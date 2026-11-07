@@ -4,7 +4,7 @@
  * pide una entrada por cada `ActionId`: una accion nueva sin la suya no compila.
  */
 import { exactSquad, SQUAD_NAME_MAX } from '../../core/squads';
-import type { GameAction, GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
+import type { GameAction, GameEvent, GameState, Pos, TurnEndOrderKind, TeamId, Unit } from '../../core/model';
 import type { ActionId } from '../../controls/actions';
 import { showToast, ui } from '../../hud/store';
 import { t } from '../../settings';
@@ -31,12 +31,12 @@ export interface ActionRunHost {
   /** Soltar la unidad elegida en `at` (como al arrastrarla); `drop`: hacer ya lo logico (capturar...). */
   commit(at: Pos, options: { drop?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;
-  /** Viaje de varios turnos (travelTo) para la unidad elegida. */
+  /** «Ir alli» (la orden de varios turnos 'goto') para la unidad elegida. */
   giveTravel(unit: Unit, goal: Pos): Promise<void>;
   /** Orden con destino sin casilla: ahora se elige en el mapa (fase 'target'). */
-  pickOrderTarget(kind: StandingOrderKind, units: Unit[], fromUnitMenu: boolean): void;
+  pickOrderTarget(kind: TurnEndOrderKind, units: Unit[], fromUnitMenu: boolean): void;
   /** Orden con destino en `at`: se da y las que pueden la empiezan ya. */
-  placeOrder(kind: StandingOrderKind, units: Unit[], fromUnitMenu: boolean, at: Pos): Promise<void>;
+  placeOrder(kind: TurnEndOrderKind, units: Unit[], fromUnitMenu: boolean, at: Pos): Promise<void>;
   /** La accion ya esta hecha: cerrar el menu del que salio y redibujar. */
   finish(): void;
 }
@@ -46,7 +46,7 @@ export interface ActionRunner {
    * Con Mayusculas + clic derecho la accion no se hace ahora: queda como esta orden, que se cumple al
    * terminar el turno. Sin ella, la accion no se puede dejar para despues.
    */
-  queueAs?: StandingOrderKind;
+  queueAs?: TurnEndOrderKind;
   run(action: ActionRun, host: ActionRunHost): void | Promise<void>;
 }
 
@@ -72,7 +72,7 @@ function joinTile(action: ActionRun, host: ActionRunHost) {
 }
 
 /** Orden con destino desde un menu: sin casilla, se pide despues; con ella, se da ya. */
-function orderWithTarget(kind: StandingOrderKind) {
+function orderWithTarget(kind: TurnEndOrderKind) {
   return (action: ActionRun, host: ActionRunHost) => {
     const fromUnitMenu = action.fromUnitMenu ?? !!action.moving;
     if (!action.at) return host.pickOrderTarget(kind, action.units, fromUnitMenu);

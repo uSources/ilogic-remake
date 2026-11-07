@@ -30,8 +30,8 @@ export interface FuzzFailure {
 /** Cada turno, al azar: juega al azar o juega la IA (con el mismo azar, sorteado al empezar el turno). */
 const coinFlipController = (rng: Rng): Controller => {
   const random = randomController(rng);
-  const ai = aiController(rng);
-  return { name: 'random', playTurn: (s, team) => (rng() < 0.5 ? random : ai).playTurn(s, team) };
+  const ai = aiController();
+  return { name: 'random', playTurn: (view) => (rng() < 0.5 ? random : ai).playTurn(view) };
 };
 
 /** Lo que se cuenta de un paso al fallar: quien, que accion y el principio de sus sucesos. */

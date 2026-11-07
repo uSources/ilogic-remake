@@ -3,24 +3,24 @@
 exports[`IA: partidas de referencia > semilla 1 1`] = `
 {
   "days": 26,
-  "events": 995,
+  "events": 834,
   "last": {
     "army": [
-      28935,
-      69820,
+      35460,
+      55585,
     ],
     "buildings": [
       7,
-      11,
+      10,
     ],
     "day": 26,
     "funds": [
-      5250,
-      32250,
+      5375,
+      17600,
     ],
     "units": [
-      10,
-      21,
+      8,
+      16,
     ],
   },
   "reason": "timeout",
@@ -30,29 +30,29 @@ exports[`IA: partidas de referencia > semilla 1 1`] = `
 
 exports[`IA: partidas de referencia > semilla 2 1`] = `
 {
-  "days": 26,
-  "events": 498,
+  "days": 21,
+  "events": 342,
   "last": {
     "army": [
-      42215,
-      11475,
+      47525,
+      10000,
     ],
     "buildings": [
-      7,
-      4,
-    ],
-    "day": 26,
-    "funds": [
-      4175,
-      17950,
-    ],
-    "units": [
-      15,
+      9,
       2,
     ],
+    "day": 21,
+    "funds": [
+      4775,
+      18100,
+    ],
+    "units": [
+      13,
+      1,
+    ],
   },
-  "reason": "timeout",
-  "winner": null,
+  "reason": "hq",
+  "winner": 0,
 }
 `;
 
@@ -62,21 +62,21 @@ exports[`IA: partidas de referencia > semilla 3 1`] = `
   "events": 706,
   "last": {
     "army": [
-      27330,
-      68140,
+      62745,
+      21260,
     ],
     "buildings": [
-      8,
-      10,
+      12,
+      7,
     ],
     "day": 26,
     "funds": [
-      5025,
-      15950,
+      44700,
+      9475,
     ],
     "units": [
-      4,
-      13,
+      14,
+      8,
     ],
   },
   "reason": "timeout",

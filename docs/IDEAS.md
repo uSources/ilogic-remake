@@ -66,7 +66,8 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     probar el equilibrio de los generales entre personas.
 15. **Partidas con amigos por enlace o código**, asíncronas, con aviso cuando te toca. Necesita un
     servidor pequeño que guarde la partida y mande a cada uno solo lo que ve (si no, se puede mirar a
-    través de la niebla).
+    través de la niebla): eso ya lo calcula el núcleo (`playerView`, lo que sabe cada equipo), y la IA
+    decide de la partida (`decisionSeed`), así que un rival IA da lo mismo en el servidor y en casa.
 16. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
 
 Para competir hará falta: equilibrio estricto de generales, mapas simétricos o probados (los de azar

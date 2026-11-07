@@ -19,7 +19,7 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 9;
+  version: 11;
   /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
   map: string[][];
   /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
@@ -53,6 +53,13 @@ export interface GameState {
    * partida con las mismas acciones da siempre los mismos combates, se cargue o no por medio.
    */
   dice: number;
+  /**
+   * Semilla de las decisiones de quien juega por un equipo sin ser una persona (la IA): fija toda la
+   * partida. El azar de cada turno sale de ella, del dia y del equipo (`decisionRng`, dice.ts), asi
+   * que la misma partida da las mismas decisiones al repetirla, al cargarla o en otra maquina
+   * (una partida por la red). Va aparte de los dados: lo que decide no cambia lo que sale en ellos.
+   */
+  decisionSeed: number;
   /**
    * Los ajustes de esta partida (la unica fuente: no hay ajustes globales): numeros e interruptores
    * de los modulos de reglas. De ellos y del modo salen los modulos que lleva (`ruleset`); se cambian,

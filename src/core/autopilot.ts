@@ -6,14 +6,27 @@
  *
  * | Modulo | Que va |
  * |---|---|
- * | `autopilot/context` | `PlayCtx` (estado del turno: equipo, grupo, plan, por donde manda) y ayudas comunes (acercarse, mover) |
+ * | `autopilot/profile` | con que juega (`AutopilotProfile`: pesos y razones para valorar un ataque); el de las ordenes, `autopilotProfileOf` (defaultProfile.ts) |
+ * | `autopilot/context` | `PlayCtx` (equipo, perfil, como mide los caminos, fuego concentrado) y ayudas comunes (acercarse, proponer lo que hace una unidad) |
+ * | `autopilot/engagement` | como pelea una unidad (`EngagementPolicy`): `HUNT`, `SHOOT_FROM_HERE`, `guardZone`, `fireOnTheWay` |
  * | `autopilot/scoring` | cuanto vale cada ataque (`ATTACK_SCORE_TERMS`) |
  * | `autopilot/tactics` | retirarse, atacar, capturar lo de debajo |
  * | `autopilot/formation` | escuadras que avanzan juntas |
  * | `autopilot/standingOrders` | cumplir las ordenes de un equipo (`assistTurn`), empezar una recien dada y la prevision |
  *
- * Quien las manda dice por donde (`ActionDispatcher`: `dispatch`, o el que apunta la sesion).
+ * Son planes (`ActionPlan`): proponen sus acciones y las manda quien los cumple (la sesion, el paso de
+ * fin de turno, la prevision).
  */
-export { assistTurn, startStandingOrder, previewStandingOrders, type StandingOrderIntent } from './autopilot/standingOrders';
+export {
+  assistTurn,
+  plannedStandingOrders,
+  previewStandingOrders,
+  startStandingOrder,
+  type PlannedAction,
+  type StandingOrderIntent,
+} from './autopilot/standingOrders';
+export { fireOnTheWay, guardZone, HUNT, SHOOT_FROM_HERE, type EngagementPolicy, type FiringPositions } from './autopilot/engagement';
+export type { AutopilotProfile, AttackPlan, AttackScoreTerm } from './autopilot/profile';
+export { autopilotProfileOf } from './autopilot/defaultProfile';
 export { standingOrderPlayOrder } from './autopilot/formation';
 export type { PlayCtx } from './autopilot/context';

@@ -3,11 +3,12 @@
  * cada unidad. Sin efectos. Es la base del resto de reglas (no importa ningun otro modulo de rules/).
  */
 import type { MoveType, TerrainType } from '../content';
-import { unitTypeOf, terrainAt } from '../gameContent';
+import { isHq, unitTypeOf, terrainAt } from '../gameContent';
 import { createLayer, isOnBoard } from '../mapGrid';
 import type { Grid } from '../util/grid';
 import { isOnMap } from '../util/predicates';
 import { samePos } from '../geom';
+import { isHostileOwner } from '../teams';
 import type { Building, GameState, Pos, TeamId, Unit } from '../model';
 
 /** Tipo de movimiento de una unidad. */
@@ -70,3 +71,10 @@ export function freeSlot(transport: Unit): number {
 export function cargoUnits(s: GameState, transport: Unit): Unit[] {
   return transport.cargo.map((uid) => unitById(s, uid)).filter((passenger): passenger is Unit => !!passenger);
 }
+
+/** El edificio es la Base de un enemigo de `team`. */
+export const isEnemyHq = (s: GameState, building: Building, team: TeamId): boolean =>
+  isHq(s, building) && isHostileOwner(s, building.owner, team);
+
+/** Los edificios que son del equipo `team`. */
+export const buildingsOf = (s: GameState, team: TeamId): Building[] => s.buildings.filter((building) => building.owner === team);

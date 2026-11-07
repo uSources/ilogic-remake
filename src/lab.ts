@@ -26,7 +26,7 @@ export interface LabOptions {
 
 export const LAB_SIZE = 12;
 /** Semilla de los dados del laboratorio: la misma animacion sale siempre igual. */
-const LAB_DICE_SEED = 1;
+const LAB_SEED = 1;
 /** Los dos equipos del laboratorio: el de la persona y su enemigo. */
 const LAB_PERSON = 0;
 const LAB_ENEMY = 1;
@@ -91,6 +91,6 @@ export function labMatch(options: LabOptions, action: LabAction | null): Sandbox
       { type: attackerType.id, team: LAB_PERSON, at: from },
       { type: options.defender, team: LAB_ENEMY, at: LAB_TARGET, ...(action === 'kill' ? { life: KILL_LIFE } : {}) },
     ],
-    diceSeed: LAB_DICE_SEED,
+    seed: LAB_SEED,
   };
 }

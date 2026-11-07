@@ -723,7 +723,6 @@ export const ANIMATORS: { [K in CoreGameEventKind]: Animator<K> } = {
   supply: noAnimation,
   remove: noAnimation,
   undoMove: noAnimation,
-  travel: noAnimation,
   standingOrder: noAnimation,
   standingOrderDone: noAnimation,
   squad: noAnimation,

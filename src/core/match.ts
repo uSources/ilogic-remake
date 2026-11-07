@@ -19,7 +19,7 @@ import { newUnit } from './rules/lifecycle';
 import { settingsWith } from './matchSettings';
 import { hooksOf } from './ruleModules/ruleset';
 import { sampleArmy } from './stats';
-import { seededRng } from './util/random';
+import { matchSeedsFrom, seededRng } from './util/random';
 import type { GameModeId, GameSetup, GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 import { teamIds, type TeamSetup } from './teams';
 
@@ -44,11 +44,14 @@ export interface SkirmishConfig {
   swapStarts?: true;
 }
 
-/** Una mision de la campaña (por su id), con su mapa, sus equipos y sus reglas; `diceSeed`, la de sus dados. */
+/**
+ * Una mision de la campaña (por su id), con su mapa, sus equipos y sus reglas; `seed`, la de su azar
+ * (de ella salen las de sus dados y las de las decisiones de la IA: `matchSeedsFrom`).
+ */
 export interface MissionConfig {
   mode: 'mission';
   mission: string;
-  diceSeed: number;
+  seed: number;
 }
 
 /** Algo en una casilla de una partida preparada a mano: un edificio (de un equipo o de nadie) o una unidad. */
@@ -75,7 +78,8 @@ export interface SandboxConfig {
   teams: readonly MatchTeam[];
   buildings: readonly PlacedBuilding[];
   units: readonly PlacedUnit[];
-  diceSeed: number;
+  /** La semilla de su azar (sus dados y las decisiones de la IA: `matchSeedsFrom`). */
+  seed: number;
 }
 
 /** Como empieza una partida nueva, en cualquier modo. */
@@ -132,7 +136,7 @@ function swapStarts(s: GameState): void {
 function mission(config: MissionConfig, { content }: MatchSetupContext): GameState {
   const found = missionById(config.mission);
   if (!found) throw new Error(`No existe la mision "${config.mission}"`);
-  return buildMission(found, content, config.diceSeed);
+  return buildMission(found, content, matchSeedsFrom(config.seed));
 }
 
 function sandbox(config: SandboxConfig, { content }: MatchSetupContext): GameState {
@@ -142,7 +146,7 @@ function sandbox(config: SandboxConfig, { content }: MatchSetupContext): GameSta
     content,
     mode: 'sandbox',
     teams: config.teams,
-    diceSeed: config.diceSeed,
+    seeds: matchSeedsFrom(config.seed),
   });
   for (const building of config.buildings)
     s.buildings.push({ type: entryOf(content.buildings, building.type, 'edificio').id, owner: building.owner, ...building.at });

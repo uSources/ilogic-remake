@@ -2,7 +2,6 @@ import type Phaser from 'phaser';
 import { startsTurn } from '../core/actions';
 import { controllersFor } from '../core/controllers';
 import { GameSession, playMatch, type ActedStep } from '../core/session';
-import { aiSeedFor, seededRng } from '../core/util/random';
 import { createLayer, mapGrid } from '../core/mapGrid';
 import { createMatch } from '../core/defaultGames';
 import { skirmishConfig } from '../core/match';
@@ -92,7 +91,7 @@ export class LiveBackground {
     this.view.centerOn(firstBuilding, true);
     this.tightBounds();
     this.view.placeCursor(false);
-    this.session = new GameSession(this.game, controllersFor(this.game, seededRng(aiSeedFor(seed))));
+    this.session = new GameSession(this.game, controllersFor(this.game));
     this.render();
     void this.loop();
   }

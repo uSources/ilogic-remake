@@ -16,7 +16,7 @@ import { setFrozen } from './ui/fx';
  */
 /** Las partidas de prueba son de 20 casillas, y sus misiones tiran siempre los mismos dados. */
 const DEBUG_MAP_SIZE = 20;
-const DEBUG_DICE_SEED = 1;
+const DEBUG_SEED = 1;
 
 /** Lo que se puede pedir de una partida de prueba (ver IlogicDebug.startGame). */
 export interface DebugGameOptions {
@@ -41,7 +41,7 @@ export interface DebugGameOptions {
  * (sin niebla, salvo que se pida) de la persona contra la IA, siempre con el mismo mapa por semilla.
  */
 function debugMatch(options: DebugGameOptions): MatchConfig {
-  if (options.mission) return { mode: 'mission', mission: options.mission, diceSeed: DEBUG_DICE_SEED };
+  if (options.mission) return { mode: 'mission', mission: options.mission, seed: DEBUG_SEED };
   return skirmishConfig({
     seed: options.seed ?? 1,
     size: options.size ?? DEBUG_MAP_SIZE,

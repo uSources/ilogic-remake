@@ -4,18 +4,21 @@ import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
 import { canMoveNow, matchResult, moveRange, newUnit, reachableTiles } from '@core/rules';
 import { serialize } from '@core/save';
-import { aiController, controllersFor, type AiBrain } from '@core/controllers';
+import { aiController, controllersFor } from '@core/controllers';
+import type { ActionPlan, ActionResult } from '@core/model';
 import {
   autopilotController,
   GameSession,
   humanController,
   passiveController,
   propose,
+  proposing,
   remoteController,
   replaySession,
   LogCursor,
   isOffTurnAction,
   runMatch,
+  scriptedController,
   sequence,
   type ActedStep,
   type Controller,
@@ -23,13 +26,15 @@ import {
 import { GAME_MODES } from '@core/modes';
 import { startsTurn } from '@core/actions';
 import { duel } from '@core/teams';
-import { seededRng } from '@core/util/random';
 import { act, blankState, giveTurn, hqId, unitTypeNamed } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
 
+/** Un controlador que decide como la IA (con un plan que propone), con el plan que da `planFor`. */
+const planning = (planFor: () => ActionPlan): Controller => ({ name: 'ai', playTurn: () => proposing(planFor()) });
+
 /** Una sesion de la persona (equipo 0) contra la IA, con lo que se haga apuntado. */
 function personVsAi(s: ReturnType<typeof blankState>) {
-  const session = new GameSession(s, [humanController(), aiController(seededRng(3))]);
+  const session = new GameSession(s, [humanController(), aiController()]);
   const steps: ActedStep[] = [];
   session.subscribe((step) => steps.push(step));
   return { session, steps };
@@ -82,7 +87,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
   it('el registro se repite igual desde la partida de antes (los dados van en la partida)', () => {
     const s = createMatch(skirmishConfig({ seed: 6, size: 16, teams: duel('ai', 'ai') }));
     const start = cloneState(s);
-    const session = new GameSession(s, controllersFor(s, seededRng(9)));
+    const session = new GameSession(s, controllersFor(s));
     runMatch(session, { until: (state) => state.day > 4 });
     const replay = replaySession(start, session.log);
     runMatch(replay, { until: (state) => state.day > 4 });
@@ -104,7 +109,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
 
   it('varias personas en la misma pantalla: la sesion espera a cada una en su turno', () => {
     const s = createMatch(skirmishConfig({ seed: 2, size: 20, teams: duel('human', 'human') }));
-    const session = new GameSession(s, controllersFor(s, seededRng(1)));
+    const session = new GameSession(s, controllersFor(s));
     expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
     session.finishInput(0);
     expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 1 });
@@ -152,7 +157,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     let surrendered = false;
     const quitter: Controller = {
       name: 'random',
-      playTurn: function* (state, team) {
+      playTurn: function* ({ state, team }) {
         const unit = state.units.find((candidate) => candidate.team === team && canMoveNow(candidate));
         const to = unit && reachableTiles(moveRange(state, unit)).find((tile) => tile.x !== unit.x || tile.y !== unit.y);
         if (unit && to) {
@@ -166,8 +171,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
         }
       },
     };
-    const rng = seededRng(4);
-    const session = new GameSession(s, [quitter, aiController(rng), aiController(rng)]);
+    const session = new GameSession(s, [quitter, aiController(), aiController()]);
     runMatch(session, { until: (state) => state.day > 4 });
     expect(session.log.some((entry) => entry.action.kind === 'undoMove')).toBe(true);
     const replay = replaySession(start, session.log);
@@ -240,14 +244,15 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(session.log.map((entry) => entry.action.kind)).toEqual([]);
   });
 
-  it('la IA que mandara un limite de turno recibe sessionOnly (no pasa su turno)', () => {
+  it('la IA que propusiera un limite de turno recibe sessionOnly (no pasa su turno)', () => {
     const s = blankState();
-    let reply: unknown = null;
-    const brain: AiBrain = (state, _rng, team, dispatcher) => {
-      reply = dispatcher(state, team, { kind: 'endTurn' });
-      return [][Symbol.iterator]();
-    };
-    const session = new GameSession(s, [aiController(seededRng(1), brain), passiveController()]);
+    let reply: ActionResult | null = null;
+    const session = new GameSession(s, [
+      planning(function* () {
+        reply = yield { kind: 'endTurn' };
+      }),
+      passiveController(),
+    ]);
     session.step();
     expect(reply).toEqual({ ok: false, reason: 'sessionOnly' });
     expect(session.log).toEqual([{ team: 0, action: { kind: 'endTurn' } }]);
@@ -258,7 +263,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
       skirmishConfig({ seed: 8, size: 20, teams: [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }] }),
     );
     const start = cloneState(s);
-    const session = new GameSession(s, [humanController(), remoteController(), aiController(seededRng(4))]);
+    const session = new GameSession(s, [humanController(), remoteController(), aiController()]);
     runMatch(session);
     const [first, second] = s.units.filter((unit) => unit.team === 0);
     expect(session.act(0, { kind: 'wait', uid: first!.uid }).ok).toBe(true);
@@ -309,7 +314,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     const s = blankState(PLAIN_SETTINGS, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
     s.turnStarted = false;
     const traveler = newUnit(s, unitTypeNamed('Soldier'), 1, { x: 2, y: 2 });
-    traveler.travelTo = { x: 2, y: 20 };
+    traveler.standingOrder = { kind: 'goto', at: { x: 2, y: 20 } };
     const start = cloneState(s);
     const session = new GameSession(s, [humanController(), remoteController(), passiveController()]);
     runMatch(session);
@@ -332,7 +337,7 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
       skirmishConfig({ seed: 8, size: 20, teams: [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }] }),
     );
     const start = cloneState(s);
-    const session = new GameSession(s, [humanController(), aiController(seededRng(4)), aiController(seededRng(5))]);
+    const session = new GameSession(s, [humanController(), aiController(), aiController()]);
     runMatch(session);
     session.finishInput(0);
     expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
@@ -375,17 +380,21 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect([soldier.x, soldier.y]).toEqual([5, 5]);
   });
 
-  it('quien manda el mismo sus acciones (la IA, el piloto) solo las manda de su equipo', () => {
+  it('lo que propone un plan es de su equipo: no puede mover las unidades de otro', () => {
     const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
-    let reply: unknown = null;
-    const brain: AiBrain = (state, _rng, _team, dispatcher) => {
-      reply = dispatcher(state, 2, { kind: 'surrender' });
-      return [][Symbol.iterator]();
-    };
-    const session = new GameSession(s, [aiController(seededRng(1), brain), passiveController(), passiveController()]);
+    const enemy = newUnit(s, unitTypeNamed('Soldier'), 2, { x: 3, y: 3 });
+    let reply: ActionResult | null = null;
+    const session = new GameSession(s, [
+      planning(function* () {
+        reply = yield { kind: 'wait', uid: enemy.uid };
+      }),
+      passiveController(),
+      passiveController(),
+    ]);
     session.step();
-    expect(reply).toEqual({ ok: false, reason: 'notYourTurn' });
-    expect(s.teams[2]!.resigned).toBeFalsy();
+    expect(reply).toMatchObject({ ok: false });
+    expect(enemy.turnState).toBe('ready');
+    expect(session.log).toEqual([{ team: 0, action: { kind: 'endTurn' } }]);
   });
 
   it('el dispatcher de la sesion solo vale para su partida (no para simular en una copia)', () => {
@@ -498,8 +507,28 @@ describe('modos de juego (core/modes.ts)', () => {
         { type: hqId(), owner: 1, at: { x: 11, y: 11 } },
       ],
       units: [],
-      diceSeed: 1,
+      seed: 1,
     });
     expect(s.settings.weather).toBe(false);
+  });
+});
+
+describe('la sesion pone al dia la vista de quien juega', () => {
+  it('tras cada accion, aunque el controlador no lo pida (scripted y en serie)', () => {
+    const s = blankState();
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 3 });
+    const seen: number[] = [];
+    // Mira cuantas unidades ve y no hace nada (un controlador sin pasos).
+    const looking: Controller = {
+      name: 'scripted',
+      playTurn: (view) => {
+        seen.push(view.state.units.length);
+        return passiveController().playTurn(view);
+      },
+    };
+    // Retirar la unidad: una vista sin poner al dia la seguiria viendo.
+    const retire = scriptedController(() => [{ kind: 'deleteUnit', uid: soldier.uid }]);
+    runMatch(new GameSession(s, [sequence(retire, looking, humanController()), passiveController()]));
+    expect(seen).toEqual([0]);
   });
 });

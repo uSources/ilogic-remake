@@ -8,7 +8,7 @@ import { screenControllers } from '../../core/controllers';
 import { GameSession, passiveController, type Controller } from '../../core/session';
 import { createMatch, loadGame } from '../../core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '../../core/match';
-import type { GameState, Rng, TeamId } from '../../core/model';
+import type { GameState, TeamId } from '../../core/model';
 import { defaultLab, labMatch, type LabOptions } from '../../lab';
 import { randomSeed } from '../../setup';
 import { deleteSave, readSave } from '../../storage';
@@ -30,8 +30,8 @@ export interface MatchStart {
 /** Una escaramuza nueva al azar, una persona contra la IA (sin datos, o si no se ha podido abrir la pedida). */
 const randomSkirmish = (): MatchConfig => skirmishConfig({ seed: randomSeed(), teams: duel('human', 'ai') });
 
-/** La partida con la que empieza la escena, en juego; la IA decide con `aiRng`. */
-export function startMatch(aiRng: Rng, data: GameStartData = { start: 'new', match: randomSkirmish() }): MatchStart {
+/** La partida con la que empieza la escena, en juego (la IA decide con el azar de la partida). */
+export function startMatch(data: GameStartData = { start: 'new', match: randomSkirmish() }): MatchStart {
   const lab = data.start === 'lab' ? (data.lab ?? defaultLab()) : null;
   const saved = data.start === 'load' ? readSavedGame() : null;
   const given = data.start === 'state' ? loadGame(data.state) : null;
@@ -40,7 +40,7 @@ export function startMatch(aiRng: Rng, data: GameStartData = { start: 'new', mat
   // Solo se borra el guardado si lo que no se ha podido abrir era el guardado (no una partida de depuracion).
   if (corruptSave && data.start === 'load') deleteSave();
   const state = lab ? createMatch(labMatch(lab, lab.play)) : (loaded ?? createMatch(newMatchConfig(data)));
-  const session = new GameSession(state, screenControllers(state, aiRng, labControllers(state, !!lab)));
+  const session = new GameSession(state, screenControllers(state, labControllers(state, !!lab)));
   return { session, viewer: viewerOf(session), lab, fromSave: !!saved, corruptSave };
 }
 

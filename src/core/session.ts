@@ -8,20 +8,20 @@
  *
  * | Modulo | Que va |
  * |---|---|
- * | `session/controller` | la forma de un controlador (`Controller`, `TurnStep`) y los sencillos: persona, remoto, en serie |
+ * | `session/controller` | la forma de un controlador (`Controller`, `TurnStep`), un plan como pasos (`proposing`) y los sencillos: persona, remoto, en serie |
  * | `session/log` | el registro: `LoggedAction`, `isOffTurnAction` y como se lee (`LogCursor`) |
  * | `session/replay` | repetir lo apuntado (`replaySession`) |
- * | `session/selfDispatched` | quien manda el mismo sus acciones (`selfDispatched`: la IA) y `autopilotController` |
+ * | `session/autopilotController` | `autopilotController`: cumple ya, en el turno, las ordenes permanentes |
  * | `session/gameSession` | `GameSession` y como llevarla: seguida (`runMatch`) o paso a paso (`playMatch`) |
  */
 export {
   humanController,
   passiveController,
   propose,
+  proposing,
   remoteController,
   scriptedController,
   sequence,
-  type AppliedStep,
   type Controller,
   type ControllerName,
   type TurnPlan,
@@ -29,7 +29,7 @@ export {
 } from './session/controller';
 export { isOffTurnAction, LogCursor, type LoggedAction } from './session/log';
 export { replaySession } from './session/replay';
-export { autopilotController } from './session/selfDispatched';
+export { autopilotController } from './session/autopilotController';
 export {
   GameSession,
   playMatch,

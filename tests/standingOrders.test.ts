@@ -3,7 +3,7 @@ import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/au
 import { defaultContent } from '@core/content/default';
 import { manhattan, posOf } from '@core/geom';
 import { newUnit } from '@core/rules';
-import { availableActions, dispatch } from '@core/actions';
+import { availableActions, carryOut, dispatch } from '@core/actions';
 import { deserialize, serialize } from '@core/save';
 import {
   SQUAD_NAME_MAX,
@@ -17,10 +17,10 @@ import {
   squadUnits,
 } from '@core/squads';
 import { addToGroup, disbandSquad, formSquad, pruneSquads, renameSquad, setGroup } from '@core/squads/membership';
-import { cancelStandingOrder, finishStandingOrder, giveStandingOrder } from '@core/squads/standingOrders';
+import { cancelStandingOrder, finishStandingOrder, giveStandingOrder, turnEndOrderOf } from '@core/squads/standingOrders';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
-import { act, blankState, unitTypeNamed, hqId, placedBuildings } from './helpers';
+import { act, blankState, unitTypeNamed, hqId, placedBuildings, playPlan } from './helpers';
 import { teamState } from '@core/teams';
 
 const HQ = hqId();
@@ -43,10 +43,7 @@ function world(): GameState {
 function turns(s: GameState, rounds: number): number[] {
   const done: number[] = [];
   for (let i = 0; i < rounds; i++) {
-    const it = assistTurn(s, 0, dispatch);
-    let step = it.next();
-    while (!step.done) step = it.next();
-    done.push(...step.value);
+    done.push(...carryOut(assistTurn(s, 0, 'turnEnd'), (action) => dispatch(s, 0, action)).value);
     for (const unit of s.units) Object.assign(unit, { turnState: 'ready' });
     s.day++;
   }
@@ -160,7 +157,7 @@ describe('ordenes con destino', () => {
     const used = newUnit(s, SOLDIER, 0, { x: 8, y: 8 });
     giveStandingOrder(s, 0, [used], 'attack', { x: 15, y: 15 });
     Object.assign(used, { turnState: 'done' });
-    const evs = Array.from(assistTurn(s, 0, dispatch));
+    const evs = playPlan(s, 0, assistTurn(s, 0, 'turnEnd'));
     expect(evs).toEqual([]);
     expect(free).toMatchObject({ x: 3, y: 3, turnState: 'ready' });
     expect(used).toMatchObject({ x: 8, y: 8 });
@@ -171,7 +168,7 @@ describe('ordenes con destino', () => {
     const s = world();
     const unit = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     giveStandingOrder(s, 0, [unit], 'capture', { x: 12, y: 5 });
-    Array.from(startStandingOrder(s, unit.uid, 0, dispatch));
+    playPlan(s, 0, startStandingOrder(s, unit.uid, 0));
     expect(unit.x).toBeGreaterThan(5);
     cancelStandingOrder(s, [unit]);
     expect(unit.standingOrder).toBeUndefined();
@@ -259,7 +256,7 @@ describe('escuadras', () => {
 describe('escuadras en formacion', () => {
   /** Casillas que le quedan hasta el destino (todo hierba: en linea recta). */
   const left = (unit: { x: number; y: number }, at: { x: number; y: number }) => Math.abs(unit.x - at.x) + Math.abs(unit.y - at.y);
-  const SPREAD = 2; // AI.SQUADSPREAD en ai.json
+  const SPREAD = 2; // SQUADSPREAD de ai.json (profile.weights.SQUADSPREAD)
 
   it('el jeep no deja atras al soldado: van juntos hacia un destino lejano', () => {
     const s = world();
@@ -460,11 +457,13 @@ describe('orden de la escuadra y unidades destacadas', () => {
     expect(firstSoldier.standingOrder).toEqual({ kind: 'attack', at: { x: 15, y: 15 } });
   });
 
-  it('llevada a mano a una casilla lejana (orden de varios turnos): eso manda mientras dura', () => {
+  it('llevada a mano a una casilla lejana (ir alli): eso manda mientras dura, y no es de pelear', () => {
     const { s, firstSoldier, secondSoldier, tank } = squadWorld();
     giveStandingOrder(s, 0, [firstSoldier, secondSoldier, tank], 'attack', { x: 15, y: 15 });
-    firstSoldier.travelTo = { x: 0, y: 9 };
-    expect(effectiveStandingOrder(s, firstSoldier)).toBeUndefined();
+    giveStandingOrder(s, 0, [firstSoldier], 'goto', { x: 0, y: 9 });
+    expect(effectiveStandingOrder(s, firstSoldier)).toEqual({ kind: 'goto', at: { x: 0, y: 9 } });
+    expect(turnEndOrderOf(s, firstSoldier)).toBeUndefined();
+    expect(sameFormation(s, firstSoldier, secondSoldier)).toBe(false);
   });
 });
 

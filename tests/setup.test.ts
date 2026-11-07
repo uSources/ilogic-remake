@@ -1,6 +1,5 @@
 import { MoveType } from '@core/content';
 import { afterEach, describe, expect, it } from 'vitest';
-import { aiTurn } from '@core/ai';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
@@ -10,7 +9,7 @@ import { skirmishConfig } from '@core/match';
 import { distanceMap, matchResult, newUnit, score } from '@core/rules';
 import { deserialize, serialize } from '@core/save';
 import { codeToSeed, seedToCode } from '../src/setup';
-import { blankState, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
+import { blankState, unitTypeNamed, hqId, withoutHeadquarters, playPlan, aiPlan } from './helpers';
 import { duel } from '@core/teams';
 
 const HQ = hqId();
@@ -96,12 +95,12 @@ describe('limite de dias', () => {
 describe('repetir el turno enemigo', () => {
   it('la IA juega igual desde el mismo estado y la misma semilla', () => {
     const s = createMatch(skirmishConfig({ seed: 3, teams: duel('human', 'ai') }));
-    for (let i = 0; i < 4; i++) for (const _ of aiTurn(s, seededRng(i), 1));
+    for (let i = 0; i < 4; i++) playPlan(s, 1, aiPlan(s, 1, seededRng(i)));
     const before = serialize(s);
-    const ev1 = [...aiTurn(s, seededRng(42), 1)];
+    const ev1 = playPlan(s, 1, aiPlan(s, 1, seededRng(42)));
     const after = serialize(s);
     const copy = deserialize(before, defaultContent())!;
-    const ev2 = [...aiTurn(copy, seededRng(42), 1)];
+    const ev2 = playPlan(copy, 1, aiPlan(copy, 1, seededRng(42)));
     expect(ev2).toEqual(ev1);
     expect(serialize(copy)).toBe(after);
   });

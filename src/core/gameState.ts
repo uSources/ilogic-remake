@@ -5,6 +5,7 @@
 import type { GameContent } from './content';
 import { gameModeOf } from './modes';
 import { rulesetFor } from './ruleModules/registry';
+import type { MatchSeeds } from './util/random';
 import { SAVE_VERSION } from './saveVersion';
 import { newTeams, type TeamSetup } from './teams';
 import type { GameModeId, GameState, MatchSettings, TeamId } from './model';
@@ -24,8 +25,11 @@ export interface NewGameStateOptions {
   teams: readonly TeamSetup[];
   /** El equipo que juega primero cada ronda (si no, el primero de la lista; el orden lo dice el modo). */
   firstTeam?: TeamId;
-  /** Semilla de los dados de la partida (`GameState.dice`, ver core/dice.ts): quien la crea dice cual. */
-  diceSeed: number;
+  /**
+   * Las semillas de su azar, una aparte de la otra (`MatchSeeds`): la de los dados (`GameState.dice`,
+   * ver core/dice.ts) y la de las decisiones de la IA (`GameState.decisionSeed`). Quien la crea dice cuales.
+   */
+  seeds: MatchSeeds;
 }
 
 /** Partida sin unidades ni edificios, en el dia 1, con su contenido; el primer equipo aun no ha empezado su turno. */
@@ -50,7 +54,8 @@ export function newGameState(options: NewGameStateOptions): GameState {
     turnOrder,
     turn: turnOrder[0]!,
     turnStarted: false,
-    dice: options.diceSeed >>> 0,
+    dice: options.seeds.dice >>> 0,
+    decisionSeed: options.seeds.decisions >>> 0,
     // Una copia: quien crea la partida puede seguir usando las suyas sin cambiar las de esta.
     settings: { ...settings },
     content: options.content,

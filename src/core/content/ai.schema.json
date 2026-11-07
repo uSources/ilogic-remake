@@ -22,7 +22,10 @@
     "CONTROLPOINT",
     "GUARDRADIUS",
     "FOCUSFIRE",
-    "SQUADSPREAD"
+    "SQUADSPREAD",
+    "HQHEADSTART",
+    "BIGUNITCOST",
+    "MINEVICTION"
   ],
   "properties": {
     "$schema": {
@@ -117,6 +120,21 @@
       "type": "number",
       "minimum": 0,
       "description": "Escuadras con la misma orden: casillas que una unidad puede adelantarse a la mas retrasada (medido por tierra hasta el destino) antes de esperarla."
+    },
+    "HQHEADSTART": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Al buscar que capturar: la Base enemiga cuenta como si estuviera estas casillas mas cerca que otro edificio."
+    },
+    "BIGUNITCOST": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Con puntos de mando: un edificio que fabrica algo de este precio o mas fabrica lo grande y compra antes (en orden al azar entre ellos)."
+    },
+    "MINEVICTION": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Echar a quien defiende su Base o captura un edificio propio: lo minimo que pesa el ataque aunque el golpe sea flojo (por cada BONUSDAMAGE de dano, 1)."
     }
   }
 }

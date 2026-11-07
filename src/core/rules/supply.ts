@@ -1,13 +1,22 @@
 /**
  * Abastecimiento: reparar a las unidades aliadas de al lado (Suministros).
  */
-import { unitTypeOf } from '../gameContent';
+import { buildingTypeOf, unitTypeOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
 import { neighbors4 } from '../geom';
 import { mapGrid } from '../mapGrid';
-import type { GameState, Healing, Unit } from '../model';
+import type { Building, GameState, Healing, Unit } from '../model';
 import { unitAt } from './queries';
 import { spendUnit } from './unitTurn';
+
+/**
+ * El edificio repara a la unidad al acabar la ronda: es de su equipo, repara su tipo (units.json,
+ * "repairedAt") y cura algo. No mira si esa ronda no se curara (sin cura bajo fuego: `unhealable`).
+ */
+export function canRepair(s: GameState, building: Building, unit: Unit): boolean {
+  const buildingType = buildingTypeOf(s, building);
+  return building.owner === unit.team && unitTypeOf(s, unit).repairedAt.includes(buildingType.id) && buildingType.heals > 0;
+}
 
 /** Vida que `supplier` le cura a `patient` cada vez (units.json, "heals"). */
 function healAmount(s: GameState, supplier: Unit, patient: Unit): number {

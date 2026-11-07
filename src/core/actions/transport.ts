@@ -2,7 +2,7 @@
 import { posOf } from '../geom';
 import { moveEvent, type Traversal } from '../rules/traverse';
 import { unitById } from '../rules/queries';
-import { endTravel } from '../rules/travel';
+import { endGotoByHand } from '../rules/travel';
 import { boardTransport, dropPassenger, loadProblem, mergeInto, mergeProblem, unloadProblem } from '../rules/transport';
 import type { ActionRegistry, ActionRejection, GameEvent, GameState, TeamId, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
@@ -30,8 +30,8 @@ export const TRANSPORT_ACTIONS: Pick<ActionRegistry, 'merge' | 'load' | 'unload'
     validate: (s, team, action) => joinProblem(s, team, action.uid, action.into, (unit, target) => mergeProblem(s, unit, target)),
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
-      // Llevarla a mano a otra unidad acaba su viaje, como mover.
-      const cancelled = endTravel(team, unit);
+      // Llevarla a mano a otra unidad acaba su orden de ir alli, como mover.
+      const cancelled = endGotoByHand(team, unit);
       const path = mergeInto(s, unit, checkedUnit(s, action.into));
       return [...cancelled, joinEvent(team, 'merge', action.uid, action.into, path)];
     },
@@ -40,7 +40,7 @@ export const TRANSPORT_ACTIONS: Pick<ActionRegistry, 'merge' | 'load' | 'unload'
     validate: (s, team, action) => joinProblem(s, team, action.uid, action.into, (unit, transport) => loadProblem(s, unit, transport)),
     apply: (s, team, action) => {
       const unit = checkedUnit(s, action.uid);
-      const cancelled = endTravel(team, unit);
+      const cancelled = endGotoByHand(team, unit);
       const path = boardTransport(s, unit, checkedUnit(s, action.into));
       return [...cancelled, joinEvent(team, 'load', action.uid, action.into, path)];
     },

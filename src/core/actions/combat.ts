@@ -6,7 +6,7 @@ import { posOf } from '../geom';
 import { attackProblem, canCounter, combatInfoBefore, strike } from '../rules/combat';
 import { fallenIn, newAttackRecord } from '../rules/attackRecord';
 import { unitById } from '../rules/queries';
-import { endTravel } from '../rules/travel';
+import { endGotoByHand } from '../rules/travel';
 import { canStillMove, spendUnit } from '../rules/unitTurn';
 import { engagement } from '../rules/engagement';
 import type { CombatStage, CombatStep } from '../ruleModules/hooks';
@@ -108,9 +108,9 @@ export const COMBAT_ACTIONS: Pick<ActionRegistry, 'attack'> = {
     },
     apply: (s, team, action, dice) => {
       const attacker = checkedUnit(s, action.uid);
-      // Atacar sin haberse movido es mandarla a mano: acaba su viaje, como mover. Si ya ha dado el
-      // paso del viaje este turno, atacar desde alli no lo acaba (como en main).
-      const cancelled = canStillMove(attacker) ? endTravel(team, attacker) : [];
+      // Atacar sin haberse movido es mandarla a mano: acaba su orden de ir alli, como mover. Si ya ha
+      // dado el paso de la orden este turno, atacar desde alli no la acaba.
+      const cancelled = canStillMove(attacker) ? endGotoByHand(team, attacker) : [];
       return [...cancelled, resolveAttack(s, attacker, checkedUnit(s, action.target), dice)];
     },
   },

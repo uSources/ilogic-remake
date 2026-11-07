@@ -25,8 +25,10 @@
  * | `menu` | los menus, sacados de las acciones que valen (`availableActions`, `canDoWithSelection`) |
  * | `registry` | `ACTIONS`: todas las entradas |
  * | `dispatch` | `dispatch`, `actionProblem`, `isValidAction` |
+ * | `plan` | cumplir un plan (`ActionPlan`, lo que propone quien decide) mandando cada accion: `carryOut` |
  */
 export { dispatch, actionProblem, isValidAction } from './actions/dispatch';
+export { carryOut, type CarriedOutPlan } from './actions/plan';
 export { ACTIONS } from './actions/registry';
 export {
   availableActions,
@@ -44,4 +46,4 @@ export { isTurnBoundary, sessionOnlyProblem, startsTurn, TURN_END_PHASES, TURN_S
 export type { TurnPhase } from './modes';
 export { ACTION_SHAPES, isGameAction } from './actions/shape';
 export type { ActionDefinition, ActionDispatcher, ActionRegistry, CompositeActionDefinition } from './model';
-export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './model';
+export type { ActionPlan, ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './model';

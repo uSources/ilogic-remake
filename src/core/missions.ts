@@ -12,6 +12,7 @@
  * equipo, null neutral), x, y]. Unidades: [tipo, equipo, x, y, vida?].
  * Objetivos: uno por entrada en `objectives.ts`.
  */
+import type { MatchSeeds } from './util/random';
 import { entryOf, findEntry, type GameContent, type TerrainType, type Theme } from './content';
 import { settingsWith } from './matchSettings';
 
@@ -90,10 +91,10 @@ function placeUnits(s: GameState, units: MissionDef['units']): number[] {
 }
 
 /**
- * Crea la partida de una mision, con sus reglas (`missionSettings`) guardadas en la partida. `diceSeed`:
- * la semilla de sus dados (cada vez que se juega, la que diga quien la empieza).
+ * Crea la partida de una mision, con sus reglas (`missionSettings`) guardadas en la partida. `seeds`:
+ * las de su azar (cada vez que se juega, las que diga quien la empieza).
  */
-export function buildMission(mission: MissionDef, content: GameContent, diceSeed: number): GameState {
+export function buildMission(mission: MissionDef, content: GameContent, seeds: MatchSeeds): GameState {
   const s = newGameState({
     map: terrainGrid(content, mission),
     settings: missionSettings(mission, content),
@@ -101,7 +102,7 @@ export function buildMission(mission: MissionDef, content: GameContent, diceSeed
     mode: 'mission',
     theme: missionTheme(content, mission).id,
     teams: mission.teams,
-    diceSeed,
+    seeds,
   });
   for (const [type, owner, x, y] of mission.buildings)
     s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });

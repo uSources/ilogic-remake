@@ -5,18 +5,17 @@
  * un equipo: el resultado dice quien gana (`winners`, una alianza entera) o que nadie (empate).
  * Lo que mide cada objetivo de mision esta en objectives.ts.
  */
+import { buildingsOf } from './queries';
 import { gameModeOf } from '../modes';
 import { armyValue } from '../stats';
 import { measureObjective, objectiveStatus, type ObjectiveProgress } from '../objectives';
 import { alliesOf, enemiesOf, teamIds, teamState } from '../teams';
 import { maxBy } from '../util/pick';
-import type { Building, EndReason, GameState, MatchResult, TeamId, VictoryRuleId } from '../model';
+import type { EndReason, GameState, MatchResult, TeamId, VictoryRuleId } from '../model';
 import { isDefeated, lastFallen, mainFall, type FallenTeam } from './falls';
 
 /** Puntos que vale cada edificio para el limite de dias. */
 const BUILDING_SCORE = 1000;
-
-const buildingsOf = (s: GameState, team: TeamId): Building[] => s.buildings.filter((building) => building.owner === team);
 
 /**
  * Puntos de un equipo para el limite de dias: valor de su ejercito (coste x vida/100)

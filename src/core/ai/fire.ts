@@ -8,11 +8,13 @@ import { expectedDamage, fireOrigins } from '../rules/combat';
 import { canDamage, inAttackRange } from '../rules/weapons';
 import { engagement } from '../rules/engagement';
 import { moveRange } from '../rules/movement';
-import { firesAfterMove, isOnMap } from '../util/predicates';
+import { canFight, firesAfterMove, isOnMap } from '../util/predicates';
 import { teamUnits } from '../rules/queries';
 import { canStillFire } from '../rules/unitTurn';
-import type { GameState, TeamId, Unit } from '../model';
-import { needsRepair, strikeReach, visibleFoes } from '../autopilot/context';
+import type { GameState, Unit } from '../model';
+import { needsRepair, strikeReach, type PlayCtx } from '../autopilot/context';
+import { visibleFoes } from '../rules/visibility';
+import { flankBonusOnceHit } from '../ruleModules/flank';
 
 /** Plan de fuego del turno y orden en que juegan las unidades. */
 export interface FirePlan {
@@ -26,8 +28,8 @@ export interface FirePlan {
 type DamageTable = Map<number, Map<number, number>>;
 
 /** Puede disparar este turno y no tiene que irse a curar. */
-const isShooter = (s: GameState, unit: Unit): boolean =>
-  isOnMap(unit) && canStillFire(s, unit) && unitTypeOf(s, unit).attack !== null && !needsRepair(s, unit);
+const isShooter = (s: GameState, play: PlayCtx, unit: Unit): boolean =>
+  isOnMap(unit) && canStillFire(s, unit) && canFight(s, unit) && !needsRepair(play, unit);
 
 /** Dano esperado de cada tirador contra cada enemigo al que llega este turno (moviendose si puede). */
 function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable {
@@ -51,15 +53,21 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
  * bastaria con uno solo (eso ya lo hace cada unidad por su cuenta).
  */
 function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: DamageTable): number[] | null {
-  const damageTo = (shooterUid: number) => damage.get(shooterUid)!.get(foe.uid)!;
-  const candidates = [...free].filter((uid) => damage.get(uid)!.has(foe.uid)).sort((first, second) => damageTo(second) - damageTo(first));
+  // Lo que le haria cada tirador libre (solo los que le llegan).
+  const damageTo = (shooterUid: number): number | undefined => damage.get(shooterUid)?.get(foe.uid);
+  const candidates = [...free]
+    .flatMap((uid) => {
+      const dealt = damageTo(uid);
+      return dealt === undefined ? [] : [{ uid, dealt }];
+    })
+    .sort((first, second) => second.dealt - first.dealt);
   let total = 0;
   const squad: number[] = [];
-  for (const uid of candidates) {
+  for (const candidate of candidates) {
     if (total >= foe.life) break;
     // Despues del primero, el objetivo ya esta flanqueado.
-    total += damageTo(uid) * (squad.length ? 1 + s.settings.flankBonus : 1);
-    squad.push(uid);
+    total += candidate.dealt * (squad.length ? 1 + flankBonusOnceHit(s) : 1);
+    squad.push(candidate.uid);
   }
   return total >= foe.life && squad.length >= 2 ? squad : null;
 }
@@ -80,13 +88,14 @@ function playRank(s: GameState, unit: Unit, plan: Map<number, number>): number {
  * el orden de juego: primero las del plan (las de distancia antes), despues el resto en el orden de
  * siempre.
  */
-export function planFire(s: GameState, me: TeamId): FirePlan {
+export function planFire(s: GameState, play: PlayCtx): FirePlan {
+  const me = play.me;
   const plan = new Map<number, number>();
   const mine = teamUnits(s, me);
   const foes = visibleFoes(s, me);
   const damage = damageTable(
     s,
-    mine.filter((unit) => isShooter(s, unit)),
+    mine.filter((unit) => isShooter(s, play, unit)),
     foes,
   );
   const free = new Set(damage.keys());

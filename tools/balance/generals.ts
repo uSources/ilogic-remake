@@ -52,7 +52,7 @@ function play(
   const [first, second] = duelTeams(s);
   appointGeneral(s, first, firstGeneral === 'none' ? null : firstGeneral);
   appointGeneral(s, second, secondGeneral === 'none' ? null : secondGeneral);
-  const session = new GameSession(s, controllersFor(s, rng));
+  const session = new GameSession(s, controllersFor(s));
   session.subscribe((step) => {
     for (const event of step.events)
       if (event.kind === 'power') uses.set(`${event.general}.${event.power}`, (uses.get(`${event.general}.${event.power}`) ?? 0) + 1);

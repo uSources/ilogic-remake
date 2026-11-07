@@ -12,7 +12,7 @@ import { unloadTiles } from '../rules/transport';
 import { posOf } from '../geom';
 import { exactSquad } from '../squads/queries';
 import { isAlliedOwner } from '../teams';
-import type { GameAction, GameState, Pos, Squad, StandingOrderKind, TeamId, Unit } from '../model';
+import type { GameAction, GameState, Pos, Squad, TurnEndOrderKind, TeamId, Unit } from '../model';
 import { isValidAction } from './dispatch';
 import { groupMoveOrder, groupMoveStep } from './groupMove';
 
@@ -27,7 +27,7 @@ interface UnitMenuEntry {
 }
 
 /** Casillas en las que tendria sentido una orden de ese tipo: un edificio que no sea ya de la alianza, o donde esta. */
-function orderTargets(s: GameState, team: TeamId, kind: StandingOrderKind, unit: Unit): Pos[] {
+function orderTargets(s: GameState, team: TeamId, kind: TurnEndOrderKind, unit: Unit): Pos[] {
   if (kind !== 'capture') return [posOf(unit)];
   return s.buildings.filter((building) => !isAlliedOwner(s, building.owner, team)).map((building) => posOf(building));
 }
@@ -35,7 +35,7 @@ function orderTargets(s: GameState, team: TeamId, kind: StandingOrderKind, unit:
 const uidsOf = (units: readonly Unit[]): number[] => units.map((unit) => unit.uid);
 
 /** Darles una orden de ese tipo en `at`, o (sin casilla, se elige despues) en cualquiera en la que valdria. */
-function orderCandidates(s: GameState, team: TeamId, units: readonly Unit[], kind: StandingOrderKind, at: Pos | null): GameAction[] {
+function orderCandidates(s: GameState, team: TeamId, units: readonly Unit[], kind: TurnEndOrderKind, at: Pos | null): GameAction[] {
   const first = units[0];
   if (!first) return [];
   const targets = at ? [at] : orderTargets(s, team, kind, first);
@@ -65,7 +65,7 @@ export type SelectionOption =
 
 /** La opcion de menu de cada orden con destino (la misma en el de una unidad y en el de un grupo). */
 export const ORDER_OPTIONS = { attack: 'orderToAttack', capture: 'orderToCapture', defend: 'orderToDefend' } as const satisfies {
-  readonly [Kind in StandingOrderKind]: SelectionOption;
+  readonly [Kind in TurnEndOrderKind]: SelectionOption;
 };
 
 /** Las acciones con las que se cumpliria la opcion con estas unidades (se puede si alguna vale). */
@@ -80,7 +80,7 @@ const onExactSquad =
   };
 
 const orderOption =
-  (kind: StandingOrderKind): SelectionCandidates =>
+  (kind: TurnEndOrderKind): SelectionCandidates =>
   (s, team, units, at) =>
     orderCandidates(s, team, units, kind, at);
 

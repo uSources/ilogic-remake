@@ -1,10 +1,12 @@
 import { expect } from 'vitest';
+import type { MatchSeeds } from '@core/util/random';
 import { entryOf, type BuildingType, type TerrainType, type UnitType } from '@core/content';
 import { defaultContent } from '@core/content/default';
 import { settingsWith } from '@core/matchSettings';
 import { newGameState } from '@core/gameState';
 import { blankMap } from '@core/mapGrid';
 import type {
+  ActionPlan,
   ActionRejection,
   Building,
   Dice,
@@ -19,11 +21,12 @@ import type {
   Unit,
 } from '@core/model';
 import { aiController } from '@core/controllers';
+import { aiTurn, defaultAiProfile } from '@core/ai';
+import { playerView, seeing } from '@core/playerView';
 import { GameSession } from '@core/session';
-import { dispatch, isTurnBoundary } from '@core/actions';
+import { carryOut, dispatch, isTurnBoundary } from '@core/actions';
 import { serialize } from '@core/save';
 import { uncheckedAttack } from '@core/sandbox';
-import { seededRng } from '@core/util/random';
 import { endRound, isWinner, matchResult, roundReport, type RoundReport } from '@core/rules';
 import { teamIds, type TeamSetup } from '@core/teams';
 import { samePos } from '@core/geom';
@@ -73,7 +76,7 @@ export const endRoundReport = (s: GameState): RoundReport => roundReport(s, endR
 export const diceFrom = (rng: Rng): Dice => ({ roll: rng });
 
 /** Semilla de los dados de las partidas de prueba (`GameState.dice`). */
-export const BLANK_DICE_SEED = 1;
+export const BLANK_SEEDS: MatchSeeds = { dice: 1, decisions: 2 };
 
 /** Dinero de cada equipo en las partidas de prueba. */
 export const BLANK_FUNDS = 5000;
@@ -97,7 +100,7 @@ export function blankState(settingChanges: Partial<MatchSettings> = {}, teams: r
     content: defaultContent(),
     mode: 'skirmish',
     teams,
-    diceSeed: BLANK_DICE_SEED,
+    seeds: BLANK_SEEDS,
   });
   teams.forEach((_, team) => s.buildings.push({ type: hqId(), owner: team, ...blankHeadquarters(team), capture: null }));
   // La partida de prueba ya esta en el turno del primer equipo (sin nada que hacer al empezarlo).
@@ -146,16 +149,15 @@ export function playOneTurn(session: GameSession): void {
 
 /**
  * Juega `days` rondas IA contra IA de cada partida a la vez, turno a turno (un turno de cada una por
- * equipo), cada una con su azar de semilla `seed`: para ver que dos partidas en el mismo proceso no
- * se mezclan. Devuelve los sucesos de las acciones de cada una (sin empezar ni acabar los turnos).
+ * equipo), cada una con el azar de sus decisiones (el de la partida): para ver que dos partidas en el
+ * mismo proceso no se mezclan. Devuelve los sucesos de las acciones de cada una (sin empezar ni acabar los turnos).
  */
-export function playInterleaved(games: readonly GameState[], days: number, seed: number): GameEvent[][] {
+export function playInterleaved(games: readonly GameState[], days: number): GameEvent[][] {
   const events: GameEvent[][] = games.map(() => []);
   const sessions = games.map((s, i) => {
-    const rng = seededRng(seed);
     const session = new GameSession(
       s,
-      s.teams.map(() => aiController(rng)),
+      s.teams.map(() => aiController()),
     );
     session.subscribe((step) => {
       if (!isTurnBoundary(step.action)) events[i]!.push(...step.events);
@@ -185,4 +187,15 @@ export function resultFor(s: GameState, team: TeamId): 'playing' | 'won' | 'lost
   const result = matchResult(s);
   if (result.status !== 'decided') return result.status;
   return isWinner(result, team) ? 'won' : 'lost';
+}
+
+/** Cumple un plan del nucleo (la IA, las ordenes) mandando cada accion con `dispatch` por `team`: sus sucesos. */
+export function playPlan(s: GameState, team: TeamId, plan: ActionPlan<unknown>): GameEvent[] {
+  return carryOut(plan, (action) => dispatch(s, team, action)).events;
+}
+
+/** El turno de la IA del juego por `team`, con lo que sabe ese equipo (su vista, al dia tras cada accion). */
+export function aiPlan(s: GameState, team: TeamId, rng: Rng): ActionPlan {
+  const view = playerView(s, team);
+  return seeing(view, aiTurn(view, defaultAiProfile(s.content), rng));
 }

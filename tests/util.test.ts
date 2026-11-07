@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Grid } from '@core/util/grid';
 import { compareKeys, maxBy, minBy } from '@core/util/pick';
+import { pick, seededRng, weightedPick } from '@core/util/random';
 
 describe('rejillas', () => {
   it('lee y escribe por posicion', () => {
@@ -59,5 +60,29 @@ describe('elegir el mejor', () => {
   it('maxBy se queda con el primero si empatan', () => {
     expect(maxBy([1, 3, 3, 2], (value) => value)).toBe(3);
     expect(maxBy(['x', 'yy', 'zz'], (word) => word.length)).toBe('yy');
+  });
+});
+
+describe('elegir al azar (util/random.ts)', () => {
+  it('pick: uno cualquiera, y con la lista vacia ni tira', () => {
+    let draws = 0;
+    const counted = () => {
+      draws++;
+      return 0.99;
+    };
+    expect(pick(['a', 'b', 'c'], counted)).toBe('c');
+    expect(pick([], counted)).toBeUndefined();
+    expect(draws).toBe(1);
+  });
+
+  it('weightedPick: proporcional al peso (lo que no pesa no sale), y la misma semilla da lo mismo', () => {
+    const rng = seededRng(7);
+    const picks = Array.from({ length: 200 }, () =>
+      weightedPick(['nada', 'poco', 'mucho'], (item) => ({ nada: 0, poco: 1, mucho: 9 })[item] ?? 0, rng),
+    );
+    expect(picks).not.toContain('nada');
+    expect(picks.filter((item) => item === 'mucho').length).toBeGreaterThan(picks.filter((item) => item === 'poco').length * 3);
+    expect(weightedPick([], () => 1, rng)).toBeUndefined();
+    expect(weightedPick(['x', 'y'], () => 1, seededRng(3))).toBe(weightedPick(['x', 'y'], () => 1, seededRng(3)));
   });
 });

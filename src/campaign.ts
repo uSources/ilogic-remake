@@ -1,6 +1,7 @@
 /**
  * Campaña: progreso guardado, textos de objetivos y consejos del tutorial.
  */
+import { buildingsOf } from './core/rules';
 import { defaultContent } from './core/content/default';
 import { MISSIONS, type MissionDef } from './core/missions';
 import { measureObjective, missionGoal, type ObjectiveKind } from './core/objectives';
@@ -146,7 +147,7 @@ export interface TutorialStep {
 }
 
 /** Cuantos edificios tiene un equipo. */
-export const ownedBuildingCount = (s: GameState, team: TeamId) => s.buildings.filter((building) => building.owner === team).length;
+export const ownedBuildingCount = (s: GameState, team: TeamId) => buildingsOf(s, team).length;
 
 /** Alguna unidad del jugador esta sobre un edificio que no es suyo (puede capturarlo). */
 const isOnCapturable = ({ s, team }: TutorialContext) =>

@@ -116,7 +116,7 @@ function checkGame(saved: SavedGame, content: GameContent): CheckedGame | { ok: 
   const { map, teams, units, buildings } = saved;
   if (!isValidMap(map, content)) return fail('badMap');
   if (!isEntryId(content.themes, saved.theme)) return fail('badTheme');
-  if (!isRandomState(saved.dice)) return fail('badDice');
+  if (!isRandomState(saved.dice) || !isRandomState(saved.decisionSeed)) return fail('badDice');
   if (!isValidTeamList(teams, content)) return fail('badTeams');
   if (!isGameModeId(saved.mode)) return fail('badMode');
   const frame: SaveFrame = { content, board: boardOf(map), teamCount: teams.length };

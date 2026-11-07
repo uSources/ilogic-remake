@@ -7,7 +7,14 @@ export type { ControllerKind, TeamId, TeamState } from './team';
 export type { DefeatReason, TeamFall } from './defeat';
 export type { Unit, UnitTurnState } from './unit';
 export type { Building, ControlPoint } from './building';
-export type { StandingOrder, StandingOrderKind } from './standingOrder';
+export type {
+  StandingOrder,
+  StandingOrderKind,
+  StandingOrderKinds,
+  StandingOrderMoment,
+  TurnEndOrder,
+  TurnEndOrderKind,
+} from './standingOrder';
 export type { Squad } from './squad';
 export type { UndoableMove } from './undo';
 export type { EndReason, GameModeId, MatchResult, VictoryRuleId } from './match';
@@ -30,12 +37,12 @@ export type {
   GeneralCharge,
   Healing,
   SquadChange,
-  TravelEnd,
+  StandingOrderEnd,
   Interruption,
   InterruptionKind,
   InterruptionKinds,
 } from './events';
-export type { ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
+export type { ActionPlan, ActionRejection, ActionResult, GameAction, GameActionKind, GameActionOf } from './actions';
 export type { DamageModelId, MatchSettings } from './settings';
 export type { TeamStats } from './stats';
 export type { GameSetup, GameState, MatchContent, MatchRuleset, SavedGameState } from './state';

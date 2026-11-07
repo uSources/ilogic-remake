@@ -17,6 +17,11 @@ export { squadUnits, squadById, exactSquad } from './squads/queries';
 export { SQUAD_NAMES, SQUAD_NAME_MAX, SQUAD_KEYS, cleanSquadName, freeKey, squadByKey, squadsOfTeam } from './squads/naming';
 export {
   effectiveStandingOrder,
+  gotoDestination,
+  standingOrderAt,
+  STANDING_ORDER_TYPES,
+  momentOf,
+  turnEndOrderOf,
   isDetached,
   standingOrderBlock,
   type StandingOrderBlock,

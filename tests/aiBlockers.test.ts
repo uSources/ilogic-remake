@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { blockersFor, playCtx } from '@core/autopilot/context';
-import { dispatch } from '@core/actions';
+import { playerView } from '@core/playerView';
+import { autopilotProfileOf } from '@core/autopilot/defaultProfile';
+import { defaultContent } from '@core/content/default';
 import { newUnit } from '@core/rules';
 import { blankState, unitTypeNamed } from './helpers';
 
@@ -14,20 +16,21 @@ function scene(settings: { passAllies: boolean; ambush: boolean }) {
   const units = [newUnit(s, TANK, 0, { x: 6, y: 10 }), newUnit(s, SOLDIER, 1, { x: 5, y: 11 }), newUnit(s, SOLDIER, 1, { x: 18, y: 18 })];
   /** Si cortan el paso: [aliado, enemigo a la vista, enemigo escondido]. */
   const blocked = (group: boolean) => {
-    const play = Object.assign(playCtx(0, dispatch), { group });
-    const blocks = blockersFor(s, play, mover);
+    const play = playCtx(0, autopilotProfileOf(defaultContent()), { paths: group ? 'army' : 'alone' });
+    // Mide quien decide por el equipo 0: sobre su vista.
+    const blocks = blockersFor(playerView(s, 0).state, play, mover);
     return units.map((unit) => blocks(unit));
   };
   return { blocked };
 }
 
 describe('lo que corta el paso a la IA al medir (blockersFor)', () => {
-  it('sola, o si no puede atravesar a los suyos: todas las unidades', () => {
-    expect(scene({ passAllies: true, ambush: true }).blocked(false)).toEqual([true, true, true]);
-    expect(scene({ passAllies: false, ambush: false }).blocked(true)).toEqual([true, true, true]);
+  it('sola, o si no puede atravesar a los suyos: todas las que conoce (el escondido no esta en su vista)', () => {
+    expect(scene({ passAllies: true, ambush: true }).blocked(false)).toEqual([true, true, false]);
+    expect(scene({ passAllies: false, ambush: false }).blocked(true)).toEqual([true, true, false]);
   });
 
-  it('en grupo, si atraviesa a los suyos: las reglas de paso y solo lo que ve (PLANS_WITH_WHAT_IT_SEES), haya emboscadas o no', () => {
+  it('en grupo, si atraviesa a los suyos: las reglas de paso y solo lo que ve, haya emboscadas o no', () => {
     expect(scene({ passAllies: true, ambush: true }).blocked(true)).toEqual([false, true, false]);
     expect(scene({ passAllies: true, ambush: false }).blocked(true)).toEqual([false, true, false]);
   });

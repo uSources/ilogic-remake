@@ -28,7 +28,7 @@ export interface CarryHost {
   updateTrail(tile: Pos): void;
   intentAt(tile: Pos): Intent;
   refresh(): void;
-  /** Viaje de varios turnos hasta `goal` (travelTo). */
+  /** «Ir alli» hasta `goal` (la orden de varios turnos 'goto'). */
   giveTravel(unit: Unit, goal: Pos): Promise<void>;
   /** Confirmar el movimiento en una casilla (ver UnitMoves.commit). */
   commit(tile: Pos, options: { drop?: boolean; wait?: boolean }): Promise<void>;

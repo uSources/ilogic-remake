@@ -1,6 +1,6 @@
 import { usePower, blankState, unitTypeNamed, act } from './helpers';
 import { describe, expect, it } from 'vitest';
-import { choosePower } from '@core/aiGenerals';
+import { choosePower } from '@core/ai';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { generalHitFactor, appointGeneral } from '@core/generals';
@@ -67,9 +67,9 @@ describe('Roca: reparar', () => {
     appointGeneral(s, 1, 'Roca');
     teamState(s, 1).general!.charge = generalDefinition('Roca').powers[0]!.cost;
     const tanks = [3, 5, 7, 9, 11].map((x) => newUnit(s, unitType('Tank'), 1, { x: x, y: 3 }));
-    expect(choosePower(s, 1)).toBeNull(); // todos enteros: no vale nada
+    expect(choosePower(s, 1, AI)).toBeNull(); // todos enteros: no vale nada
     for (const tank of tanks) tank.life = 40;
-    const choice = choosePower(s, 1)!;
+    const choice = choosePower(s, 1, AI)!;
     expect(choice.power).toBe('repair');
     expect(choice.value).toBeGreaterThanOrEqual(AI.GENERALMINVALUE);
   });
@@ -100,7 +100,7 @@ describe('Ambar: suministros', () => {
     appointGeneral(s, 1, 'Ambar');
     teamState(s, 1).general!.charge = 4;
     newUnit(s, unitType('Soldier'), 1, { x: 10, y: 10 });
-    const choice = choosePower(s, 1)!;
+    const choice = choosePower(s, 1, AI)!;
     expect(choice.power).toBe('supplies');
     expect(choice.value).toBe(
       (generalDefinition('Ambar').powers.find((power) => power.id === 'supplies')!.effect as { amount: number }).amount,

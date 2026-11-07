@@ -5,14 +5,16 @@
  * al terminar el turno, en orden. La partida se juega con la misma sesion que la pantalla (GameSession):
  * lo que pasa solo al acabar y empezar cada turno, igual.
  */
-import { aiTurn } from '@core/ai';
+import { aiTurn, defaultAiProfile } from '@core/ai';
+import { carryOut } from '@core/actions';
+import { playerView, seeing } from '@core/playerView';
 import { playerTeam, shownTeamNumber, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createMatch, loadGame } from '@core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '@core/match';
 import { posKey } from '@core/geom';
-import { aiSeedFor, seededRng } from '@core/util/random';
+import { seededRng } from '@core/util/random';
 import { mapGrid } from '@core/mapGrid';
 import { generalOf } from '@core/generals';
 import { missionById } from '@core/missions';
@@ -31,11 +33,12 @@ import {
   unitById,
   visibility,
   canStillAct,
+  buildingsOf,
 } from '@core/rules';
 import { serialize } from '@core/save';
 import { screenControllers } from '@core/controllers';
 import { GameSession, runMatch, type ActedStep } from '@core/session';
-import type { DefeatReason, GameAction, GameEvent, GameState, InterruptionKind, Pos, Rng, TeamId, Unit } from '@core/model';
+import type { DefeatReason, GameAction, GameEvent, GameState, InterruptionKind, Pos, TeamId, Unit } from '@core/model';
 
 /** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
 const TERRAIN_CHAR: Readonly<Record<string, string>> = {
@@ -76,7 +79,6 @@ export interface TextMatchOptions {
 
 export class TextMatch {
   readonly s: GameState;
-  private readonly rng: Rng;
   /** La partida en juego: los equipos de personas los juegan las ordenes; los demas, la IA. */
   private readonly session: GameSession;
   /** El equipo que se juega con las ordenes: la persona a la que le toca (con varias, por turnos). */
@@ -93,10 +95,9 @@ export class TextMatch {
 
   constructor(options: TextMatchOptions = {}) {
     const seed = options.seed ?? 1;
-    this.rng = seededRng(aiSeedFor(seed));
     this.s = options.state ? loadedGame(options.state) : createMatch(matchConfigOf(options, seed));
     this.me = playerTeam(this.s);
-    this.session = new GameSession(this.s, screenControllers(this.s, this.rng));
+    this.session = new GameSession(this.s, screenControllers(this.s));
     this.session.subscribe((step) => this.note(step));
     this.advance();
     this.told = [];
@@ -346,7 +347,14 @@ export class TextMatch {
 
   /** La IA juega tu turno, por la sesion (sus acciones quedan apuntadas como las tuyas): lo que ha hecho. */
   private playMyTurnWithAi(): string[] {
-    return describeAll(this.s, aiTurn(this.s, this.rng, this.me, this.session.dispatcher), 'tu IA: ');
+    return describeAll(this.s, this.aiPlaysMyTurn(), 'tu IA: ');
+  }
+
+  /** Los sucesos de la IA jugando tu turno: propone y la sesion manda, como si fueras tu. */
+  private aiPlaysMyTurn(): GameEvent[] {
+    const view = playerView(this.s, this.me);
+    const plan = seeing(view, aiTurn(view, defaultAiProfile(this.s.content), seededRng(view.turnSeed)));
+    return carryOut(plan, (action) => this.session.act(this.me, action)).events;
   }
 
   /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */
@@ -360,7 +368,7 @@ export class TextMatch {
   status(): string {
     const s = this.s;
     const me = this.me;
-    const own = (team: TeamId) => s.buildings.filter((building) => building.owner === team).length;
+    const own = (team: TeamId) => buildingsOf(s, team).length;
     const unitsOf = (team: TeamId) => s.units.filter((unit) => unit.team === team).length;
     const others = (count: (team: TeamId) => number) => this.others.map(count).join('/');
     const general = teamState(s, me).general;
@@ -402,7 +410,7 @@ function checkedGeneral(id: string | undefined): string | null {
 function matchConfigOf(options: TextMatchOptions, seed: number): MatchConfig {
   if (options.mission) {
     if (!missionById(options.mission)) throw new Error(`No existe la mision "${options.mission}"`);
-    return { mode: 'mission', mission: options.mission, diceSeed: seed };
+    return { mode: 'mission', mission: options.mission, seed };
   }
   return skirmishConfig({
     seed,

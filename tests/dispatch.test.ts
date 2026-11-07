@@ -17,9 +17,13 @@ import { manhattan } from '@core/geom';
 import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
-import type { GameAction, GameActionKind } from '@core/model';
+import { gotoDestination, momentOf, turnEndOrderOf } from '@core/squads';
+import type { GameAction, GameActionKind, Pos } from '@core/model';
 import { act, BLANK_SIZE, blankState, expectRejected, giveTurn, unitTypeNamed, placedBuildings, someUnits } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
+
+/** Dar la orden de ir alli ('goto') a una unidad. */
+const goTo = (uid: number, at: Pos): GameAction => ({ kind: 'giveStandingOrder', uids: [uid], order: { kind: 'goto', at } });
 
 const SOLDIER = unitTypeNamed('Soldier');
 const TANK = unitTypeNamed('Tank');
@@ -106,28 +110,28 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     expect(canCaptureAt(s, tank, { x: 9, y: 9 })).toBe(false);
   });
 
-  it('un viaje avanza con travelStep: se acerca y acaba si ya llega este turno', () => {
+  it('ir alli avanza con gotoStep: se acerca y acaba si ya llega este turno', () => {
     const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
-    expectRejected(s, 0, { kind: 'travelStep', uid: soldier.uid }, 'noTravel');
-    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
-    const [step] = act(s, 0, { kind: 'travelStep', uid: soldier.uid });
+    expectRejected(s, 0, { kind: 'gotoStep', uid: soldier.uid }, 'noStandingOrder');
+    act(s, 0, goTo(soldier.uid, { x: 2, y: 20 }));
+    const [step] = act(s, 0, { kind: 'gotoStep', uid: soldier.uid });
     expect(step?.kind).toBe('move');
     expect(soldier.y).toBeGreaterThan(2);
-    expect(soldier.travelTo).toEqual({ x: 2, y: 20 });
+    expect(gotoDestination(soldier)).toEqual({ x: 2, y: 20 });
     // Ya movida: este turno no puede dar otro paso.
-    expectRejected(s, 0, { kind: 'travelStep', uid: soldier.uid }, 'unreachable');
+    expectRejected(s, 0, { kind: 'gotoStep', uid: soldier.uid }, 'unreachable');
     // Si ya llega este turno, el viaje acaba sin moverla: el ultimo trozo lo hace quien juega.
     endRound(s);
     soldier.y = 19;
-    expect(act(s, 0, { kind: 'travelStep', uid: soldier.uid })).toEqual([
-      { kind: 'travel', actor: 0, uid: soldier.uid, to: null, end: 'withinReach' },
+    expect(act(s, 0, { kind: 'gotoStep', uid: soldier.uid })).toEqual([
+      { kind: 'standingOrderDone', actor: 0, uid: soldier.uid, end: 'withinReach' },
     ]);
-    expect([soldier.y, soldier.travelTo]).toEqual([19, undefined]);
+    expect([soldier.y, gotoDestination(soldier)]).toEqual([19, undefined]);
     // Y si ya esta en el destino al empezar el turno, acaba sin mas.
-    soldier.travelTo = { x: 2, y: 19 };
-    expect(act(s, 0, { kind: 'travelStep', uid: soldier.uid })).toEqual([
-      { kind: 'travel', actor: 0, uid: soldier.uid, to: null, end: 'arrived' },
+    soldier.standingOrder = { kind: 'goto', at: { x: 2, y: 19 } };
+    expect(act(s, 0, { kind: 'gotoStep', uid: soldier.uid })).toEqual([
+      { kind: 'standingOrderDone', actor: 0, uid: soldier.uid, end: 'arrived' },
     ]);
   });
 
@@ -144,28 +148,40 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     expect(act(s, 0, { kind: 'capture', uid: soldier.uid }).map((event) => event.kind)).toEqual(['capture']);
   });
 
-  it('un viaje y una orden permanente se quitan el uno al otro, cada uno con su suceso', () => {
+  it('ir alli es una orden mas: la ultima que se da manda, con su suceso', () => {
     const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     const order = { kind: 'defend', at: { x: 2, y: 4 } } as const;
     act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order });
-    expect(act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } })).toEqual([
-      { kind: 'standingOrder', actor: 0, uids: [soldier.uid], order: null },
-      { kind: 'travel', actor: 0, uid: soldier.uid, to: { x: 2, y: 20 } },
+    expect(act(s, 0, goTo(soldier.uid, { x: 2, y: 20 }))).toEqual([
+      { kind: 'standingOrder', actor: 0, uids: [soldier.uid], order: { kind: 'goto', at: { x: 2, y: 20 } } },
     ]);
-    expect(soldier.standingOrder).toBeUndefined();
+    expect(soldier.standingOrder).toEqual({ kind: 'goto', at: { x: 2, y: 20 } });
     expect(act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order })).toEqual([
-      { kind: 'travel', actor: 0, uid: soldier.uid, to: null, end: 'ordered' },
       { kind: 'standingOrder', actor: 0, uids: [soldier.uid], order },
     ]);
-    expect(soldier.travelTo).toBeUndefined();
+    expect(gotoDestination(soldier)).toBeUndefined();
+  });
+
+  it('ir alli es de cada unidad, aunque sea una escuadra entera, y se cumple al empezar el turno', () => {
+    const s = blankState(PLAIN_SETTINGS);
+    const squad = [newUnit(s, SOLDIER, 0, { x: 2, y: 2 }), newUnit(s, SOLDIER, 0, { x: 3, y: 2 })];
+    act(s, 0, { kind: 'formSquad', uids: squad.map((unit) => unit.uid) });
+    act(s, 0, { kind: 'giveStandingOrder', uids: squad.map((unit) => unit.uid), order: { kind: 'goto', at: { x: 2, y: 25 } } });
+    expect(s.squads?.[0]?.standingOrder).toBeUndefined();
+    expect(squad.map((unit) => gotoDestination(unit))).toEqual([
+      { x: 2, y: 25 },
+      { x: 2, y: 25 },
+    ]);
+    expect(momentOf('goto')).toBe('turnStart');
+    expect(turnEndOrderOf(s, squad[0]!)).toBeUndefined();
   });
 
   it('el paso de un viaje no se deshace (seria un movimiento gratis)', () => {
     const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
-    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
-    act(s, 0, { kind: 'travelStep', uid: soldier.uid });
+    act(s, 0, goTo(soldier.uid, { x: 2, y: 20 }));
+    act(s, 0, { kind: 'gotoStep', uid: soldier.uid });
     expect(s.undoableMoves).toBeUndefined();
     expectRejected(s, 0, { kind: 'undoMove', uid: soldier.uid }, 'nothingToUndo');
   });
@@ -177,11 +193,11 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     s.map[6]![5] = 'Woods';
     const tank = newUnit(s, TANK, 0, { x: 2, y: 5 });
     newUnit(s, SOLDIER, 1, { x: 6, y: 5 });
-    act(s, 0, { kind: 'travel', uid: tank.uid, to: { x: 25, y: 5 } });
-    const events = act(s, 0, { kind: 'travelStep', uid: tank.uid });
+    act(s, 0, goTo(tank.uid, { x: 25, y: 5 }));
+    const events = act(s, 0, { kind: 'gotoStep', uid: tank.uid });
     expect(events[0]).toMatchObject({ kind: 'move', interruption: { kind: 'ambush', at: { x: 6, y: 5 } } });
-    expect(events[1]).toEqual({ kind: 'travel', actor: 0, uid: tank.uid, to: null, end: 'ambush' });
-    expect(tank.travelTo).toBeUndefined();
+    expect(events[1]).toEqual({ kind: 'standingOrderDone', actor: 0, uid: tank.uid, end: 'ambush' });
+    expect(gotoDestination(tank)).toBeUndefined();
   });
 
   it('a mano (mover, subir, unirse, atacar sin moverse) se acaba el viaje', () => {
@@ -190,31 +206,31 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const transport = newUnit(s, TRANSPORT, 0, { x: 5, y: 6 });
     const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
     const enemy = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
-    const cancelled = (uid: number) => ({ kind: 'travel', actor: 0, uid, to: null, end: 'cancelled' });
-    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 5, y: 25 } });
+    const cancelled = (uid: number) => ({ kind: 'standingOrder', actor: 0, uids: [uid], order: null });
+    act(s, 0, goTo(soldier.uid, { x: 5, y: 25 }));
     expect(act(s, 0, { kind: 'load', uid: soldier.uid, into: transport.uid })[0]).toEqual(cancelled(soldier.uid));
-    expect(soldier.travelTo).toBeUndefined();
-    act(s, 0, { kind: 'travel', uid: tank.uid, to: { x: 25, y: 10 } });
+    expect(gotoDestination(soldier)).toBeUndefined();
+    act(s, 0, goTo(tank.uid, { x: 25, y: 10 }));
     expect(act(s, 0, { kind: 'attack', uid: tank.uid, target: enemy.uid })[0]).toEqual(cancelled(tank.uid));
-    expect(tank.travelTo).toBeUndefined();
+    expect(gotoDestination(tank)).toBeUndefined();
     const other = newUnit(s, SOLDIER, 0, { x: 15, y: 15 });
-    act(s, 0, { kind: 'travel', uid: other.uid, to: { x: 15, y: 30 } });
+    act(s, 0, goTo(other.uid, { x: 15, y: 30 }));
     expect(act(s, 0, { kind: 'move', uid: other.uid, to: { x: 15, y: 17 } })[0]).toEqual(cancelled(other.uid));
     const [first, second] = [newUnit(s, SOLDIER, 0, { x: 20, y: 5 }), newUnit(s, SOLDIER, 0, { x: 21, y: 5 })];
     second.life = 50;
-    act(s, 0, { kind: 'travel', uid: first.uid, to: { x: 20, y: 25 } });
+    act(s, 0, goTo(first.uid, { x: 20, y: 25 }));
     expect(act(s, 0, { kind: 'merge', uid: first.uid, into: second.uid })[0]).toEqual(cancelled(first.uid));
   });
 
   it('atacar despues del paso del viaje no lo acaba (ya se ha movido solo); sin moverse, si', () => {
     const s = blankState(PLAIN_SETTINGS);
     const tank = newUnit(s, TANK, 0, { x: 2, y: 10 });
-    act(s, 0, { kind: 'travel', uid: tank.uid, to: { x: 30, y: 10 } });
-    act(s, 0, { kind: 'travelStep', uid: tank.uid });
+    act(s, 0, goTo(tank.uid, { x: 30, y: 10 }));
+    act(s, 0, { kind: 'gotoStep', uid: tank.uid });
     const enemy = newUnit(s, SOLDIER, 1, { x: tank.x + 1, y: tank.y });
     const events = act(s, 0, { kind: 'attack', uid: tank.uid, target: enemy.uid });
-    expect(events.some((event) => event.kind === 'travel')).toBe(false);
-    expect(tank.travelTo).toEqual({ x: 30, y: 10 });
+    expect(events.some((event) => event.kind === 'standingOrder')).toBe(false);
+    expect(gotoDestination(tank)).toEqual({ x: 30, y: 10 });
   });
 
   it('un viaje: solo desde el mapa, a otra casilla que pueda pisar y hacia la que pueda ir ya', () => {
@@ -222,15 +238,15 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     const transport = newUnit(s, TRANSPORT, 0, { x: 6, y: 5 });
     s.map[20]![20] = 'DWater';
-    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 20, y: 20 } }, 'unreachable');
-    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 5, y: 5 } }, 'withinReach');
-    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 5, y: 6 } }, 'withinReach');
-    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 99, y: 0 } }, 'offBoard');
-    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 20, y: 21 } });
+    expectRejected(s, 0, goTo(soldier.uid, { x: 20, y: 20 }), 'unreachable');
+    expectRejected(s, 0, goTo(soldier.uid, { x: 5, y: 5 }), 'withinReach');
+    expectRejected(s, 0, goTo(soldier.uid, { x: 5, y: 6 }), 'withinReach');
+    expectRejected(s, 0, goTo(soldier.uid, { x: 99, y: 0 }), 'offBoard');
+    act(s, 0, goTo(soldier.uid, { x: 20, y: 21 }));
     act(s, 0, { kind: 'load', uid: soldier.uid, into: transport.uid });
-    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 20, y: 21 } }, 'transported');
+    expectRejected(s, 0, goTo(soldier.uid, { x: 20, y: 21 }), 'transported');
     // Ya no viaja (subir lo acabo): no hay viaje que quitar.
-    expectRejected(s, 0, { kind: 'travel', uid: soldier.uid, to: null }, 'noTravel');
+    expectRejected(s, 0, { kind: 'cancelStandingOrder', uids: [soldier.uid] }, 'noStandingOrder');
   });
 
   it('una unidad que no lucha no ataca (noFighter), aunque le quede turno', () => {
@@ -334,7 +350,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     ];
     for (const action of broken) expectRejected(s, 0, action as GameAction, 'badAction');
     expect(isGameAction({ kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 } })).toBe(true);
-    expect(isGameAction({ kind: 'travel', uid: soldier.uid, to: null })).toBe(true);
+    expect(isGameAction({ kind: 'cancelStandingOrder', uids: [soldier.uid] })).toBe(true);
   });
 
   it('isValidAction pregunta lo mismo sin cambiar nada', () => {
@@ -399,32 +415,32 @@ describe('deshacer el ultimo movimiento', () => {
   it('deshacer un movimiento que acabo un viaje lo devuelve', () => {
     const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
-    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, goTo(soldier.uid, { x: 2, y: 20 }));
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
-    expect(soldier.travelTo).toBeUndefined();
+    expect(gotoDestination(soldier)).toBeUndefined();
     const events = act(s, 0, { kind: 'undoMove', uid: soldier.uid });
-    expect(events.at(-1)).toEqual({ kind: 'travel', actor: 0, uid: soldier.uid, to: { x: 2, y: 20 } });
-    expect(soldier.travelTo).toEqual({ x: 2, y: 20 });
+    expect(events.at(-1)).toEqual({ kind: 'standingOrder', actor: 0, uids: [soldier.uid], order: { kind: 'goto', at: { x: 2, y: 20 } } });
+    expect(gotoDestination(soldier)).toEqual({ x: 2, y: 20 });
   });
 
   it('el viaje que corto un movimiento se guarda con el: al cargar, deshacer lo devuelve', () => {
     const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
-    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, goTo(soldier.uid, { x: 2, y: 20 }));
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
     const loaded = loadGame(serialize(s))!;
     expect(loaded.undoableMoves).toEqual(s.undoableMoves);
     act(loaded, 0, { kind: 'undoMove', uid: soldier.uid });
-    expect(unitById(loaded, soldier.uid)!.travelTo).toEqual({ x: 2, y: 20 });
+    expect(gotoDestination(unitById(loaded, soldier.uid)!)).toEqual({ x: 2, y: 20 });
   });
 
   it('un viaje cortado fuera del mapa en un guardado roto: se pierde lo que se podia deshacer, no la partida', () => {
     const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
-    act(s, 0, { kind: 'travel', uid: soldier.uid, to: { x: 2, y: 20 } });
+    act(s, 0, goTo(soldier.uid, { x: 2, y: 20 }));
     act(s, 0, { kind: 'move', uid: soldier.uid, to: { x: 3, y: 2 } });
-    const saved = JSON.parse(serialize(s)) as { undoableMoves: { travelTo: unknown }[] };
-    saved.undoableMoves[0]!.travelTo = { x: BLANK_SIZE + 5, y: 2 };
+    const saved = JSON.parse(serialize(s)) as { undoableMoves: { goto: unknown }[] };
+    saved.undoableMoves[0]!.goto = { x: BLANK_SIZE + 5, y: 2 };
     const loaded = loadGame(JSON.stringify(saved))!;
     expect(loaded).not.toBeNull();
     expect(loaded.undoableMoves).toBeUndefined();
@@ -678,7 +694,6 @@ describe('ventana de deshacer y menus: piezas del nucleo', () => {
         'move',
         'undoMove',
         'wait',
-        'travel',
         'giveStandingOrder',
         'cancelStandingOrder',
         'formSquad',

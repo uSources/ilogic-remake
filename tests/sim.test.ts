@@ -41,7 +41,7 @@ describe('partidas simuladas', () => {
     for (let seed = 1; seed <= 20; seed++) {
       const rng = seededRng(seed * 104729);
       const s = createMatch(skirmishConfig({ seed, teams: duel('human', 'ai') }), rng);
-      runMatch(new GameSession(s, [passiveController(), aiController(rng)]), { until: (state) => state.day > 60 });
+      runMatch(new GameSession(s, [passiveController(), aiController()]), { until: (state) => state.day > 60 });
       if (resultFor(s, 0) === 'lost') {
         won++;
         days.push(s.day);

@@ -27,13 +27,11 @@ export type GameAction =
   | { kind: 'buy'; at: Pos; unitType: string }
   /** Un poder del general del equipo; `target`, la casilla de los de area. */
   | { kind: 'usePower'; power: string; target: Pos | null }
-  /** Viaje de varios turnos hacia `to` (null: dejar de viajar). */
-  | { kind: 'travel'; uid: number; to: Pos | null }
   /**
-   * El paso de este turno del viaje de la unidad: hacia su destino lo que pueda; si ya llega este
-   * turno, el viaje acaba sin moverla (el ultimo trozo lo hace quien juega).
+   * El paso de este turno de la orden de ir alli ('goto') de la unidad: hacia su destino lo que pueda;
+   * si ya llega este turno, la orden acaba sin moverla (el ultimo trozo lo hace quien juega).
    */
-  | { kind: 'travelStep'; uid: number }
+  | { kind: 'gotoStep'; uid: number }
   | { kind: 'giveStandingOrder'; uids: number[]; order: StandingOrder }
   | { kind: 'cancelStandingOrder'; uids: number[] }
   /** La unidad ha cumplido la orden que seguia (la decide quien la cumple: ver autopilot/standingOrders.ts). */
@@ -92,9 +90,7 @@ export type ActionRejection =
   | 'unreachable'
   /** Deshacer: no es su ultimo movimiento, o ya ha hecho algo despues. */
   | 'nothingToUndo'
-  /** Un paso de viaje, o quitar el viaje, a una unidad que no viaja. */
-  | 'noTravel'
-  /** Un viaje a donde ya llega este turno (o donde ya esta): para eso se mueve. */
+  /** Ir alli a donde ya llega este turno (o donde ya esta): para eso se mueve. */
   | 'withinReach'
   /** Deshacer: el movimiento descubrio enemigos (con niebla, volver atras seria mirar gratis). */
   | 'revealed'
@@ -134,3 +130,12 @@ export type ActionRejection =
 
 /** Lo que ha pasado al mandar una accion: sus sucesos, o por que no valia. */
 export type ActionResult = { ok: true; events: GameEvent[] } | { ok: false; reason: ActionRejection };
+
+/**
+ * Lo que decide quien juega un equipo (la IA, las ordenes permanentes), paso a paso: propone cada
+ * accion (`yield`) y recibe lo que ha dicho la partida de ella; no la manda el. Quien lo cumple (la
+ * sesion, el paso de fin de turno, la prevision sobre una copia) manda cada accion por su via y le
+ * contesta con su resultado (`carryOut`, actions/plan.ts). Devuelve lo que diga el plan (si ha usado
+ * la unidad, que ordenes se han cumplido...).
+ */
+export type ActionPlan<Result = void> = Generator<GameAction, Result, ActionResult>;

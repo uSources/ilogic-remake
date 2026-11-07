@@ -29,7 +29,7 @@ function loadedBy(entry: string): Set<string> {
   return new Set([...seen].map((file) => relative(CORE, file)));
 }
 
-const isAi = (file: string) => /^(ai\/|ai\.ts$|aiGenerals\.ts$|controllers\/|controllers\.ts$)/.test(file);
+const isAi = (file: string) => /^(ai\/|ai\.ts$|controllers\/|controllers\.ts$)/.test(file);
 
 /** Una partida se juega, se repite o se lleva en un servidor sin cargar la IA (docs/ARQUITECTURA.md, capas). */
 describe('capas: la IA es un jugador mas', () => {
@@ -40,5 +40,18 @@ describe('capas: la IA es un jugador mas', () => {
   it('core/controllers.ts si la carga (para comprobar que la prueba mira de verdad)', () => {
     expect([...loadedBy('controllers.ts')].some(isAi)).toBe(true);
     expect(loadedBy('controllers.ts').has('ai.ts')).toBe(true);
+  });
+});
+
+const sendsActions = (file: string) => /^(actions\/dispatch\.ts|session\.ts|session\/)/.test(file);
+
+/** I1: quien decide solo propone; ni la IA ni autopilot/ cargan dispatch ni la sesion (ni de lejos). */
+describe('capas: quien decide no manda', () => {
+  it.each(['ai.ts', 'autopilot.ts', 'playerView.ts'])('%s no carga dispatch ni la sesion', (entry) => {
+    expect([...loadedBy(entry)].filter(sendsActions)).toEqual([]);
+  });
+
+  it('core/controllers.ts si (es quien la hace jugar por la sesion)', () => {
+    expect([...loadedBy('controllers.ts')].some(sendsActions)).toBe(true);
   });
 });

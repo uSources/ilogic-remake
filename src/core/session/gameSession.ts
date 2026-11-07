@@ -15,6 +15,7 @@ import { takesTurn } from '../rules/turnOrder';
 import { matchResult } from '../rules/victory';
 import { gameModeOf } from '../modes';
 import { teamIds } from '../teams';
+import { playerView, type PlayerView } from '../playerView';
 import type { ActionDispatcher, ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamFall, TeamId } from '../model';
 import type { Controller, TurnPlan, TurnStep } from './controller';
 import { isOffTurnAction, type LoggedAction } from './log';
@@ -33,9 +34,11 @@ export type SessionStep = ActedStep | { kind: 'awaitingInput'; team: TeamId } | 
 /** Quien escucha lo que pasa (cada accion hecha, con sus sucesos, en orden). */
 export type SessionListener = (step: ActedStep) => void;
 
-/** El turno en curso de un controlador: su plan y lo que hay que contestarle (el resultado de lo que propuso). */
+/** El turno en curso de un controlador: la vista de su equipo, su plan y lo que hay que contestarle (el resultado de lo que propuso). */
 interface TurnInPlay {
   team: TeamId;
+  /** Lo que sabe su equipo: la sesion la pone al dia tras cada accion hecha (de quien sea). */
+  view: PlayerView;
   plan: TurnPlan;
   reply: ActionResult | undefined;
 }
@@ -203,7 +206,10 @@ export class GameSession {
 
   /** El turno en curso del controlador del equipo (lo empieza si aun no lo tenia). */
   private turnOf(team: TeamId): TurnInPlay {
-    if (this.current?.team !== team) this.current = { team, plan: this.controllerOf(team).playTurn(this.state, team), reply: undefined };
+    if (this.current?.team !== team) {
+      const view = playerView(this.state, team);
+      this.current = { team, view, plan: this.controllerOf(team).playTurn(view), reply: undefined };
+    }
     return this.current;
   }
 
@@ -223,9 +229,6 @@ export class GameSession {
         this.turnOf(team).reply = result;
         return result.ok ? this.record(team, step.action, result.events) : null;
       }
-      case 'applied':
-        // Ya hecha y comprobada por selfDispatched (lo dice su marca: AppliedStep): solo se apunta.
-        return this.record(team, step.action, step.events);
     }
   }
 
@@ -255,10 +258,11 @@ export class GameSession {
     return this.record(team, action, result.events);
   }
 
-  /** Apunta una accion hecha y avisa a quien escucha. */
+  /** Apunta una accion hecha, pone al dia la vista de quien juega (ningun controlador tiene que pedirlo) y avisa a quien escucha. */
   private record(team: TeamId, action: GameAction, events: GameEvent[]): ActedStep {
     const step: ActedStep = { kind: 'acted', team, action, events };
     this.log.push({ team, action });
+    this.current?.view.refresh();
     for (const listener of this.listeners) listener(step);
     return step;
   }

@@ -195,7 +195,7 @@ Conclusiones:
 Para que haya algo por lo que pelear en el medio del mapa: 3 casillas por mapa al azar
 (`SETTINGS.controlPoints`), igual de lejos a pie de las dos salidas y separadas entre sí. Al acabar la
 ronda son de quien tenga una unidad encima (y siguen suyas al irse) y cada una da
-`SETTINGS.controlIncome` (1000) por ronda. La IA las busca al avanzar (`AI.CONTROLPOINT`, 6 casillas
+`SETTINGS.controlIncome` (1000) por ronda. La IA las busca al avanzar (`CONTROLPOINT` de ai.json, 6 casillas
 de ventaja).
 
 `npm run balance -- run --games 80` (IA contra IA, máximo 60 días):
@@ -220,7 +220,7 @@ centro y dinero por avanzar.
 Cada unidad de la IA decidía sola y llegaban de una en una. Dos cambios, solo en el turno de la IA
 enemiga (las órdenes del jugador se cumplen igual que antes):
 
-- **Fuego concentrado** (`planFire` en `src/core/ai.ts`, peso `AI.FOCUSFIRE`): antes de mover, busca
+- **Fuego concentrado** (`planFire` en `src/core/ai/fire.ts`, peso `FOCUSFIRE` de ai.json): antes de mover, busca
   enemigos visibles que puede destruir ese turno sumando el daño esperado de varias unidades (con el
   flanqueo para las que siguen) y reparte a quién dispara a cada uno, empezando por el que más vale.
   Las del plan juegan primero (las de distancia antes).

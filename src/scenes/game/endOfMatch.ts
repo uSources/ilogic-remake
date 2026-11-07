@@ -292,7 +292,7 @@ export class EndOfMatch {
 /** Empezar una mision (cada vez con otros dados). */
 const missionStart = (mission: MissionDef): GameStartData => ({
   start: 'new',
-  match: { mode: 'mission', mission: mission.id, diceSeed: randomSeed() },
+  match: { mode: 'mission', mission: mission.id, seed: randomSeed() },
 });
 
 /** Al acabar se quita todo lo de la partida (menus, prevision, avisos...) y empieza el final. */

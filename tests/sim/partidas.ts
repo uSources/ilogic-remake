@@ -33,7 +33,7 @@ export function aiVsAi(from: number, to: number): void {
   for (let seed = from; seed <= to; seed++) {
     const rng = seededRng(seed * 7919);
     const s = createMatch(skirmishConfig({ seed: seed * 7919, teams: duel('ai', 'ai') }), rng);
-    const session = new GameSession(s, controllersFor(s, rng));
+    const session = new GameSession(s, controllersFor(s));
     session.subscribe((step) => {
       if (!step.events.some((event) => event.kind === 'newDay')) return;
       checkInvariants(s);

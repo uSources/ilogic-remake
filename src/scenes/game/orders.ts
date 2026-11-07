@@ -11,7 +11,7 @@ import { movementOf, canWalk, unitAt, unitById, canMoveNow, visibleFoeAt } from 
 import { isCapturer } from '../../core/util/predicates';
 import { isOnBoard } from '../../core/mapGrid';
 import { standingOrderBlock, type StandingOrderBlock } from '../../core/squads';
-import type { GameEvent, GameState, Pos, StandingOrderKind, TeamId, Unit } from '../../core/model';
+import type { ActionPlan, GameEvent, GameState, Pos, TurnEndOrderKind, TeamId, Unit } from '../../core/model';
 import { cursorFor, menuActions, type ActionCtx, type ActionId, type CursorKind } from '../../controls/actions';
 import { showToast } from '../../hud/store';
 import { t, type TextKey } from '../../settings';
@@ -22,13 +22,14 @@ import { ACTION_RUNNERS, type ActionRunHost } from './actionRunners';
 import type { GroupSelection } from './groupSelection';
 import type { ActionHost, Intent, Phase } from './types';
 import { posOf } from '../../core/geom';
+import { playerView, seeing } from '../../core/playerView';
 
 /** De donde se abrio el menu de ordenes de una casilla (adonde vuelve al cancelar). */
 export type OrderFrom = 'move' | 'unitMenu' | 'map';
 
 /** Orden con destino que se esta dando (fase 'target', eligiendo casilla). */
 export interface Ordering {
-  kind: StandingOrderKind;
+  kind: TurnEndOrderKind;
   uids: number[];
   /** Una unidad desde su menu: su movimiento de este turno, si lo hay, se mantiene. */
   single: boolean;
@@ -84,6 +85,10 @@ const BLOCK_TEXT: Record<StandingOrderBlock, TextKey> = {
   noBuilding: 'orderNoBuilding',
   noCapturer: 'orderNoCapturer',
   noFighter: 'orderNoFighter',
+  transported: 'travelUnreachable',
+  offBoard: 'travelUnreachable',
+  unreachable: 'travelUnreachable',
+  withinReach: 'travelArrives',
 };
 
 export class Orders {
@@ -161,7 +166,7 @@ export class Orders {
    * Empieza a dar una orden a estas unidades: ahora se elige la casilla en el mapa (fase 'target').
    * `single` = una unidad desde su menu (su movimiento de este turno, si lo hay, se mantiene).
    */
-  start(kind: StandingOrderKind, units: Unit[], single: boolean): void {
+  start(kind: TurnEndOrderKind, units: Unit[], single: boolean): void {
     const host = this.host;
     if (!units.length) return host.toMap();
     this.ordering = { kind, uids: uidsOf(units), single };
@@ -252,7 +257,7 @@ export class Orders {
   }
 
   /** Orden sin gastar el turno: se cumple al terminarlo. */
-  private queue(kind: StandingOrderKind, units: Unit[], at: Pos, moving: Unit | null): void {
+  private queue(kind: TurnEndOrderKind, units: Unit[], at: Pos, moving: Unit | null): void {
     const host = this.host;
     if (!host.act({ kind: 'giveStandingOrder', uids: uidsOf(units), order: { kind, at: posOf(at) } })) return;
     showToast(`${standingOrderLabel(kind)} · ${units.length}`);
@@ -297,18 +302,32 @@ export class Orders {
   /** Las unidades empiezan ya su orden (animado); luego esperan. */
   private async playStandingOrders(units: Unit[]): Promise<void> {
     const host = this.host;
-    const match = host.match;
     host.phase = 'busy';
     host.refresh();
     // [CAMBIO] En formacion: primero las mas retrasadas, y las demas se colocan con ellas.
     for (const unit of standingOrderPlayOrder(host.state, units)) {
-      for (const event of startStandingOrder(host.state, unit.uid, host.viewer, host.dispatcher)) {
-        await host.play([event]);
-        if (match !== host.match || host.checkEnd()) return;
-      }
+      // La orden decide con lo que sabe el equipo que mira, como al cumplirse sola.
+      const view = playerView(host.state, host.viewer);
+      if (!(await this.playPlan(seeing(view, startStandingOrder(view.state, unit.uid, host.viewer))))) return;
       if (unitById(host.state, unit.uid)) host.act({ kind: 'wait', uid: unit.uid });
     }
     host.afterAction();
+  }
+
+  /**
+   * Cumple un plan del nucleo (lo que propone una orden, accion a accion) por la sesion y anima lo que
+   * pasa en cada una. false si la partida se ha cambiado o se ha acabado por medio.
+   */
+  private async playPlan(plan: ActionPlan<unknown>): Promise<boolean> {
+    const host = this.host;
+    const match = host.match;
+    for (let step = plan.next(); !step.done;) {
+      const result = host.dispatcher(host.state, host.viewer, step.value);
+      if (result.ok) await host.play(result.events);
+      if (match !== host.match || host.checkEnd()) return false;
+      step = plan.next(result);
+    }
+    return true;
   }
 
   /** [CAMBIO] Puntero del raton segun lo que haria el clic derecho en esa casilla. */

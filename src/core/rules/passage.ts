@@ -20,7 +20,7 @@ export type TileOccupancy = 'empty' | 'passThrough' | 'blocked';
 
 /**
  * Regla de paso: de los enemigos que su equipo no ve no se sabe (como si no hubiera nadie). La pone
- * el modulo de la emboscada y la IA al planear en grupo (PLANS_WITH_WHAT_IT_SEES).
+ * el modulo de la emboscada (quien decide por un equipo ya no ve a esos enemigos: su vista no los tiene).
  */
 export const UNSEEN_FOES_UNNOTICED: PassRule = {
   id: 'unseenFoes',

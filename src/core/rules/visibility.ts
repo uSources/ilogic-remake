@@ -7,7 +7,7 @@ import { diamond, manhattan } from '../geom';
 import { createLayer } from '../mapGrid';
 import { hooksOf } from '../ruleModules/ruleset';
 import type { Grid } from '../util/grid';
-import { isOnMap } from '../util/predicates';
+import { isAlive, isOnMap } from '../util/predicates';
 import { alliesOf, isHostile } from '../teams';
 import { unitAt } from './queries';
 import type { GameState, Pos, TeamId, Unit } from '../model';
@@ -74,10 +74,12 @@ export function sightOf(s: GameState, team: TeamId): Sight {
 export const isVisibleFoe = (s: GameState, team: TeamId, unit: Unit, sees: Sight): boolean =>
   isHostile(s, team, unit.team) && isOnMap(unit) && sees(unit);
 
-/** Uids de los enemigos de `team` que ve ahora en el mapa (para saber si un movimiento ha descubierto a alguien). */
-export function visibleEnemies(s: GameState, team: TeamId): Set<number> {
-  const sees = sightOf(s, team);
-  return new Set(s.units.filter((unit) => isVisibleFoe(s, team, unit, sees)).map((unit) => unit.uid));
+/**
+ * Enemigos de `team` vivos, en el mapa (no transportados) y a la vista (`sees`: lo que ve ahora, si
+ * no se dice): los que dan por buenos `isVisibleFoe`, la pregunta de cada unidad.
+ */
+export function visibleFoes(s: GameState, team: TeamId, sees: Sight = sightOf(s, team)): Unit[] {
+  return s.units.filter((unit) => isVisibleFoe(s, team, unit, sees) && isAlive(unit));
 }
 
 /** El enemigo de `team` que hay en `at` y que ve (`sees`); undefined si no hay ninguno a la vista. */

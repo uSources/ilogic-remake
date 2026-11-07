@@ -5,16 +5,14 @@
  * animar, turno enemigo, final... Cada modulo ve solo lo que pide su `...Host` (al final del fichero).
  */
 import Phaser from 'phaser';
-import { effectiveStandingOrder } from '../core/squads';
+import { turnEndOrderOf } from '../core/squads';
 import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
-import { commandUsed, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
+import { commandUsed, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow, buildingsOf } from '../core/rules';
 import { serialize } from '../core/save';
 import type { GameSession, ActedStep } from '../core/session';
-import { seededRng } from '../core/util/random';
-import { randomSeed } from '../setup';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
 import { enemiesOf, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
@@ -236,7 +234,7 @@ export class GameScene extends Phaser.Scene {
 
   init(data: GameStartData): void {
     this.resetMatch();
-    const start = startMatch(seededRng(randomSeed()), data);
+    const start = startMatch(data);
     this.session = start.session;
     this.s = start.session.state;
     this.viewer = start.viewer;
@@ -766,7 +764,7 @@ export class GameScene extends Phaser.Scene {
 
   /** La orden que cumple la unidad (la suya o la de su escuadra). */
   private standingOrderOf(unit: Unit) {
-    return effectiveStandingOrder(this.s, unit);
+    return turnEndOrderOf(this.s, unit);
   }
 
   /** Las que aun pueden hacer algo. Las que tienen orden no cuentan: la cumpliran solas al terminar el turno. */
@@ -958,7 +956,7 @@ export class GameScene extends Phaser.Scene {
       lab: labPanel(this.s, this.lab),
       general: generalVM(s, viewer, viewer, this.phase === 'target' ? this.powers.targeting : null),
       enemyGeneral: enemyWithGeneral === undefined ? null : generalVM(s, viewer, enemyWithGeneral, null),
-      buildings: s.buildings.filter((building) => building.owner === viewer).length,
+      buildings: buildingsOf(s, viewer).length,
       day: s.day,
       dayLimit: s.settings.dayLimit,
       helpRules: helpRulesOfMatch(s),

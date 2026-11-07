@@ -3,12 +3,13 @@ import type { GameContent } from '@core/content';
 import { seededRng } from '@core/util/random';
 import { buildMatch, skirmishConfig } from '@core/match';
 import { isTurnBoundary } from '@core/actions';
-import { isMatchOver, isWinner, matchResult } from '@core/rules';
+import { isMatchOver, isWinner, matchResult, buildingsOf } from '@core/rules';
 import { aiController } from '@core/controllers';
 import { GameSession, passiveController, runMatch, type ActedStep, type Controller } from '@core/session';
 import { duel, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
 import { armyValue } from '@core/stats';
+import { lifeValue } from '@core/unitValue';
 import type { EndReason, GameEvent, GameEventOf, GameState, Rng, MatchSettings, TeamId, Unit } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
@@ -107,7 +108,7 @@ const bySide = (valueOf: (side: Side) => number): [number, number] => [valueOf(F
 function sample(s: GameState): DaySample {
   const unitsOf = (side: Side) => s.units.filter((unit) => unit.team === side);
   const army = (side: Side) => armyValue(s, side);
-  const buildings = (side: Side) => s.buildings.filter((building) => building.owner === side).length;
+  const buildings = (side: Side) => buildingsOf(s, side).length;
   return {
     day: s.day,
     funds: bySide((side) => teamState(s, side).funds),
@@ -133,8 +134,9 @@ function tallyAttack(s: GameState, event: GameEventOf<'attack'>, team: TeamId, {
   tally.damageDealt += event.damage;
   if (!victimInfo) return;
   const victimTally = tallyOf(sideOfTeam(victimInfo.team), victimInfo);
-  tally.valueDealt += (event.damage * costOf(s, victimInfo)) / 100;
-  victimTally.valueLost += (event.damage * costOf(s, victimInfo)) / 100;
+  const dealt = lifeValue(s, event.damage, victimInfo);
+  tally.valueDealt += dealt;
+  victimTally.valueLost += dealt;
   if (event.killed) {
     tally.kills++;
     victimTally.deaths++;
@@ -144,8 +146,9 @@ function tallyAttack(s: GameState, event: GameEventOf<'attack'>, team: TeamId, {
   const lost = attacker.life - (after?.life ?? 0);
   if (lost <= 0) return;
   victimTally.damageDealt += lost;
-  victimTally.valueDealt += (lost * costOf(s, attacker)) / 100;
-  tally.valueLost += (lost * costOf(s, attacker)) / 100;
+  const returned = lifeValue(s, lost, attacker);
+  victimTally.valueDealt += returned;
+  tally.valueLost += returned;
   if (!after) {
     victimTally.kills++;
     tally.deaths++;
@@ -168,14 +171,14 @@ function tallyEvent(s: GameState, event: GameEvent, team: TeamId, tallies: Talli
   }
 }
 
-/** Quien juega cada lado: la IA (con el mismo azar para los dos) o nadie ('passive'). */
-function controllersOf(s: GameState, policies: PlayOptions['policies'], rng: Rng): Controller[] {
-  const controllerFor = (policy: Policy) => (policy === 'passive' ? passiveController() : aiController(rng));
+/** Quien juega cada lado: la IA (con el azar de la partida) o nadie ('passive'). */
+function controllersOf(s: GameState, policies: PlayOptions['policies']): Controller[] {
+  const controllerFor = (policy: Policy) => (policy === 'passive' ? passiveController() : aiController());
   return s.teams.map((team) => controllerFor(policies[sideOfTeam(team.id)]));
 }
 
-export function playGame(options: PlayOptions): GameRecord {
-  const rng = seededRng(options.seed);
+/** La partida de equilibrio de estas opciones (mapa al azar con su semilla, quiza con los lados cambiados). */
+function balanceMatch(options: PlayOptions, mapRng: Rng): GameState {
   const config = skirmishConfig({
     seed: options.seed,
     size: options.size,
@@ -183,45 +186,69 @@ export function playGame(options: PlayOptions): GameRecord {
     teams: duel('ai', 'ai'),
     firstTeam: options.firstTeam ?? FIRST_SIDE,
   });
-  const s = buildMatch(options.swapSides ? { ...config, swapStarts: true } : config, { content: options.content, mapRng: rng });
-  const units: Record<string, UnitTally>[] = SIDES.map(() =>
-    Object.fromEntries(s.content.units.list.map((unitType) => [unitType.id, emptyTally()])),
-  );
-  /** Lo apuntado de ese tipo de unidad para ese lado. */
-  const tallyOf = (side: Side, unit: Pick<Unit, 'type'>): UnitTally => units[side]![unit.type]!;
-  const samples: DaySample[] = [sample(s)];
-  // Ultimo estado conocido de cada unidad (para saber a quien se ha atacado aunque ya no exista).
-  const known = new Map<number, Pick<Unit, 'type' | 'team' | 'x' | 'y' | 'life'>>();
-  const remember = () => {
-    known.clear();
-    for (const unit of s.units) known.set(unit.uid, { type: unit.type, team: unit.team, x: unit.x, y: unit.y, life: unit.life });
-  };
-  remember();
-  let events = 0;
-  let reason: GameRecord['reason'] = 'timeout';
-  const isOwnAction = (step: ActedStep) => !isTurnBoundary(step.action);
+  return buildMatch(options.swapSides ? { ...config, swapStarts: true } : config, { content: options.content, mapRng });
+}
 
-  const session = new GameSession(s, controllersOf(s, options.policies, rng));
-  session.subscribe((step) => {
+/** Lo que se apunta de una partida mientras se juega: muestras de cada dia, lo de cada tipo de unidad y cuantos sucesos. */
+class GameLog {
+  readonly samples: DaySample[];
+  readonly units: Record<string, UnitTally>[];
+  events = 0;
+  /** Ultimo estado conocido de cada unidad (para saber a quien se ha atacado aunque ya no exista). */
+  private readonly known = new Map<number, Pick<Unit, 'type' | 'team' | 'x' | 'y' | 'life'>>();
+
+  constructor(private readonly s: GameState) {
+    this.samples = [sample(s)];
+    this.units = SIDES.map(() => Object.fromEntries(s.content.units.list.map((unitType) => [unitType.id, emptyTally()])));
+    this.remember();
+  }
+
+  /** Lo apuntado de ese tipo de unidad para ese lado. */
+  private readonly tallyOf = (side: Side, unit: Pick<Unit, 'type'>): UnitTally => {
+    const tally = this.units[side]?.[unit.type];
+    if (!tally) throw new Error(`Tipo de unidad desconocido en el informe: ${unit.type}`);
+    return tally;
+  };
+
+  private remember(): void {
+    this.known.clear();
+    for (const unit of this.s.units) this.known.set(unit.uid, { type: unit.type, team: unit.team, x: unit.x, y: unit.y, life: unit.life });
+  }
+
+  /** Apunta un paso de la sesion: la muestra del dia nuevo y, si es de quien juega, cada suceso. */
+  readonly record = (step: ActedStep): void => {
     if (step.events.some((event) => event.kind === 'newDay')) {
-      remember();
-      samples.push(sample(s));
+      this.remember();
+      this.samples.push(sample(this.s));
     }
-    if (!isOwnAction(step)) return;
+    if (isTurnBoundary(step.action)) return;
     // Suceso a suceso, como se jugaban: si la partida acaba con esta accion, hasta el primero.
     for (const event of step.events) {
-      events++;
-      tallyEvent(s, event, step.team, { known, tallyOf });
-      remember();
-      if (isMatchOver(s)) break;
+      this.events++;
+      tallyEvent(this.s, event, step.team, { known: this.known, tallyOf: this.tallyOf });
+      this.remember();
+      if (isMatchOver(this.s)) break;
     }
-  });
-  runMatch(session, { until: (state) => state.day > options.maxDays });
+  };
+}
 
+/** Quien ha ganado (por lado) y por que; sin acabar, nadie y 'timeout'. */
+function outcomeOf(s: GameState): Pick<GameRecord, 'winner' | 'reason'> {
   const result = matchResult(s);
-  let winner: Side | null = null;
-  if (result.status === 'decided') winner = isWinner(result, FIRST_SIDE) ? FIRST_SIDE : SECOND_SIDE;
-  if (result.status !== 'playing') reason = result.reason;
-  else samples.push(sample(s));
-  return { seed: options.seed, winner, reason, days: s.day, samples, units, events };
+  if (result.status === 'playing') return { winner: null, reason: 'timeout' };
+  if (result.status === 'draw') return { winner: null, reason: result.reason };
+  return { winner: isWinner(result, FIRST_SIDE) ? FIRST_SIDE : SECOND_SIDE, reason: result.reason };
+}
+
+/** Una partida de equilibrio entera, con todo lo que pasa apuntado. */
+export function playGame(options: PlayOptions): GameRecord {
+  const rng = seededRng(options.seed);
+  const s = balanceMatch(options, rng);
+  const log = new GameLog(s);
+  const session = new GameSession(s, controllersOf(s, options.policies));
+  session.subscribe(log.record);
+  runMatch(session, { until: (state) => state.day > options.maxDays });
+  const outcome = outcomeOf(s);
+  if (outcome.reason === 'timeout') log.samples.push(sample(s));
+  return { seed: options.seed, ...outcome, days: s.day, samples: log.samples, units: log.units, events: log.events };
 }

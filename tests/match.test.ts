@@ -12,7 +12,7 @@ import { defaultLab, labMatch } from '../src/lab';
 describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () => {
   it('cada modo de GAME_MODES tiene su forma de prepararse, y la partida lleva su modo', () => {
     expect(Object.keys(MATCH_SETUPS).sort()).toEqual(Object.keys(GAME_MODES).sort());
-    const mission = createMatch({ mode: 'mission', mission: 'bridgehead', diceSeed: 1 });
+    const mission = createMatch({ mode: 'mission', mission: 'bridgehead', seed: 1 });
     expect(mission.mode).toBe('mission');
     expect(createMatch(skirmishConfig({ seed: 3, teams: duel('human', 'ai') })).mode).toBe('skirmish');
   });
@@ -82,7 +82,7 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
     const again = createMatch(rematchOf(s)!);
     expect(again.map).toEqual(s.map);
     expect(again.settings).toEqual(s.settings);
-    expect(rematchOf(createMatch({ mode: 'mission', mission: 'bridgehead', diceSeed: 1 }))).toBeNull();
+    expect(rematchOf(createMatch({ mode: 'mission', mission: 'bridgehead', seed: 1 }))).toBeNull();
   });
 
   it('K4: la misma semilla da la misma partida en la pantalla (opciones de siempre) y en npm run play', () => {

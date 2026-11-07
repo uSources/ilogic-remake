@@ -20,7 +20,7 @@ import { LogCursor, type LoggedAction } from './log';
 function replayController(cursor: LogCursor): Controller {
   return {
     name: 'replay',
-    playTurn: function* (_s, team) {
+    playTurn: function* ({ team }) {
       cursor.seekTurnOf(team);
       for (let entry = cursor.peek(); entry && entry.team === team && !isTurnBoundary(entry.action); entry = cursor.peek()) {
         cursor.advance();

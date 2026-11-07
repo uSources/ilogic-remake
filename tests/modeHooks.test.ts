@@ -63,7 +63,7 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
     const s = blankState(PLAIN_SETTINGS, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
     s.turnStarted = false;
     const traveler = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
-    traveler.travelTo = { x: 2, y: 20 };
+    traveler.standingOrder = { kind: 'goto', at: { x: 2, y: 20 } };
     s.buildings.push({ type: 'City', owner: null, x: 9, y: 9 });
     const capturer = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 9, y: 9 });
     s.buildings.at(-1)!.capture = { team: 0, uid: capturer.uid, left: 1 };

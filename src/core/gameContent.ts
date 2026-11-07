@@ -9,16 +9,7 @@
  * que hay en la partida (`unitTypeOf(s, unit).cost`). Para copiar una partida, `cloneState` (comparte
  * el contenido, que esta congelado).
  */
-import {
-  entryOf,
-  findEntry,
-  type AiWeights,
-  type BuildingType,
-  type TerrainType,
-  type Theme,
-  type UnitType,
-  type WeatherType,
-} from './content';
+import { entryOf, findEntry, type BuildingType, type TerrainType, type Theme, type UnitType, type WeatherType } from './content';
 import { mapGrid } from './mapGrid';
 import type { Building, GameState, Pos, SavedGameState, Unit } from './model';
 
@@ -57,11 +48,6 @@ export function themeOf(s: GameState): Theme {
 /** Un clima de la partida por su id (WeatherState.kind y next). */
 export function weatherTypeOf(s: GameState, kind: string): WeatherType {
   return entryOf(s.content.weather, kind, 'clima');
-}
-
-/** Los pesos de la IA de la partida (ai.json). */
-export function weightsOf(s: GameState): Readonly<AiWeights> {
-  return s.content.ai;
 }
 
 /** Lo que se guarda de la partida: todo menos el contenido. */

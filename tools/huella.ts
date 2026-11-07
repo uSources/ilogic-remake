@@ -20,7 +20,7 @@ import { posOf } from '@core/geom';
 import { aiController, controllersFor } from '@core/controllers';
 import { autopilotController, GameSession, runMatch, scriptedController, sequence, type Controller } from '@core/session';
 import { duel, enemiesOf, playerTeam } from '@core/teams';
-import type { GameAction, GameState, Rng, MatchSettings, TeamId } from '@core/model';
+import type { GameAction, GameState, MatchSettings, TeamId } from '@core/model';
 
 const MAX_DAYS = 30;
 const FIRST_DAY = 1;
@@ -75,14 +75,14 @@ function squadOrders(s: GameState, person: TeamId): GameAction[] {
 }
 
 /**
- * Quien juega cada equipo: la IA, con el mismo azar para todos; la persona, si lleva escuadra, da sus
+ * Quien juega cada equipo: la IA, con el azar de la partida; la persona, si lleva escuadra, da sus
  * ordenes el primer dia y deja antes que su piloto automatico las cumpla (como la IA no las tiene,
  * juega despues).
  */
-function controllersOf(s: GameState, scenario: Scenario, rng: Rng): Controller[] {
+function controllersOf(s: GameState, scenario: Scenario): Controller[] {
   const person = playerTeam(s);
-  const withSquad = sequence(scriptedController(squadOrders), autopilotController(), aiController(rng));
-  return controllersFor(s, rng, new Map([[person, scenario.withSquad ? withSquad : aiController(rng)]]));
+  const withSquad = sequence(scriptedController(squadOrders), autopilotController(), aiController());
+  return controllersFor(s, new Map([[person, scenario.withSquad ? withSquad : aiController()]]));
 }
 
 /** Una persona contra la IA; con generales, cada equipo el de su numero en generals.json. */
@@ -100,7 +100,7 @@ function playScenario(scenario: Scenario): string {
 
   const hash = createHash('sha256');
   const record = (value: unknown) => hash.update(JSON.stringify(value));
-  const session = new GameSession(s, controllersOf(s, scenario, rng));
+  const session = new GameSession(s, controllersOf(s, scenario));
   session.subscribe((step) => {
     // Cada suceso; si la partida acaba con esta accion, hasta el primero (como al jugarla suceso a suceso).
     for (const event of step.events) {

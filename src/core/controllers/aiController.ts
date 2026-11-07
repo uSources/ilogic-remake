@@ -1,18 +1,22 @@
 /**
- * El controlador que decide con la IA del juego (`aiController`: la IA rival, o la de referencia de
- * la arena). La IA aun manda ella sus acciones (fase 6: solo las propondra), por el dispatcher que
- * apunta de session/selfDispatched.ts: solo las de su equipo y nunca los limites de turno.
+ * El controlador que decide con una IA (`aiController`: la IA rival con su perfil, `AiProfile`). La
+ * IA solo propone sus acciones (`ActionPlan`): las manda la sesion, como las de cualquiera. Decide con
+ * lo que sabe su equipo (la `PlayerView` que le da la sesion, que la pone al dia tras cada accion).
  */
-import { aiTurn } from '../ai';
-import type { ActionDispatcher, GameEvent, GameState, Rng, TeamId } from '../model';
-import type { Controller } from '../session/controller';
-import { selfDispatched } from '../session/selfDispatched';
+import { defaultAiProfile, type AiProfile } from '../ai';
+import { seededRng } from '../util/random';
+import { proposing, type Controller } from '../session/controller';
 
-/** Una IA: el turno de un equipo, mandando sus acciones por `dispatcher` (la de `aiTurn` o la de referencia de la arena). */
-export type AiBrain = (s: GameState, rng: Rng, team: TeamId, dispatcher: ActionDispatcher) => Iterator<GameEvent, unknown>;
-
-/** La IA del juego (o otra con la misma forma, `brain`), que decide con su azar `rng`. */
-export const aiController = (rng: Rng, brain: AiBrain = aiTurn): Controller => ({
+/**
+ * La IA que juega con `profile` (la del juego con el contenido de la partida, si no se dice: su
+ * `defaultAiProfile`). Su azar de cada turno sale de la partida (el de su vista, `turnSeed`): la misma partida da
+ * las mismas decisiones, se juegue donde se juegue.
+ */
+export const aiController = (profile?: AiProfile): Controller => ({
   name: 'ai',
-  playTurn: (s, team) => selfDispatched(team, (dispatcher) => brain(s, rng, team, dispatcher)),
+  playTurn: (view) => {
+    const rng = seededRng(view.turnSeed);
+    const played = profile ?? defaultAiProfile(view.state.content);
+    return proposing(played.turn(view, played, rng));
+  },
 });

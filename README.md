@@ -153,7 +153,7 @@ src/
     ruleModules/ Modulos de reglas (veterania, clima, habilidades, emboscadas...): se enchufan segun los
                  ajustes y aportan entradas a las listas de las reglas (RULE_MODULES, hooksOf)
     data.ts      Constantes que no son contenido (tamaños de mapa, vida)
-    gameContent.ts  El contenido de cada partida (unitTypeOf, terrainAt, themeOf, weightsOf); gameState.ts: newGameState
+    gameContent.ts  El contenido de cada partida (unitTypeOf, terrainAt, themeOf); gameState.ts: newGameState
     teams.ts     Los equipos de la partida: alianzas, quien juega cada uno (isHostile, enemiesOf, teamState)
     defaultGames.ts Partidas con el contenido del juego (createMatch, loadGame)
     match.ts     Empezar una partida: MatchConfig por modo, buildMatch, skirmishConfig, rematchOf
@@ -167,8 +167,9 @@ src/
     generals.ts  Los generales; generalPowers.ts: sus poderes (POWER_EFFECTS)
     squads.ts    Escuadras y ordenes permanentes del jugador (fachada de squads/)
     targeting.ts Desde donde atacar; trail.ts: el camino trazado con el cursor
-    ai.ts        Inteligencia artificial (fachada de ai/: un generador que va devolviendo cada accion);
-                 las reglas, las acciones, autopilot/ y session/ no la importan (ESLint)
+    ai.ts        Inteligencia artificial (fachada de ai/: un plan que propone cada accion, con su perfil
+                 AiProfile); las reglas, las acciones, autopilot/ y session/ no la importan (ESLint)
+    playerView.ts Lo que sabe cada equipo (PlayerView): lo que recibe quien decide por el
     mapgen.ts    Generador de mapas aleatorios
     save.ts      Guardar / cargar en JSON (solo el formato de ahora: las partidas de antes se descartan)
     geom.ts      Rombos, distancias, numeros aleatorios con semilla
