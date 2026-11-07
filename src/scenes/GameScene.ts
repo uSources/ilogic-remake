@@ -443,7 +443,7 @@ export class GameScene extends Phaser.Scene {
   /** Donde va lo que pulse un mando: al mapa (command) o a un menu propio (menu). */
   controlContext(): ControlContext {
     if (this.ended) return 'end';
-    if (this.optionsPanel.isOpen) return 'options';
+    if (this.optionsPanel.isOpen) return this.optionsPanel.context();
     return 'map';
   }
 

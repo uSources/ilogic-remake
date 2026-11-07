@@ -1,8 +1,10 @@
 import type Phaser from 'phaser';
-import { ui, type OptionRowVM } from '../hud/store';
+import { ui, type OptionsRowVM } from '../hud/store';
+import { keyLabelOf } from '../hud/keyLabels';
 import { playMusic, stopMusic } from '../music';
 import { saveSettings, settings, t, UI_SCALES, type Settings, type TextKey } from '../settings';
-import type { MenuCommand } from '../controls/menu';
+import type { MenuCommand, MenuContext } from '../controls/menu';
+import { KEY_BINDING_IDS, keyConflict, withKeyBound, type KeyBindingId, type KeyConflict } from '../controls/keyboard';
 
 interface Row<K extends keyof Settings = keyof Settings> {
   key: K;
@@ -48,13 +50,55 @@ const ROWS: Row[] = [
   { key: 'lang', group: 'optGroupLang', label: 'language', values: ['es', 'en'], show: (v) => (v === 'es' ? 'Español' : 'English') },
 ] as Row[];
 
+/** El nombre de cada orden cuya tecla se puede cambiar (textos en i18n/<idioma>/options.ts). */
+const KEY_LABELS: Readonly<Record<KeyBindingId, TextKey>> = {
+  endTurn: 'key_endTurn',
+  nextUnit: 'key_nextUnit',
+  orderHere: 'key_orderHere',
+  orderAttack: 'key_orderAttack',
+  orderCapture: 'key_orderCapture',
+  orderDefend: 'key_orderDefend',
+  orderCancel: 'key_orderCancel',
+  threat: 'key_threat',
+  intents: 'key_intents',
+  minimap: 'key_minimap',
+  zoomIn: 'key_zoomIn',
+  zoomOut: 'key_zoomOut',
+  stepBack: 'key_stepBack',
+  cancel: 'key_cancel',
+  help: 'key_help',
+  options: 'key_options',
+};
+
+/** Por que no vale una tecla, para el jugador. */
+function conflictText(conflict: KeyConflict): string {
+  if (conflict.kind === 'fixed') return t('keyTakenFixed');
+  if (conflict.kind === 'modifier') return t('keyIsModifier');
+  return t('keyTakenBy').replace('{a}', t(KEY_LABELS[conflict.id]));
+}
+
+/** Una fila de la pantalla: lo que enseña y lo que hace al moverse a los lados o pulsarla. */
+interface Entry {
+  vm(): OptionsRowVM;
+  /** Izquierda o derecha: el valor anterior o el siguiente. */
+  step(direction: -1 | 1): void;
+  /** Enter o el boton de la fila. */
+  pick(): void;
+  /** El boton de segmento `choice` con el raton (las filas sin segmentos lo toman como pulsarlas). */
+  select(choice: number): void;
+}
+
 /**
  * Pantalla de opciones (la misma en el menu principal y en la partida). Se abre encima de lo que haya;
- * mientras esta abierta, la escena le pasa las teclas.
+ * mientras esta abierta, la escena le pasa las teclas (y, cambiando una tecla, todas: `context`).
  */
 export class OptionsPanel {
   private focus = 0;
-  private rows: Row[];
+  private entries: Entry[];
+  /** La orden cuya tecla nueva se espera. */
+  private capturing: KeyBindingId | null = null;
+  /** Por que no valio la ultima tecla pulsada, junto a su orden. */
+  private notice: { id: KeyBindingId; text: string } | null = null;
 
   constructor(
     private scene: Phaser.Scene,
@@ -63,69 +107,159 @@ export class OptionsPanel {
     private onChange: (key: keyof Settings) => void,
     private onClose: () => void,
   ) {
-    this.rows = ROWS.filter((r) => !(r.menuOnly && track === 'game'));
+    const rows = ROWS.filter((row) => !(row.menuOnly && track === 'game'));
+    this.entries = [...rows.map((row) => this.choiceEntry(row)), ...KEY_BINDING_IDS.map((id) => this.keyEntry(id)), this.resetEntry()];
   }
 
   get isOpen(): boolean {
     return ui.get().options !== null;
   }
 
+  /** Que teclas valen ahora: las del menu o, esperando una tecla nueva, cualquiera. */
+  context(): MenuContext {
+    return this.capturing ? 'keyCapture' : 'options';
+  }
+
   open(): void {
     this.focus = 0;
+    this.capturing = null;
+    this.notice = null;
     Object.assign(ui.actions, {
-      optionsHover: (i: number) => {
-        this.focus = i;
+      optionsHover: (index: number) => {
+        this.focus = index;
         this.publish();
       },
-      optionsSet: (i: number, index: number) => {
-        this.focus = i;
-        this.set(i, index);
-      },
+      optionsSet: (index: number, choice: number) => this.setChoice(index, choice),
+      optionsPick: (index: number) => this.pick(index),
       optionsClose: () => this.close(),
     });
     this.publish();
   }
 
   close(): void {
+    this.capturing = null;
     ui.set({ options: null });
     this.onClose();
   }
 
-  private publish(): void {
-    const rows: OptionRowVM[] = this.rows.map((r) => ({
-      id: r.key,
-      group: t(r.group),
-      label: t(r.label),
-      choices: r.values.map((v) => r.show(v as never)),
-      index: Math.max(0, r.values.indexOf(settings[r.key] as never)),
-    }));
-    ui.set({ options: { focus: this.focus, rows } });
+  /** Ordenes de menu mientras esta abierta (teclas en MENU_BINDINGS.options y .keyCapture, src/controls/menu.ts). */
+  command(cmd: MenuCommand): void {
+    if (cmd.kind === 'key') return this.bindKey(cmd.code);
+    if (cmd.kind === 'back') return this.capturing ? this.stopCapturing() : this.close();
+    if (cmd.kind === 'options') return this.close();
+    if (cmd.kind === 'ok') return cmd.repeat ? undefined : this.pick(this.focus);
+    if (cmd.kind !== 'move') return;
+    if (cmd.dx) return this.entries[this.focus]?.step(cmd.dx);
+    this.focus = (this.focus + cmd.dy + this.entries.length) % this.entries.length;
+    this.publish();
   }
 
-  private set(i: number, index: number): void {
-    const r = this.rows[i];
-    if (!r) return;
-    const v = r.values[(index + r.values.length) % r.values.length];
-    (settings as unknown as Record<string, unknown>)[r.key] = v;
+  // --- Filas -----------------------------------------------------------------------------------
+
+  private choiceEntry(row: Row): Entry {
+    const current = () => Math.max(0, row.values.indexOf(settings[row.key]));
+    const set = (index: number) => {
+      const value = row.values[(index + row.values.length) % row.values.length];
+      (settings as unknown as Record<string, unknown>)[row.key] = value;
+      this.changed(row.key);
+    };
+    return {
+      vm: () => ({
+        kind: 'choices',
+        id: row.key,
+        group: t(row.group),
+        label: t(row.label),
+        choices: row.values.map((value) => row.show(value as never)),
+        index: current(),
+      }),
+      step: (direction) => set(current() + direction),
+      pick: () => set(current() + 1),
+      select: set,
+    };
+  }
+
+  private keyEntry(id: KeyBindingId): Entry {
+    const start = () => this.startCapturing(id);
+    return {
+      vm: () => ({
+        kind: 'key',
+        id: `key-${id}`,
+        group: t('optGroupKeys'),
+        label: t(KEY_LABELS[id]),
+        value: keyLabelOf(id),
+        capturing: this.capturing === id,
+        notice: this.notice?.id === id ? this.notice.text : null,
+      }),
+      step: start,
+      pick: start,
+      select: start,
+    };
+  }
+
+  private resetEntry(): Entry {
+    const reset = () => {
+      settings.keys = {};
+      this.changed('keys');
+    };
+    return {
+      vm: () => ({ kind: 'action', id: 'keys-reset', group: t('optGroupKeys'), label: t('keyResetAll'), text: t('keyReset') }),
+      step: reset,
+      pick: reset,
+      select: reset,
+    };
+  }
+
+  // --- Cambiar una tecla -----------------------------------------------------------------------
+
+  private startCapturing(id: KeyBindingId): void {
+    this.capturing = id;
+    this.notice = null;
+    this.publish();
+  }
+
+  private stopCapturing(): void {
+    this.capturing = null;
+    this.publish();
+  }
+
+  /** La tecla pulsada mientras se espera una: si vale, pasa a ser la de la orden; si no, se dice por que. */
+  private bindKey(code: string): void {
+    const id = this.capturing;
+    if (!id) return;
+    const conflict = keyConflict(id, code, settings.keys);
+    if (conflict) {
+      this.notice = { id, text: conflictText(conflict) };
+      return this.publish();
+    }
+    settings.keys = withKeyBound(settings.keys, id, code);
+    this.capturing = null;
+    this.changed('keys');
+  }
+
+  // --- Cambios y pintado -----------------------------------------------------------------------
+
+  private publish(): void {
+    ui.set({ options: { focus: this.focus, rows: this.entries.map((entry) => entry.vm()) } });
+  }
+
+  /** Un ajuste ha cambiado: guardarlo, aplicarlo y repintar. */
+  private changed(key: keyof Settings): void {
     saveSettings();
-    if (r.key === 'music') {
+    if (key === 'music') {
       if (settings.music) playMusic(this.scene, this.track, true);
       else stopMusic();
     }
-    this.onChange(r.key);
+    this.onChange(key);
     this.publish();
   }
 
-  /** Ordenes de menu mientras esta abierta (teclas en MENU_BINDINGS.options, src/controls/menu.ts). */
-  command(cmd: MenuCommand): void {
-    const n = this.rows.length;
-    const r = this.rows[this.focus]!;
-    const cur = Math.max(0, r.values.indexOf(settings[r.key]));
-    const mv = cmd.kind === 'move' ? cmd : { dx: 0, dy: 0 };
-    if (mv.dy) this.focus = (this.focus + mv.dy + n) % n;
-    else if (mv.dx < 0) return this.set(this.focus, cur - 1);
-    else if (mv.dx > 0 || (cmd.kind === 'ok' && !cmd.repeat)) return this.set(this.focus, cur + 1);
-    else if (cmd.kind === 'back' || cmd.kind === 'options') return this.close();
-    this.publish();
+  private pick(index: number): void {
+    this.focus = index;
+    this.entries[index]?.pick();
+  }
+
+  private setChoice(index: number, choice: number): void {
+    this.focus = index;
+    this.entries[index]?.select(choice);
   }
 }

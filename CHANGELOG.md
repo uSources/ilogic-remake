@@ -9,10 +9,16 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ## [Sin publicar]
 
+### Novedades
+- **Teclas a tu gusto**: en Opciones → Controles puedes cambiar la tecla de cada orden del mapa (fin de turno, siguiente unidad, atacar, capturar, defender, amenaza, minimapa, zoom, ayuda...). Pulsa «Cambiar» y la tecla nueva; si ya la usa otra orden o es fija (flechas, Enter, números, Ctrl+Z), te lo dice. «Por defecto» vuelve a las de serie. La ayuda y los botones enseñan siempre tus teclas.
+
 ### Cambios de juego
 - **Los edificios vigilan**: con niebla, cada edificio tuyo descubre lo que hay a su alrededor. La Base y la fortaleza ven 3 casillas, las fábricas y los aeropuertos 2, las ciudades y los pozos 1. Capturar un edificio también sirve para ver más.
 
 <!-- en -->
+
+### New
+- **Keys your way**: in Options → Controls you can change the key of every map command (end turn, next unit, attack, capture, hold, threat, minimap, zoom, help...). Press “Change” and the new key; if another command already uses it or it is fixed (arrows, Enter, numbers, Ctrl+Z), it tells you. “Reset” brings back the default keys. The help and the buttons always show your keys.
 
 ### Gameplay
 - **Buildings keep watch**: with fog of war, each building you own reveals its surroundings. The HQ and the stronghold see 3 tiles, factories and airports 2, cities and oil wells 1. Capturing a building also widens your view.

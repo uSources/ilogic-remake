@@ -29,3 +29,44 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Controles: la tecla de cada orden y el boton para cambiarla; el grupo ocupa todo el ancho, en columnas */
+.opt-card.keys {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  column-gap: 24px;
+}
+.opt-card.keys .label {
+  grid-column: 1 / -1;
+}
+.key-row .key-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.key-row .key {
+  min-width: 2.5em;
+  text-align: center;
+  font-size: 14px;
+  padding: 4px 8px;
+}
+.key-row .px-btn.small {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.key-row .key-wait {
+  color: var(--gold);
+  font-size: 14px;
+  animation: key-blink 1s steps(2, end) infinite;
+}
+.key-row .key-notice {
+  flex-basis: 100%;
+  color: var(--red-soft);
+  font-size: 13px;
+}
+@keyframes key-blink {
+  50% {
+    opacity: 0.4;
+  }
+}

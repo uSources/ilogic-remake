@@ -18,13 +18,15 @@ export type MenuCommand =
   | { kind: 'options' }
   | { kind: 'notes' }
   /** Partida nueva: otro mapa al azar. */
-  | { kind: 'reroll' };
+  | { kind: 'reroll' }
+  /** Opciones, cambiando una tecla: la pulsada (KeyboardEvent.code), sea la que sea. */
+  | { kind: 'key'; code: string };
 
 /**
  * Donde esta el foco de los mandos. 'map': el mapa (ordenes InputCommand); el resto son menus
  * (MenuCommand) y cada uno tiene sus teclas. Las escenas lo dicen con `controlContext()`.
  */
-export type MenuContext = 'help' | 'notes' | 'options' | 'home' | 'setup' | 'typing' | 'campaign' | 'end';
+export type MenuContext = 'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'end';
 export type ControlContext = 'map' | MenuContext;
 
 export interface MenuBinding {
@@ -57,6 +59,8 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
   ],
   notes: [...MENU_KEYS, { codes: ['KeyN'], command: { kind: 'notes' } }],
   options: [...MENU_KEYS, { codes: ['KeyO'], command: { kind: 'options' } }],
+  // Opciones esperando la tecla nueva de una orden: Esc lo deja; cualquier otra es la elegida (`key`).
+  keyCapture: [{ codes: ['Escape'], command: { kind: 'back' } }],
   home: [...MENU_KEYS, { codes: ['KeyO'], command: { kind: 'options' } }],
   setup: [...MENU_KEYS, { codes: ['KeyR'], command: { kind: 'reroll' } }],
   // Escribiendo el codigo de un mapa: las letras y el Retroceso son del cuadro de texto.
@@ -81,7 +85,7 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
 /** La orden de una pulsacion en un menu, o null si en ese menu la tecla no hace nada. */
 export function menuKeyCommand(key: Pick<KeyInput, 'code' | 'repeat'>, context: MenuContext): MenuCommand | null {
   const binding = MENU_BINDINGS[context].find((candidate) => candidate.codes.includes(key.code));
-  if (!binding) return null;
+  if (!binding) return context === 'keyCapture' ? { kind: 'key', code: key.code } : null;
   if (binding.command.kind === 'ok') return { kind: 'ok', repeat: key.repeat };
   return binding.command;
 }

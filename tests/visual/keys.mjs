@@ -20,19 +20,19 @@ const check = (ok, what) => {
   if (!ok) failures.push(what);
 };
 
-async function open(browser) {
+async function open(browser, settings = {}) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   page.on('pageerror', (e) => failures.push(`error en la pagina: ${e.message}`));
   await page.route(/^https?:\/\//, (r) => r.abort());
-  await page.addInitScript(() => {
-    localStorage.setItem('ilogic.settings', JSON.stringify({ menuBg: 'classic', music: false }));
+  await page.addInitScript((saved) => {
+    localStorage.setItem('ilogic.settings', JSON.stringify({ menuBg: 'classic', music: false, ...saved }));
     // Lo que pasa con el teclado y el raton, para contarlo si algo falla (ver `traceOf`).
     window.__keyTrace = [];
     const note = (line) => window.__keyTrace.push(`${new Date().toISOString().slice(17, 23)} ${line}`);
     for (const type of ['keydown', 'keyup'])
       window.addEventListener(type, (e) => note(`${type} ${e.code}${e.shiftKey ? ' (Mayusculas)' : ''}`), true);
     window.addEventListener('mouseover', (e) => note(`raton sobre ${e.target?.className || e.target?.nodeName}`), true);
-  });
+  }, settings);
   await page.goto(GAME);
   await page.evaluate(() => window.ilogicDebug.ready());
   await page.evaluate(() => window.ilogicDebug.freeze());
@@ -228,6 +228,27 @@ async function groupKeys(page) {
   check(c.x < 10, `grupos: 2 dos veces lleva el cursor a la escuadra (${c.x},${c.y})`);
 }
 
+/**
+ * Teclas cambiadas en Opciones (guardadas en localStorage, `keys`): fin de turno en P. Con unidades sin
+ * mover, la primera pulsacion arma el boton («¿Terminar?»), que ademas enseña la tecla nueva; E ya no.
+ */
+async function reboundKeys(browser) {
+  const page = await open(browser, { keys: { endTurn: 'KeyP' } });
+  await page.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', fog: false }));
+  const armed = () => page.evaluate(() => window.ilogicDebug.ui().endTurn.armed);
+  check((await page.locator('.px-btn.end .key').textContent()) === 'P', 'teclas cambiadas: el boton de fin de turno enseña la P');
+  await press(page, 'KeyE');
+  check(!(await armed()), 'teclas cambiadas: E ya no termina el turno');
+  await press(page, 'KeyP');
+  check(await armed(), 'teclas cambiadas: P pide confirmar el fin de turno');
+  await press(page, 'KeyP');
+  await page
+    .waitForFunction(() => window.ilogicDebug.game().busy || window.ilogicDebug.game().day > 1, null, { timeout: 5000 })
+    .catch(() => {});
+  check(!(await armed()), 'teclas cambiadas: P otra vez termina el turno');
+  await page.close();
+}
+
 const browser = await chromium.launch();
 try {
   const page = await open(browser);
@@ -236,6 +257,8 @@ try {
   await codeTab(page);
   await squadTab(page);
   await groupKeys(page);
+  await page.close();
+  await reboundKeys(browser);
 } finally {
   await browser.close();
 }

@@ -52,6 +52,32 @@ export interface OptionRowVM {
   index: number;
 }
 
+/** Fila de Opciones con una tecla que el jugador puede cambiar. */
+export interface KeyRowVM {
+  kind: 'key';
+  id: string;
+  group: string;
+  label: string;
+  /** La tecla de ahora, como se lee ("E", "Retroceso"). */
+  value: string;
+  /** Esperando a que pulse la tecla nueva. */
+  capturing: boolean;
+  /** Por que no valio la ultima tecla que pulso (null si valio o no ha pulsado). */
+  notice: string | null;
+}
+
+/** Fila de Opciones que es un boton suelto (volver a las teclas de serie). */
+export interface ActionRowVM {
+  kind: 'action';
+  id: string;
+  group: string;
+  label: string;
+  text: string;
+}
+
+/** Las filas de la pantalla de opciones: botones de segmento, una tecla o un boton. */
+export type OptionsRowVM = ({ kind: 'choices' } & OptionRowVM) | KeyRowVM | ActionRowVM;
+
 export type MarkVM = 'done' | 'open' | 'locked';
 
 export interface HomeVM {

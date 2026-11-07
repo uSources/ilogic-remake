@@ -1,6 +1,9 @@
 /** Forma de la ayuda ("Cómo se juega") y piezas para escribir sus frases en cada idioma. */
 import type { MatchSettings } from '../core/model';
 import type { RuleModuleId } from '../core/rules';
+import type { KeyLabels } from '../controls/keyNames';
+
+export type { KeyLabels };
 
 /** Un color del mapa y lo que quiere decir. */
 export type MapColor = readonly [color: string, meaning: string];
@@ -31,12 +34,13 @@ export interface HelpTexts {
   goalIntro: string;
   /** Frases que dependen de las reglas de la partida; "" si ese modulo no esta puesto (no sale). */
   ruleLines: (facts: RuleFacts) => string[];
-  goalBasics: string[];
+  goalBasics: (keys: KeyLabels) => string[];
   colorsTitle: string;
-  colors: MapColor[];
+  colors: (keys: KeyLabels) => MapColor[];
   controlsTitle: string;
   head: ControlRow;
-  controls: ControlRow[];
+  /** La tabla de controles con las teclas del jugador (`keys`: lo que pone en la tecla de cada orden). */
+  controls: (keys: KeyLabels) => ControlRow[];
   close: string;
 }
 

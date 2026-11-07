@@ -9,6 +9,7 @@ import { onceEachKey } from '../../controls/browserKeys';
 import { keyCommand } from '../../controls/keyboard';
 import { menuKeyCommand, type ControlContext, type MenuCommand } from '../../controls/menu';
 import type { PointerGestures, PointerIn } from '../../controls/pointer';
+import { settings } from '../../settings';
 
 /** Lo unico que un mando necesita de la escena (ver docs/ARQUITECTURA.md, "Mandos"). */
 export interface InputTarget {
@@ -40,10 +41,13 @@ export function onKey(keyEvent: KeyboardEvent, target: InputTarget): void {
   const context = target.controlContext();
   if (context !== 'map') {
     const command = menuKeyCommand(keyEvent, context);
-    if (command) target.menu(command);
+    if (!command) return;
+    // La tecla que el jugador elige para una orden es para el juego, no para el navegador (Tab, F5...).
+    if (command.kind === 'key') keyEvent.preventDefault();
+    target.menu(command);
     return;
   }
-  const command = keyCommand(keyEvent);
+  const command = keyCommand(keyEvent, settings.keys);
   if (!command) return;
   // Ctrl+numero cambia de pestaña en algunos navegadores: aqui es hacer un grupo.
   if (command.kind === 'accept' || (command.kind === 'group' && command.mode !== 'select')) keyEvent.preventDefault();

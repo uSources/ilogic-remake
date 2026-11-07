@@ -90,6 +90,13 @@ const SCENES = {
     await p.keyboard.press('KeyH');
     await p.waitForSelector('.help');
   },
+  'partida-opciones': async (p) => {
+    await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains' }));
+    await p.keyboard.press('KeyO');
+    await p.waitForSelector('.options');
+    // Abajo del todo: el grupo «Controles» con la tecla de cada orden.
+    await p.evaluate(() => document.querySelector('.options').scrollTo(0, 10000));
+  },
   'partida-2013': async (p) => {
     await p.evaluate(() => window.ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains' }));
   },

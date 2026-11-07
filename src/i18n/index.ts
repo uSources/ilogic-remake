@@ -8,9 +8,12 @@
  */
 import { EN, EN_BY_FEATURE } from './en';
 import { help as EN_HELP } from './en/help';
+import { keyNames as EN_KEY_NAMES } from './en/keyNames';
 import { ES, ES_BY_FEATURE, type TextKey } from './es';
 import { help as ES_HELP } from './es/help';
+import { keyNames as ES_KEY_NAMES } from './es/keyNames';
 import type { HelpTexts } from './help';
+import type { KeyNames } from '../controls/keyNames';
 
 export type { TextKey };
 
@@ -20,3 +23,6 @@ export const TEXTS_BY_FEATURE = { es: ES_BY_FEATURE, en: EN_BY_FEATURE };
 
 /** La ayuda ("Cómo se juega") va aparte: no son frases sueltas sino listas y una tabla. */
 export const HELP_TEXTS: Record<keyof typeof TEXTS, HelpTexts> = { es: ES_HELP, en: EN_HELP };
+
+/** Nombres de las teclas especiales (Retroceso, Esc...), para enseñar las teclas del jugador. */
+export const KEY_NAMES: Record<keyof typeof TEXTS, KeyNames> = { es: ES_KEY_NAMES, en: EN_KEY_NAMES };

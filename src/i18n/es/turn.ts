@@ -20,7 +20,7 @@ export const turn = {
   resume: 'Volver',
   pressKey: 'Pulsa Enter o haz clic para continuar',
   skip: 'Enter / clic: acelerar',
-  hintMap: 'Enter: seleccionar · Esc: menú · Tab: siguiente · T: amenaza · M: minimapa · H: ayuda',
+  hintMap: 'Enter: seleccionar · {cancel}: menú · {nextUnit}: siguiente · {threat}: amenaza · {minimap}: minimapa · {help}: ayuda',
   confirmEndTurn: 'Quedan unidades sin mover. Vuelve a pulsar para terminar el turno',
   endTurnConfirm: '¿Terminar?',
   endTurnIdle: 'sin mover',

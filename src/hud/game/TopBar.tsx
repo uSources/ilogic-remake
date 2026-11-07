@@ -8,6 +8,7 @@ import { ui } from '../store';
 import type { WeatherVM } from '../vm/topBar';
 import type { Side } from '../vm/common';
 import { DayPanel, EconomyPanel } from './Breakdown';
+import { keyLabelOf } from '../keyLabels';
 import { canAct, canUseMenuButton } from './turn';
 
 /** " · 12/40" con el icono de mando (solo con la regla de puntos de mando). */
@@ -71,7 +72,7 @@ function EndTurnButton({ s }: { s: UIState }) {
     >
       {armed ? t('endTurnConfirm') : t('endTurn')}
       {canAct(s) && pending > 0 && <span class="pending num">{pending}</span>}
-      <span class="key">E</span>
+      <span class="key">{keyLabelOf('endTurn')}</span>
     </Button>
   );
 }

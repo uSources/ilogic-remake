@@ -1005,8 +1005,14 @@ puras, sin Phaser, con tests) traduce lo que pulsa el jugador a **ordenes**, y l
 Cada escena dice donde esta el foco con `controlContext()`: `'map'` (ordenes `InputCommand`) o el menu
 abierto (`'home'`, `'setup'`, `'typing'`, `'options'`, `'end'`...), que decide que teclas valen.
 
-- **Teclado**: `keyCommand(key)` (tabla `KEY_BINDINGS`) en el mapa; `menuKeyCommand(key, context)` (tabla
-  `MENU_BINDINGS`, una por menu) en los menus. Son las unicas tablas de teclas. Las escenas escuchan
+- **Teclado**: `keyCommand(key, settings.keys)` en el mapa, con las tablas `FIXED_KEYS` (cursor, aceptar,
+  deshacer, grupos) y `REBINDABLE_KEYS` (una entrada por `KeyBindingId` con su tecla de serie; el
+  jugador la cambia en Opciones → Controles y `Settings.keys` guarda solo los cambios, que `keyBindings`
+  pone encima); `menuKeyCommand(key, context)` (tabla `MENU_BINDINGS`, una por menu) en los menus; el
+  contexto `keyCapture` (Opciones esperando una tecla) da cualquier tecla como orden `key`. Son las
+  unicas tablas de teclas: la ayuda, los botones y la linea de abajo enseñan la tecla de cada orden
+  con `hud/keyLabels.ts` (`keyLabelOf`, `withKeyLabels`; nombres por idioma en `i18n/<idioma>/keyNames.ts`),
+  nunca una letra escrita a mano. Las escenas escuchan
   con `onceEachKey` (`browserKeys.ts`): Phaser reparte varias veces las teclas de un mismo fotograma.
 - **Raton y dedos**: la escena traduce el `Phaser.Input.Pointer` a `PointerIn` (`pointerIn`) y llama a
   `PointerGestures` (`down`, `move`, `up`, `wheel`, `leave` y `tick` en `update()`).
