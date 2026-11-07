@@ -12,6 +12,7 @@ import { loadGame } from '../core/defaultGames';
 import type { GameState } from '../core/model';
 import { resetActions, ui } from '../hud/store';
 import { helpRulesForSettingsOnly } from '../hud/helpText';
+import { onceEachKey } from '../controls/browserKeys';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
 import { CampaignScreen, type CampaignHost } from '../menu/campaignScreen';
 import { HomeScreen, type HomeHost } from '../menu/homeScreen';
@@ -155,7 +156,10 @@ export class MenuScene extends Phaser.Scene {
     // Las teclas que captura la partida (Retroceso, flechas...) siguen capturadas: liberarlas para el campo de texto.
     keyboard.clearCaptures();
     keyboard.addCapture('SPACE,UP,DOWN,LEFT,RIGHT');
-    keyboard.on('keydown', (event: KeyboardEvent) => this.onKey(event));
+    keyboard.on(
+      'keydown',
+      onceEachKey((event: KeyboardEvent) => this.onKey(event)),
+    );
   }
 
   private onKey(event: KeyboardEvent): void {

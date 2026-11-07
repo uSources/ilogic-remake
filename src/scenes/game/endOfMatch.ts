@@ -13,7 +13,7 @@ import type { DefeatReason, EndReason, GameState, MatchResult, Pos, TeamId } fro
 import { missionObjectives, objectiveOf } from '../../core/objectives';
 import type { PersonEnd } from '../../core/session';
 import { bestDays, campaignMissions, markCompleted } from '../../campaign';
-import { listStep, type MenuCommand } from '../../controls/menu';
+import { listStep, wrappedStep, type MenuCommand } from '../../controls/menu';
 import { ui, type EndOutcome } from '../../hud/store';
 import { TILE } from '../../layout';
 import { settings, t, type TextKey } from '../../settings';
@@ -255,8 +255,7 @@ export class EndOfMatch {
     if (ui.get().screen !== 'end') return;
     const step = listStep(command);
     if (step) {
-      const count = this.buttons.length;
-      this.selected = (this.selected + step + count) % count;
+      this.selected = wrappedStep(this.selected, step, this.buttons.length);
       this.publishSelected();
       return;
     }

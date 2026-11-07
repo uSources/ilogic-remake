@@ -24,7 +24,15 @@ async function open(browser) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   page.on('pageerror', (e) => failures.push(`error en la pagina: ${e.message}`));
   await page.route(/^https?:\/\//, (r) => r.abort());
-  await page.addInitScript(() => localStorage.setItem('ilogic.settings', JSON.stringify({ menuBg: 'classic', music: false })));
+  await page.addInitScript(() => {
+    localStorage.setItem('ilogic.settings', JSON.stringify({ menuBg: 'classic', music: false }));
+    // Lo que pasa con el teclado y el raton, para contarlo si algo falla (ver `traceOf`).
+    window.__keyTrace = [];
+    const note = (line) => window.__keyTrace.push(`${new Date().toISOString().slice(17, 23)} ${line}`);
+    for (const type of ['keydown', 'keyup'])
+      window.addEventListener(type, (e) => note(`${type} ${e.code}${e.shiftKey ? ' (Mayusculas)' : ''}`), true);
+    window.addEventListener('mouseover', (e) => note(`raton sobre ${e.target?.className || e.target?.nodeName}`), true);
+  });
   await page.goto(GAME);
   await page.evaluate(() => window.ilogicDebug.ready());
   await page.evaluate(() => window.ilogicDebug.freeze());
@@ -32,6 +40,34 @@ async function open(browser) {
 }
 
 const game = (page) => page.evaluate(() => window.ilogicDebug.game());
+
+/**
+ * Ademas, cada vez que Phaser le da una tecla a la escena de la partida (despues de que la escena la
+ * atienda: este oyente va detras) y el boton elegido de la pantalla final en ese momento.
+ */
+const traceScene = (page) =>
+  page.evaluate(() => {
+    const note = (line) => window.__keyTrace.push(`${new Date().toISOString().slice(17, 23)} ${line}`);
+    window.ilogic.scene
+      .getScene('Game')
+      .input.keyboard.on('keydown', (e) =>
+        note(`Phaser da ${e.code} a la escena; boton elegido: ${window.ilogicDebug.ui().end?.selected}`),
+      );
+  });
+
+/** Lo apuntado desde la ultima vez (y se vacia). */
+const traceOf = (page) =>
+  page.evaluate(() => {
+    const lines = window.__keyTrace;
+    window.__keyTrace = [];
+    return lines;
+  });
+
+/** Si `ok` no, ademas del fallo, lo que ha pasado con el teclado y el raton hasta ahi. */
+async function checkTraced(page, ok, what) {
+  check(ok, what);
+  if (!ok) console.log(`  lo que ha pasado:\n    ${(await traceOf(page)).join('\n    ')}`);
+}
 const focused = (page) => page.evaluate(() => document.activeElement?.tagName ?? null);
 const press = async (page, key) => {
   await page.keyboard.press(key);
@@ -84,6 +120,8 @@ async function endTab(page) {
   await press(page, 'Enter');
   await page.waitForFunction(() => window.ilogicDebug.ui().screen === 'end', null, { timeout: 15000 });
   await page.waitForTimeout(300);
+  await traceScene(page);
+  await traceOf(page);
   const sel = () => page.evaluate(() => window.ilogicDebug.ui().end?.selected);
   // Phaser atiende las teclas en cola, una vez por fotograma; en CI (sin pantalla) los fotogramas
   // tardan y dos pulsaciones muy seguidas se pisaban. Se espera a ver el cambio (hasta 3 s) y un poco mas.
@@ -95,9 +133,28 @@ async function endTab(page) {
   const s0 = await sel();
   await press(page, 'Tab');
   const s1 = await changed(s0);
-  check(s1 !== s0, `pantalla final: Tab pasa al siguiente boton (${s0} -> ${s1})`);
+  await checkTraced(page, s1 !== s0, `pantalla final: Tab pasa al siguiente boton (${s0} -> ${s1})`);
+  await traceOf(page);
   await press(page, 'Shift+Tab');
-  check((await changed(s1)) !== s1, 'pantalla final: Mayusculas+Tab tambien');
+  const s2 = await changed(s1);
+  await checkTraced(page, s2 !== s1, `pantalla final: Mayusculas+Tab tambien (${s1} -> ${s2})`);
+  // Los cuatro eventos de Mayusculas+Tab en un mismo fotograma: Phaser reparte el Tab tres veces
+  // (browserKeys.ts, onceEachKey) y con tres botones se volvia al mismo. Tiene que ser un paso.
+  const { from, to, count } = await page.evaluate(async () => {
+    const end = () => window.ilogicDebug.ui().end;
+    const before = end().selected;
+    const fire = (type, code, keyCode, shiftKey) =>
+      document.body.dispatchEvent(
+        new window.KeyboardEvent(type, { key: code === 'Tab' ? 'Tab' : 'Shift', code, keyCode, shiftKey, bubbles: true, cancelable: true }),
+      );
+    fire('keydown', 'ShiftLeft', 16, true);
+    fire('keydown', 'Tab', 9, true);
+    fire('keyup', 'Tab', 9, true);
+    fire('keyup', 'ShiftLeft', 16, false);
+    await new Promise((resolve) => window.setTimeout(resolve, 300));
+    return { from: before, to: end().selected, count: end().buttons.length };
+  });
+  await checkTraced(page, to === (from + 1) % count, `pantalla final: Mayusculas+Tab en un fotograma, un solo paso (${from} -> ${to})`);
   check((await focused(page)) === 'BODY', 'pantalla final: el foco del navegador no se ha movido');
 }
 
