@@ -40,13 +40,18 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   la partida; solo el equipo al que le toca: `GameState.turn`), la hace y devuelve sus sucesos (o por
   que no vale). Cada equipo lo juega un controlador dentro de una `GameSession` (`core/session.ts`):
   la escena manda las de la persona con `host.act(...)`/`host.perform(...)` (`ActionHost`, por
-  `session.act`), la IA con `act`/`doMove`/`finish` (`autopilot/context.ts`, por el dispatcher que le da la
-  sesion). Las herramientas y los tests juegan partidas enteras con `runMatch`; nada de bucles de
+  `session.act`); la IA y las ordenes permanentes **solo proponen**: son planes (`ActionPlan`, un
+  generador que da cada `GameAction` y recibe su `ActionResult`; `act`/`doMove`/`finish` en
+  `autopilot/context.ts`) que cumple la sesion (`proposing`) o, fuera de ella, `carryOut`. Quien
+  decide lee la vista de su equipo (`PlayerView`, `core/playerView.ts`: sin lo que no ve, al dia con
+  `seeing`), nunca la partida de verdad; ESLint lo vigila (`DECIDERS_ONLY_PROPOSE`). Las herramientas y los tests juegan partidas enteras con `runMatch`; nada de bucles de
   turnos a mano. Las fachadas (`core/rules`, `core/squads`) solo preguntan; ESLint no deja usar sus
   modulos de dentro fuera del nucleo. Ver `docs/ARQUITECTURA.md`, "Acciones" y "Sucesos".
-- El azar: los dados de las reglas son de la partida (`GameState.dice`, `diceOf(s)`), las decisiones
-  llevan su `Rng` con semilla (`seededRng`, `core/util/random.ts`); nada de `Math.random` en core.
-  La IA y la generacion de mapas son deterministas con la misma semilla.
+- El azar: los dados de las reglas son de la partida (`GameState.dice`, `diceOf(s)`) y el de las
+  decisiones de la IA tambien, aparte (`GameState.decisionSeed`; el de cada turno, `decisionRng(s,
+  equipo)`); el generador de mapas lleva su `Rng` (`seededRng`); elegir al azar, `pick`/`weightedPick`
+  (`core/util/random.ts`); nada de `Math.random` en core. La IA y los mapas son deterministas con la
+  misma partida.
 
 ## Estilo: que se lea a la primera
 
@@ -63,7 +68,8 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - **Datos, no numeros sueltos**: unidades, edificios, terreno, temas, generador de mapas, reglas por
   defecto y pesos de la IA en `core/content/*.json` (ver `docs/CONTENIDO.md`). El contenido va con
   cada partida, ya resuelto en tipos con nombre: `unitTypeOf(s, unit).cost`, `buildingTypeOf(s, b)`,
-  `terrainAt(s, pos)`, `themeOf(s)`, `weatherTypeOf(s, id)`, `weightsOf(s)` (pesos de la IA) y
+  `terrainAt(s, pos)`, `themeOf(s)`, `weatherTypeOf(s, id)`, los pesos de la IA en su perfil
+  (`AiProfile.weights`, `defaultAiProfile(contenido)`; las ordenes, `autopilotProfileOf`) y
   `s.content` (core/gameContent.ts), nunca de una constante de modulo; fuera de una partida (menus,
   etiquetas), `defaultContent()`. Un tipo se busca por su id en su catalogo (`entryOf(content.units,
   id, 'unidad')`). El codigo no compara nombres de unidades (`'Tank'`) ni de temas: si necesita saber
@@ -75,7 +81,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - **Equipos, no bandos**: ningun numero de equipo es especial (ni `team === 0` ni `team = 0` por
   defecto). Enemigo es `isHostile(s, a, b)` (otra alianza); lo de cada equipo, `teamState(s, team)`
   (dinero, general, estadisticas); quien lo juega, su `controller`. Lo que actua por un equipo lo
-  recibe (`aiTurn(s, rng, team, dispatcher)`, `formSquad(s, team, units)`); como acaba la partida es
+  recibe (`playerView(s, team)`, `formSquad(s, team, units)`); como acaba la partida es
   igual para todos (`matchResult(s)`: quien gana, nada de 'won'/'lost' de un equipo). En la escena, el
   equipo que mira es `viewer` y la interfaz pinta por lado (`ui/sides.ts`). Ver `docs/ARQUITECTURA.md`, "Equipos".
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
@@ -132,7 +138,14 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   en `ABILITY_ORDER` (`abilities.ts`; el compilador exige las dos);
   efecto nuevo de un poder del general = su validacion en `EFFECT_SHAPES` (`content/generals.ts`) y
   su entrada en `POWER_EFFECTS` (`generalPowers.ts`: casilla, area, efecto y `aiValue`).
-  La IA no tiene variables globales: lo del turno va en `PlayCtx`. Antes de escribir un bucle o un
+  La IA no tiene variables globales: lo del turno va en `PlayCtx` (equipo, perfil, `paths`,
+  `focusFire`); como juega, en su `AiProfile` (pesos, `scoreTerms`, `behaviours`), que se le da al
+  controlador; como pelea una unidad, un preset de `EngagementPolicy` (`HUNT`, `SHOOT_FROM_HERE`,
+  `guardZone`, `fireOnTheWay`); lo que sabe de la partida, una consulta de las reglas
+  (`visibleFoes`, `projectedIncome`, `canRepair`, `isEnemyHq`...), nunca una copia; lo que un
+  equipo no sabe, una entrada en `FOG` (`playerView.ts`); un tipo de orden permanente, su
+  entrada en `STANDING_ORDER_BLOCKS`, `STANDING_ORDER_MOMENT` y `STANDING_ORDER_TURNS` («Ir alli» es
+  la orden 'goto'). Antes de escribir un bucle o un
   literal, buscar si ya existe la ayuda.
 - Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `grid.at(pos)` en vez de
   `grid[x]![y]!`. El tamaño del mapa sale siempre del estado (`mapGrid(s)`, `createLayer(s, fill)`,

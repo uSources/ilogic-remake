@@ -307,7 +307,7 @@ Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 `GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `readSave` lo ponen en el campo
 `GameState.content` (no se guarda: `serialize` escribe el resto). Las reglas y la IA lo leen por la partida:
 `unitTypeOf(s, unit).cost`, `buildingTypeOf(s, building).earning`, `terrainAt(s, pos)`, `themeOf(s)`,
-`weightsOf(s).KILLBONUS`, `s.content.generals`; las reglas por defecto, `settingsWith(contenido, cambios)`;
+`s.content.generals` (los pesos de la IA, `s.content.ai`, los lee quien juega por su perfil: `defaultAiProfile(contenido).weights`); las reglas por defecto, `settingsWith(contenido, cambios)`;
 los nombres en pantalla, `nameOf(unitType)` (settings.ts). Nada lee el contenido al
 importar un modulo: el del juego es `defaultContent()` (content/default.ts, se carga la primera vez
 que se pide), y lo usan `createMatch`/`loadGame` (core/defaultGames.ts), la interfaz y las

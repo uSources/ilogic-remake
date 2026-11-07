@@ -15,8 +15,9 @@ flowchart TB
     ruleModules["ruleModules/<br/>RULE_MODULES: piezas de reglas que<br/>se enchufan segun los ajustes"]
     orders["targeting.ts / trail.ts<br/>a donde apuntar y camino trazado"]
     squads["squads.ts + squads/<br/>escuadras y ordenes permanentes"]
-    autopilot["autopilot.ts + autopilot/<br/>cumplir ordenes permanentes:<br/>pasos de unidad (atacar, retirarse, formacion)"]
-    ai["ai.ts + ai/<br/>IA (generador de eventos)"]
+    autopilot["autopilot.ts + autopilot/<br/>cumplir ordenes permanentes:<br/>pasos de unidad (atacar, retirarse, formacion)<br/>que proponen acciones"]
+    ai["ai.ts + ai/<br/>IA: un plan que propone acciones<br/>(ActionPlan), con su perfil (AiProfile)"]
+    view["playerView.ts<br/>lo que sabe cada equipo (PlayerView)"]
     session["session.ts + session/<br/>GameSession y controladores sin IA"]
     controllers["controllers.ts + controllers/<br/>controladores de la IA"]
     gen["mapgen.ts / missions.ts"]
@@ -38,8 +39,10 @@ flowchart TB
   game --> rules & autopilot & orders & squads & controllers
   session -- "dispatch(accion)" --> actions
   controllers --> session & ai
-  ai -- "dispatch(accion)" --> actions
+  ai -- "propone (ActionPlan)" --> controllers
+  ai -- "lee" --> view
   ai --> autopilot
+  session -- "da a cada controlador" --> view
   actions --> rules & squads & autopilot
   game --> mapView & fx & hudModels
   game -- "ui.set(...)" --> store
@@ -62,7 +65,10 @@ ni las herramientas importen los modulos de dentro. Dentro de core, mejor del mo
 las acciones, las ordenes permanentes (autopilot/) y la sesion no importan nada de la IA (ai/,
 ai.ts, aiGenerals.ts, controllers/); ESLint lo vigila (`NO_AI`) y `tests/layers.test.ts` comprueba
 que `session.ts`, `actions.ts`, `autopilot.ts` y `rules.ts` no la cargan ni de lejos. La IA
-reutiliza autopilot/.
+reutiliza autopilot/. Y **quien decide solo propone**: la IA y autopilot/ no importan dispatch, las
+acciones ni la sesion, no se hacen su propia vista de la partida y no tiran de los dados
+(`DECIDERS_ONLY_PROPOSE`; tests/layers.test.ts comprueba que `ai.ts`, `autopilot.ts` y
+`playerView.ts` no cargan dispatch ni la sesion).
 
 ### Acciones: la unica via para cambiar la partida
 
@@ -205,7 +211,8 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 | `modes.ts` | `GAME_MODES`: lo que fija cada modo de juego (congelado; se lee con `gameModeOf`) |
 | `match.ts` | empezar una partida: `MatchConfig`, `MATCH_SETUPS`, `buildMatch`, `skirmishConfig`, `rematchOf` |
 | `gameState.ts` | `newGameState(...)`: el unico sitio que escribe la forma de una partida nueva |
-| `dice.ts` + `util/random.ts` | el azar: los dados de la partida (`diceOf`) y el `Rng` de quien decide (`seededRng`) |
+| `dice.ts` + `util/random.ts` | el azar: los dados de la partida (`diceOf`), el de las decisiones de la IA en cada turno (`decisionRng`), el `Rng` con semilla (`seededRng`) y elegir al azar (`pick`, `weightedPick`) |
+| `playerView.ts` | lo que sabe cada equipo (`PlayerView`, con lo que no sabe en `FOG`) y un plan con la vista al dia (`seeing`) |
 | `settingsSchema.ts` | `SETTINGS_SCHEMA`: que valores puede tener cada ajuste |
 | `matchSettings.ts` | `settingsWith(contenido, cambios)`: los ajustes por defecto con cambios (`MatchSettings`, `s.settings`) |
 | `ruleModules/` | los modulos de reglas (`RULE_MODULES`) y lo que aporta cada uno a las listas de las reglas (`RuleHooks`); ver "Modulos de reglas" |
@@ -235,7 +242,8 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   `MatchContent`; content/index.ts le da la forma de `GameContent`). Lo ponen `newGameState` y
   `readSave`, no se guarda (`serialize` escribe `SavedGameState`) y se lee como `s.content` o con
   los atajos que dan el tipo resuelto: `unitTypeOf(s, unit)`, `buildingTypeOf`, `isHq`,
-  `terrainAt(s, pos)`, `themeOf(s)`, `weatherTypeOf(s, id)`, `weightsOf(s)` (y
+  `terrainAt(s, pos)`, `themeOf(s)`, `weatherTypeOf(s, id)` (los pesos de la IA, `content.ai`, los
+  lee quien juega por su perfil: ver "La IA") (y
   `findUnitType`/`findBuildingType` para lo que viene de fuera). Las partidas guardan ids
   (`unit.type = 'Tank'`), nunca el puesto en el fichero; `cloneState(s)` copia la partida y comparte
   el contenido.
@@ -419,22 +427,47 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
 - `turnOrder`: `nextTurn` da el siguiente del orden de la ronda que aun juega.
 
 `src/core/autopilot/` (no es la IA: lo usan las ordenes permanentes, una regla para todos):
-`context` (el `PlayCtx` del turno y ayudas comunes), `scoring` (cuanto vale cada ataque), `tactics`
-(retirarse, atacar, capturar lo de debajo), `formation` (escuadras que avanzan juntas) y
-`standingOrders` (cumplir las ordenes del jugador, `StandingOrder`, y su prevision).
-`src/core/ai/` los reutiliza: `tactics` (ir a capturar, avanzar, moverse al azar), `fire` (fuego
-concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabrica). `ai.ts` tiene
-`aiTurn`, que los junta.
+`profile` (con que juega: `AutopilotProfile`, pesos y razones de ataque; el de las ordenes de la
+partida, `autopilotProfileOf`, en defaultProfile.ts), `context` (el `PlayCtx` del turno y ayudas
+comunes), `engagement` (como pelea una unidad: `EngagementPolicy`), `scoring` (cuanto vale cada
+ataque), `tactics` (retirarse, atacar, capturar lo de debajo), `formation` (escuadras que avanzan
+juntas) y `standingOrders` (cumplir las ordenes, `StandingOrder`, y su prevision).
+`src/core/ai/` los reutiliza: `profile` (`AiProfile`, `defaultAiProfile`), `tactics` (ir a capturar,
+avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades de cada unidad) y
+`production` (que fabrica). `ai.ts` tiene `aiTurn`, que los junta.
 
-- **Sin estado global en la IA**: el equipo que juega, el modo grupo y el plan de fuego van en un
-  `PlayCtx` que crea quien empieza el turno (`aiTurn`, `assistTurn`, `startStandingOrder`, con el
-  `ActionDispatcher` por el que manda sus acciones: el de la sesion, que las apunta) y se pasa a cada
-  paso. Dos turnos, o una prevision en medio de uno, no se mezclan (lo necesitara un PvP o un
-  servidor con varias partidas).
-- **La IA juega por la misma via**: cada cosa que hace con una unidad es una accion (`act`,
-  `doMove`, `finish` en `autopilot/context.ts`, que llaman a `dispatch` con su equipo); los sucesos
-  que da son los que devuelve `dispatch`. Decide con su `Rng`; los combates tiran de los dados de la
-  partida.
+### La IA
+
+- **Un plan que propone**: el turno de la IA, como lo que hacen las ordenes, es un `ActionPlan`
+  (`Generator<GameAction, R, ActionResult>`, model/actions.ts): cada paso propone una accion
+  (`act`, `doMove`, `finish` en `autopilot/context.ts`) y recibe lo que ha dicho la partida; no
+  manda nada. La sesion lo cumple como lo de cualquier controlador (`proposing`, 'propose'); fuera
+  de una sesion (el paso de fin de turno, la prevision, la escena al dar una orden, la partida por
+  texto, los tests) se cumple con `carryOut(plan, enviar)` (actions/plan.ts). Asi todo lo que hace
+  la IA pasa por `dispatch` con las mismas comprobaciones que lo de una persona, queda en el
+  registro de la sesion y se puede repetir o mandar por la red.
+- **Lo que sabe su equipo**: decide con la `PlayerView` que le da la sesion (`playerView.ts`): la
+  partida sin lo que su equipo no sabe (`FOG`: los enemigos que no ve y lo que llevan dentro, las
+  ordenes y escuadras de los enemigos, los dados). Es la misma partida por debajo (un Proxy de
+  solo lectura; sus unidades son las de verdad) y se pone al dia tras cada accion (`seeing`). Las
+  caidas son publicas (la partida las anuncia): la vista las lleva como estan apuntadas
+  (`TeamState.fell`), nunca las deduce de lo que ve. Las ordenes permanentes que cumple la partida
+  deciden igual, con la vista del equipo (y su prevision quita lo mismo: `unitsKnownTo`).
+- **Un perfil que se le da**: como juega una IA es su `AiProfile` (`weights` de ai.json,
+  `scoreTerms`, `behaviours`), que recibe su controlador (`aiController(perfil?)`; sin el, el del
+  contenido de la partida: `defaultAiProfile`). Nada de la IA lee pesos de un sitio comun: dos IAs
+  con otros perfiles juegan a la vez (la arena). Las ordenes de la partida usan
+  `autopilotProfileOf(contenido)`.
+- **Su azar, de la partida**: `decisionRng(s, equipo)` (ver "El azar"): el mismo turno decide igual
+  al cargar, al repetir o por la red.
+- **Sin estado global**: el equipo que juega, su perfil, como mide los caminos (`paths`: 'alone',
+  cada unidad sola, o 'army', el ejercito a la vez: atraviesa a los aliados si las reglas lo
+  dejan) y el fuego concentrado del turno (`focusFire`) van en un `PlayCtx` que no cambia; la IA
+  crea uno para el general y la compra y otro para mover el ejercito. Dos turnos, o una prevision en
+  medio de uno, no se mezclan.
+- **Pregunta a las reglas**: lo que necesita saber de la partida es una consulta de las reglas
+  (`projectedIncome`, `canRepair`, `visibleFoes`, `isEnemyHq`, `hasFullArmy`, `flankBonusOnceHit`),
+  nunca una copia propia; los numeros con los que decide son pesos de su perfil.
 - **Puntos de extension**:
   - una pieza de reglas que la partida lleva o no (con su ajuste) es un modulo de reglas (ver
     "Modulos de reglas"): un fichero en `ruleModules/` y su entrada en `RULE_MODULES`;
@@ -471,11 +504,15 @@ concentrado), `unitTurn` (prioridades de cada unidad) y `production` (que fabric
     `EFFECT_SHAPES` (`content/generals.ts`) y su entrada en `POWER_EFFECTS` (`generalPowers.ts`: si
     necesita casilla, su area, como se aplica y lo que le vale a la IA, `aiValue`);
   - un comportamiento de IA nuevo (un papel de unidad) es una entrada `{ id, when, run }` en
-    `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`), en su sitio de la lista; `run` devuelve si ha usado la
-    unidad y suele llamar a un paso de `ai/tactics.ts`;
+    `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`, los del perfil por defecto), en su sitio de la lista; `run`
+    es un plan que devuelve si ha usado la unidad y suele llamar a un paso de `ai/tactics.ts`. Para
+    probarlo antes, un perfil con la lista nueva en la arena (`--candidate`);
   - una razon nueva para preferir o evitar un ataque es un termino en `ATTACK_SCORE_TERMS`
-    (`autopilot/scoring.ts`); un tipo de orden permanente del jugador, una entrada en
-    `STANDING_ORDER_TURNS` (`autopilot/standingOrders.ts`).
+    (`autopilot/scoring.ts`, los del perfil); una forma de pelear, un preset de `EngagementPolicy`
+    (`autopilot/engagement.ts`); un tipo de orden permanente, su comprobacion en
+    `STANDING_ORDER_BLOCKS` y su momento en `STANDING_ORDER_MOMENT` (`squads/standingOrders.ts`) y
+    como se juega en `STANDING_ORDER_TURNS` (`autopilot/standingOrders.ts`);
+  - algo mas que un equipo no sabe de la partida, una entrada en `FOG` (`playerView.ts`).
 - La arena (`npm run arena`) enfrenta dos perfiles de IA (`AiProfile`, ver "La IA"): cada uno se le da a
   su controlador, asi que juegan a la vez sin copiar codigo ni cambiar nada global. La referencia es la
   IA del juego con los pesos guardados en `improve/ai-baseline.json` (`--snapshot` guarda los de
@@ -559,7 +596,7 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
   no se atacan ni se capturan lo suyo, y un punto de control solo lo disputan enemigos.
 - Todo lo que es de un equipo lo dice: `unit.team`, `building.owner`, `squad.team`,
   `objective.owner`. Las funciones que hacen algo por un equipo lo reciben siempre
-  (`dispatch(s, team, action)`, `aiTurn(s, rng, team, dispatcher)`, `visibility(s, team)`), sin
+  (`dispatch(s, team, action)`, `playerView(s, team)`, `visibility(s, team)`), sin
   valor por defecto. Como acaba la partida no es de un equipo: `matchResult(s)` dice quien gana.
 - Los sucesos dicen que equipo los ha hecho (`actor`); el resumen de la ronda (`RoundReport`,
   `ControlReport`) lleva una lista por equipo (`perTeam`).
@@ -655,21 +692,21 @@ pintan; los botones llaman a `ui.actions.*`, que pone la escena. Cada pieza en s
 ## Partidas en juego (`core/session`)
 
 Quien decide lo que hace cada equipo es un **controlador** (`Controller`, `session/controller.ts`):
-la sesion le pide su turno (`playTurn`) y va haciendo lo que da, paso a paso (`TurnStep`): 'propose'
-(una accion para que la mande la sesion; recibe el resultado), 'applied' (una que ya ha hecho el: la
-IA y `autopilotController`, hasta que en la fase 6 solo propongan, mandan las suyas por el
-`ActionDispatcher` de `selfDispatched`, que solo da las hechas y les pone la marca de `AppliedStep`:
-ningun otro controlador puede colar una) o 'awaitInput' (decide alguien de fuera: la sesion espera a
-`finishInput`). Cuando el turno del controlador acaba, la sesion manda 'endTurn'.
+la sesion le pide su turno (`playTurn`) con la vista de su equipo (`PlayerView`: nunca la partida de
+verdad) y va haciendo lo que da, paso a paso (`TurnStep`): 'propose' (una accion para que la mande la
+sesion; recibe el resultado) o 'awaitInput' (decide alguien de fuera: la sesion espera a
+`finishInput`). Ningun controlador manda nada: la IA y las ordenes son planes que proponen
+(`ActionPlan`), y `proposing(plan)` los hace pasos 'propose'. Cuando el turno del controlador acaba,
+la sesion manda 'endTurn'.
 
 | Controlador | Que hace |
 |---|---|
-| `aiController(rng, brain?)` | la IA rival (o la de referencia de la arena), con su azar |
+| `aiController(perfil?)` | la IA rival, con su perfil (`AiProfile`; la arena le da otro) y el azar de la partida |
 | `humanController()` | una persona en la pantalla: espera a que acabe (sus ordenes permanentes las cumple la fase de fin de turno) |
 | `remoteController()` | un jugador por la red: espera las acciones que lleguen |
 | `replaySession(s, log)` | (una sesion entera, no un controlador) repite el registro de otra, con un `LogCursor` |
-| `autopilotController()` | cumple ya, en el turno, las ordenes permanentes (la huella; session/selfDispatched.ts, sin IA) |
-| `randomController(rng)` | jugadas legales al azar (tools/improve/randomPlayer.ts, para el fuzz) |
+| `autopilotController()` | cumple ya, en el turno, las ordenes de pelear (la huella; session/autopilotController.ts, sin IA) |
+| `randomController(rng)` | jugadas legales al azar, de las que el juego daria por buenas (tools/improve/randomPlayer.ts, para el fuzz) |
 | `passiveController()` | no hace nada |
 | `scriptedController(acciones)` | manda una lista fija de acciones (la huella: las ordenes del primer dia) |
 | `sequence(...)` | uno detras de otro (la huella: sus ordenes, `autopilotController` y la IA) |
@@ -691,9 +728,8 @@ azar"): nadie se lo da, asi que la pantalla, el fondo del menu y las herramienta
   de la sesion: para simular en una copia, `dispatch`). Solo mientras se la espera, salvo rendirse,
   que vale siempre.
 - 'startTurn' y 'endTurn' son solo de la sesion: la regla esta en `sessionOnlyProblem` y la usan
-  `act`, lo que propone un controlador y lo que mandan los que mandan ellos mismos
-  (`selfDispatched`: la IA y `autopilotController`, que ademas solo pueden mandar acciones de su
-  equipo; lo mismo los pasos de turno).
+  `act` y lo que propone un controlador (los pasos de turno, ademas, solo mandan acciones de su
+  equipo: `ownTeamOnly`).
 - El registro (`log`, de `LoggedAction`) y como se lee estan en `session/log.ts`. Lo que un equipo
   manda fuera de su turno (rendirse mientras juega otro, o antes de empezar el suyo) queda en el
   registro en su sitio; si lo es lo dice una sola pregunta, `isOffTurnAction` (el turno es de otro o
@@ -863,8 +899,8 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 
 - **La partida cambia con acciones**: los modulos que hacen algo en ella piden `ActionHost`
   (`types.ts`): `act(action)` la manda por la sesion (`GameSession.act`) con el equipo que mira y da
-  sus sucesos (o null si no vale), `perform(action)` ademas los anima y `dispatcher` es lo que se le
-  da a la IA para las ordenes que empiezan ya. Ninguno cambia la partida a mano; lo que se apunta de
+  sus sucesos (o null si no vale), `perform(action)` ademas los anima y `dispatcher` es por donde se
+  cumple el plan de una orden que empieza ya (orders.ts, `playPlan`). Ninguno cambia la partida a mano; lo que se apunta de
   cada accion (tutorial, ultima casilla) llega por los avisos de la sesion. La escena no juega a los
   demas equipos ni hace el fin de ronda: lo hace la sesion.
 - **Dependencias por interfaces pequeñas**: cada modulo declara lo que necesita de la escena en una

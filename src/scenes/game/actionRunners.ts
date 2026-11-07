@@ -31,7 +31,7 @@ export interface ActionRunHost {
   /** Soltar la unidad elegida en `at` (como al arrastrarla); `drop`: hacer ya lo logico (capturar...). */
   commit(at: Pos, options: { drop?: boolean }): Promise<void>;
   groupMove(goal: Pos): Promise<void>;
-  /** Viaje de varios turnos (travelTo) para la unidad elegida. */
+  /** «Ir alli» (la orden de varios turnos 'goto') para la unidad elegida. */
   giveTravel(unit: Unit, goal: Pos): Promise<void>;
   /** Orden con destino sin casilla: ahora se elige en el mapa (fase 'target'). */
   pickOrderTarget(kind: TurnEndOrderKind, units: Unit[], fromUnitMenu: boolean): void;
