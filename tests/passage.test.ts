@@ -7,13 +7,13 @@ import {
   letsAlliesThrough,
   mergeProblem,
   moveRulesOf,
-  newUnit,
   passBlockers,
   RULE_MODULES,
   stepAllowed,
   surroundingsOf,
-  traverse,
 } from '@core/rules';
+import { newUnit } from '@core/measure';
+import { traverse } from '@core/rules/traverse';
 import { MoveType } from '@core/content';
 import { sightOf } from '@core/rules/visibility';
 import { blankState, unitTypeNamed } from './helpers';

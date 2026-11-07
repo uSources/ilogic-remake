@@ -7,12 +7,12 @@ import {
   hasFullArmy,
   isEnemyHq,
   killReward,
-  newUnit,
   projectedIncome,
   upkeepOf,
   usesCommandPoints,
   visibleFoes,
 } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { buildingTypeOf } from '@core/gameContent';
 import type { Building } from '@core/model';
 import { blankState, hqId, unitTypeNamed } from './helpers';

@@ -5,7 +5,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { createLayer } from '@core/mapGrid';
-import { endRound, newUnit, score } from '@core/rules';
+import { score } from '@core/rules';
+import { endRound } from '@core/rules/round';
+import { newUnit } from '@core/measure';
 import { settings } from '../src/settings';
 import {
   armyChartVM,

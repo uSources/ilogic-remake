@@ -4,7 +4,8 @@ import { choosePower } from '@core/ai';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { generalHitFactor, appointGeneral } from '@core/generals';
-import { newUnit, engagement } from '@core/rules';
+import { engagement } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { teamState } from '@core/teams';
 
 const AI = defaultContent().ai;

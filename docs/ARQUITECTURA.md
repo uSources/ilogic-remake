@@ -68,7 +68,14 @@ que `session.ts`, `actions.ts`, `autopilot.ts` y `rules.ts` no la cargan ni de l
 reutiliza autopilot/. Y **quien decide solo propone**: la IA y autopilot/ no importan dispatch, las
 acciones ni la sesion, no se hacen su propia vista de la partida y no tiran de los dados
 (`DECIDERS_ONLY_PROPOSE`; tests/layers.test.ts comprueba que `ai.ts`, `autopilot.ts` y
-`playerView.ts` no cargan dispatch ni la sesion).
+`playerView.ts` no cargan dispatch ni la sesion). Los modulos de `rules/` y `squads/` tienen, ademas de sus consultas,
+los pasos con los que se cambia la partida (`advanceCapture`, `mergeInto`, `earn`, `spendUnit`,
+`giveStandingOrder`, `formSquad`...): solo los llaman el `apply` de las acciones, los pasos de ronda
+y de turno, las `INVARIANTS` y lo que prepara una partida. La IA, autopilot/, la sesion, los
+controladores, la vista y lo que apunta la escena (`targeting.ts`, `trail.ts`) no los importan
+(`APPLY_STEPS`, eslint.config.js), y las fachadas no los dan (tests/lintImports.test.ts): las
+herramientas y los tests que preparan una partida a mano ponen sus unidades con `newUnit` de
+`core/measure.ts`.
 
 ### Acciones: la unica via para cambiar la partida
 

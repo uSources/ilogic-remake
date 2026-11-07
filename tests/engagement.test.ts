@@ -3,7 +3,8 @@ import { fireOnTheWay, guardZone, HUNT, SHOOT_FROM_HERE, autopilotProfileOf, typ
 import { playCtx } from '@core/autopilot/context';
 import { tryAttack } from '@core/autopilot/tactics';
 import { defaultContent } from '@core/content/default';
-import { moveRange, newUnit } from '@core/rules';
+import { moveRange } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { blankState, giveTurn, playPlan, unitTypeNamed } from './helpers';
 
 const TANK = unitTypeNamed('Tank');

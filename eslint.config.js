@@ -114,6 +114,50 @@ export const DECIDERS_ONLY_PROPOSE = [
       'Los dados son de las reglas y la semilla de cada turno se lee de la partida de verdad: quien decide usa el azar de su vista (decisionRngOf).',
   },
 ];
+/**
+ * Los pasos que cambian la partida y viven con las reglas (`rules/`, `squads/`): solo los llaman el
+ * `apply` de las acciones (actions/), los pasos de ronda y de turno, las INVARIANTS y lo que prepara
+ * una partida. Quien decide (la IA, autopilot/), la sesion, los controladores, la vista y lo que
+ * apunta (targeting, trail) solo preguntan: no los importan. Fuera del nucleo ya no se ven (las
+ * fachadas no los dan: tests/layers.test.ts). Lo prueba tests/lintImports.test.ts.
+ */
+const STEPS_BY_MODULE = {
+  'rules/capture': ['dropStaleCaptures', 'advanceCapture'],
+  'rules/transport': ['mergeInto', 'boardTransport', 'dropPassenger'],
+  'rules/traverse': ['traverse', 'moveAlong'],
+  'rules/lifecycle': ['newUnit', 'removeUnit', 'removeDead', 'removeWithCargo'],
+  'rules/unitTurn': ['markMoved', 'spendUnit', 'readyUnit'],
+  'rules/funds': ['earn', 'pay', 'capFunds'],
+  'rules/travel': ['endGotoByHand', 'finishGoto'],
+  'rules/economy': ['buildUnit'],
+  'rules/supply': ['repairNeighbours'],
+  'rules/round': ['endRound'],
+  'rules/invariants': ['restoreInvariants'],
+  'rules/undo': ['forgetUndoableMoves', 'rememberMove', 'dropLastUndoableMove', 'dropStaleUndoableMoves'],
+  'rules/falls': ['recordFalls'],
+  'rules/control': ['controlRound'],
+  'squads/standingOrders': ['giveStandingOrder', 'cancelStandingOrder', 'finishStandingOrder', 'keepCapturing', 'liftStandingOrder'],
+  'squads/membership': ['pruneSquads', 'formSquad', 'setGroup', 'addToGroup', 'leaveSquad', 'renameSquad', 'disbandSquad'],
+};
+/** El nombre de cada paso, para quien los busca (las fachadas no pueden darlos). */
+export const APPLY_STEP_NAMES = Object.values(STEPS_BY_MODULE).flat();
+/** Un patron por modulo: su ruta desde cualquier sitio del nucleo (`../rules/funds`, `./funds`, con o sin extension). */
+export const APPLY_STEPS = Object.entries(STEPS_BY_MODULE).map(([module, importNames]) => {
+  const [folder, file] = module.split('/');
+  return {
+    regex: `(^|/)(${folder}/)?${file}(\\.[jt]s)?$`,
+    importNames,
+    message: `${importNames.join(', ')} cambian la partida: solo los llaman las acciones, los pasos de ronda y de turno y las INVARIANTS. Quien decide propone una accion.`,
+  };
+});
+const READER_FILES = [
+  'src/core/controllers/**/*.ts',
+  'src/core/controllers.ts',
+  'src/core/playerView.ts',
+  'src/core/targeting.ts',
+  'src/core/trail.ts',
+];
+const SESSION_FILES = ['src/core/session/**/*.ts', 'src/core/session.ts'];
 const AI_FILES = ['src/core/ai/**/*.ts', 'src/core/ai.ts'];
 const AUTOPILOT_FILES = ['src/core/autopilot/**/*.ts', 'src/core/autopilot.ts'];
 
@@ -200,12 +244,29 @@ export default tseslint.config(
   {
     // La IA solo propone y solo lee su vista (DECIDERS_ONLY_PROPOSE).
     files: AI_FILES,
-    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, ...DECIDERS_ONLY_PROPOSE] }] },
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, ...DECIDERS_ONLY_PROPOSE, ...APPLY_STEPS] }],
+    },
   },
   {
     // Y autopilot/, ademas, sin la IA (NO_AI).
     files: AUTOPILOT_FILES,
-    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ...DECIDERS_ONLY_PROPOSE] }] },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ...DECIDERS_ONLY_PROPOSE, ...APPLY_STEPS] },
+      ],
+    },
+  },
+  {
+    // La sesion lleva los turnos mandando acciones: no cambia la partida a mano (APPLY_STEPS) ni carga la IA.
+    files: SESSION_FILES,
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ...APPLY_STEPS] }] },
+  },
+  {
+    // Los controladores, la vista y lo que apunta la escena solo preguntan (APPLY_STEPS).
+    files: READER_FILES,
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, ...APPLY_STEPS] }] },
   },
   {
     // Y las reglas y las acciones, ademas, sin las piezas que se enchufan (ONLY_THROUGH_RULE_MODULES).

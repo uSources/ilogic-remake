@@ -27,7 +27,8 @@ import { GameSession } from '@core/session';
 import { carryOut, dispatch, isTurnBoundary } from '@core/actions';
 import { serialize } from '@core/save';
 import { uncheckedAttack } from '@core/measure';
-import { endRound, isWinner, matchResult, roundReport, type RoundReport } from '@core/rules';
+import { isWinner, matchResult, roundReport, type RoundReport } from '@core/rules';
+import { endRound } from '@core/rules/round';
 import { teamIds, type TeamSetup } from '@core/teams';
 import { samePos } from '@core/geom';
 

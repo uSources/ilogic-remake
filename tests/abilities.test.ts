@@ -11,7 +11,6 @@ import {
   captureStrength,
   hitChance,
   moveRange,
-  newUnit,
   tileProtection,
   validPath,
   visibility,
@@ -21,6 +20,7 @@ import {
   abilitiesOf,
   loadProblem,
 } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { dispatch } from '@core/actions';
 import { settings } from '../src/settings';
 import { abilitiesVM } from '../src/ui/hudModels';

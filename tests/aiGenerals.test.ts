@@ -5,7 +5,7 @@ import { playCtx } from '@core/autopilot/context';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { appointGeneral, generalDef } from '@core/generals';
-import { newUnit } from '@core/rules';
+import { newUnit } from '@core/measure';
 import type { GameState } from '@core/model';
 import { blankState, giveTurn, unitTypeNamed, playPlan } from './helpers';
 import { teamState } from '@core/teams';

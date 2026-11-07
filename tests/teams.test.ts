@@ -13,10 +13,8 @@ import { settingsWith } from '@core/matchSettings';
 import {
   attackTargets,
   canCapture,
-  controlRound,
   distanceMap,
   isMatchOver,
-  newUnit,
   matchResult,
   isDefeated,
   standingTeams,
@@ -26,8 +24,10 @@ import {
   unitById,
   visibility,
   roundReport,
-  restoreInvariants,
 } from '@core/rules';
+import { controlRound } from '@core/rules/control';
+import { newUnit } from '@core/measure';
+import { restoreInvariants } from '@core/rules/invariants';
 import { deserialize, serialize } from '@core/save';
 import {
   alliesOf,

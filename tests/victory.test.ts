@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_MODES, gameModeOf } from '@core/modes';
-import { currentDefeat, isWinner, matchResult, newUnit, restoreInvariants, VICTORY_RULES } from '@core/rules';
+import { currentDefeat, isWinner, matchResult, VICTORY_RULES } from '@core/rules';
+import { newUnit } from '@core/measure';
+import { restoreInvariants } from '@core/rules/invariants';
 import { buildMission, missionById } from '@core/missions';
 import { defaultContent } from '@core/content/default';
 import type { GameModeId, VictoryRuleId } from '@core/model';

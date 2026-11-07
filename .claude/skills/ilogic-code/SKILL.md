@@ -46,7 +46,10 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   decide lee la vista de su equipo (`PlayerView`, `core/playerView.ts`: sin lo que no ve, al dia con
   `seeing`), nunca la partida de verdad; ESLint lo vigila (`DECIDERS_ONLY_PROPOSE`). Las herramientas y los tests juegan partidas enteras con `runMatch`; nada de bucles de
   turnos a mano. Las fachadas (`core/rules`, `core/squads`) solo preguntan; ESLint no deja usar sus
-  modulos de dentro fuera del nucleo. Ver `docs/ARQUITECTURA.md`, "Acciones" y "Sucesos".
+  modulos de dentro fuera del nucleo, y los pasos que cambian la partida de `rules/` y `squads/`
+  (`earn`, `advanceCapture`, `giveStandingOrder`...) solo los llaman las acciones, las fases y las
+  `INVARIANTS` (`APPLY_STEPS`). Para preparar una partida a mano (herramientas, tests), `newUnit` de
+  `core/measure.ts`. Ver `docs/ARQUITECTURA.md`, "Acciones" y "Sucesos".
 - El azar: los dados de las reglas son de la partida (`GameState.dice`, `diceOf(s)`) y el de las
   decisiones de la IA tambien, aparte (`GameState.decisionSeed`; el de cada turno, `turnSeedOf(s,
   equipo)`, y quien decide lo lee de su vista: `decisionRngOf(vista)`); el generador de mapas lleva su `Rng` (`seededRng`); elegir al azar, `pick`/`weightedPick`/`randomInt`/`shuffleInPlace`

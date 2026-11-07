@@ -10,8 +10,8 @@ import { diceOf } from '@core/dice';
 import { newGameState } from '@core/gameState';
 import { duel, duelTeams } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
-import { inAttackRange, newUnit } from '@core/rules';
-import { uncheckedAttack } from '@core/measure';
+import { inAttackRange } from '@core/rules';
+import { uncheckedAttack, newUnit } from '@core/measure';
 import type { GameState, Rng, MatchSettings, Unit } from '@core/model';
 
 export interface DuelCell {

@@ -1,16 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import {
-  attackZone,
-  captureEvent,
-  defenseStars,
-  moveEvent,
-  moveRange,
-  newUnit,
-  reachableTiles,
-  tileProtection,
-  unitThreat,
-} from '@core/rules';
+import { attackZone, captureEvent, defenseStars, moveEvent, moveRange, reachableTiles, tileProtection, unitThreat } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { deserialize, serialize } from '@core/save';
 import { blankState, unitTypeNamed, terrainNamed, hqId } from './helpers';
 

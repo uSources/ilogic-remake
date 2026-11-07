@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MoveType } from '@core/content';
-import { distanceMap, newUnit, noBlockers, passBlockers, unitsBlock } from '@core/rules';
+import { distanceMap, noBlockers, passBlockers, unitsBlock } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { blankState, unitTypeNamed } from './helpers';
 
 /** Distancia por tierra (distanceMap) con cada estrategia de lo que corta el paso (Blockers). */

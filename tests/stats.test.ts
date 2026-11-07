@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import { endRound, newUnit } from '@core/rules';
+import { endRound } from '@core/rules/round';
+import { newUnit } from '@core/measure';
 import { deserialize, serialize } from '@core/save';
 import { armyByDay, armyValue, recordEvent, sampleArmy, statsOf } from '@core/stats';
 import { emptyTeamStats, teamState } from '@core/teams';

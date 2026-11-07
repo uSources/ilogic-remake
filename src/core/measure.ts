@@ -7,6 +7,12 @@
  */
 import { resolveAttack } from './actions/combat';
 import { restoreInvariants } from './rules/invariants';
+
+/**
+ * Poner una unidad en una partida que se prepara a mano (un duelo, una prueba, la herramienta de
+ * contenido), sin comprobar nada: lo mismo que usan el generador de mapas y las misiones al crearla.
+ */
+export { newUnit } from './rules/lifecycle';
 import type { Dice, GameEventOf, GameState, Unit } from './model';
 
 /**

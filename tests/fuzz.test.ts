@@ -1,7 +1,9 @@
 import { defaultContent } from '@core/content/default';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { newUnit, captureProgress, endRound } from '@core/rules';
+import { captureProgress } from '@core/rules';
+import { newUnit } from '@core/measure';
+import { endRound } from '@core/rules/round';
 import { act, blankState } from './helpers';
 import { fuzzGame } from '../tools/improve/fuzz';
 

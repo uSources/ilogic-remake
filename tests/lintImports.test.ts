@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { ESLint, Linter } from 'eslint';
-import { DECIDERS_ONLY_PROPOSE, NO_PLUGGED_PIECES_EXCEPT_POWERS, ONLY_THROUGH_RULE_MODULES } from '../eslint.config.js';
+import {
+  APPLY_STEPS,
+  APPLY_STEP_NAMES,
+  DECIDERS_ONLY_PROPOSE,
+  NO_PLUGGED_PIECES_EXCEPT_POWERS,
+  ONLY_THROUGH_RULE_MODULES,
+} from '../eslint.config.js';
+import * as rulesFacade from '@core/rules';
+import * as squadsFacade from '@core/squads';
+import * as actionsFacade from '@core/actions';
 
 /**
  * La regla L7 de eslint.config.js (las reglas y las acciones no importan las piezas que se
@@ -115,5 +124,60 @@ describe('quien decide solo propone (DECIDERS_ONLY_PROPOSE, eslint.config.js)', 
       const options = config.rules?.['no-restricted-imports']?.[1] as { patterns?: object[] } | undefined;
       for (const pattern of DECIDERS_ONLY_PROPOSE) expect(options?.patterns ?? []).toContainEqual(pattern);
     }
+  });
+});
+
+/** ESTILO, regla 12: los pasos que cambian la partida (en rules/ y squads/) solo los llaman las acciones, las fases y las INVARIANTS. */
+describe('los pasos que cambian la partida no se usan para decidir ni mirar (APPLY_STEPS, eslint.config.js)', () => {
+  const forbidsIn = (filename: string, code: string): boolean =>
+    linter
+      .verify(
+        `${code}\nexport const used = 1;\n`,
+        [{ rules: { 'no-restricted-imports': ['error', { patterns: APPLY_STEPS }] } }] as Linter.Config[],
+        {
+          filename,
+        },
+      )
+      .some((message) => message.ruleId === 'no-restricted-imports');
+
+  it.each([
+    "import { earn } from '../rules/funds';",
+    "import { pay } from '../rules/funds.ts';",
+    "import { advanceCapture } from '../rules/capture';",
+    "import { traverse } from '../rules/traverse';",
+    "import { spendUnit } from '../rules/unitTurn';",
+    "import { giveStandingOrder } from '../squads/standingOrders';",
+    "import { formSquad } from '../squads/membership';",
+    "import { endRound } from '../rules/round';",
+  ])('prohibe %s a quien decide', (code) => expect(forbidsIn('src/core/ai/example.js', code)).toBe(true));
+
+  it.each([
+    "import { endsInterrupted } from '../rules/traverse';",
+    "import { captureProgress } from '../rules/capture';",
+    "import { canStillAct } from '../rules/unitTurn';",
+    "import { effectiveStandingOrder } from '../squads/standingOrders';",
+    "import { assistTurn } from '../autopilot/standingOrders';",
+  ])('deja %s', (code) => expect(forbidsIn('src/core/ai/example.js', code)).toBe(false));
+
+  it('la configuracion de verdad lo pone en quien decide, la sesion, los controladores y la vista', async () => {
+    const eslint = new ESLint({ overrideConfigFile: 'eslint.config.js' });
+    const files = [
+      'src/core/ai/tactics.ts',
+      'src/core/autopilot/tactics.ts',
+      'src/core/session/gameSession.ts',
+      'src/core/controllers/aiController.ts',
+      'src/core/playerView.ts',
+      'src/core/targeting.ts',
+    ];
+    for (const file of files) {
+      const config = (await eslint.calculateConfigForFile(file)) as { rules?: Record<string, unknown[]> };
+      const options = config.rules?.['no-restricted-imports']?.[1] as { patterns?: object[] } | undefined;
+      for (const pattern of APPLY_STEPS) expect(options?.patterns ?? [], file).toContainEqual(pattern);
+    }
+  });
+
+  it('las fachadas del nucleo no dan ninguno: fuera del nucleo la partida solo cambia con acciones', () => {
+    const exported = [...Object.keys(rulesFacade), ...Object.keys(squadsFacade), ...Object.keys(actionsFacade)];
+    expect(exported.filter((name) => APPLY_STEP_NAMES.includes(name))).toEqual([]);
   });
 });

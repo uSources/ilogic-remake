@@ -6,7 +6,8 @@ import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { blankMap, mapGrid } from '@core/mapGrid';
 import { newGameState } from '@core/gameState';
-import { moveRange, newUnit, reachableTiles, visibility } from '@core/rules';
+import { moveRange, reachableTiles, visibility } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { duel } from '@core/teams';
 import type { GameState } from '@core/model';
 

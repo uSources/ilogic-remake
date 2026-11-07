@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/autopilot';
 import { defaultContent } from '@core/content/default';
 import { manhattan, posOf } from '@core/geom';
-import { newUnit } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { availableActions, carryOut, dispatch } from '@core/actions';
 import { deserialize, serialize } from '@core/save';
 import {

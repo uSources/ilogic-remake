@@ -11,5 +11,7 @@ interface ImportPattern {
 export const ONLY_THROUGH_RULE_MODULES: ImportPattern;
 export const NO_PLUGGED_PIECES_EXCEPT_POWERS: ImportPattern;
 export const DECIDERS_ONLY_PROPOSE: readonly ImportPattern[];
+export const APPLY_STEPS: readonly ImportPattern[];
+export const APPLY_STEP_NAMES: readonly string[];
 declare const config: Linter.Config[];
 export default config;

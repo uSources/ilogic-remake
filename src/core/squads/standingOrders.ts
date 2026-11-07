@@ -1,7 +1,9 @@
 /**
  * [CAMBIO] Ordenes permanentes de cada equipo (estilo RTS): la de cada escuadra y la propia de cada unidad
- * (destacada). Logica pura: la usan las acciones de las ordenes, la escena y quien las cumple, que es la
- * partida para todos los equipos (autopilot/standingOrders.ts, en los pasos de turno), no la IA.
+ * (destacada). Las consultas (que orden cumple cada una, si se puede dar) las usan la escena y quien las
+ * cumple, que es la partida para todos los equipos (autopilot/standingOrders.ts, en los pasos de turno),
+ * no la IA. Los pasos que las cambian (`giveStandingOrder`, `cancelStandingOrder`, `finishStandingOrder`,
+ * `keepCapturing`, `liftStandingOrder`) solo los llaman las acciones (`APPLY_STEPS`, eslint.config.js).
  */
 import { manhattan, samePos, posOf } from '../geom';
 import { buildingAt, teamUnits } from '../rules/queries';

@@ -4,7 +4,7 @@ import { loadGame } from '@core/defaultGames';
 import { serialize } from '@core/save';
 import { isRandomState, randomStep, seedFromDraw, seededRng } from '@core/util/random';
 import { act, blankState, unitTypeNamed } from './helpers';
-import { newUnit } from '@core/rules';
+import { newUnit } from '@core/measure';
 
 describe('los dados de la partida', () => {
   it('cada tirada avanza su estado, que es un entero de 32 bits', () => {

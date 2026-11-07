@@ -6,7 +6,9 @@ import { entryOf, loadContent, validateContent, type Content, type WeatherType }
 
 import { mutableCopy } from '@core/util/freeze';
 import { deserialize, serialize } from '@core/save';
-import { endRound, hitChance, movementProfile, moveRange, newUnit, visibility, visionOf, engagement } from '@core/rules';
+import { hitChance, movementProfile, moveRange, visibility, visionOf, engagement } from '@core/rules';
+import { endRound } from '@core/rules/round';
+import { newUnit } from '@core/measure';
 import { ensureWeather, rollWeather, upcomingWeather, weatherNow } from '@core/weather';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';

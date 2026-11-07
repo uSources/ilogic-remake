@@ -4,7 +4,7 @@ import { loadGame } from '@core/defaultGames';
 import { readSave, serialize } from '@core/save';
 import { SAVE_VERSION } from '@core/saveVersion';
 import { cleanTeams, hasValidTeams } from '@core/savedParts';
-import { newUnit } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { formSquad } from '@core/squads/membership';
 import { blankState, unitTypeNamed } from './helpers';
 

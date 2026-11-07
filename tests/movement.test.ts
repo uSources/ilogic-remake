@@ -3,7 +3,8 @@ import { changeSettings } from '@core/gameState';
 import { describe, expect, it } from 'vitest';
 
 import { PLAIN_SETTINGS } from './plainSettings';
-import { moveRange, pathTo, validPath, visibility, newUnit } from '@core/rules';
+import { moveRange, pathTo, validPath, visibility } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { dispatch } from '@core/actions';
 import type { GameAction, GameEvent, GameState, Pos } from '@core/model';
 import { act, blankState, unitTypeNamed } from './helpers';

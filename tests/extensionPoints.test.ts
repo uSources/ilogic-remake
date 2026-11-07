@@ -8,7 +8,6 @@ import {
   fireOrigins,
   hitChance,
   moveRange,
-  newUnit,
   reachableTiles,
   tileProtection,
   engagement,
@@ -23,6 +22,7 @@ import {
   MELEE_COUNTER,
   ROUND_REPORT_PARTS,
 } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { COMBAT_RESOLUTION, combatResolutionOf } from '@core/actions';
 import type { UnitType } from '@core/content';
 import { blankState, endRoundReport, unitTypeNamed, withoutHeadquarters } from './helpers';

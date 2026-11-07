@@ -1,9 +1,12 @@
 /**
  * Reglas del juego (portadas de Ilogic.java, Unit.java y Building.java).
  * Funciones sobre GameState, sin nada de Phaser, que preguntan y calculan: que puede hacer cada
- * unidad, hasta donde llega, cuanto acierta... Lo que cambia la partida son las acciones
- * (core/actions.ts, `dispatch`), que usan estas reglas para comprobar y hacer cada una; desde aqui
- * solo sale lo que no es de quien juega: crear unidades al preparar una partida y el fin de ronda.
+ * unidad, hasta donde llega, cuanto acierta... Los modulos de `rules/` tienen tambien los pasos que
+ * cambian la partida (`advanceCapture`, `mergeInto`, `earn`, `endRound`...), pero esos solo los
+ * llaman el `apply` de las acciones (core/actions.ts, `dispatch`), los pasos de ronda y de turno y
+ * las `INVARIANTS` (`APPLY_STEPS` en eslint.config.js): esta fachada solo da lo que pregunta (lo
+ * comprueba tests/layers.test.ts). Las herramientas y los tests que preparan una partida a mano
+ * ponen sus unidades con `newUnit` de core/measure.ts.
  * Las desviaciones respecto al original estan marcadas con [CAMBIO].
  *
  * Este fichero solo reune lo publico de los modulos de `rules/` (uno por tema) para que se pueda
@@ -35,7 +38,7 @@
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
  * | `undo` | los movimientos que se pueden deshacer (`undoableMoves`): apuntarlos, olvidarlos y por que no se puede |
- * | `falls` | si un equipo ha caido y por que (`currentDefeat`, `isDefeated`) y cuando cayo (`recordFalls`, `fallOf`) |
+ * | `falls` | si un equipo ha caido y por que (`currentDefeat`, `isDefeated`) y cuando cayo (`fallOf`; lo apunta `recordFalls`, su invariante) |
  * | `invariants` | lo que se deja en orden tras cada accion y cada ronda (`INVARIANTS`, `restoreInvariants`) |
  * | `victory` | como acaba la partida (`VICTORY_RULES`, `matchResult`), derrota de un equipo, puntos, objetivo de mision |
  * | `turnOrder` | quien juega y en que orden (los derrotados ya no) |
@@ -69,7 +72,6 @@ export {
   type CaptureProgress,
   type CaptureResult,
 } from './rules/capture';
-export { newUnit } from './rules/lifecycle';
 export {
   moveRulesOf,
   stepAllowed,
@@ -91,7 +93,7 @@ export {
   type Step,
   type StepKind,
 } from './rules/movement';
-export { traverse, moveAlong, moveEvent, endsInterrupted, type Traversal } from './rules/traverse';
+export { moveEvent, endsInterrupted, type Traversal } from './rules/traverse';
 export { distanceMap, noBlockers, unitsBlock, type Blockers, type DistanceMap } from './rules/distance';
 export { movementProfile, terrainAccess, pathCost, type MovementProfile, type TerrainAccess } from './rules/movementProfile';
 export { letsAlliesThrough, passBlockers, surroundingsOf, type Surroundings, type TileOccupancy } from './rules/passage';
@@ -155,12 +157,12 @@ export {
   type ArmyLimit,
   type BuyOption,
 } from './rules/economy';
-export { inControlZone, teamsInZone, controlRound } from './rules/control';
+export { inControlZone, teamsInZone } from './rules/control';
 export type { RoundReport, RoundReportParts } from './model';
 export type { ControlReport } from './ruleModules/controlPoints';
 export type { WeatherChange } from './weather';
-export { unhealable, endRound, roundReport, ROUND_PHASES, ROUND_REPORT_PARTS, ROUND_STAGES, roundPhasesOf } from './rules/round';
-export { INVARIANTS, restoreInvariants, type Invariant } from './rules/invariants';
+export { unhealable, roundReport, ROUND_PHASES, ROUND_REPORT_PARTS, ROUND_STAGES, roundPhasesOf } from './rules/round';
+export { INVARIANTS, type Invariant } from './rules/invariants';
 export { lastUndoableMove } from './rules/undo';
 export {
   currentDefeat,
@@ -171,7 +173,6 @@ export {
   lastFallen,
   lastFallOrder,
   mainFall,
-  recordFalls,
   type FallenTeam,
 } from './rules/falls';
 export {
