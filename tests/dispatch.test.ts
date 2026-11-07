@@ -17,7 +17,7 @@ import { manhattan } from '@core/geom';
 import { serialize } from '@core/save';
 import { loadGame } from '@core/defaultGames';
 import { formSquad } from '@core/squads/membership';
-import { gotoDestination, STANDING_ORDER_MOMENT, turnEndOrderOf } from '@core/squads';
+import { gotoDestination, momentOf, turnEndOrderOf } from '@core/squads';
 import type { GameAction, GameActionKind, Pos } from '@core/model';
 import { act, BLANK_SIZE, blankState, expectRejected, giveTurn, unitTypeNamed, placedBuildings, someUnits } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
@@ -173,7 +173,7 @@ describe('dispatch: la unica via para cambiar la partida', () => {
       { x: 2, y: 25 },
       { x: 2, y: 25 },
     ]);
-    expect(STANDING_ORDER_MOMENT.goto).toBe('turnStart');
+    expect(momentOf('goto')).toBe('turnStart');
     expect(turnEndOrderOf(s, squad[0]!)).toBeUndefined();
   });
 

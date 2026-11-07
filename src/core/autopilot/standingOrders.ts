@@ -35,7 +35,7 @@ import { autopilotProfileOf } from './defaultProfile';
 
 /**
  * [CAMBIO] Ordenes de un equipo en ese momento de su turno (`moment`): las unidades con una orden
- * de ese momento (STANDING_ORDER_MOMENT) que siguen sin usar la cumplen. No toca las demas unidades
+ * de ese momento (`momentOf`) que siguen sin usar la cumplen. No toca las demas unidades
  * ni compra nada. Devuelve los uid de las que han cumplido su orden (se quedan esperando otra).
  */
 export function* assistTurn(s: GameState, team: TeamId, moment: StandingOrderMoment): ActionPlan<number[]> {
@@ -91,7 +91,7 @@ function* captureOrderTurn(turn: StandingOrderTurnContext): ActionPlan<boolean> 
   return ownsBuildingAt(s, play, at);
 }
 
-/** Esta en la zona que guarda la orden (a AI.GUARDRADIUS o menos del destino). */
+/** Esta en la zona que guarda la orden (a profile.weights.GUARDRADIUS o menos del destino). */
 const inGuardZone = (play: PlayCtx, at: Pos) => (pos: Pos) => manhattan(pos, at) <= play.profile.weights.GUARDRADIUS;
 
 /** Defender: disparar a lo que entre en la zona y, si no, colocarse junto al destino. Nunca se cumple sola. */
@@ -131,7 +131,7 @@ function* gotoOrderTurn({ unit }: StandingOrderTurnContext): ActionPlan<boolean>
   return false;
 }
 
-/** Como juega una unidad cada tipo de orden (y cuando: STANDING_ORDER_MOMENT). Un tipo de orden nuevo es una entrada aqui. */
+/** Como juega una unidad cada tipo de orden (lo demas de cada tipo, en STANDING_ORDER_TYPES). Un tipo de orden nuevo es una entrada aqui. */
 const STANDING_ORDER_TURNS: Record<StandingOrderKind, StandingOrderTurn> = {
   capture: captureOrderTurn,
   defend: defendOrderTurn,

@@ -1,7 +1,7 @@
 /**
  * [CAMBIO] Ordenes permanentes de cada equipo (estilo RTS): la de cada escuadra y la propia de cada unidad
- * (destacada). Logica pura: la usan la escena y la IA, que las cumple al terminar el turno
- * (autopilot/standingOrders.ts).
+ * (destacada). Logica pura: la usan las acciones de las ordenes, la escena y quien las cumple, que es la
+ * partida para todos los equipos (autopilot/standingOrders.ts, en los pasos de turno), no la IA.
  */
 import { manhattan, samePos, posOf } from '../geom';
 import { buildingAt } from '../rules/queries';
@@ -15,6 +15,7 @@ import type {
   Squad,
   StandingOrder,
   StandingOrderKind,
+  StandingOrderKinds,
   StandingOrderMoment,
   TeamId,
   TurnEndOrder,
@@ -23,34 +24,8 @@ import type {
 } from '../model';
 import { squadById, squadUnits, unitsOfTeam } from './queries';
 
-/** Que dice cada tipo de orden permanente (el Record obliga a tenerlos todos). */
-const STANDING_ORDER_NAMES: Record<StandingOrderKind, string> = { attack: 'atacar', capture: 'capturar', defend: 'defender', goto: 'ir' };
-
-/**
- * Cuando la cumple la unidad en el turno de su equipo: la de ir alli al empezarlo (avanza y despues
- * quien juega puede seguir con ella), las de pelear al acabarlo (con lo que no se ha usado).
- */
-export const STANDING_ORDER_MOMENT: Record<StandingOrderKind, StandingOrderMoment> = {
-  attack: 'turnEnd',
-  capture: 'turnEnd',
-  defend: 'turnEnd',
-  goto: 'turnStart',
-};
-
-/** Las de ir alli son de cada unidad (nunca de su escuadra) y las acaba moverla a mano. */
-const isUnitOnly = (kind: StandingOrderKind): boolean => kind === 'goto';
-
 /** La orden es de las que se cumplen al acabar el turno (las de pelear). */
-const isTurnEndOrder = (order: StandingOrder): order is TurnEndOrder => STANDING_ORDER_MOMENT[order.kind] === 'turnEnd';
-/** Los tipos de orden permanente que hay (para comprobar los que vienen de fuera, como una partida guardada). */
-export const STANDING_ORDER_KINDS = Object.keys(STANDING_ORDER_NAMES) as readonly StandingOrderKind[];
-
-/** El valor es un tipo de orden permanente. */
-export const isStandingOrderKind = (value: unknown): value is StandingOrderKind => STANDING_ORDER_KINDS.some((kind) => kind === value);
-
-/** El valor es un tipo de orden de pelear (de las que se cumplen al acabar el turno). */
-export const isTurnEndOrderKind = (value: unknown): value is TurnEndOrderKind =>
-  isStandingOrderKind(value) && STANDING_ORDER_MOMENT[value] === 'turnEnd';
+const isTurnEndOrder = (order: StandingOrder): order is TurnEndOrder => isTurnEndOrderKind(order.kind);
 
 export const sameStandingOrder = (first: StandingOrder, second: StandingOrder): boolean =>
   first.kind === second.kind && samePos(first.at, second.at);
@@ -76,10 +51,10 @@ export function effectiveStandingOrder(s: GameState, unit: Unit): StandingOrder 
   return squadOrder ? forUnit(s, unit, squadOrder) : undefined;
 }
 
-/** La orden que cumple la unidad en ese momento de su turno (`STANDING_ORDER_MOMENT`), si la tiene. */
+/** La orden que cumple la unidad en ese momento de su turno (`momentOf`), si la tiene. */
 export function standingOrderAt(s: GameState, unit: Unit, moment: StandingOrderMoment): StandingOrder | undefined {
   const order = effectiveStandingOrder(s, unit);
-  return order && STANDING_ORDER_MOMENT[order.kind] === moment ? order : undefined;
+  return order && momentOf(order.kind) === moment ? order : undefined;
 }
 
 /** La orden de pelear (atacar, capturar, defender) que cumple al acabar el turno: la que se enseña como orden. */
@@ -134,31 +109,76 @@ export function standingOrderBlock(
   at: Pos,
   units: readonly Unit[],
 ): StandingOrderBlock | null {
-  return STANDING_ORDER_BLOCKS[kind](s, team, at, units);
+  return STANDING_ORDER_TYPES[kind].block(s, team, at, units);
 }
 
 type BlockCheck = (s: GameState, team: TeamId, at: Pos, units: readonly Unit[]) => StandingOrderBlock | null;
 
+/** Lo que hay que saber de un tipo de orden permanente. */
+interface StandingOrderType<Kind extends StandingOrderKind> {
+  /** Como se dice (para depurar y la partida por texto). */
+  readonly name: string;
+  /**
+   * Cuando la cumple la unidad en el turno de su equipo: al empezarlo (la de ir alli: avanza y
+   * despues quien juega puede seguir con ella) o al acabarlo (las de pelear, con lo que no se ha usado).
+   */
+  readonly moment: StandingOrderKinds[Kind];
+  /** Es siempre de cada unidad (nunca de su escuadra), la acaba moverla a mano y capturar de paso no la cambia. */
+  readonly unitOnly: boolean;
+  /** Por que no se puede dar ahi a esas unidades (null = se puede). */
+  readonly block: BlockCheck;
+}
+
 /** Atacar y defender: alguna tiene que poder luchar. */
 const needsFighter: BlockCheck = (s, _team, _at, units) => (units.some((unit) => canFight(s, unit)) ? null : 'noFighter');
 
-/** Por que no se puede dar cada tipo de orden (el Record obliga a tenerlos todos). */
-const STANDING_ORDER_BLOCKS: Record<StandingOrderKind, BlockCheck> = {
-  attack: needsFighter,
-  defend: needsFighter,
-  capture: (s, team, at, units) => {
-    if (isOwnedOrMissing(s, team, at)) return 'noBuilding';
-    return units.some((unit) => isCapturer(s, unit)) ? null : 'noCapturer';
+/**
+ * Cada tipo de orden permanente, con todo lo suyo (el tipo obliga a tener uno por tipo, con su
+ * momento). Un tipo nuevo es su linea en `StandingOrderKinds` (model/standingOrder.ts), su entrada
+ * aqui y como se juega en `STANDING_ORDER_TURNS` (autopilot/standingOrders.ts).
+ */
+export const STANDING_ORDER_TYPES: { readonly [Kind in StandingOrderKind]: StandingOrderType<Kind> } = {
+  attack: { name: 'atacar', moment: 'turnEnd', unitOnly: false, block: needsFighter },
+  capture: {
+    name: 'capturar',
+    moment: 'turnEnd',
+    unitOnly: false,
+    block: (s, team, at, units) => {
+      if (isOwnedOrMissing(s, team, at)) return 'noBuilding';
+      return units.some((unit) => isCapturer(s, unit)) ? null : 'noCapturer';
+    },
   },
-  // Ir alli: cada una tiene que poder ir (en el mapa, a donde no llegue ya este turno: travelProblem).
-  goto: (s, _team, at, units) => {
-    for (const unit of units) {
-      const problem = isOnMap(unit) ? travelProblem(s, unit, at) : 'transported';
-      if (problem) return problem;
-    }
-    return null;
+  defend: { name: 'defender', moment: 'turnEnd', unitOnly: false, block: needsFighter },
+  goto: {
+    name: 'ir',
+    moment: 'turnStart',
+    unitOnly: true,
+    // Cada una tiene que poder ir (en el mapa, a donde no llegue ya este turno: travelProblem).
+    block: (s, _team, at, units) => {
+      for (const unit of units) {
+        const problem = isOnMap(unit) ? travelProblem(s, unit, at) : 'transported';
+        if (problem) return problem;
+      }
+      return null;
+    },
   },
 };
+
+/** Los tipos de orden permanente que hay (para comprobar los que vienen de fuera, como una partida guardada). */
+export const STANDING_ORDER_KINDS = Object.keys(STANDING_ORDER_TYPES) as readonly StandingOrderKind[];
+
+/** El valor es un tipo de orden permanente. */
+export const isStandingOrderKind = (value: unknown): value is StandingOrderKind => STANDING_ORDER_KINDS.some((kind) => kind === value);
+
+/** Cuando se cumple una orden de ese tipo en el turno de su equipo. */
+export const momentOf = (kind: StandingOrderKind): StandingOrderMoment => STANDING_ORDER_TYPES[kind].moment;
+
+/** El valor es un tipo de orden de pelear (de las que se cumplen al acabar el turno). */
+export const isTurnEndOrderKind = (value: unknown): value is TurnEndOrderKind =>
+  isStandingOrderKind(value) && momentOf(value) === 'turnEnd';
+
+/** Las de ese tipo son de cada unidad (ver StandingOrderType.unitOnly). */
+const isUnitOnly = (kind: StandingOrderKind): boolean => STANDING_ORDER_TYPES[kind].unitOnly;
 
 /**
  * Ordenes que tiene sentido ofrecer en una casilla (clic derecho o pulsacion larga en el destino, con

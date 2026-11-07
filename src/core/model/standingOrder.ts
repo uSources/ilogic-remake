@@ -3,7 +3,7 @@ import type { Pos } from './geometry';
 /**
  * [CAMBIO] Orden permanente (con destino) de una unidad, estilo RTS (de cualquier equipo; la da
  * quien lo juega): la cumple sola cada turno (ver autopilot/standingOrders.ts), al acabarlo o, la de
- * ir, al empezarlo (`STANDING_ORDER_MOMENT`, squads/standingOrders.ts). Tipos:
+ * ir, al empezarlo (su `moment` en `STANDING_ORDER_TYPES`, squads/standingOrders.ts). Tipos:
  * - attack: avanza hacia `at` atacando lo que tenga a tiro por el camino; al llegar, cuando no
  *   quedan enemigos cerca, la orden se cumple;
  * - capture: va al edificio de `at` y lo captura (responde si puede, sin desviarse); cumplida al
@@ -16,11 +16,23 @@ import type { Pos } from './geometry';
  *   a mano la acaba.
  * Al cumplirse, la unidad se queda quieta esperando otra orden.
  */
-export type StandingOrderKind = TurnEndOrderKind | 'goto';
-/** Las ordenes que se cumplen al acabar el turno (las de pelear: lo que se enseña como orden en el mapa). */
-export type TurnEndOrderKind = 'attack' | 'capture' | 'defend';
+export interface StandingOrderKinds {
+  attack: 'turnEnd';
+  capture: 'turnEnd';
+  defend: 'turnEnd';
+  goto: 'turnStart';
+}
+/**
+ * Los tipos de orden y cuando se cumple cada uno (la unica lista: los tipos de abajo salen de aqui, y
+ * cada uno tiene su entrada en `STANDING_ORDER_TYPES`, que el compilador exige con este momento).
+ */
+export type StandingOrderKind = keyof StandingOrderKinds;
 /** Cuando cumple una unidad su orden en su turno: al empezarlo ('goto') o al acabarlo (las demas). */
 export type StandingOrderMoment = 'turnStart' | 'turnEnd';
+/** Las ordenes que se cumplen al acabar el turno (las de pelear: lo que se enseña como orden en el mapa). */
+export type TurnEndOrderKind = {
+  [Kind in StandingOrderKind]: StandingOrderKinds[Kind] extends 'turnEnd' ? Kind : never;
+}[StandingOrderKind];
 /** Una orden: que hacer (`kind`) y donde (`at`). */
 export interface StandingOrder {
   kind: StandingOrderKind;

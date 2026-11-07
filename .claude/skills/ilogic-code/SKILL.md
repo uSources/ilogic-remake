@@ -144,7 +144,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `guardZone`, `fireOnTheWay`); lo que sabe de la partida, una consulta de las reglas
   (`visibleFoes`, `projectedIncome`, `canRepair`, `isEnemyHq`...), nunca una copia; lo que un
   equipo no sabe, una entrada en `FOG` (`playerView.ts`); un tipo de orden permanente, su
-  entrada en `STANDING_ORDER_BLOCKS`, `STANDING_ORDER_MOMENT` y `STANDING_ORDER_TURNS` («Ir alli» es
+  linea en `StandingOrderKinds` (model) y sus entradas en `STANDING_ORDER_TYPES` y `STANDING_ORDER_TURNS` («Ir alli» es
   la orden 'goto'). Antes de escribir un bucle o un
   literal, buscar si ya existe la ayuda.
 - Tipos estrictos con `noUncheckedIndexedAccess`: para rejillas, `grid.at(pos)` en vez de
