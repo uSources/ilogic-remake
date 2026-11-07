@@ -97,19 +97,22 @@ const NO_AI = {
  * L7: las reglas y las acciones no importan las piezas que se enchufan (generales, sus poderes, el
  * clima, las habilidades) ni los modulos de reglas concretos o su lista: preguntan a la partida por lo
  * que aportan (ruleModules/ruleset.ts) y los tipos de lo que se puede aportar (ruleModules/hooks.ts).
- * Vale con cualquier forma de la ruta: relativa (`../`, `../../core/`) o por alias (`@core/`); lo del
+ * Vale con cualquier forma de la ruta: la pieza es el ultimo trozo y lo de antes sube o es el nucleo
+ * (`../`, `./../`, `../util/../`, `../../core/`, `@core/`), con o sin extension (`.ts`, `.js`). Lo del
  * contenido (`content/abilities`, `model/weather`) no es una pieza y si se puede. La lista de
  * acciones (actions/registry.ts) es la excepcion: junta la accion de los poderes, que vive con ellos.
+ * Lo prueba tests/lintImports.test.ts.
  */
-const PIECE_PATH = '(^(\\.\\./)+|^@core/|/core/)';
+const PIECE_PATH = '(^|/)(\\.\\.?|@?core)/';
+const EXTENSION = '(\\.[jt]s)?$';
 const pluggedPieces = (pieces) => ({
-  regex: `${PIECE_PATH}(${pieces})(\\.ts)?$|${PIECE_PATH}ruleModules/(?!(hooks|ruleset)(\\.ts)?$)`,
+  regex: `${PIECE_PATH}(${pieces})${EXTENSION}|${PIECE_PATH}ruleModules/(?!(hooks|ruleset)${EXTENSION})`,
   message:
     'Las reglas y las acciones no importan generales, poderes, clima, habilidades ni modulos concretos: lo que aportan llega por GameState.ruleset (hooksOf, ruleModules/ruleset.ts).',
 });
-const ONLY_THROUGH_RULE_MODULES = pluggedPieces('generals|generalPowers|weather|abilities');
+export const ONLY_THROUGH_RULE_MODULES = pluggedPieces('generals|generalPowers|weather|abilities');
 const ACTION_LIST_FILE = 'src/core/actions/registry.ts';
-const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces('generals|weather|abilities');
+export const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces('generals|weather|abilities');
 
 /** Lo que se prohibe en todo el nucleo (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
 const CORE_LIMITS = [...CORE_IS_PURE, SANDBOX_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_SANDBOX];
