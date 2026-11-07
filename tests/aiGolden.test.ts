@@ -19,6 +19,6 @@ describe('IA: partidas de referencia', () => {
       content: defaultContent(),
     });
     const last = record.samples[record.samples.length - 1];
-    expect({ winner: record.winner, reason: record.reason, days: record.days, events: record.events, last }).toMatchSnapshot();
+    expect({ winners: record.winners, reason: record.reason, days: record.days, events: record.events, last }).toMatchSnapshot();
   });
 });

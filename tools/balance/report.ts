@@ -152,48 +152,54 @@ const lastSampleOf = (record: GameRecord): DaySample => record.samples[record.sa
 
 const sampleOn = (record: GameRecord, day: number): DaySample | undefined => record.samples.find((sample) => sample.day === day);
 
-/** Cuantas partidas gana cada equipo y por que acaban. */
+/** Cuantas partidas gana cada equipo (con una alianza, cada uno de los suyos) y por que acaban. */
 function winsOf(records: readonly GameRecord[], teams: readonly TeamId[]): { wins: PerTeam<number>; reasons: Record<string, number> } {
   const wins = teams.map(() => 0);
   const reasons: Record<string, number> = { hq: 0, wipeout: 0, days: 0, timeout: 0 };
   for (const record of records) {
-    if (record.winner !== null) wins[record.winner]!++;
+    for (const winner of record.winners) wins[winner]!++;
     reasons[record.reason] = (reasons[record.reason] ?? 0) + 1;
   }
   return { wins, reasons };
 }
 
+const hasWinner = (record: GameRecord): boolean => record.winners.length > 0;
+
 /**
- * El ganador "efectivo" de cada partida: el real o, en las sin terminar, quien va claramente por
- * delante al final (`adjudicated`); las demas quedan igualadas (`even`).
+ * Los ganadores "efectivos" de cada partida: los reales o, en las sin terminar, quien va claramente
+ * por delante al final (`adjudicated`); las demas quedan igualadas (`even`).
  */
 function effectiveWinners(records: readonly GameRecord[], teams: readonly TeamId[]) {
   const adjudicated = teams.map(() => 0);
   let even = 0;
-  const winners = new Map<GameRecord, TeamId>();
+  const winners = new Map<GameRecord, readonly TeamId[]>();
   for (const record of records) {
-    const winner = record.winner ?? clearLeader(holdingsOf(lastSampleOf(record)));
-    if (winner === null) even++;
+    if (hasWinner(record)) {
+      winners.set(record, record.winners);
+      continue;
+    }
+    const leader = clearLeader(holdingsOf(lastSampleOf(record)));
+    if (leader === null) even++;
     else {
-      if (record.winner === null) adjudicated[winner]!++;
-      winners.set(record, winner);
+      adjudicated[leader]!++;
+      winners.set(record, [leader]);
     }
   }
   return { adjudicated, even, winners };
 }
 
 /** Bola de nieve: entre las partidas que siguen tal dia con alguien por delante, en cuantas gana el que iba primero. */
-function snowballOf(winners: ReadonlyMap<GameRecord, TeamId>): SnowballPoint[] {
+function snowballOf(winners: ReadonlyMap<GameRecord, readonly TeamId[]>): SnowballPoint[] {
   return SNOWBALL_DAYS.map((day) => {
     const leaders = [...winners]
       .filter(([record]) => record.days > day)
-      .map(([record, winner]) => ({ sample: sampleOn(record, day), winner }))
-      .filter((entry): entry is { sample: DaySample; winner: TeamId } => entry.sample !== undefined)
-      .map(({ sample, winner }) => ({ ranking: strengthRanking(holdingsOf(sample)), winner }))
+      .map(([record, winning]) => ({ sample: sampleOn(record, day), winning }))
+      .filter((entry): entry is { sample: DaySample; winning: readonly TeamId[] } => entry.sample !== undefined)
+      .map(({ sample, winning }) => ({ ranking: strengthRanking(holdingsOf(sample)), winning }))
       .filter(
         ({ ranking: [leader, runnerUp] }) => leader !== undefined && runnerUp !== undefined && leader.strength - runnerUp.strength >= 1,
       );
-    const leaderWins = leaders.filter(({ ranking: [leader], winner }) => leader!.team === winner).length;
+    const leaderWins = leaders.filter(({ ranking: [leader], winning }) => winning.includes(leader!.team)).length;
     return { day, leaderWins: leaders.length ? leaderWins / leaders.length : null, games: leaders.length };
   });
 }
@@ -257,8 +263,8 @@ function unitRowsOf(records: readonly GameRecord[], content: GameContent): UnitR
   return tallies.map(({ unitType, tally }) => unitRowOf(unitType, tally, totalBought, records.length));
 }
 
-/** El nombre de un equipo en los avisos: el primero es el de la persona en el juego; los demas, la IA. */
-const teamLabel = (team: TeamId): string => `bando ${team} (${team === 0 ? 'el jugador' : 'la IA'})`;
+/** El nombre de un equipo en los avisos: su numero (ninguno es especial; quien lo juega lo dice `policies`). */
+const teamLabel = (team: TeamId): string => `bando ${team}`;
 
 /** Lo que el informe mira de las partidas para avisar y proponer. */
 interface Findings {
@@ -353,7 +359,7 @@ function duelFlags(summary: DuelSummary | undefined, targets: Targets): string[]
 function outcomeOf(records: readonly GameRecord[], teams: readonly TeamId[], winners: ReturnType<typeof effectiveWinners>): Outcome {
   const games = records.length;
   const { wins, reasons } = winsOf(records, teams);
-  const days = records.filter((record) => record.winner !== null).map((record) => record.days);
+  const days = records.filter(hasWinner).map((record) => record.days);
   return {
     wins,
     adjudicated: winners.adjudicated,

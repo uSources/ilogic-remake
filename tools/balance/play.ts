@@ -69,9 +69,9 @@ export interface DaySample {
 
 export interface GameRecord {
   seed: number;
-  /** El equipo ganador (el primero de la alianza que gana), o null si no gana nadie. */
-  winner: TeamId | null;
-  /** Por que acabo; 'timeout' si se llego a `maxDays` sin acabar (entonces `winner` es null). */
+  /** Los equipos que ganan (toda la alianza ganadora), o ninguno si no gana nadie. */
+  winners: TeamId[];
+  /** Por que acabo; 'timeout' si se llego a `maxDays` sin acabar (entonces no gana nadie). */
   reason: EndReason | 'timeout';
   days: number;
   samples: DaySample[];
@@ -229,11 +229,11 @@ class GameLog {
 }
 
 /** Quien ha ganado y por que; sin acabar, nadie y 'timeout'. */
-function outcomeOf(s: GameState): Pick<GameRecord, 'winner' | 'reason'> {
+function outcomeOf(s: GameState): Pick<GameRecord, 'winners' | 'reason'> {
   const result = matchResult(s);
-  if (result.status === 'playing') return { winner: null, reason: 'timeout' };
-  if (result.status === 'draw') return { winner: null, reason: result.reason };
-  return { winner: teamIds(s).find((team) => isWinner(result, team)) ?? null, reason: result.reason };
+  if (result.status === 'playing') return { winners: [], reason: 'timeout' };
+  if (result.status === 'draw') return { winners: [], reason: result.reason };
+  return { winners: teamIds(s).filter((team) => isWinner(result, team)), reason: result.reason };
 }
 
 /** Una partida de equilibrio entera, con todo lo que pasa apuntado. */

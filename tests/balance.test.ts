@@ -170,7 +170,7 @@ describe('herramienta de equilibrio: el informe', () => {
   const tallies = () => Object.fromEntries(defaultContent().units.list.map((unitType) => [unitType.id, noTally()]));
   const won = (seed: number, winner: 0 | 1): GameRecord => ({
     seed,
-    winner,
+    winners: [winner],
     reason: 'hq',
     days: 20,
     samples: [{ day: 1, funds: [0, 0], buildings: [1, 1], army: [0, 0], units: [0, 0] }],
