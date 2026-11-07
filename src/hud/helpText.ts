@@ -3,6 +3,7 @@ import { gameModulesFor } from '../core/rules';
 import { HELP_TEXTS } from '../i18n';
 import type { HelpRules, RuleFacts } from '../i18n/help';
 import { settings } from '../settings';
+import { currentKeyLabels } from './keyLabels';
 
 /** La ayuda en una partida: sus ajustes y los modulos que lleva de verdad (los del juego y los de su modo). */
 export const helpRulesOfMatch = (s: GameState): HelpRules => ({
@@ -20,11 +21,11 @@ export const helpRulesForSettingsOnly = (matchSettings: Readonly<MatchSettings>)
 export const ruleFactsOf = (rules: HelpRules): RuleFacts => ({ settings: rules.settings, on: (module) => rules.modules.includes(module) });
 
 /**
- * La ayuda en el idioma elegido, con las frases del objetivo que tocan con esas reglas. Los textos
- * estan en src/i18n/<idioma>/help.ts.
+ * La ayuda en el idioma elegido, con las frases del objetivo que tocan con esas reglas y las teclas
+ * del jugador (las de serie con sus cambios). Los textos estan en src/i18n/<idioma>/help.ts.
  */
-export const helpText = (rules: HelpRules) => {
+export const helpText = (rules: HelpRules, keys = currentKeyLabels()) => {
   const help = HELP_TEXTS[settings.lang];
-  const goal = [help.goalIntro, ...help.ruleLines(ruleFactsOf(rules)), ...help.goalBasics].filter(Boolean);
-  return { ...help, goal };
+  const goal = [help.goalIntro, ...help.ruleLines(ruleFactsOf(rules)), ...help.goalBasics(keys)].filter(Boolean);
+  return { ...help, goal, colors: help.colors(keys), controls: help.controls(keys) };
 };

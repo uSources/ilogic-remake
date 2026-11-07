@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { HELP_TEXTS, TEXTS, TEXTS_BY_FEATURE } from '../src/i18n';
+import { HELP_TEXTS, KEY_NAMES, TEXTS, TEXTS_BY_FEATURE } from '../src/i18n';
+import { keyLabels } from '../src/controls/keyNames';
 import { defaultContent } from '@core/content/default';
 import { settingsWith } from '@core/matchSettings';
 import { helpRulesForSettingsOnly, helpRulesOfMatch, ruleFactsOf } from '../src/hud/helpText';
@@ -26,9 +27,10 @@ describe('textos por tema', () => {
 describe('ayuda', () => {
   it('los dos idiomas tienen las mismas filas, colores y frases segun las reglas', () => {
     const { es, en } = HELP_TEXTS;
-    expect(en.controls.length).toBe(es.controls.length);
-    expect(en.colors.map(([color]) => color)).toEqual(es.colors.map(([color]) => color));
-    expect(en.goalBasics.length).toBe(es.goalBasics.length);
+    const keys = keyLabels({}, KEY_NAMES.es);
+    expect(en.controls(keys).length).toBe(es.controls(keys).length);
+    expect(en.colors(keys).map(([color]) => color)).toEqual(es.colors(keys).map(([color]) => color));
+    expect(en.goalBasics(keys).length).toBe(es.goalBasics(keys).length);
     const ruleLineIsShown = (lines: string[]) => lines.map((line) => line !== '');
     const facts = ruleFactsOf(helpRulesForSettingsOnly(defaultContent().defaultSettings));
     expect(ruleLineIsShown(en.ruleLines(facts))).toEqual(ruleLineIsShown(es.ruleLines(facts)));

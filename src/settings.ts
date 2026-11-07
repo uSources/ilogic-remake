@@ -1,9 +1,10 @@
 /**
- * Configuracion del jugador (idioma, autoguardado, musica).
+ * Configuracion del jugador (idioma, autoguardado, musica, teclas).
  * En el original se guardaba en data/config al cerrar la ventana;
  * aqui se guarda en localStorage en cada cambio.
  */
 import type { Texts } from './core/content';
+import { parseKeyOverrides, type KeyOverrides } from './controls/keyboard';
 import { TEXTS, type TextKey } from './i18n';
 
 export type { TextKey };
@@ -35,6 +36,8 @@ export interface Settings {
   menuBg: 'live' | 'classic';
   /** Dibujo del terreno: el nuevo (piezas con orillas) o el de 2013. */
   terrainArt: 'new' | 'classic';
+  /** Teclas del mapa que el jugador ha cambiado (solo esas; las de serie, en controls/keyboard.ts). */
+  keys: KeyOverrides;
 }
 
 const STORAGE_KEY = 'ilogic.settings';
@@ -53,6 +56,7 @@ const DEFAULTS: Settings = {
   warnIdle: true,
   menuBg: 'live',
   terrainArt: 'new',
+  keys: {},
 };
 export const UI_SCALES = [0.9, 1, 1.25];
 const LANGS: Lang[] = ['es', 'en'];
@@ -67,7 +71,7 @@ const oneOf = <T>(saved: unknown, valid: readonly T[], fallback: T): T => (valid
  * Las opciones guardadas, sin fiarse de lo que haya: cada campo se comprueba y, si no vale, se queda
  * el de por defecto. Las que empiezan encendidas solo se apagan con un `false` guardado.
  */
-function parseSaved(saved: Partial<Settings>): Settings {
+export function parseSaved(saved: Partial<Settings>): Settings {
   return {
     lang: oneOf(saved.lang, LANGS, DEFAULTS.lang),
     autosave: !!saved.autosave,
@@ -82,6 +86,7 @@ function parseSaved(saved: Partial<Settings>): Settings {
     warnIdle: saved.warnIdle !== false,
     menuBg: oneOf(saved.menuBg, MENU_BACKGROUNDS, DEFAULTS.menuBg),
     terrainArt: oneOf(saved.terrainArt, TERRAIN_ARTS, DEFAULTS.terrainArt),
+    keys: parseKeyOverrides(saved.keys),
   };
 }
 

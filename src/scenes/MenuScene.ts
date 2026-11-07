@@ -129,7 +129,7 @@ export class MenuScene extends Phaser.Scene {
   controlContext(): MenuContext {
     if (ui.get().help) return 'help';
     if (notesOpen()) return 'notes';
-    if (this.optionsPanel.isOpen) return 'options';
+    if (this.optionsPanel.isOpen) return this.optionsPanel.context();
     if (this.mode === 'setup') return isTypingCode() ? 'typing' : 'setup';
     if (this.mode === 'campaign') return 'campaign';
     return 'home';
@@ -165,7 +165,10 @@ export class MenuScene extends Phaser.Scene {
   private onKey(event: KeyboardEvent): void {
     if (this.leaving) return;
     const command = menuKeyCommand(event, this.controlContext());
-    if (command) this.menu(command);
+    if (!command) return;
+    // La tecla que el jugador elige para una orden es para el juego, no para el navegador (Tab, F5...).
+    if (command.kind === 'key') event.preventDefault();
+    this.menu(command);
   }
 
   private publishAll(): void {

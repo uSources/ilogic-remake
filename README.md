@@ -116,9 +116,13 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
   movimiento si no ha descubierto nada.
 - **Reglas nuevas de movimiento:** el terreno cuesta (bosque, arena y nieve frenan a los vehículos;
   acantilados y agua poco profunda, a la infantería), se atraviesan las unidades propias y, con
-  niebla, el bosque esconde: si tu camino choca con un enemigo escondido, emboscada.
+  niebla, el bosque esconde: si tu camino choca con un enemigo escondido, emboscada. Los edificios
+  propios vigilan a su alrededor (la Base y la fortaleza 3 casillas, fábricas y aeropuertos 2, ciudades y pozos 1).
 - Opciones dentro de la partida (menú > Opciones): esperar sola al soltar, saltar a la siguiente
-  unidad, velocidad de las animaciones propias y del enemigo, música y autoguardado.
+  unidad, velocidad de las animaciones propias y del enemigo, música y autoguardado, en pestañas (Q y
+  E cambian de pestaña). En la pestaña «Controles» se cambia la tecla de cada orden del mapa (fin de
+  turno, amenaza, órdenes, zoom...; las flechas, Enter y los números son fijos); la ayuda y los
+  botones enseñan las teclas elegidas.
 - **Clima** (reglas nuevas): cada pocos días cambia el tiempo para los dos bandos. La lluvia frena a los vehículos, la nevada a todo lo que va por tierra, la tormenta a los aviones y la tormenta de arena (desierto) a infantería y aviones; el mal tiempo quita visión y puntería. Arriba, junto al día, el clima de hoy, sus efectos (pasando por encima) y el de mañana si cambia. Se quita en Nueva partida → Personalizada; la campaña no lo usa. Números en `src/core/content/weather.json`.
 - **Generales**: en "Nueva partida" se puede elegir uno. Tiene una ventaja fija y una barra que se
   carga con el daño que haces y recibes; con ella usa sus habilidades (una por turno). **Brisa**,

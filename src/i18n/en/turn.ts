@@ -22,7 +22,7 @@ export const turn: Translation<typeof es> = {
   resume: 'Resume',
   pressKey: 'Press Enter or click to continue',
   skip: 'Enter / click: speed up',
-  hintMap: 'Enter: select · Esc: menu · Tab: next · T: threat · M: minimap · H: help',
+  hintMap: 'Enter: select · {cancel}: menu · {nextUnit}: next · {threat}: threat · {minimap}: minimap · {help}: help',
   confirmEndTurn: 'Some units have not moved. Press again to end the turn',
   endTurnConfirm: 'End anyway?',
   endTurnIdle: 'not moved',

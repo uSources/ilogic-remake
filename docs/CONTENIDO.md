@@ -146,7 +146,7 @@ ver `docs/ARQUITECTURA.md`, "Modulos de reglas"), sus textos
 | `earning` | Dinero por ronda |
 | `heals` | Vida que cura a las unidades que repara |
 | `protection` | Multiplica el acierto contra quien esta encima: `0.7` = un 30 % menos de daño |
-| `vision` | Radio de vision |
+| `vision` | Radio de vision que da a su dueño (rombo): 3 la Base y la fortaleza, 2 fabricas y aeropuertos, 1 ciudades y pozos |
 | `textLetter` | Letra del edificio en el mapa de la partida por texto (`npm run play`): una mayuscula distinta por edificio; la de otro equipo sale en minuscula, asi que ningun terreno puede tener esa letra (ni en minuscula) |
 
 Un edificio nuevo necesita ademas graficos (`public/assets/b/`) y, para que salga en los mapas al

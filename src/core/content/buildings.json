@@ -11,7 +11,7 @@
       "earning": 1000,
       "heals": 30,
       "protection": 0.8,
-      "vision": 0,
+      "vision": 1,
       "classicSprite": {
         "Snow": "2_"
       }
@@ -26,7 +26,7 @@
       "earning": 500,
       "heals": 0,
       "protection": 0.9,
-      "vision": 0,
+      "vision": 1,
       "classicSprite": {
         "Snow": "2_"
       }
@@ -41,7 +41,7 @@
       "earning": 1000,
       "heals": 25,
       "protection": 0.8,
-      "vision": 0,
+      "vision": 2,
       "classicSprite": {
         "Snow": "2_"
       }
@@ -56,7 +56,7 @@
       "earning": 1500,
       "heals": 20,
       "protection": 0.7,
-      "vision": 0,
+      "vision": 3,
       "classicSprite": {
         "Snow": "2_"
       }
@@ -71,7 +71,7 @@
       "earning": 1000,
       "heals": 25,
       "protection": 0.85,
-      "vision": 0,
+      "vision": 2,
       "classicSprite": {
         "Snow": "2_"
       }
@@ -87,7 +87,7 @@
       "earning": 1000,
       "heals": 30,
       "protection": 0.7,
-      "vision": 0,
+      "vision": 3,
       "classicSprite": {
         "Snow": "2_"
       }

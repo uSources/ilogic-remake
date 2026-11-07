@@ -11,6 +11,7 @@ import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRa
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, ForecastVM, MoveTipVM, SelectionVM, UIState } from '../../hud/store';
+import { withKeyLabels } from '../../hud/keyLabels';
 import type { LabOptions } from '../../lab';
 import { t, nameOf } from '../../settings';
 import { forecastVM } from '../../ui/hudModels';
@@ -144,6 +145,6 @@ export function hintText(options: { busy: boolean; othersPlaying: boolean; phase
   // Animando lo propio no se dice nada; en el turno enemigo, como saltarlo.
   if (options.busy) return options.othersPlaying ? t('skip') : '';
   if (options.phase === 'target') return options.ordering ? t('orderPick') : t('genTarget');
-  if (options.phase === 'map') return options.inspecting ? t('hintInspect') : t('hintMap');
+  if (options.phase === 'map') return options.inspecting ? t('hintInspect') : withKeyLabels(t('hintMap'));
   return '';
 }

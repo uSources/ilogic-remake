@@ -8,10 +8,43 @@
   gap: 12px;
   padding: 16px 18px;
 }
+.opt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.opt-tab {
+  padding: 8px 12px;
+  border: 3px solid var(--ink);
+  background: var(--panel);
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 14px;
+  cursor: var(--cursor-button, pointer);
+  box-shadow:
+    inset 3px 3px 0 var(--hi),
+    inset -3px -3px 0 var(--lo);
+}
+.opt-tab.on {
+  background: var(--blue-btn);
+  color: #fff;
+  box-shadow:
+    inset 3px 3px 0 var(--blue-hi),
+    inset -3px -3px 0 var(--blue-lo);
+}
+.opt-tabs-keys {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
 .opt-groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   gap: 12px;
+  /* La pestaña mas larga (Controles) marca la altura: asi el panel no salta al cambiar de pestaña. */
+  min-height: 360px;
+  align-content: start;
 }
 .opt-card {
   display: flex;
@@ -27,5 +60,46 @@
 @media (max-width: 520px) {
   .opt-groups {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Controles: la tecla de cada orden y el boton para cambiarla; el grupo ocupa todo el ancho, en columnas */
+.opt-card.keys {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  column-gap: 24px;
+}
+.opt-card.keys .label {
+  grid-column: 1 / -1;
+}
+.key-row .key-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.key-row .key {
+  min-width: 2.5em;
+  text-align: center;
+  font-size: 14px;
+  padding: 4px 8px;
+}
+.key-row .px-btn.small {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+.key-row .key-wait {
+  color: var(--gold);
+  font-size: 14px;
+  animation: key-blink 1s steps(2, end) infinite;
+}
+.key-row .key-notice {
+  flex-basis: 100%;
+  color: var(--red-soft);
+  font-size: 13px;
+}
+@keyframes key-blink {
+  50% {
+    opacity: 0.4;
   }
 }

@@ -7,7 +7,7 @@ import { sightOf, unitById, visibleFoes } from '@core/rules';
 import { newUnit } from '@core/measure';
 import type { ActionPlan, Building, GameAction, GameState } from '@core/model';
 import { turnSeedOf } from '@core/turnSeeds';
-import { act, blankState, giveTurn, unitTypeNamed } from './helpers';
+import { act, blankHeadquarters, blankState, giveTurn, unitTypeNamed } from './helpers';
 import { seededRng } from '@core/util/random';
 
 const SOLDIER = unitTypeNamed('Soldier');
@@ -240,6 +240,31 @@ describe('PlayerView: lo que sabe un equipo', () => {
     const without = decide(make(false));
     expect(without.length).toBeGreaterThan(0);
     expect(decide(make(true))).toEqual(without);
+  });
+});
+
+describe('la vision de los edificios propios', () => {
+  it('[CAMBIO] con niebla, un equipo con solo su Base ve un rombo de 3 a su alrededor', () => {
+    const s = blankState({ fog: true });
+    const hq = blankHeadquarters(0);
+    const atThree = newUnit(s, TANK, 1, { x: hq.x - 3, y: hq.y });
+    const atFour = newUnit(s, TANK, 1, { x: hq.x - 4, y: hq.y });
+    const diagonal = newUnit(s, TANK, 1, { x: hq.x - 2, y: hq.y - 1 });
+    const sees = sightOf(s, 0);
+    expect(sees(atThree)).toBe(true);
+    expect(sees(diagonal)).toBe(true);
+    expect(sees(atFour)).toBe(false);
+    expect(visibleFoes(s, 0)).toEqual([atThree, diagonal]);
+  });
+
+  it('un edificio sin dueño no da vision a nadie', () => {
+    const s = blankState({ fog: true });
+    const city: Building = { type: 'City', owner: null, x: 10, y: 10, capture: null };
+    s.buildings.push(city);
+    const foe = newUnit(s, TANK, 1, { x: 11, y: 10 });
+    expect(sightOf(s, 0)(foe)).toBe(false);
+    city.owner = 0;
+    expect(sightOf(s, 0)(foe)).toBe(true);
   });
 });
 

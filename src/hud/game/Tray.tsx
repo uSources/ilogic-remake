@@ -2,6 +2,7 @@ import { t } from '../../settings';
 import { Button } from '../common/buttons';
 import { FoldMark, useFold } from '../common/fold';
 import { Icon } from '../common/Icon';
+import { keyLabelOf } from '../keyLabels';
 import { ui } from '../store';
 import type { IdleVM, SquadVM } from '../vm/army';
 
@@ -109,7 +110,7 @@ export function Tray({
       <ToggleButton
         cls="threat"
         on={threat}
-        keyLabel="T"
+        keyLabel={keyLabelOf('threat')}
         long={threat ? t('threatOn') : t('threatOff')}
         short={t('threatShort')}
         onClick={() => actions.toggleThreat()}
@@ -118,7 +119,7 @@ export function Tray({
         <ToggleButton
           cls="threat intents"
           on={intents}
-          keyLabel="V"
+          keyLabel={keyLabelOf('intents')}
           long={intents ? t('intentsOn') : t('intentsOff')}
           short={t('intentsShort')}
           onClick={() => actions.toggleIntents()}

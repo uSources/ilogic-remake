@@ -24,6 +24,10 @@ export interface UIActions {
   campaignBack(): void;
   optionsHover(index: number): void;
   optionsSet(row: number, index: number): void;
+  /** Pulsar el boton de una fila de tecla («Cambiar») o de accion («Por defecto»). */
+  optionsPick(row: number): void;
+  /** Abrir la pestaña `tab` de las opciones. */
+  optionsTab(tab: number): void;
   optionsClose(): void;
 
   // --- Menus de la partida (emergente de unidad/compra/carga y pausa) ---
