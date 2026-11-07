@@ -34,7 +34,7 @@ npm run huella              # huella del comportamiento: igual antes y despues d
 - La partida solo cambia con acciones: `dispatch(s, team, action)` (`src/core/actions.ts`; una accion
   nueva, una entrada en `ACTIONS`). Las reglas (`core/rules`) preguntan y calculan; sus pasos que
   cambian la partida solo los usan las acciones, las fases y las `INVARIANTS` (ESLint, `APPLY_STEPS`).
-- Unidades, edificios, terreno, reglas e IA en `src/core/content/*.json` (`docs/CONTENIDO.md`); generador de mapas en `src/core/mapgen.ts`, con sus numeros en `mapgen.json` y `themes.json` (el contenido se lee de cada partida, ya resuelto: `s.content`, `unitTypeOf(s, unit)`, `terrainAt(s, pos)`); textos en `src/settings.ts` (es y en); colores en `src/ui/palette.ts`.
+- Unidades, edificios, terreno, reglas e IA en `src/core/content/*.json` (`docs/CONTENIDO.md`); generador de mapas en `src/core/mapgen/` (fachada `mapgen.ts`: terreno, salidas, edificios, puntos de control y los pasos en orden), con sus numeros en `mapgen.json` y `themes.json` (el contenido se lee de cada partida, ya resuelto: `s.content`, `unitTypeOf(s, unit)`, `terrainAt(s, pos)`); textos en `src/settings.ts` (es y en); colores en `src/ui/palette.ts`.
 - No editar a mano lo generado: `public/assets/atlas/`, `src/assetList.ts`, `src/atlasPages.ts`,
   `src/ui/{wangSets,blobSets,sheets}.ts` → `npm run assets`.
 - Probar en el navegador solo por `file://` (`dist-single/ilogic.html`); nunca `vite preview` ni servidores.

@@ -20,7 +20,7 @@ flowchart TB
     view["playerView.ts<br/>lo que sabe cada equipo (PlayerView)"]
     session["session.ts + session/<br/>GameSession y controladores sin IA"]
     controllers["controllers.ts + controllers/<br/>controladores de la IA"]
-    gen["mapgen.ts / missions.ts + missions/"]
+    gen["mapgen.ts + mapgen/ / missions.ts + missions/"]
     save["save.ts / stats.ts"]
     teams["teams.ts<br/>equipos y alianzas"]
   end
