@@ -140,7 +140,10 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta en `ABILITY_HOOKS` y su sitio
   en `ABILITY_ORDER` (`abilities.ts`; el compilador exige las dos);
   efecto nuevo de un poder del general = su validacion en `EFFECT_SHAPES` (`content/generals.ts`) y
-  su entrada en `POWER_EFFECTS` (`generalPowers.ts`: casilla, area, efecto y `aiValue`).
+  su entrada en `POWER_EFFECTS` (`generalPowers.ts`: casilla, area, efecto y `aiValue`; lo que apunta
+  en el suceso del poder, su campo en `PowerEventParts` con `declare module`); lo que cuenta un
+  suceso en las estadisticas = entrada en `STAT_COUNTERS` (stats.ts) o `statCounters` de un modulo;
+  un ingreso nuevo del fin de ronda = su nombre en `IncomeSources`.
   La IA no tiene variables globales: lo del turno va en `PlayCtx` (equipo, perfil, `paths`,
   `focusFire`); como juega, en su `AiProfile` (pesos, `scoreTerms`, `behaviours`, `turn`), que se le da al
   controlador; como pelea una unidad, un preset de `EngagementPolicy` (`HUNT`, `SHOOT_FROM_HERE`,

@@ -5,13 +5,13 @@
 import { entryOf } from './content';
 import { emptyTeamStats, teamState } from './teams';
 import { lifeValue } from './unitValue';
-import type { GameEvent, GameState, TeamId, TeamStats } from './model';
+import { teamUnits } from './rules/queries';
+import { hooksOf } from './ruleModules/ruleset';
+import type { GameEvent, GameEventKind, GameEventOf, GameState, TeamId, TeamStats } from './model';
 
 /** Valor de un ejercito: lo que vale la vida de cada unidad (lifeValue), redondeado. */
 export function armyValue(s: GameState, team: TeamId): number {
-  let value = 0;
-  for (const unit of s.units) if (unit.team === team) value += lifeValue(s, unit.life, unit);
-  return Math.round(value);
+  return Math.round(teamUnits(s, team).reduce((value, unit) => value + lifeValue(s, unit.life, unit), 0));
 }
 
 /** Apunta en un equipo el valor de su ejercito del dia actual (una muestra por dia). */
@@ -47,30 +47,44 @@ export function statsOf(s: GameState, team: TeamId): Readonly<TeamStats> {
   return teamState(s, team).stats;
 }
 
+/** Lo que apunta un suceso en las estadisticas: en las de quien lo ha hecho (`counts`) y, si toca, en las de otro equipo. */
+export type StatCounter<K extends GameEventKind> = (s: GameState, counts: TeamStats, event: GameEventOf<K>) => void;
+
 /**
- * Apunta un evento ya aplicado al estado en las estadisticas de quien lo ha hecho (`actor`); lo de la
- * propia partida (el fin de ronda) no cuenta.
+ * Los sucesos que cuentan para las estadisticas, por su tipo; los demas no (mover, unir, subir,
+ * esperar, ordenes, escuadras, poderes). Un suceso nuevo que cuente es una entrada aqui; lo que cuenta
+ * un modulo de reglas (de sus sucesos o de los de siempre), un `statCounters` suyo.
+ */
+export const STAT_COUNTERS: { readonly [K in GameEventKind]?: StatCounter<K> } = {
+  attack: (s, counts, event) => {
+    if (event.killed) teamState(s, event.combat.defenderTeam).stats.lost++;
+    if (event.attackerKilled) counts.lost++;
+  },
+  capture: (_s, counts, event) => {
+    // Con captura por puntos, solo cuenta cuando se termina.
+    if (event.left === 0) counts.captured++;
+  },
+  spawn: (s, counts, event) => {
+    counts.built++;
+    counts.spent += entryOf(s.content.units, event.unitType, 'unidad').cost;
+  },
+};
+
+/** Lo que cuenta un suceso, con su tipo (TypeScript no lo deduce solo al indexar la tabla). */
+function counterFor<K extends GameEventKind>(event: GameEventOf<K>): StatCounter<K> | undefined {
+  const counters: { readonly [L in GameEventKind]?: StatCounter<L> } = STAT_COUNTERS;
+  return counters[event.kind];
+}
+
+/**
+ * Apunta un evento ya aplicado al estado en las estadisticas de quien lo ha hecho (`actor`): lo de
+ * STAT_COUNTERS y lo de los modulos de la partida. Lo de la propia partida (el fin de ronda) no cuenta.
  */
 export function recordEvent(s: GameState, event: GameEvent): void {
   if (event.actor === null) return;
   const counts = teamState(s, event.actor).stats;
-  switch (event.kind) {
-    case 'attack':
-      if (event.killed) teamState(s, event.combat.defenderTeam).stats.lost++;
-      if (event.attackerKilled) counts.lost++;
-      break;
-    case 'capture':
-      // Con captura por puntos, solo cuenta cuando se termina.
-      if (event.left === 0) counts.captured++;
-      break;
-    case 'spawn':
-      counts.built++;
-      counts.spent += entryOf(s.content.units, event.unitType, 'unidad').cost;
-      break;
-    default:
-      // Mover, unir, subir, esperar, ordenes, escuadras y los poderes no cuentan para las estadisticas.
-      break;
-  }
+  counterFor(event)?.(s, counts, event);
+  for (const counter of hooksOf(s, 'statCounters')) counter.count(s, counts, event);
 }
 
 /** Apunta los sucesos de una accion ya hecha (dispatch lo hace con todas: las estadisticas salen de los sucesos). */

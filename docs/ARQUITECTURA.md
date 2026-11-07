@@ -522,7 +522,10 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
     cualquier partida (`CoreGameEvent`) mas esos; la escena anima los de siempre por `ANIMATORS`
     (exhaustiva) y los de los modulos por `MODULE_ANIMATORS` o nada, y `npm run play` y las
     estadisticas tienen un caso por defecto. Los sucesos no se guardan ni se leen de fuera, asi que
-    no hay validacion que necesite la lista cerrada;
+    no hay validacion que necesite la lista cerrada; un ingreso nuevo del fin de ronda dice de donde
+    sale con el nombre de su modulo (`income.source`, ampliando `IncomeSources`);
+  - lo que cuenta un suceso en las estadisticas es una entrada en `STAT_COUNTERS` (stats.ts, por tipo
+    de suceso) o, si es de un modulo, un `statCounters` suyo;
   - por donde se pasa, un `passRules` o `stopRules`; lo que corta un camino a mitad, un
     `pathInterruptions` (su nombre ampliando `InterruptionKinds`, `model/events.ts`, con `declare
     module`; si quiere animacion propia, en `INTERRUPTION_ANIMATIONS`, `scenes/game/playback.ts`, y si
@@ -538,7 +541,9 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
     `ABILITY_EFFECTS`, en ese orden); el modulo de las habilidades lo enchufa todo;
   - una clase de efecto de un poder del general es su forma en `GeneralEffect`, su validacion en
     `EFFECT_SHAPES` (`content/generals.ts`) y su entrada en `POWER_EFFECTS` (`generalPowers.ts`: si
-    necesita casilla, su area, como se aplica y lo que le vale a la IA, `aiValue`);
+    necesita casilla, su area, como se aplica, lo que apunta en el suceso del poder —su campo en
+    `PowerEventParts`, con `declare module`, como el dinero o las curas— y lo que le vale a la IA,
+    `aiValue`);
   - un comportamiento de IA nuevo (un papel de unidad) es una entrada `{ id, when, run }` en
     `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`, los del perfil por defecto), en su sitio de la lista; `run`
     es un plan que devuelve si ha usado la unidad y suele llamar a un paso de `ai/tactics.ts`. Para

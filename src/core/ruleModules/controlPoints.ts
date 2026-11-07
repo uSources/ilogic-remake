@@ -8,6 +8,10 @@ import { addForTeam, perTeam } from '../teams';
 import type { RuleModule } from './hooks';
 
 declare module '../model/events' {
+  interface IncomeSources {
+    /** Lo que pagan los puntos de control (el nombre del modulo; el suceso lo da rules/control.ts). */
+    controlPoints: true;
+  }
   interface ModuleEvents {
     /** [CAMBIO] Fin de ronda: un punto de control, de quien queda (y si esta disputado: entonces no paga). La da rules/control.ts. */
     controlPoint: { actor: null; at: Pos; owner: TeamId | null; contested: boolean };

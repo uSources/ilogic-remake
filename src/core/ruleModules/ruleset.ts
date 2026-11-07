@@ -33,6 +33,7 @@ const HOOK_LISTS = {
   counterRules: true,
   combatSteps: true,
   killRewards: true,
+  statCounters: true,
   roundPhases: true,
   roundReportParts: true,
   matchSetup: true,
