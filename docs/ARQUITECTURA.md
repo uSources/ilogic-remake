@@ -445,7 +445,7 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
 partida, `autopilotProfileOf`, en defaultProfile.ts), `context` (el `PlayCtx` del turno y ayudas
 comunes), `engagement` (como pelea una unidad: `EngagementPolicy`), `scoring` (cuanto vale cada
 ataque), `tactics` (retirarse, atacar, capturar lo de debajo), `formation` (escuadras que avanzan
-juntas) y `standingOrders` (cumplir las ordenes, `StandingOrder`, y su prevision).
+juntas) `standingOrders` (cumplir las ordenes, `StandingOrder`) y `preview` (lo que haran, para las flechas de intencion: `previewStandingOrders`).
 `src/core/ai/` los reutiliza: `profile` (`AiProfile`, `defaultAiProfile`), `general` (que poder usa su general: `choosePower`), `tactics` (ir a capturar,
 avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades de cada unidad) y
 `production` (que fabrica). `turn` tiene `aiTurn`, que los junta (es el `turn` del perfil del juego, `defaultProfile`); `ai.ts` es la fachada.

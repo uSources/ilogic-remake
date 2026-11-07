@@ -1,30 +1,16 @@
 /**
  * [CAMBIO] Ordenes permanentes de un equipo (ver StandingOrder en model/standingOrder.ts): las cumple
  * la partida al terminar el turno de cada equipo (assistTurn, fase de TURN_END_PHASES; los pasos de
- * unidad son los mismos que reutiliza la IA), o al darlas (startStandingOrder), y se
- * pueden prever sin tocar la partida (previewStandingOrders, para las flechas de intencion).
+ * unidad son los mismos que reutiliza la IA), o al darlas (startStandingOrder). Lo que haran se
+ * puede prever sin tocar la partida: autopilot/preview.ts.
  */
 
 import { isAlliedOwner } from '../teams';
-import { cloneState } from '../gameContent';
-import { manhattan, samePos, posOf } from '../geom';
+import { manhattan, samePos } from '../geom';
 import { moveRange } from '../rules/movement';
 import { buildingAt, teamUnits, unitById } from '../rules/queries';
 import { effectiveStandingOrder, standingOrderAt } from '../squads/standingOrders';
-import { carryOut } from '../actions/plan';
-import { unitsKnownTo } from '../playerView';
-import type {
-  ActionDispatcher,
-  ActionPlan,
-  GameAction,
-  GameEvent,
-  GameState,
-  Pos,
-  StandingOrderKind,
-  StandingOrderMoment,
-  TeamId,
-  Unit,
-} from '../model';
+import type { ActionPlan, GameState, Pos, StandingOrderKind, StandingOrderMoment, TeamId, Unit } from '../model';
 import { act, playCtx, canAct, doMove, finish, needsRepair, type PlayCtx } from './context';
 import { visibleFoes } from '../rules/visibility';
 import { isCapturer } from '../util/predicates';
@@ -151,96 +137,4 @@ function* unitStandingOrderTurn(s: GameState, play: PlayCtx, uid: number): Actio
   const isFulfilled = yield* STANDING_ORDER_TURNS[standingOrder.kind]({ s, play, unit, at: standingOrder.at });
   if (isFulfilled) yield* act({ kind: 'finishStandingOrder', uid });
   return isFulfilled;
-}
-
-/** [CAMBIO] Lo que hara una unidad con orden al terminar el turno (ver previewStandingOrders). */
-export interface StandingOrderIntent {
-  /** Camino de este turno, desde donde esta (vacio si no se mueve). */
-  path: Pos[];
-  /** Casilla de la unidad a la que va a atacar. */
-  attack?: Pos;
-  /** Edificio que va a capturar (o seguir capturando). */
-  capture?: Pos;
-  /** Al final del camino se une a otra unidad igual (para curarse). */
-  merge?: boolean;
-}
-
-/**
- * Semilla de los dados de la copia en la que se simula la prevision: fija, para que la misma partida
- * de siempre la misma prevision, y no la de la partida, que diria como van a salir los combates.
- */
-const PREVIEW_DICE_SEED = 0x1d0c;
-
-/** Una accion que propondria el plan de las ordenes, con los sucesos que daria (en la copia de la prevision). */
-export interface PlannedAction {
-  action: GameAction;
-  events: GameEvent[];
-}
-
-/**
- * [CAMBIO] Lo que haran las ordenes del equipo al terminar el turno: las acciones que propone su plan
- * (assistTurn), cumplido sobre una copia de la partida (las que no valdrian no salen). No toca `s`.
- * Solo usa lo que el equipo ve: los enemigos escondidos se quitan de la copia antes de simular, asi
- * no puede delatarlos (ni como objetivo, ni por un camino que los rodee o una emboscada). Es una
- * prevision: con enemigos escondidos o la suerte del combate, el turno real puede variar. `simulate`
- * manda las acciones en la copia que se le da: `dispatch` (no el de una sesion, que solo vale para
- * su partida y lo dice: GameSession.dispatcher).
- */
-export function plannedStandingOrders(s: GameState, team: TeamId, simulate: ActionDispatcher): PlannedAction[] {
-  const copy = withoutHiddenEnemies(s, team);
-  copy.dice = PREVIEW_DICE_SEED;
-  const planned: PlannedAction[] = [];
-  carryOut(assistTurn(copy, team, 'turnEnd'), (action) => {
-    const result = simulate(copy, team, action);
-    if (result.ok) planned.push({ action, events: result.events });
-    return result;
-  });
-  return planned;
-}
-
-/**
- * [CAMBIO] Flechas de intencion: por uid, lo que hara cada unidad del equipo con orden al terminar el
- * turno, sacado de las acciones planeadas (plannedStandingOrders).
- */
-export function previewStandingOrders(s: GameState, team: TeamId, simulate: ActionDispatcher): Map<number, StandingOrderIntent> {
-  const intents = new Map<number, StandingOrderIntent>();
-  const actors = teamUnits(s, team).filter((unit) => standingOrderAt(s, unit, 'turnEnd') && canAct(s, unit));
-  if (!actors.length) return intents;
-  for (const unit of actors) intents.set(unit.uid, { path: [] });
-  for (const planned of plannedStandingOrders(s, team, simulate)) for (const event of planned.events) recordIntent(intents, event);
-  return intents;
-}
-
-/** Copia de la partida con las unidades que conoce `team` (sin los enemigos que no ve ni lo que llevan dentro: playerView). */
-function withoutHiddenEnemies(s: GameState, team: TeamId): GameState {
-  const copy = cloneState(s);
-  copy.units = unitsKnownTo(copy, team);
-  return copy;
-}
-
-/** Apunta en la intencion de su unidad lo que dice un suceso de una accion planeada. */
-function recordIntent(intents: Map<number, StandingOrderIntent>, event: GameEvent): void {
-  switch (event.kind) {
-    case 'move':
-    case 'merge': {
-      const intent = intents.get(event.uid);
-      if (!intent) return;
-      // Un camino que sigue a otro empieza donde acabo el anterior: esa casilla no se repite.
-      intent.path = intent.path.length ? [...intent.path, ...event.path.slice(1)] : event.path.map((pos) => posOf(pos));
-      if (event.kind === 'merge') intent.merge = true;
-      return;
-    }
-    case 'attack': {
-      const intent = intents.get(event.attacker);
-      if (intent && !intent.attack) intent.attack = posOf(event.at);
-      return;
-    }
-    case 'capture': {
-      const intent = intents.get(event.uid);
-      if (intent) intent.capture = posOf(event.at);
-      return;
-    }
-    default:
-      return;
-  }
 }
