@@ -145,18 +145,29 @@ const STEPS_BY_MODULE = {
   generals: ['appointGeneral', 'chargeFromCombat', 'generalsNewRound'],
   generalPowers: ['applyPower'],
   stats: ['recordEvents', 'recordEvent', 'sampleArmy'],
+  gameState: ['changeSettings'],
 };
+/** Los pasos por modulo (para tests/lintImports.test.ts: que cada funcion que cambia la partida este en el suyo). */
+export const APPLY_STEPS_BY_MODULE = STEPS_BY_MODULE;
 /** El nombre de cada paso, para quien los busca (las fachadas no pueden darlos). */
 export const APPLY_STEP_NAMES = Object.values(STEPS_BY_MODULE).flat();
-/** Un patron por modulo: su ruta desde cualquier sitio del nucleo (`../rules/funds`, `./funds`, con o sin extension). */
-export const APPLY_STEPS = Object.entries(STEPS_BY_MODULE).map(([module, importNames]) => {
+/** El patron de los pasos de un modulo: su ruta desde cualquier sitio (`../rules/funds`, `./funds`, `@core/weather`, con o sin extension). */
+function stepPattern([module, importNames]) {
   const [file, folder] = module.split('/').reverse();
   return {
     regex: `(^|/)${folder ? `(${folder}/)?` : ''}${file}(\\.[jt]s)?$`,
     importNames,
     message: `${importNames.join(', ')} cambian la partida: solo los llaman las acciones, los pasos de ronda y de turno y las INVARIANTS. Quien decide propone una accion.`,
   };
-});
+}
+export const APPLY_STEPS = Object.entries(STEPS_BY_MODULE).map(stepPattern);
+/**
+ * Los pasos que viven en la raiz del nucleo (el clima, los generales, las estadisticas, los ajustes):
+ * no tienen fachada que los esconda, asi que fuera del nucleo (src/ y tools/) se prohiben aqui.
+ */
+const ROOT_STEPS = Object.entries(STEPS_BY_MODULE)
+  .filter(([module]) => !module.includes('/'))
+  .map(stepPattern);
 const READER_FILES = [
   'src/core/controllers/**/*.ts',
   'src/core/controllers.ts',
@@ -337,7 +348,7 @@ export default tseslint.config(
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     ignores: ['src/core/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_FACADES_ONLY, MEASURING_IS_NOT_THE_GAME] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_FACADES_ONLY, ...ROOT_STEPS, MEASURING_IS_NOT_THE_GAME] }] },
   },
   {
     // Las herramientas solo usan el nucleo, y por su alias: asi se podrian separar en su propio paquete
@@ -354,6 +365,7 @@ export default tseslint.config(
             },
             { group: ['phaser', 'preact', 'preact/*'], message: 'tools/ no puede depender de Phaser ni de la interfaz.' },
             ...CORE_FACADES_ONLY,
+            ...ROOT_STEPS,
           ],
         },
       ],

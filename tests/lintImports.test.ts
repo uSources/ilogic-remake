@@ -3,6 +3,7 @@ import { readdirSync } from 'node:fs';
 import { ESLint, Linter } from 'eslint';
 import {
   APPLY_STEPS,
+  APPLY_STEPS_BY_MODULE,
   APPLY_STEP_NAMES,
   DECIDERS_ONLY_PROPOSE,
   NO_PLUGGED_PIECES_EXCEPT_POWERS,
@@ -155,6 +156,7 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     "import { applyPower } from '../generalPowers';",
     "import { appointGeneral, chargeFromCombat, generalsNewRound } from '../generals';",
     "import { recordEvents, recordEvent, sampleArmy } from '../stats.ts';",
+    "import { changeSettings } from '../gameState';",
   ])('prohibe %s a quien decide', (code) => expect(forbidsIn('src/core/ai/example.js', code)).toBe(true));
 
   it.each([
@@ -215,11 +217,30 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     const files = readdirSync('src/core', { recursive: true, encoding: 'utf8' })
       .filter((file) => file.endsWith('.ts') && !file.startsWith('model/'))
       .map((file) => `src/core/${file}`);
+    // Cada paso en su modulo (`file#name`, no solo por el nombre: uno que se llamara igual en otro sitio no vale).
+    const listed = new Set(
+      Object.entries(APPLY_STEPS_BY_MODULE).flatMap(([module, names]) => names.map((name) => `core/${module}.ts#${name}`)),
+    );
     const found = stateWriters(files)
-      .map(({ file, name }) => ({ id: `${file.replace(/^src\//, '')}#${name}`, name }))
-      .filter(({ id, name }) => !APPLY_STEP_NAMES.includes(name) && !(id in NOT_STEPS))
-      .map(({ id }) => id);
+      .map(({ file, name }) => `${file.replace(/^src\//, '')}#${name}`)
+      .filter((id) => !listed.has(id) && !(id in NOT_STEPS));
     expect(found).toEqual([]);
+  }, 60_000);
+
+  it('la busqueda ve cada forma de cambiar la partida (tests/stateWriterKinds.ts) y no lo que solo mira', () => {
+    const found = stateWriters(['tests/stateWriterKinds.ts']).map(({ name }) => name);
+    expect(found.sort()).toEqual(
+      [
+        'writesDirectly',
+        'writesThroughHelper',
+        'writesThroughAlias',
+        'writesWithAssign',
+        'writesWithReflect',
+        'writesWithDefineProperty',
+        'writesLength',
+        'writesParameter',
+      ].sort(),
+    );
   }, 60_000);
 
   it('la busqueda ve lo que cambia la partida: directamente, en un campo guardado en una variable y a traves de un gancho', () => {
@@ -230,6 +251,18 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     expect(found).not.toContain('weatherNow');
     expect(found).not.toContain('armyValue');
   }, 60_000);
+
+  it.each([
+    ['tools/example.ts', "import { appointGeneral } from '@core/generals';"],
+    ['tools/example.ts', "import { advanceWeather } from '@core/weather';"],
+    // Un fichero de src/ que existe (el lint de src/ usa los tipos del proyecto); el texto es el de la prueba.
+    ['src/setup.ts', "import { recordEvents } from './core/stats';"],
+    ['src/setup.ts', "import { changeSettings } from './core/gameState';"],
+  ])('fuera del nucleo tampoco: %s no puede %s (los pasos de la raiz del nucleo no tienen fachada)', async (filePath, code) => {
+    const eslint = new ESLint({ overrideConfigFile: 'eslint.config.js' });
+    const [result] = await eslint.lintText(`${code}\nexport const used = 1;\n`, { filePath });
+    expect(result!.messages.some((message) => message.ruleId === 'no-restricted-imports')).toBe(true);
+  });
 
   it('las fachadas del nucleo no dan ninguno: fuera del nucleo la partida solo cambia con acciones', () => {
     const exported = [...Object.keys(rulesFacade), ...Object.keys(squadsFacade), ...Object.keys(actionsFacade)];

@@ -76,7 +76,9 @@ controladores, la vista y lo que apunta la escena (`targeting.ts`, `trail.ts`) n
 (`APPLY_STEPS`, eslint.config.js; tambien los del clima, los generales y las estadisticas:
 `advanceWeather`, `appointGeneral`, `applyPower`, `recordEvents`...), y las fachadas no los dan
 (tests/lintImports.test.ts, que ademas busca con los tipos de TypeScript toda funcion del nucleo que
-escribe en la partida, `tests/stateWriters.ts`, y falla si no esta en la lista): las
+escribe en la partida, `tests/stateWriters.ts`, y falla si no esta en la lista de su modulo). Los de
+la raiz del nucleo (clima, generales, estadisticas, `changeSettings`), que no tienen fachada que los
+esconda, tampoco se pueden importar desde src/ ni tools/ (`ROOT_STEPS`): las
 herramientas y los tests que preparan una partida a mano ponen sus unidades con `newUnit` de
 `core/measure.ts`.
 

@@ -17,7 +17,6 @@ import { GameSession, runMatch } from '@core/session';
 import { defaultContent } from '@core/content/default';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { appointGeneral } from '@core/generals';
 import { seededRng } from '@core/util/random';
 import { isWinner, matchResult, score } from '@core/rules';
 import type { GameState, TeamId } from '@core/model';
@@ -49,8 +48,8 @@ function topScorer(s: GameState): TeamId | null {
 /** Una partida IA contra IA con un general por equipo ('none': sin general): quien gana (null: empate) y si fue por puntos al dia 60. */
 function play(seed: number, generals: readonly string[], uses: Map<string, number>): { winner: TeamId | null; byScore: boolean } {
   const rng = seededRng(seed * 7919);
-  const s: GameState = createMatch(skirmishConfig({ seed: seed * 7919, teams: generals.map(() => ({ controller: 'ai' })) }), rng);
-  for (const team of teamIds(s)) appointGeneral(s, team, generals[team] === 'none' ? null : generals[team]!);
+  const teams = generals.map((general) => ({ controller: 'ai' as const, general: general === 'none' ? null : general }));
+  const s: GameState = createMatch(skirmishConfig({ seed: seed * 7919, teams }), rng);
   const session = new GameSession(s, controllersFor(s));
   session.subscribe((step) => {
     for (const event of step.events)
@@ -59,6 +58,7 @@ function play(seed: number, generals: readonly string[], uses: Map<string, numbe
   runMatch(session, { until: (state) => state.day > MAX_DAYS });
   const result = matchResult(s);
   if (result.status === 'draw') return { winner: null, byScore: false };
+  // Son dos equipos, uno contra otro (SEATINGS): si se decide, gana uno solo.
   if (result.status === 'decided') return { winner: teamIds(s).find((team) => isWinner(result, team)) ?? null, byScore: false };
   return { winner: topScorer(s), byScore: true };
 }

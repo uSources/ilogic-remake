@@ -13,5 +13,6 @@ export const NO_PLUGGED_PIECES_EXCEPT_POWERS: ImportPattern;
 export const DECIDERS_ONLY_PROPOSE: readonly ImportPattern[];
 export const APPLY_STEPS: readonly ImportPattern[];
 export const APPLY_STEP_NAMES: readonly string[];
+export const APPLY_STEPS_BY_MODULE: Readonly<Record<string, readonly string[]>>;
 declare const config: Linter.Config[];
 export default config;
