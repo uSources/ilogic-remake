@@ -63,7 +63,7 @@ siempre de ellas (`'../core/rules'`, `'@core/actions'`); ESLint no deja que la e
 ni las herramientas importen los modulos de dentro. Dentro de core, mejor del modulo concreto
 (`'./rules/movement'`): menos acoplamiento y sin ciclos. **La IA es un jugador mas**: las reglas,
 las acciones, las ordenes permanentes (autopilot/) y la sesion no importan nada de la IA (ai/,
-ai.ts, aiGenerals.ts, controllers/); ESLint lo vigila (`NO_AI`) y `tests/layers.test.ts` comprueba
+ai.ts, controllers/); ESLint lo vigila (`NO_AI`) y `tests/layers.test.ts` comprueba
 que `session.ts`, `actions.ts`, `autopilot.ts` y `rules.ts` no la cargan ni de lejos. La IA
 reutiliza autopilot/. Y **quien decide solo propone**: la IA y autopilot/ no importan dispatch, las
 acciones ni la sesion, no se hacen su propia vista de la partida y no tiran de los dados
@@ -126,10 +126,10 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
 - «Ir alli» (el viaje de varios turnos) es una orden permanente mas: `StandingOrder` de tipo 'goto'
   (reglas del viaje en `rules/travel.ts`). Se da con 'giveStandingOrder' como las demas, a una
   casilla que la unidad pueda pisar, a la que no llegue ya este turno —`'withinReach'`: para eso se
-  mueve— y hacia la que pueda dar ya un paso (`travelProblem`, en `STANDING_ORDER_BLOCKS`), y se
-  quita con 'cancelStandingOrder'. Es siempre de cada unidad (nunca de su escuadra: `isUnitOnly`) y
+  mueve— y hacia la que pueda dar ya un paso (`travelProblem`, su `block` en `STANDING_ORDER_TYPES`), y se
+  quita con 'cancelStandingOrder'. Es siempre de cada unidad (nunca de su escuadra: `unitOnly`) y
   manda sobre la de su escuadra mientras dura. Cada orden dice cuando se cumple
-  (`STANDING_ORDER_MOMENT`): la de ir alli al empezar el turno (la fase 'gotoOrders' de
+  (su `moment`, `momentOf`): la de ir alli al empezar el turno (la fase 'gotoOrders' de
   `TURN_START_PHASES`: su paso, 'gotoStep', hacia la casilla del alcance que mas acerca,
   `travelStepOf`, y despues quien juega puede seguir con ella), las de pelear al acabarlo. Si ya
   esta en el destino o llega este turno, la orden se cumple sin moverla (el ultimo trozo lo hace
@@ -373,7 +373,7 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
   que no puede moverse y disparar, `firesAfterMove`, ya no dispara si se ha movido), `canActNow`/`canMoveNow` (lo mismo y en el mapa), y se cambia
   solo con `markMoved`, `spendUnit` y `readyUnit`.
 - `visibility`: lo que ve un equipo es un `Sight` (`sightOf`); enemigos a la vista con
-  `isVisibleFoe`, `visibleEnemies` y `visibleFoeAt`; que unidades se le enseñan, `isShownTo`.
+  `isVisibleFoe` (la pregunta de una unidad), `visibleFoes` (los de la vista) y `visibleFoeAt`; que unidades se le enseñan, `isShownTo`.
 - `capture`: `captureProgress` solo consulta; `dropStaleCaptures` es una de las INVARIANTS. `undo`:
   apuntar, olvidar, `lastUndoableMove` y `undoMoveProblem`. `combat`: `attackProblem`,
   `attackTargets` y la tirada (`strike`); lo que pasa en un ataque es `COMBAT_RESOLUTION`
@@ -432,7 +432,7 @@ partida, `autopilotProfileOf`, en defaultProfile.ts), `context` (el `PlayCtx` de
 comunes), `engagement` (como pelea una unidad: `EngagementPolicy`), `scoring` (cuanto vale cada
 ataque), `tactics` (retirarse, atacar, capturar lo de debajo), `formation` (escuadras que avanzan
 juntas) y `standingOrders` (cumplir las ordenes, `StandingOrder`, y su prevision).
-`src/core/ai/` los reutiliza: `profile` (`AiProfile`, `defaultAiProfile`), `tactics` (ir a capturar,
+`src/core/ai/` los reutiliza: `profile` (`AiProfile`, `defaultAiProfile`), `general` (que poder usa su general: `choosePower`), `tactics` (ir a capturar,
 avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades de cada unidad) y
 `production` (que fabrica). `ai.ts` tiene `aiTurn`, que los junta.
 
@@ -509,9 +509,11 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
     probarlo antes, un perfil con la lista nueva en la arena (`--candidate`);
   - una razon nueva para preferir o evitar un ataque es un termino en `ATTACK_SCORE_TERMS`
     (`autopilot/scoring.ts`, los del perfil); una forma de pelear, un preset de `EngagementPolicy`
-    (`autopilot/engagement.ts`); un tipo de orden permanente, su comprobacion en
-    `STANDING_ORDER_BLOCKS` y su momento en `STANDING_ORDER_MOMENT` (`squads/standingOrders.ts`) y
-    como se juega en `STANDING_ORDER_TURNS` (`autopilot/standingOrders.ts`);
+    (`autopilot/engagement.ts`); un tipo de orden permanente, su linea en `StandingOrderKinds`
+    (`model/standingOrder.ts`, con su momento: de ahi salen los tipos), su entrada en
+    `STANDING_ORDER_TYPES` (`squads/standingOrders.ts`: nombre, momento, si es solo de la unidad y por
+    que no se puede dar) y como se juega en `STANDING_ORDER_TURNS` (`autopilot/standingOrders.ts`); el
+    compilador pide las tres;
   - algo mas que un equipo no sabe de la partida, una entrada en `FOG` (`playerView.ts`).
 - La arena (`npm run arena`) enfrenta dos perfiles de IA (`AiProfile`, ver "La IA"): cada uno se le da a
   su controlador, asi que juegan a la vez sin copiar codigo ni cambiar nada global. La referencia es la

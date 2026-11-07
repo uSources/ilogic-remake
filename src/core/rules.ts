@@ -54,19 +54,10 @@ export {
   canMoveOn,
   terrainMoveCost,
   isEnemyHq,
+  buildingsOf,
 } from './rules/queries';
 export { canActNow, canMoveNow, canStillAct, canStillFire, canStillMove, isUnitTurnState, UNIT_TURN_STATES } from './rules/unitTurn';
-export {
-  visionOf,
-  visibility,
-  visibleFoeAt,
-  visibleFoes,
-  hiddenFoes,
-  isShownTo,
-  isVisibleFoe,
-  sightOf,
-  type Sight,
-} from './rules/visibility';
+export { visionOf, visibility, visibleFoeAt, visibleFoes, isShownTo, isVisibleFoe, sightOf, type Sight } from './rules/visibility';
 export {
   autoCapturers,
   capturePointsOf,

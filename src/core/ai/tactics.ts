@@ -24,33 +24,33 @@ import { isCapturer } from '../util/predicates';
 // Capturar
 // ---------------------------------------------------------------------------------------------
 
-/** El edificio ajeno a la vista (hasta AI.MAXCAPTDIST) mas cercano por tierra, con la Base enemiga por delante. */
-function captureGoal(s: GameState, ai: PlayCtx, unit: Unit): Pos | null {
-  const sees = sightOf(s, ai.me);
+/** El edificio ajeno a la vista (hasta profile.weights.MAXCAPTDIST) mas cercano por tierra, con la Base enemiga por delante. */
+function captureGoal(s: GameState, play: PlayCtx, unit: Unit): Pos | null {
+  const sees = sightOf(s, play.me);
   // Desde 1 casilla: lo de debajo ya lo ha mirado captureHere.
-  const steps = stepsMap(s, ai, unit);
+  const steps = stepsMap(s, play, unit);
   const capturableAt = (tile: Pos): Building | null => {
     const building = buildingAt(s, tile);
-    if (!building || isAlliedOwner(s, building.owner, ai.me) || !sees(tile)) return null;
+    if (!building || isAlliedOwner(s, building.owner, play.me) || !sees(tile)) return null;
     const occupant = unitAt(s, tile);
-    if (occupant && areAllied(s, occupant.team, ai.me)) return null;
+    if (occupant && areAllied(s, occupant.team, play.me)) return null;
     return steps.at(tile) < Infinity ? building : null;
   };
-  const candidates = [...diamond(mapGrid(s), unit, 1, ai.profile.weights.MAXCAPTDIST)].flatMap((tile) => {
+  const candidates = [...diamond(mapGrid(s), unit, 1, play.profile.weights.MAXCAPTDIST)].flatMap((tile) => {
     const building = capturableAt(tile);
     return building ? [{ tile, building }] : [];
   });
-  const headStart = (building: Building): number => (isHq(s, building) ? ai.profile.weights.HQHEADSTART : 0);
+  const headStart = (building: Building): number => (isHq(s, building) ? play.profile.weights.HQHEADSTART : 0);
   return minBy(candidates, (candidate) => steps.at(candidate.tile) - headStart(candidate.building))?.tile ?? null;
 }
 
 /** Capturar lo de debajo o ir a capturar el edificio ajeno mas cercano (solo las que capturan). */
-export function* tryCapture(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
+export function* tryCapture(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
   if (!isCapturer(s, unit)) return false;
   if (yield* captureHere(s, unit)) return true;
-  const goal = captureGoal(s, ai, unit);
+  const goal = captureGoal(s, play, unit);
   if (!goal) return false;
-  yield* doMove(unit, bestMoveToward(s, ai, unit, goal, range));
+  yield* doMove(unit, bestMoveToward(s, play, unit, goal, range));
   if (!(yield* captureHere(s, unit))) yield* finish(s, unit);
   return true;
 }
@@ -63,12 +63,12 @@ export function* tryCapture(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRa
  * Cuantos pasos "de ventaja" tiene un objetivo de avance: los que interesan mas cuentan como si
  * estuvieran mas cerca.
  */
-function advanceHeadStart(s: GameState, ai: PlayCtx, unit: Unit, goal: Pos): number {
+function advanceHeadStart(s: GameState, play: PlayCtx, unit: Unit, goal: Pos): number {
   // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
-  if (s.controlPoints?.some((point) => samePos(point, goal))) return ai.profile.weights.CONTROLPOINT;
+  if (s.controlPoints?.some((point) => samePos(point, goal))) return play.profile.weights.CONTROLPOINT;
   const building = buildingAt(s, goal);
   if (!building || !isCapturer(s, unit) || building.owner === null) return 0;
-  return isHq(s, building) ? ai.profile.weights.CAPTUREHQ : ai.profile.weights.CAPTUREOWNED;
+  return isHq(s, building) ? play.profile.weights.CAPTUREHQ : play.profile.weights.CAPTUREOWNED;
 }
 
 /**
@@ -76,13 +76,13 @@ function advanceHeadStart(s: GameState, ai: PlayCtx, unit: Unit, goal: Pos): num
  * los que puedan danar y a la Base enemiga. Todas, a puntos de control que no son suyos o que
  * estan disputados (sus zonas: ver controlRound) y libres.
  */
-function advanceGoals(s: GameState, ai: PlayCtx, unit: Unit): Pos[] {
+function advanceGoals(s: GameState, play: PlayCtx, unit: Unit): Pos[] {
   const isOpenPoint = (point: ControlPoint): boolean =>
-    (!isAlliedOwner(s, point.owner, ai.me) || isContested(s, point)) && !unitAt(s, point);
+    (!isAlliedOwner(s, point.owner, play.me) || isContested(s, point)) && !unitAt(s, point);
   const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
-  if (isCapturer(s, unit)) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, ai.me)), ...points];
-  const targets = visibleFoes(s, ai.me).filter((foe) => canDamage(s, unit, foe));
-  return [...targets, ...s.buildings.filter((building) => isEnemyHq(s, building, ai.me)), ...points];
+  if (isCapturer(s, unit)) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, play.me)), ...points];
+  const targets = visibleFoes(s, play.me).filter((foe) => canDamage(s, unit, foe));
+  return [...targets, ...s.buildings.filter((building) => isEnemyHq(s, building, play.me)), ...points];
 }
 
 /** Pasos hasta `goal` o, si no se puede llegar a esa casilla (ocupada), hasta su vecina mas cercana. */
@@ -97,19 +97,19 @@ function stepsToGoalOrNextToIt(s: GameState, steps: (pos: Pos) => number, goal: 
  * jugador mas cercana o, si no hay, hacia su Base.
  * [CAMBIO] en el original este paso casi nunca se activaba y la IA paseaba al azar.
  */
-export function* advance(s: GameState, ai: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
-  const fromHere = stepsMap(s, ai, unit);
+export function* advance(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
+  const fromHere = stepsMap(s, play, unit);
   // La casilla en la que ya esta no cuenta como sitio al que ir (ni como vecina del objetivo).
   const steps = (pos: Pos) => (samePos(pos, unit) ? Infinity : fromHere.at(pos));
-  const reachableGoals = advanceGoals(s, ai, unit)
+  const reachableGoals = advanceGoals(s, play, unit)
     .map((goal) => ({ goal, steps: stepsToGoalOrNextToIt(s, steps, goal) }))
     .filter((option) => option.steps < Infinity);
-  const nearest = minBy(reachableGoals, (option) => option.steps - advanceHeadStart(s, ai, unit, option.goal));
+  const nearest = minBy(reachableGoals, (option) => option.steps - advanceHeadStart(s, play, unit, option.goal));
   if (!nearest) return false;
   const goal = nearest.goal;
   // [CAMBIO] Una unidad que no captura no se queda encima de la Base enemiga (taparia a los que si).
   const wouldBlock = !isCapturer(s, unit) && !!buildingAt(s, goal);
-  const destination = bestMoveToward(s, ai, unit, goal, range, wouldBlock);
+  const destination = bestMoveToward(s, play, unit, goal, range, wouldBlock);
   if (!destination) return false;
   yield* doMove(unit, destination);
   yield* finish(s, unit);

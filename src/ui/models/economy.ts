@@ -1,5 +1,5 @@
 import { unitTypeOf, buildingTypeOf } from '../../core/gameContent';
-import { allianceScore, buildingIncome, commandUsed, isRuleOn, rivalScore, upkeepOf, type BuyOption } from '../../core/rules';
+import { allianceScore, buildingIncome, commandUsed, isRuleOn, rivalScore, upkeepOf, type BuyOption, buildingsOf } from '../../core/rules';
 import { teamState } from '../../core/teams';
 import type { Texts } from '../../core/content';
 import type { GameState, TeamId } from '../../core/model';
@@ -38,7 +38,7 @@ function tally<T extends Named>(types: readonly T[], each: (type: T) => number):
  * es el que se cobra, redondeado a 100).
  */
 export function economyVM(s: GameState, team: TeamId): EconomyVM {
-  const owned = s.buildings.filter((building) => building.owner === team).map((building) => buildingTypeOf(s, building));
+  const owned = buildingsOf(s, team).map((building) => buildingTypeOf(s, building));
   const units = s.units.filter((unit) => unit.team === team).map((unit) => unitTypeOf(s, unit));
   const income = owned.reduce((sum, buildingType) => sum + buildingIncome(s, buildingType), 0);
   const upkeep = upkeepOf(s, team);

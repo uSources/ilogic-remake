@@ -7,7 +7,7 @@ import { entryOf, type UnitType } from '../../core/content';
 import { unitTypeOf, buildingTypeOf } from '../../core/gameContent';
 import { posKey, posOf } from '../../core/geom';
 import type Phaser from 'phaser';
-import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange } from '../../core/rules';
+import { buildingIncome, defenseStars, pathCost, unitById, upkeepOf, type MoveRange, buildingsOf } from '../../core/rules';
 import type { Grid } from '../../core/util/grid';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, ForecastVM, MoveTipVM, SelectionVM, UIState } from '../../hud/store';
@@ -123,7 +123,7 @@ export function selectionPanel(
 
 /** Ingresos de un equipo por turno: lo que dan sus edificios menos el mantenimiento de su ejercito. */
 export function teamIncome(s: GameState, team: TeamId): number {
-  const owned = s.buildings.filter((building) => building.owner === team);
+  const owned = buildingsOf(s, team);
   return owned.reduce((sum, building) => sum + buildingIncome(s, buildingTypeOf(s, building)), 0) - upkeepOf(s, team);
 }
 

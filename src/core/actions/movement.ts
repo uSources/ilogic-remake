@@ -7,7 +7,7 @@ import { endGotoByHand, finishGoto, travelStepOf, type TravelStep } from '../rul
 import { captureProgress } from '../rules/capture';
 import { dropLastUndoableMove, forgetUndoableMoves, rememberMove, undoMoveProblem } from '../rules/undo';
 import { readyUnit } from '../rules/unitTurn';
-import { visibleEnemies } from '../rules/visibility';
+import { visibleFoes } from '../rules/visibility';
 import type { ActionRegistry, GameEvent, GameState, Pos, TeamId, UndoableMove, Unit } from '../model';
 import { actorProblem, checkedUndoableMove, checkedUnit, ownUnitProblem } from './checks';
 import { gotoDestination } from '../squads/standingOrders';
@@ -32,9 +32,9 @@ function checkedPath(path: Pos[] | null): Pos[] {
 function walkRemembering(s: GameState, team: TeamId, unit: Unit, path: Pos[], goto: Pos | undefined): Traversal {
   const from = posOf(unit);
   const capture = ownCaptureHere(s, unit);
-  const seenBefore = visibleEnemies(s, team);
+  const seenBefore = new Set(visibleFoes(s, team).map((foe) => foe.uid));
   const walked = moveAlong(s, unit, path);
-  const revealed = [...visibleEnemies(s, team)].some((uid) => !seenBefore.has(uid));
+  const revealed = visibleFoes(s, team).some((foe) => !seenBefore.has(foe.uid));
   if (walked.interruption) forgetUndoableMoves(s);
   else rememberMove(s, { uid: unit.uid, from, capture, revealed, ...(goto ? { goto: posOf(goto) } : {}) });
   return walked;

@@ -10,7 +10,7 @@ import { unitTypeOf, isHq } from '../core/gameContent';
 import { samePos, posOf } from '../core/geom';
 import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
-import { commandUsed, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow } from '../core/rules';
+import { commandUsed, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow, buildingsOf } from '../core/rules';
 import { serialize } from '../core/save';
 import type { GameSession, ActedStep } from '../core/session';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
@@ -956,7 +956,7 @@ export class GameScene extends Phaser.Scene {
       lab: labPanel(this.s, this.lab),
       general: generalVM(s, viewer, viewer, this.phase === 'target' ? this.powers.targeting : null),
       enemyGeneral: enemyWithGeneral === undefined ? null : generalVM(s, viewer, enemyWithGeneral, null),
-      buildings: s.buildings.filter((building) => building.owner === viewer).length,
+      buildings: buildingsOf(s, viewer).length,
       day: s.day,
       dayLimit: s.settings.dayLimit,
       helpRules: helpRulesOfMatch(s),

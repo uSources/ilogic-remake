@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { aiGeneral, choosePower } from '@core/aiGenerals';
+import { aiGeneral, choosePower, defaultAiProfile } from '@core/ai';
 import { bestAreaTarget, powerValue } from '@core/generalPowers';
 import { playCtx } from '@core/autopilot/context';
-import { defaultAiProfile } from '@core/ai';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { appointGeneral, generalDef } from '@core/generals';

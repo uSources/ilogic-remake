@@ -1,7 +1,7 @@
 /**
  * [CAMBIO] Formacion: una escuadra con la misma orden avanza junta. Sin ella, los jeeps y tanques
  * llegaban solos antes que la infanteria y los destrozaban. Las rapidas no se adelantan mas de
- * AI.SQUADSPREAD casillas a la mas retrasada (por tierra hasta el destino), salvo para atacar a algo a
+ * profile.weights.SQUADSPREAD casillas a la mas retrasada (por tierra hasta el destino), salvo para atacar a algo a
  * tiro; cerca del destino, o con enemigos al alcance de la mas retrasada, cada una pelea a su aire.
  */
 

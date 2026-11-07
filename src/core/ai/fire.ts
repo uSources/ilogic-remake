@@ -28,8 +28,8 @@ export interface FirePlan {
 type DamageTable = Map<number, Map<number, number>>;
 
 /** Puede disparar este turno y no tiene que irse a curar. */
-const isShooter = (s: GameState, ai: PlayCtx, unit: Unit): boolean =>
-  isOnMap(unit) && canStillFire(s, unit) && canFight(s, unit) && !needsRepair(ai, unit);
+const isShooter = (s: GameState, play: PlayCtx, unit: Unit): boolean =>
+  isOnMap(unit) && canStillFire(s, unit) && canFight(s, unit) && !needsRepair(play, unit);
 
 /** Dano esperado de cada tirador contra cada enemigo al que llega este turno (moviendose si puede). */
 function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable {
@@ -88,14 +88,14 @@ function playRank(s: GameState, unit: Unit, plan: Map<number, number>): number {
  * el orden de juego: primero las del plan (las de distancia antes), despues el resto en el orden de
  * siempre.
  */
-export function planFire(s: GameState, ai: PlayCtx): FirePlan {
-  const me = ai.me;
+export function planFire(s: GameState, play: PlayCtx): FirePlan {
+  const me = play.me;
   const plan = new Map<number, number>();
   const mine = teamUnits(s, me);
   const foes = visibleFoes(s, me);
   const damage = damageTable(
     s,
-    mine.filter((unit) => isShooter(s, ai, unit)),
+    mine.filter((unit) => isShooter(s, play, unit)),
     foes,
   );
   const free = new Set(damage.keys());

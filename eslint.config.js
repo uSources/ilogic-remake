@@ -73,7 +73,7 @@ const UNCHECKED_ATTACK_ONLY_IN_SANDBOX = {
 };
 /**
  * Las reglas, las acciones, las ordenes permanentes y la sesion no dependen de la IA (ai/, ai.ts,
- * aiGenerals.ts, ni los controladores que la usan): una partida se juega, se repite o se lleva en un
+ * ni los controladores que la usan): una partida se juega, se repite o se lleva en un
  * servidor sin cargarla. La IA es un jugador mas: reutiliza autopilot/, no al reves.
  */
 const NOT_THE_AI_FILES = [
@@ -89,12 +89,11 @@ const NOT_THE_AI_FILES = [
   'src/core/session.ts',
 ];
 const NO_AI = {
-  regex: '(^|/)(ai|aiGenerals|controllers)(\\.ts)?(/.*)?$',
-  message:
-    'Las reglas, las acciones, las ordenes y la sesion no importan la IA (ai/, ai.ts, aiGenerals.ts, controllers/): la IA reutiliza autopilot/.',
+  regex: '(^|/)(ai|controllers)(\\.ts)?(/.*)?$',
+  message: 'Las reglas, las acciones, las ordenes y la sesion no importan la IA (ai/, ai.ts, controllers/): la IA reutiliza autopilot/.',
 };
 /**
- * I1/I2: quien decide por un equipo (la IA: ai/, ai.ts, aiGenerals.ts; y los pasos de autopilot/)
+ * I1/I2: quien decide por un equipo (la IA: ai/ y ai.ts; y los pasos de autopilot/)
  * solo propone acciones (`ActionPlan`) y solo lee la vista de su equipo (`PlayerView`): no manda
  * nada (ni dispatch ni la sesion), no se hace su propia vista de la partida de verdad y no tira de
  * los dados de la partida. Lo prueba tests/lintImports.test.ts.
@@ -115,7 +114,7 @@ export const DECIDERS_ONLY_PROPOSE = [
     message: 'Los dados son de las reglas: quien decide usa su propio azar (decisionRng, que le da su controlador).',
   },
 ];
-const AI_FILES = ['src/core/ai/**/*.ts', 'src/core/ai.ts', 'src/core/aiGenerals.ts'];
+const AI_FILES = ['src/core/ai/**/*.ts', 'src/core/ai.ts'];
 const AUTOPILOT_FILES = ['src/core/autopilot/**/*.ts', 'src/core/autopilot.ts'];
 
 /**

@@ -108,7 +108,7 @@ describe('quien decide solo propone (DECIDERS_ONLY_PROPOSE, eslint.config.js)', 
 
   it('la configuracion de verdad lo pone en la IA y en autopilot/', async () => {
     const eslint = new ESLint({ overrideConfigFile: 'eslint.config.js' });
-    for (const file of ['src/core/ai/tactics.ts', 'src/core/ai.ts', 'src/core/aiGenerals.ts', 'src/core/autopilot/tactics.ts']) {
+    for (const file of ['src/core/ai/tactics.ts', 'src/core/ai.ts', 'src/core/ai/general.ts', 'src/core/autopilot/tactics.ts']) {
       const config = (await eslint.calculateConfigForFile(file)) as { rules?: Record<string, unknown[]> };
       const options = config.rules?.['no-restricted-imports']?.[1] as { patterns?: object[] } | undefined;
       for (const pattern of DECIDERS_ONLY_PROPOSE) expect(options?.patterns ?? []).toContainEqual(pattern);

@@ -29,7 +29,7 @@ function loadedBy(entry: string): Set<string> {
   return new Set([...seen].map((file) => relative(CORE, file)));
 }
 
-const isAi = (file: string) => /^(ai\/|ai\.ts$|aiGenerals\.ts$|controllers\/|controllers\.ts$)/.test(file);
+const isAi = (file: string) => /^(ai\/|ai\.ts$|controllers\/|controllers\.ts$)/.test(file);
 
 /** Una partida se juega, se repite o se lleva en un servidor sin cargar la IA (docs/ARQUITECTURA.md, capas). */
 describe('capas: la IA es un jugador mas', () => {

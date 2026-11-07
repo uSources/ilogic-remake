@@ -232,7 +232,7 @@ Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es cod
 "poderes" son del general (se usan una vez por turno); las "habilidades" son de las unidades
 (`abilities`, siempre activas).
 
-La IA usa a su general sin saber cual es (`core/aiGenerals.ts`): al empezar su turno valora cada
+La IA usa a su general sin saber cual es (`core/ai/general.ts`): al empezar su turno valora cada
 poder que puede pagar (el daño en area, en el mejor cuadrado sobre los enemigos que ve; el
 reconocimiento, un valor fijo con niebla; curar, por la vida que recuperan sus unidades; el dinero,
 por lo que es) y usa la mejor si vale al menos `GENERALMINVALUE`

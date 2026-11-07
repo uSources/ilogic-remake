@@ -4,7 +4,6 @@ import {
   canRepair,
   flankBonusOnceHit,
   hasFullArmy,
-  hiddenFoes,
   isEnemyHq,
   newUnit,
   projectedIncome,
@@ -20,13 +19,13 @@ const SOLDIER = unitTypeNamed('Soldier');
 
 /** Las preguntas que la IA hacia con copias propias: ahora son de las reglas, una vez. */
 describe('consultas de las reglas que usa la IA', () => {
-  it('visibleFoes y hiddenFoes: los enemigos vivos en el mapa, a la vista o no', () => {
+  it('visibleFoes: los enemigos vivos en el mapa y a la vista', () => {
     const s = blankState({ fog: true });
     newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
     const near = newUnit(s, SOLDIER, 1, { x: 3, y: 2 });
     const far = newUnit(s, SOLDIER, 1, { x: 25, y: 25 });
     expect(visibleFoes(s, 0)).toEqual([near]);
-    expect(hiddenFoes(s, 0)).toEqual([far]);
+    expect(visibleFoes(s, 0, () => true)).toEqual([near, far]);
     expect(visibleFoes(blankState({ fog: false }), 0)).toEqual([]);
   });
 

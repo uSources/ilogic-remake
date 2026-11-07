@@ -10,6 +10,7 @@
  *
  * | Modulo | Que va |
  * |---|---|
+ * | `general` | el general de la IA: que poder usa y cuando (`choosePower`, `aiGeneral`) |
  * | `tactics` | ir a capturar, avanzar, moverse al azar |
  * | `fire` | plan de fuego concentrado y orden de juego |
  * | `unitTurn` | prioridades de cada unidad en el turno de la IA (`UNIT_BEHAVIOURS`) |
@@ -22,7 +23,7 @@
  *
  * Fuera de aqui se importa de este fichero.
  */
-import { aiGeneral } from './aiGenerals';
+import { aiGeneral } from './ai/general';
 import { teamUnits } from './rules/queries';
 import type { ActionPlan, Rng } from './model';
 import type { PlayerView } from './playerView';
@@ -33,6 +34,7 @@ import { unitTurn } from './ai/unitTurn';
 import type { AiProfile } from './ai/profile';
 
 export { defaultAiProfile, type AiProfile } from './ai/profile';
+export { aiGeneral, choosePower, type PowerChoice } from './ai/general';
 
 /**
  * Turno completo de la IA que juega con `profile`, con lo que sabe su equipo (`view`: no lee la
@@ -43,7 +45,7 @@ export { defaultAiProfile, type AiProfile } from './ai/profile';
 export function* aiTurn(view: PlayerView, profile: AiProfile, rng: Rng): ActionPlan {
   const { state: s, team } = view;
   const alone = playCtx(team, profile);
-  // [CAMBIO] Primero el general (un poder, si merece la pena): ver aiGenerals.ts.
+  // [CAMBIO] Primero el general (un poder, si merece la pena): ver ai/general.ts.
   yield* aiGeneral(s, alone);
   const { plan, order } = planFire(s, alone);
   // Las unidades juegan como un ejercito, con el fuego concentrado del plan.

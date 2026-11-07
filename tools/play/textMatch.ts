@@ -33,6 +33,7 @@ import {
   unitById,
   visibility,
   canStillAct,
+  buildingsOf,
 } from '@core/rules';
 import { serialize } from '@core/save';
 import { screenControllers } from '@core/controllers';
@@ -367,7 +368,7 @@ export class TextMatch {
   status(): string {
     const s = this.s;
     const me = this.me;
-    const own = (team: TeamId) => s.buildings.filter((building) => building.owner === team).length;
+    const own = (team: TeamId) => buildingsOf(s, team).length;
     const unitsOf = (team: TeamId) => s.units.filter((unit) => unit.team === team).length;
     const others = (count: (team: TeamId) => number) => this.others.map(count).join('/');
     const general = teamState(s, me).general;

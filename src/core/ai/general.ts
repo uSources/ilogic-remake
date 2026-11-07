@@ -8,12 +8,12 @@
  * a su GENERALMINVALUE (ai.json, en el perfil de la IA). Con la barra llena se usa cualquiera que valga algo, para no desperdiciar la
  * carga que seguiria ganando. Una clase de efecto nueva no toca esto.
  */
-import { chargeStars, generalOf } from './generals';
-import { powerValue } from './generalPowers';
-import { act, type PlayCtx } from './autopilot/context';
-import type { AiWeights } from './content';
-import type { ActionPlan, GameState, Pos, TeamId } from './model';
-import { maxBy } from './util/pick';
+import { chargeStars, generalOf } from '../generals';
+import { powerValue } from '../generalPowers';
+import { act, type PlayCtx } from '../autopilot/context';
+import type { AiWeights } from '../content';
+import type { ActionPlan, GameState, Pos, TeamId } from '../model';
+import { maxBy } from '../util/pick';
 
 export interface PowerChoice {
   power: string;
@@ -39,8 +39,8 @@ export function choosePower(s: GameState, team: TeamId, weights: Readonly<AiWeig
 }
 
 /** Turno del general de la IA: como mucho un poder. */
-export function* aiGeneral(s: GameState, ai: PlayCtx): ActionPlan {
-  const choice = choosePower(s, ai.me, ai.profile.weights);
+export function* aiGeneral(s: GameState, play: PlayCtx): ActionPlan {
+  const choice = choosePower(s, play.me, play.profile.weights);
   if (!choice) return;
   yield* act({ kind: 'usePower', power: choice.power, target: choice.target });
 }

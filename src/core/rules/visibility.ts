@@ -74,24 +74,12 @@ export function sightOf(s: GameState, team: TeamId): Sight {
 export const isVisibleFoe = (s: GameState, team: TeamId, unit: Unit, sees: Sight): boolean =>
   isHostile(s, team, unit.team) && isOnMap(unit) && sees(unit);
 
-/** Enemigos de `team` vivos y en el mapa (no transportados), se vean o no. */
-const foesOnMap = (s: GameState, team: TeamId): Unit[] =>
-  s.units.filter((other) => isHostile(s, team, other.team) && isOnMap(other) && isAlive(other));
-
-/** Enemigos de `team` vivos, en el mapa (no transportados) y a la vista (`sees`: lo que ve ahora, si no se dice). */
+/**
+ * Enemigos de `team` vivos, en el mapa (no transportados) y a la vista (`sees`: lo que ve ahora, si
+ * no se dice): los que dan por buenos `isVisibleFoe`, la pregunta de cada unidad.
+ */
 export function visibleFoes(s: GameState, team: TeamId, sees: Sight = sightOf(s, team)): Unit[] {
-  return foesOnMap(s, team).filter((other) => sees(other));
-}
-
-/** Los mismos que `visibleFoes` no ve: enemigos vivos en el mapa escondidos para `team`. */
-export function hiddenFoes(s: GameState, team: TeamId, sees: Sight = sightOf(s, team)): Unit[] {
-  return foesOnMap(s, team).filter((other) => !sees(other));
-}
-
-/** Uids de los enemigos de `team` que ve ahora en el mapa (para saber si un movimiento ha descubierto a alguien). */
-export function visibleEnemies(s: GameState, team: TeamId): Set<number> {
-  const sees = sightOf(s, team);
-  return new Set(s.units.filter((unit) => isVisibleFoe(s, team, unit, sees)).map((unit) => unit.uid));
+  return s.units.filter((unit) => isVisibleFoe(s, team, unit, sees) && isAlive(unit));
 }
 
 /** El enemigo de `team` que hay en `at` y que ve (`sees`); undefined si no hay ninguno a la vista. */

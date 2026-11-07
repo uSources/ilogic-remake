@@ -26,7 +26,7 @@ import type { EngagementPolicy, FiringPositions } from './engagement';
 // Retirarse
 // ---------------------------------------------------------------------------------------------
 
-/** Unirse a la unidad igual mas cercana si la suma de vidas no pasa de AI.MAXMERGELIFE. */
+/** Unirse a la unidad igual mas cercana si la suma de vidas no pasa de profile.weights.MAXMERGELIFE. */
 function* mergeWithMate(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
   const mates = mergeTargets(s, unit, range).filter((mate) => mate.life + unit.life <= play.profile.weights.MAXMERGELIFE);
   const nearest = minBy(mates, (mate) => manhattan(unit, mate));

@@ -1,6 +1,6 @@
 import { usePower, blankState, unitTypeNamed, act } from './helpers';
 import { describe, expect, it } from 'vitest';
-import { choosePower } from '@core/aiGenerals';
+import { choosePower } from '@core/ai';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { generalHitFactor, appointGeneral } from '@core/generals';

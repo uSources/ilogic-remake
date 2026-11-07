@@ -75,3 +75,6 @@ export function cargoUnits(s: GameState, transport: Unit): Unit[] {
 /** El edificio es la Base de un enemigo de `team`. */
 export const isEnemyHq = (s: GameState, building: Building, team: TeamId): boolean =>
   isHq(s, building) && isHostileOwner(s, building.owner, team);
+
+/** Los edificios que son del equipo `team`. */
+export const buildingsOf = (s: GameState, team: TeamId): Building[] => s.buildings.filter((building) => building.owner === team);

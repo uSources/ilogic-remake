@@ -27,7 +27,7 @@ import { defaultContent } from '@core/content/default';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { seededRng } from '@core/util/random';
-import { isWinner, matchResult } from '@core/rules';
+import { isWinner, matchResult, buildingsOf } from '@core/rules';
 import { armyValue } from '@core/stats';
 import type { GameState, TeamId } from '@core/model';
 import { clearLeader, type Holdings } from '../balance/strength';
@@ -38,8 +38,7 @@ const BASELINE_FILE = `${ROOT}improve/ai-baseline.json`;
 
 /** Lo que tiene un equipo al decidir una partida sin terminar. */
 function holdingsOf(s: GameState, team: TeamId): Holdings {
-  const buildings = s.buildings.filter((building) => building.owner === team).length;
-  return { army: armyValue(s, team), buildings, funds: teamState(s, team).funds };
+  return { army: armyValue(s, team), buildings: buildingsOf(s, team).length, funds: teamState(s, team).funds };
 }
 
 /** Que IA ha ganado una partida: la primera de `profiles`, la segunda o ninguna (empate). */

@@ -3,12 +3,13 @@ import type { GameContent } from '@core/content';
 import { seededRng } from '@core/util/random';
 import { buildMatch, skirmishConfig } from '@core/match';
 import { isTurnBoundary } from '@core/actions';
-import { isMatchOver, isWinner, matchResult } from '@core/rules';
+import { isMatchOver, isWinner, matchResult, buildingsOf } from '@core/rules';
 import { aiController } from '@core/controllers';
 import { GameSession, passiveController, runMatch, type ActedStep, type Controller } from '@core/session';
 import { duel, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
 import { armyValue } from '@core/stats';
+import { lifeValue } from '@core/unitValue';
 import type { EndReason, GameEvent, GameEventOf, GameState, Rng, MatchSettings, TeamId, Unit } from '@core/model';
 
 export type Policy = 'ai' | 'passive';
@@ -107,7 +108,7 @@ const bySide = (valueOf: (side: Side) => number): [number, number] => [valueOf(F
 function sample(s: GameState): DaySample {
   const unitsOf = (side: Side) => s.units.filter((unit) => unit.team === side);
   const army = (side: Side) => armyValue(s, side);
-  const buildings = (side: Side) => s.buildings.filter((building) => building.owner === side).length;
+  const buildings = (side: Side) => buildingsOf(s, side).length;
   return {
     day: s.day,
     funds: bySide((side) => teamState(s, side).funds),
@@ -133,8 +134,9 @@ function tallyAttack(s: GameState, event: GameEventOf<'attack'>, team: TeamId, {
   tally.damageDealt += event.damage;
   if (!victimInfo) return;
   const victimTally = tallyOf(sideOfTeam(victimInfo.team), victimInfo);
-  tally.valueDealt += (event.damage * costOf(s, victimInfo)) / 100;
-  victimTally.valueLost += (event.damage * costOf(s, victimInfo)) / 100;
+  const dealt = lifeValue(s, event.damage, victimInfo);
+  tally.valueDealt += dealt;
+  victimTally.valueLost += dealt;
   if (event.killed) {
     tally.kills++;
     victimTally.deaths++;
@@ -144,8 +146,9 @@ function tallyAttack(s: GameState, event: GameEventOf<'attack'>, team: TeamId, {
   const lost = attacker.life - (after?.life ?? 0);
   if (lost <= 0) return;
   victimTally.damageDealt += lost;
-  victimTally.valueDealt += (lost * costOf(s, attacker)) / 100;
-  tally.valueLost += (lost * costOf(s, attacker)) / 100;
+  const returned = lifeValue(s, lost, attacker);
+  victimTally.valueDealt += returned;
+  tally.valueLost += returned;
   if (!after) {
     victimTally.kills++;
     tally.deaths++;

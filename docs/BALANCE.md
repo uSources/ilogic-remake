@@ -220,7 +220,7 @@ centro y dinero por avanzar.
 Cada unidad de la IA decidía sola y llegaban de una en una. Dos cambios, solo en el turno de la IA
 enemiga (las órdenes del jugador se cumplen igual que antes):
 
-- **Fuego concentrado** (`planFire` en `src/core/ai.ts`, peso `AI.FOCUSFIRE`): antes de mover, busca
+- **Fuego concentrado** (`planFire` en `src/core/ai/fire.ts`, peso `FOCUSFIRE` de ai.json): antes de mover, busca
   enemigos visibles que puede destruir ese turno sumando el daño esperado de varias unidades (con el
   flanqueo para las que siguen) y reparte a quién dispara a cada uno, empezando por el que más vale.
   Las del plan juegan primero (las de distancia antes).
