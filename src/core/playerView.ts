@@ -37,7 +37,8 @@ type FoggedParts = Partial<
 /** Una cosa que el equipo no sabe: lo que deja ver de esa parte de la partida. */
 interface FogRule {
   id: string;
-  hide(s: GameState, team: TeamId, sees: Sight): FoggedParts;
+  /** `before`: lo que ya han cambiado las entradas de antes (las unidades que ve, por ejemplo). */
+  hide(s: GameState, team: TeamId, sees: Sight, before: FoggedParts): FoggedParts;
 }
 
 /**
@@ -83,8 +84,8 @@ const FOG: readonly FogRule[] = [
     // Los contadores de unidades y escuadras (diria cuantas ha hecho un enemigo sin verlas): el
     // siguiente despues de las que conoce. Asi una copia para simular sigue dando numeros nuevos.
     id: 'counters',
-    hide: (s, team, sees) => ({
-      nextUid: nextAfter(s.units.filter(isKnownTo(s, team, sees)).map((unit) => unit.uid)),
+    hide: (s, team, sees, before) => ({
+      nextUid: nextAfter((before.units ?? s.units.filter(isKnownTo(s, team, sees))).map((unit) => unit.uid)),
       nextSquadId: nextAfter((s.squads ?? []).filter((squad) => areAllied(s, squad.team, team)).map((squad) => squad.id)),
     }),
   },
@@ -123,7 +124,7 @@ const HIDDEN_SEED = 0;
 
 /** Lo que el equipo `team` ve distinto de la partida ahora mismo, viendo lo que dice `sees` (lo que deja cada entrada de FOG). */
 function foggedParts(s: GameState, team: TeamId, sees: Sight = sightOf(s, team)): FoggedParts {
-  return FOG.reduce<FoggedParts>((parts, rule) => ({ ...parts, ...rule.hide(s, team, sees) }), {});
+  return FOG.reduce<FoggedParts>((parts, rule) => ({ ...parts, ...rule.hide(s, team, sees, parts) }), {});
 }
 
 /**
@@ -210,10 +211,11 @@ const UNSHOWN_KEYS: ReadonlySet<string | symbol> = new Set(['__proto__', 'constr
 function readOnlyHandler(guard: (value: unknown) => unknown): ProxyHandler<object> {
   return {
     get: (target, key): unknown => {
-      if (UNSHOWN_KEYS.has(key)) return undefined;
       const property: unknown = Reflect.get(target, key);
-      // Lo que no es un objeto (numeros, textos) se da tal cual, sin mas: es lo que mas se lee.
-      return typeof property === 'object' ? guard(property) : property;
+      // Lo que no es un objeto (numeros, textos) se da tal cual, sin mas: es lo que mas se lee. Lo de
+      // UNSHOWN_KEYS es un objeto (`__proto__`) o una funcion (`constructor`): solo ahi se mira.
+      if (typeof property === 'object') return UNSHOWN_KEYS.has(key) ? undefined : guard(property);
+      return typeof property === 'function' && UNSHOWN_KEYS.has(key) ? undefined : property;
     },
     getOwnPropertyDescriptor: (target, key) => shownDescriptor(Reflect.getOwnPropertyDescriptor(target, key), guard),
     ...REFUSED_CHANGES,
