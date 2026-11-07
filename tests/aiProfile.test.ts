@@ -3,7 +3,7 @@ import { aiTurn, defaultAiProfile, UNIT_BEHAVIOURS, type AiProfile } from '@core
 import { aiController } from '@core/controllers';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { newUnit } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { GameSession, runMatch } from '@core/session';
 import { duel } from '@core/teams';
 import { defaultContent } from '@core/content/default';

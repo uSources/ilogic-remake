@@ -46,10 +46,13 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   decide lee la vista de su equipo (`PlayerView`, `core/playerView.ts`: sin lo que no ve, al dia con
   `seeing`), nunca la partida de verdad; ESLint lo vigila (`DECIDERS_ONLY_PROPOSE`). Las herramientas y los tests juegan partidas enteras con `runMatch`; nada de bucles de
   turnos a mano. Las fachadas (`core/rules`, `core/squads`) solo preguntan; ESLint no deja usar sus
-  modulos de dentro fuera del nucleo. Ver `docs/ARQUITECTURA.md`, "Acciones" y "Sucesos".
+  modulos de dentro fuera del nucleo, y los pasos que cambian la partida de `rules/` y `squads/`
+  (`earn`, `advanceCapture`, `giveStandingOrder`...) solo los llaman las acciones, las fases y las
+  `INVARIANTS` (`APPLY_STEPS`). Para preparar una partida a mano (herramientas, tests), `newUnit` de
+  `core/measure.ts`. Ver `docs/ARQUITECTURA.md`, "Acciones" y "Sucesos".
 - El azar: los dados de las reglas son de la partida (`GameState.dice`, `diceOf(s)`) y el de las
-  decisiones de la IA tambien, aparte (`GameState.decisionSeed`; el de cada turno, `decisionRng(s,
-  equipo)`); el generador de mapas lleva su `Rng` (`seededRng`); elegir al azar, `pick`/`weightedPick`
+  decisiones de la IA tambien, aparte (`GameState.decisionSeed`; el de cada turno, `turnSeedOf(s,
+  equipo)`, y quien decide lo lee de su vista: `decisionRngOf(vista)`); el generador de mapas lleva su `Rng` (`seededRng`); elegir al azar, `pick`/`weightedPick`/`randomInt`/`shuffleInPlace`
   (`core/util/random.ts`); nada de `Math.random` en core. La IA y los mapas son deterministas con la
   misma partida.
 
@@ -74,7 +77,9 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   etiquetas), `defaultContent()`. Un tipo se busca por su id en su catalogo (`entryOf(content.units,
   id, 'unidad')`). El codigo no compara nombres de unidades (`'Tank'`) ni de temas: si necesita saber
   algo de uno, es un campo del JSON.
-- **Tipos con nombre, no indices sueltos**: `MoveType.FOOT` (`'foot'`), `movementOf(s, unit)`,
+- **Tipos con nombre, no indices sueltos**: los tipos de movimiento son contenido (`movements.json`,
+  `content.movements`; `MoveType` es su id, como `'foot'`, y lo que el codigo necesita saber de uno es
+  un campo: `motion`, `crossesEverything`), `movementOf(s, unit)`,
   `canMoveOn(moveType, terrain)`; como se mueve una unidad en esta partida (por donde, lo que cuesta,
   lo que puede gastar) es su `movementProfile(s, unit)`; las partidas guardan ids
   (`unit.type = 'Tank'`, `s.theme = 'Plains'`), nunca el puesto en el fichero.
@@ -87,7 +92,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
   vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
-  las variables de `hud/styles/base/base.css`). Textos de pantalla en `settings.ts` (`t('clave')`, es/en).
+  las variables de `hud/styles/base/base.css`). Textos de pantalla en `src/i18n/es/` y `en/`, un fichero por tema (se leen con `t('clave')`, de `settings.ts`).
 - **La partida es la unica fuente**: reglas en `s.settings`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(settingChanges)` en los tests,
@@ -131,18 +136,24 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   puede traer sus propios modulos (`GameMode.ruleModules`: se resuelven con la partida, `s.ruleset`); las reglas no preguntan por un ajuste (`if (!s.settings.x)`); paso al empezar o acabar cada turno =
   entrada en `TURN_START_PHASES`/`TURN_END_PHASES` (`core/actions/turn.ts`); forma de acabar la
   partida = entrada en `VICTORY_RULES` (`core/rules/victory.ts`) y en la lista de su modo; modo de
-  juego = entrada en `GAME_MODES` (`core/modes.ts`), su configuracion en `MatchConfig` y su
+  juego = su nombre en `GameModeIds` (model), su entrada en `GAME_MODES` (`core/modes.ts`; la partida
+  lo resuelve al crearse, `s.ruleset.mode`, y uno de prueba va en un registro propio que se da a
+  `newGameState({ modes })`, sin `vi.mock`), su configuracion en `MatchConfig` y su
   preparacion en `MATCH_SETUPS` (`core/match.ts`); quien juega un equipo = un `Controller`
   (`core/session`); habilidad de unidad nueva = su forma en `AbilityDef`, su validacion en
   `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta en `ABILITY_HOOKS` y su sitio
   en `ABILITY_ORDER` (`abilities.ts`; el compilador exige las dos);
   efecto nuevo de un poder del general = su validacion en `EFFECT_SHAPES` (`content/generals.ts`) y
-  su entrada en `POWER_EFFECTS` (`generalPowers.ts`: casilla, area, efecto y `aiValue`).
+  su entrada en `POWER_EFFECTS` (`generalPowers.ts`: casilla, area, efecto y `aiValue`; lo que apunta
+  en el suceso del poder, su campo en `PowerEventParts` con `declare module`); lo que cuenta un
+  suceso en las estadisticas = entrada en `STAT_COUNTERS` (stats.ts) o `statCounters` de un modulo;
+  un ingreso nuevo del fin de ronda = su nombre en `IncomeSources`.
   La IA no tiene variables globales: lo del turno va en `PlayCtx` (equipo, perfil, `paths`,
   `focusFire`); como juega, en su `AiProfile` (pesos, `scoreTerms`, `behaviours`, `turn`), que se le da al
   controlador; como pelea una unidad, un preset de `EngagementPolicy` (`HUNT`, `SHOOT_FROM_HERE`,
   `guardZone`, `fireOnTheWay`); lo que sabe de la partida, una consulta de las reglas
-  (`visibleFoes`, `projectedIncome`, `canRepair`, `isEnemyHq`...), nunca una copia; lo que un
+  (`projectedIncome`, `canRepair`, `isEnemyHq`...; los enemigos que conoce y lo que ve, de su vista:
+  `knownFoes`, `sightIn`), nunca una copia; lo que un
   equipo no sabe, una entrada en `FOG` (`playerView.ts`); un tipo de orden permanente, su
   linea en `StandingOrderKinds` (model) y sus entradas en `STANDING_ORDER_TYPES` y `STANDING_ORDER_TURNS` («Ir alli» es
   la orden 'goto'). Antes de escribir un bucle o un
@@ -163,7 +174,7 @@ El compilador es estricto (`strict`, `noUncheckedIndexedAccess`): que pille los 
 partida. Pero un tipo tiene que leerse a la primera, como el codigo (`docs/ESTILO.md`, regla 9).
 
 - **Lo que entra de fuera es `unknown`** (JSON de contenido, partidas guardadas, `localStorage`): se
-  comprueba con guardas (`v is number`, `isNum` y `Checker` de `core/content/check.ts`; `hasGameShape`
+  comprueba con guardas (`v is number`, `isNumberWithin` y `Checker` de `core/content/check.ts`; `hasGameShape`
   en `core/savedParts.ts`, `SavedGame` hasta que `readSave` la ha comprobado) y solo despues se usa. Nada de `as Tipo` para "convencer" al compilador ni de `any`.
 - **Guardas en vez de `!` y de `as`**: para quitar huecos de una lista,
   `.filter((unit): unit is Unit => !!unit)`; si un valor tiene que existir, una funcion

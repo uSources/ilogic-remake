@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import buildingsFile from '@core/content/buildings.json';
 import unitsFile from '@core/content/units.json';
-import { entryOf, findEntry, loadContent, validateContent, type Content, MOVEMENTS, MoveType } from '@core/content';
+import missionsFile from '@core/content/missions.json';
+import { entryOf, findEntry, loadContent, validateContent, type Content } from '@core/content';
 import { canMoveOn, terrainMoveCost } from '@core/rules';
 import { defaultContent } from '@core/content/default';
 
@@ -48,6 +49,7 @@ describe('contenido (src/core/content/*.json)', () => {
   it('los JSON apuntan a su esquema', () => {
     expect(unitsFile.$schema).toBe('./units.schema.json');
     expect(buildingsFile.$schema).toBe('./buildings.schema.json');
+    expect(missionsFile.$schema).toBe('./missions.schema.json');
   });
 
   it('explica lo que esta mal', () => {
@@ -133,14 +135,38 @@ describe('contenido (src/core/content/*.json)', () => {
     files.terrain[4]!.mapLetter = '~';
     (files.settings.defaults as unknown as Record<string, unknown>).fog = 'si';
     (files.settings.defaults as unknown as Record<string, unknown>).magic = true;
-    files.ai.KILLBONUS = -1;
+    files.ai.killBonus = -1;
     const errors = errsOf(files);
     expect(errors).toContain('terreno Woods: movement.vehicle tiene que ser un coste de 1 a 9 o null (no se pasa)');
-    expect(errors).toContain('terreno Sand: los aereos tienen que poder pasar por todo (movement.air)');
+    expect(errors).toContain('terreno Sand: movement.air pasa por todo: tiene que tener un coste');
     expect(errors).toContain('terreno Cactus: la letra "~" ya es de otro terreno');
     expect(errors).toContain('settings.json: defaults.fog tiene que ser true o false');
     expect(errors).toContain('settings.json: regla desconocida "magic"');
-    expect(errors.some((error) => error.startsWith('ai.json: KILLBONUS'))).toBe(true);
+    expect(errors.some((error) => error.startsWith('ai.json: killBonus'))).toBe(true);
+  });
+
+  it('las letras de la partida por texto: una por terreno y por edificio, y la de un edificio en mayuscula', () => {
+    const files = clone();
+    files.terrain[1]!.textLetter = files.terrain[0]!.textLetter;
+    files.terrain[2]!.textLetter = 'ff';
+    files.buildings[1]!.textLetter = 'o';
+    files.buildings[2]!.textLetter = files.buildings[0]!.textLetter;
+    const errors = errsOf(files);
+    expect(errors).toContain(`terreno ${files.terrain[1]!.id}: textLetter: la letra "${files.terrain[0]!.textLetter}" ya es de otro`);
+    expect(errors).toContain(`terreno ${files.terrain[2]!.id}: textLetter tiene que ser una sola letra`);
+    expect(errors).toContain(
+      `edificio ${files.buildings[1]!.id}: textLetter tiene que ser una mayuscula (la de otro equipo sale en minuscula)`,
+    );
+    expect(errors).toContain(`edificio ${files.buildings[2]!.id}: textLetter: la letra "${files.buildings[0]!.textLetter}" ya es de otro`);
+  });
+
+  it('la letra de un terreno no puede ser la de un edificio (en el mapa, la de otro equipo sale en minuscula)', () => {
+    const files = clone();
+    const factory = files.buildings.find((building) => building.id === 'Factory')!;
+    files.terrain[3]!.textLetter = factory.textLetter.toLowerCase();
+    expect(errsOf(files)).toContain(
+      `terreno ${files.terrain[3]!.id}: textLetter "${factory.textLetter.toLowerCase()}" se confunde en el mapa con el edificio Factory (de otro equipo sale en minuscula)`,
+    );
   });
 
   it('temas y generador de mapas: nombran terrenos, unidades y edificios que existen', () => {
@@ -168,11 +194,25 @@ describe('contenido (src/core/content/*.json)', () => {
   it('movimiento: tipos legibles sobre terrain.json', () => {
     const tank = entryOf(defaultContent().units, 'Tank', 'unidad');
     const terrain = (id: string) => entryOf(defaultContent().terrain, id, 'terreno');
-    expect(tank.movement).toBe(MoveType.VEHICLE);
-    expect(MOVEMENTS).toEqual(['foot', 'vehicle', 'air', 'amphibious']);
-    expect(canMoveOn(MoveType.VEHICLE, terrain('Water'))).toBe(false);
-    expect(canMoveOn(MoveType.AIR, terrain('DWater'))).toBe(true);
-    expect(terrainMoveCost(MoveType.VEHICLE, terrain('Woods'))).toBe(2);
+    expect(tank.movement).toBe('vehicle');
+    expect(defaultContent().movements.list.map((movement) => movement.id)).toEqual(['foot', 'vehicle', 'air', 'amphibious']);
+    expect(canMoveOn('vehicle', terrain('Water'))).toBe(false);
+    expect(canMoveOn('air', terrain('DWater'))).toBe(true);
+    expect(terrainMoveCost('vehicle', terrain('Woods'))).toBe(2);
+  });
+
+  it('un tipo de movimiento nuevo es su entrada en movements.json y su coste en cada terreno', () => {
+    const files = clone();
+    files.movements.push({ id: 'hover', name: { es: 'Aerodeslizador', en: 'Hovercraft' }, motion: 'drive' });
+    expect(validateContent(files).join('\n')).toMatch(/movement\.hover tiene que ser un coste/);
+    for (const terrain of files.terrain) terrain.movement.hover = terrain.water ? 1 : 2;
+    files.units[0]!.movement = 'hover';
+    const content = loadContent(files);
+    expect(content.weather.list[0]!.move.hover).toBe(0);
+    expect(content.units.list[0]!.motion).toBe('drive');
+    const broken = clone();
+    broken.units[0]!.movement = 'teleport';
+    expect(validateContent(broken).join('\n')).toMatch(/el movimiento "teleport", que no existe/);
   });
 
   it('art: una unidad sin dibujo usa el de otra', () => {

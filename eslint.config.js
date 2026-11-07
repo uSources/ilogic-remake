@@ -58,18 +58,18 @@ const CORE_FACADES_ONLY = [
 ];
 
 /**
- * El banco de pruebas (core/sandbox.ts: combate sin comprobar) es de las herramientas y los tests, no
- * del juego: ningun fichero de src/ lo importa, con la ruta que sea (con o sin `.ts`, por alias).
+ * Medir sin comprobar (core/measure.ts: el combate suelto, poner unidades) es de las herramientas y los
+ * tests, no del juego: ningun fichero de src/ lo importa, con la ruta que sea (con o sin `.ts`, por alias).
  */
-const SANDBOX_IS_NOT_THE_GAME = {
-  regex: '(^|/)sandbox(\\.ts)?$',
-  message: 'core/sandbox.ts no comprueba nada: es para tools/ y tests/. El juego cambia la partida con dispatch.',
+const MEASURING_IS_NOT_THE_GAME = {
+  regex: '(^|/)measure(\\.ts)?$',
+  message: 'core/measure.ts no comprueba nada: es para tools/ y tests/. El juego cambia la partida con dispatch.',
 };
-/** El combate sin comprobar (`resolveAttack`) solo lo usan la accion 'attack' (su propio modulo) y sandbox.ts. */
-const UNCHECKED_ATTACK_ONLY_IN_SANDBOX = {
+/** El combate sin comprobar (`resolveAttack`) solo lo usan la accion 'attack' (su propio modulo) y measure.ts. */
+const UNCHECKED_ATTACK_ONLY_IN_MEASURE = {
   regex: '(^|/)actions/combat(\\.ts)?$|^\\./combat(\\.ts)?$',
   importNames: ['resolveAttack'],
-  message: "resolveAttack no comprueba nada: el juego ataca con la accion 'attack' (dispatch); fuera de una partida, core/sandbox.ts.",
+  message: "resolveAttack no comprueba nada: el juego ataca con la accion 'attack' (dispatch); fuera de una partida, core/measure.ts.",
 };
 /**
  * Las reglas, las acciones, las ordenes permanentes y la sesion no dependen de la IA (ai/, ai.ts,
@@ -109,11 +109,73 @@ export const DECIDERS_ONLY_PROPOSE = [
     message: 'Quien decide recibe la vista de su equipo (PlayerView): no se la hace de la partida de verdad.',
   },
   {
-    regex: '(^|/)dice(\\.ts)?$',
-    importNames: ['diceOf'],
-    message: 'Los dados son de las reglas: quien decide usa su propio azar (decisionRng, que le da su controlador).',
+    regex: '(^|/)(dice|turnSeeds)(\\.ts)?$',
+    message:
+      'Los dados son de las reglas y la semilla de cada turno se lee de la partida de verdad: quien decide usa el azar de su vista (decisionRngOf).',
   },
 ];
+/**
+ * Los pasos que cambian la partida y viven con las reglas (`rules/`, `squads/`, el clima, los generales
+ * y sus poderes, las estadisticas): solo los llaman el
+ * `apply` de las acciones (actions/), los pasos de ronda y de turno, las INVARIANTS y lo que prepara
+ * una partida. Quien decide (la IA, autopilot/), la sesion, los controladores, la vista y lo que
+ * apunta (targeting, trail) solo preguntan: no los importan. Fuera del nucleo ya no se ven (las
+ * fachadas no los dan: tests/layers.test.ts). Lo prueba tests/lintImports.test.ts, que ademas busca en
+ * todo el nucleo las funciones que cambian la partida: una que no este aqui (ni sea de las que crean
+ * o cargan una partida) hace fallar el test, asi la lista no se queda atras.
+ */
+const STEPS_BY_MODULE = {
+  'rules/capture': ['dropStaleCaptures', 'advanceCapture'],
+  'rules/transport': ['mergeInto', 'boardTransport', 'dropPassenger'],
+  'rules/traverse': ['traverse', 'moveAlong'],
+  'rules/lifecycle': ['newUnit', 'removeUnit', 'removeDead', 'removeWithCargo'],
+  'rules/unitTurn': ['markMoved', 'spendUnit', 'readyUnit'],
+  'rules/funds': ['earn', 'pay', 'capFunds'],
+  'rules/travel': ['endGotoByHand', 'finishGoto'],
+  'rules/economy': ['buildUnit'],
+  'rules/supply': ['repairNeighbours'],
+  'rules/round': ['endRound'],
+  'rules/invariants': ['restoreInvariants'],
+  'rules/undo': ['forgetUndoableMoves', 'rememberMove', 'dropLastUndoableMove', 'dropStaleUndoableMoves'],
+  'rules/falls': ['recordFalls'],
+  'rules/control': ['controlRound'],
+  'squads/standingOrderSteps': ['giveStandingOrder', 'cancelStandingOrder', 'finishStandingOrder', 'keepCapturing', 'liftStandingOrder'],
+  'squads/membership': ['pruneSquads', 'formSquad', 'setGroup', 'addToGroup', 'leaveSquad', 'renameSquad', 'disbandSquad'],
+  weather: ['advanceWeather', 'ensureWeather'],
+  generals: ['appointGeneral', 'chargeFromCombat', 'generalsNewRound'],
+  generalPowers: ['applyPower'],
+  stats: ['recordEvents', 'recordEvent', 'sampleArmy'],
+  gameState: ['changeSettings'],
+};
+/** Los pasos por modulo (para tests/lintImports.test.ts: que cada funcion que cambia la partida este en el suyo). */
+export const APPLY_STEPS_BY_MODULE = STEPS_BY_MODULE;
+/** El nombre de cada paso, para quien los busca (las fachadas no pueden darlos). */
+export const APPLY_STEP_NAMES = Object.values(STEPS_BY_MODULE).flat();
+/** El patron de los pasos de un modulo: su ruta desde cualquier sitio (`../rules/funds`, `./funds`, `@core/weather`, con o sin extension). */
+function stepPattern([module, importNames]) {
+  const [file, folder] = module.split('/').reverse();
+  return {
+    regex: `(^|/)${folder ? `(${folder}/)?` : ''}${file}(\\.[jt]s)?$`,
+    importNames,
+    message: `${importNames.join(', ')} cambian la partida: solo los llaman las acciones, los pasos de ronda y de turno y las INVARIANTS. Quien decide propone una accion.`,
+  };
+}
+export const APPLY_STEPS = Object.entries(STEPS_BY_MODULE).map(stepPattern);
+/**
+ * Los pasos que viven en la raiz del nucleo (el clima, los generales, las estadisticas, los ajustes):
+ * no tienen fachada que los esconda, asi que fuera del nucleo (src/ y tools/) se prohiben aqui.
+ */
+const ROOT_STEPS = Object.entries(STEPS_BY_MODULE)
+  .filter(([module]) => !module.includes('/'))
+  .map(stepPattern);
+const READER_FILES = [
+  'src/core/controllers/**/*.ts',
+  'src/core/controllers.ts',
+  'src/core/playerView.ts',
+  'src/core/targeting.ts',
+  'src/core/trail.ts',
+];
+const SESSION_FILES = ['src/core/session/**/*.ts', 'src/core/session.ts'];
 const AI_FILES = ['src/core/ai/**/*.ts', 'src/core/ai.ts'];
 const AUTOPILOT_FILES = ['src/core/autopilot/**/*.ts', 'src/core/autopilot.ts'];
 
@@ -142,7 +204,7 @@ const ACTION_LIST_FILE = 'src/core/actions/registry.ts';
 export const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces(`generals|weather|abilities|${FACADES}`);
 
 /** Lo que se prohibe en todo el nucleo (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
-const CORE_LIMITS = [...CORE_IS_PURE, SANDBOX_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_SANDBOX];
+const CORE_LIMITS = [...CORE_IS_PURE, MEASURING_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_MEASURE];
 
 export default tseslint.config(
   {
@@ -200,12 +262,29 @@ export default tseslint.config(
   {
     // La IA solo propone y solo lee su vista (DECIDERS_ONLY_PROPOSE).
     files: AI_FILES,
-    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, ...DECIDERS_ONLY_PROPOSE] }] },
+    rules: {
+      'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, ...DECIDERS_ONLY_PROPOSE, ...APPLY_STEPS] }],
+    },
   },
   {
     // Y autopilot/, ademas, sin la IA (NO_AI).
     files: AUTOPILOT_FILES,
-    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ...DECIDERS_ONLY_PROPOSE] }] },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ...DECIDERS_ONLY_PROPOSE, ...APPLY_STEPS] },
+      ],
+    },
+  },
+  {
+    // La sesion lleva los turnos mandando acciones: no cambia la partida a mano (APPLY_STEPS) ni carga la IA.
+    files: SESSION_FILES,
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ...APPLY_STEPS] }] },
+  },
+  {
+    // Los controladores, la vista y lo que apunta la escena solo preguntan (APPLY_STEPS).
+    files: READER_FILES,
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, ...APPLY_STEPS] }] },
   },
   {
     // Y las reglas y las acciones, ademas, sin las piezas que se enchufan (ONLY_THROUGH_RULE_MODULES).
@@ -258,8 +337,8 @@ export default tseslint.config(
     },
   },
   {
-    // El banco de pruebas es el unico sitio del nucleo que usa el combate sin comprobar.
-    files: ['src/core/sandbox.ts'],
+    // Medir sin comprobar es el unico sitio del nucleo que usa el combate sin comprobar.
+    files: ['src/core/measure.ts'],
     rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_IS_PURE, NO_DEFAULT_CONTENT] }] },
   },
   {
@@ -269,7 +348,7 @@ export default tseslint.config(
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     ignores: ['src/core/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_FACADES_ONLY, SANDBOX_IS_NOT_THE_GAME] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_FACADES_ONLY, ...ROOT_STEPS, MEASURING_IS_NOT_THE_GAME] }] },
   },
   {
     // Las herramientas solo usan el nucleo, y por su alias: asi se podrian separar en su propio paquete
@@ -286,6 +365,7 @@ export default tseslint.config(
             },
             { group: ['phaser', 'preact', 'preact/*'], message: 'tools/ no puede depender de Phaser ni de la interfaz.' },
             ...CORE_FACADES_ONLY,
+            ...ROOT_STEPS,
           ],
         },
       ],

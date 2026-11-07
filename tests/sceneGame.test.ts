@@ -1,7 +1,10 @@
 import { withBack } from '../src/scenes/game/phases/unitMenu';
+import { defaultContent } from '@core/content/default';
 import { backWarning } from '../src/scenes/game/unitMoves';
 import { describe, expect, it } from 'vitest';
-import { mergeTargets, loadTargets, moveRange, newUnit, outcomeFor, restoreInvariants } from '@core/rules';
+import { mergeTargets, loadTargets, moveRange, outcomeFor } from '@core/rules';
+import { newUnit } from '@core/measure';
+import { restoreInvariants } from '@core/rules/invariants';
 import type { GameState, MatchResult, Unit } from '@core/model';
 import { intentAt, trailTo, type MovePlan } from '../src/scenes/game/intent';
 import { computeHighlights, type HighlightInput } from '../src/scenes/game/highlights';
@@ -23,12 +26,20 @@ import { GameMenuChoices, gameMenuOf, PHASES, quitWhileWatching, watchesOthers, 
 import { hasMenu } from '../src/scenes/game/menuModel';
 import { ACTION_RUNNERS } from '../src/scenes/game/actionRunners';
 import { INPUT_ACTIONS } from '../src/controls/actions';
-import { MISSIONS } from '@core/missions';
 import { act, blankState, giveTurn, unitTypeNamed, hqId, withoutHeadquarters } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
 import { labControllers, viewerOf } from '../src/scenes/game/matchSetup';
 import { screenControllers } from '@core/controllers';
-import { GameSession, humanController, passiveController, remoteController, sequence } from '@core/session';
+import {
+  GameSession,
+  humanController,
+  isPerson,
+  passiveController,
+  personStillPlays,
+  remoteController,
+  screenEnd,
+  sequence,
+} from '@core/session';
 import { dispatch } from '@core/actions';
 
 const HQ = hqId();
@@ -160,6 +171,7 @@ describe('escena: linea de ayuda (game/hudParts.ts)', () => {
 
 describe('escena: final de la partida (game/endOfMatch.ts)', () => {
   it('botones: en una mision ganada, la siguiente si la hay; si no es mision, revancha', () => {
+    const MISSIONS = defaultContent().missions.list;
     expect(endButtonsFor(MISSIONS[0], 'won')).toEqual(['next', 'retry', 'menu']);
     expect(endButtonsFor(MISSIONS[MISSIONS.length - 1], 'won')).toEqual(['retry', 'menu']);
     expect(endButtonsFor(MISSIONS[0], 'lost')).toEqual(['retry', 'menu']);
@@ -302,13 +314,13 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
       s.teams.map((team) => (people.includes(team.id) ? humanController() : passiveController())),
     );
 
-  it('sin personas en juego la partida se acaba para la pantalla (GameSession.screenEnd): perdida, por rendirse o por caer', () => {
+  it('sin personas en juego la partida se acaba para la pantalla (screenEnd): perdida, por rendirse o por caer', () => {
     const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
     const session = withPeople(s, [0]);
-    expect([session.personStillPlays(), session.screenEnd(0)]).toEqual([true, null]);
+    expect([personStillPlays(session), screenEnd(session, 0)]).toEqual([true, null]);
     act(s, 0, { kind: 'surrender' });
-    expect(session.personStillPlays()).toBe(false);
-    const out = session.screenEnd(0)!;
+    expect(personStillPlays(session)).toBe(false);
+    const out = screenEnd(session, 0)!;
     expect(out).toEqual({ kind: 'out', fall: { order: 1, reason: 'surrender' } });
     expect(screenEndFor(s, out, 0)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' });
     // Sin rendirse: cae y quedan dos IA. Sin nada (ni Base) es 'wipeout'; el motivo es el apuntado al caer.
@@ -316,11 +328,15 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
     fallen.buildings = fallen.buildings.filter((building) => building.owner !== 0);
     restoreInvariants(fallen, null);
     newUnit(fallen, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
-    expect(screenEndFor(fallen, withPeople(fallen, [0]).screenEnd(0)!, 0)).toEqual({ outcome: 'lost', reason: 'wipeout', fallenBy: 'own' });
+    expect(screenEndFor(fallen, screenEnd(withPeople(fallen, [0]), 0)!, 0)).toEqual({
+      outcome: 'lost',
+      reason: 'wipeout',
+      fallenBy: 'own',
+    });
     // Con dos personas, si cae una la otra sigue jugando.
     const hotSeat = blankState({}, [{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }]);
     act(hotSeat, 0, { kind: 'surrender' });
-    expect(withPeople(hotSeat, [0, 1]).screenEnd(1)).toBeNull();
+    expect(screenEnd(withPeople(hotSeat, [0, 1]), 1)).toBeNull();
   });
 
   it('el final de una partida decidida segun quien mira: 2 contra 2, se rinden los dos de una alianza', () => {
@@ -332,7 +348,7 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
     ]);
     act(pairs, 0, { kind: 'surrender' });
     act(pairs, 2, { kind: 'surrender' });
-    const end = withPeople(pairs, [0]).screenEnd(0)!;
+    const end = screenEnd(withPeople(pairs, [0]), 0)!;
     expect(end).toEqual({ kind: 'decided', result: { status: 'decided', winners: [1, 3], reason: 'surrender' } });
     expect(screenEndFor(pairs, end, 0)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'ally' });
     expect(screenEndFor(pairs, end, 2)).toEqual({ outcome: 'lost', reason: 'surrender', fallenBy: 'own' });
@@ -420,7 +436,7 @@ describe('escena: quien mira al abrir la partida (game/matchSetup.ts)', () => {
   it('quien es una persona lo dice su controlador, tambien dentro de una serie', () => {
     const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]);
     const session = new GameSession(s, [sequence(passiveController(), humanController()), remoteController()]);
-    expect([session.isPerson(0), session.isPerson(1)]).toEqual([true, false]);
+    expect([isPerson(session, 0), isPerson(session, 1)]).toEqual([true, false]);
     giveTurn(s, 1);
     expect(viewerOf(session)).toBe(0);
     const lab = sceneSession(blankState({}, [{ controller: 'human' }, { controller: 'ai' }]), true);

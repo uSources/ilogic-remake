@@ -64,9 +64,12 @@ return gotCloser ? best.pos : null;
 11. **Identificadores en ingles, comentarios y textos en castellano** (como hasta ahora).
 12. **La partida cambia con acciones.** Fuera de `src/core/actions/`, nada cambia la partida a mano:
     se manda una accion (`dispatch(s, team, { kind: 'move', uid, to })`) y se miran sus sucesos o su
-    `reason`. Las reglas (`rules/`, `squads/`) preguntan y calculan; lo que una accion cambia lo hace
-    su `apply`, y lo que hay que dejar en orden despues de cualquiera es una entrada en `INVARIANTS`,
-    no una llamada que cada uno tiene que acordarse de hacer. Quien decide por un equipo (la IA, las
+    `reason`. Las reglas (`rules/`, `squads/`) preguntan y calculan, y tienen tambien los pasos con
+    los que se cambia la partida (`advanceCapture`, `mergeInto`, `earn`, `giveStandingOrder`...): esos
+    pasos solo los llaman el `apply` de las acciones (`actions/`), los pasos de ronda y de turno y las
+    `INVARIANTS` (lo que hay que dejar en orden despues de cualquiera es una entrada ahi, no una
+    llamada que cada uno tiene que acordarse de hacer). Quien decide, la sesion, la vista y lo de
+    fuera del nucleo no los ven (`APPLY_STEPS` en eslint.config.js; las fachadas no los dan). Quien decide por un equipo (la IA, las
     ordenes) ni siquiera manda: es un plan que propone cada accion (`yield accion`, recibe su
     resultado) con la vista de su equipo (`PlayerView`), y la manda quien lo cumple.
 13. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de

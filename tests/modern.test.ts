@@ -3,7 +3,8 @@ import { changeSettings } from '@core/gameState';
 import { describe, expect, it } from 'vitest';
 
 import { seededRng } from '@core/util/random';
-import { captureProgress, combatForecast, newUnit, visibility, engagement } from '@core/rules';
+import { captureProgress, combatForecast, visibility, engagement } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { dropStaleCaptures } from '@core/rules/capture';
 import type { GameState, Unit } from '@core/model';
 import { act, blankState, diceFrom, unitTypeNamed, fight, placedBuildings } from './helpers';

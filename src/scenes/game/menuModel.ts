@@ -6,6 +6,7 @@
 import type { BuyOption } from '../../core/rules';
 import type { Building, GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { ActionCtx, ActionId } from '../../controls/actions';
+import { wrappedStep } from '../../controls/menu';
 import type { MenuItemVM, MenuVM } from '../../hud/store';
 import { PHASES } from './phases';
 import type { ActionKey, Phase } from './types';
@@ -48,7 +49,7 @@ export function stepMenuRow(items: readonly MenuItemVM[], from: number, step: nu
   const count = items.length;
   let row = from;
   for (let tries = 0; tries < count; tries++) {
-    row = (row + step + count) % count;
+    row = wrappedStep(row, step, count);
     if (!items[row]?.disabled || canPointDisabled) break;
   }
   return row;

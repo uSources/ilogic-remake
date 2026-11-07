@@ -11,41 +11,74 @@ export interface NewUnitResult {
   copied: { attackers: string[]; carriers: string[]; healers: string[] };
 }
 
-export function addUnitLike(units: readonly UnitDef[], id: string, like: string): NewUnitResult {
-  if (!/^\w+$/.test(id)) throw new Error(`"${id}" no vale como id (letras, numeros y _)`);
-  if (units.some((u) => u.id === id)) throw new Error(`Ya hay una unidad "${id}"`);
-  const base = units.find((u) => u.id === like);
-  if (!base) throw new Error(`No hay ninguna unidad "${like}" (hay: ${units.map((u) => u.id).join(', ')})`);
+/** La original y la nueva, por su id. */
+interface Copying {
+  original: string;
+  added: string;
+}
 
-  const copy: UnitDef = {
-    ...structuredClone(base),
-    id,
-    name: { es: `${base.name.es} (nueva)`, en: `${base.name.en} (new)` },
-    art: base.art ?? base.id,
-    notes: `Copiada de ${like}: ajustar numeros, nombre y dibujo.`,
+/** La unidad nueva: la original con otro id y otro nombre, su dibujo y una nota (sin los graficos de 2013). */
+function newUnitFrom(original: UnitDef, { added }: Copying): UnitDef {
+  const unit: UnitDef = {
+    ...structuredClone(original),
+    id: added,
+    name: { es: `${original.name.es} (nueva)`, en: `${original.name.en} (new)` },
+    art: original.art ?? original.id,
+    notes: `Copiada de ${original.id}: ajustar numeros, nombre y dibujo.`,
   };
-  delete copy.classicSprite;
+  delete unit.classicSprite;
   // Se ataca a si misma como la original se atacaba a si misma.
-  if (copy.attack && base.attack?.hitChance[like] !== undefined) copy.attack.hitChance[id] = base.attack.hitChance[like];
+  const selfHit = original.attack?.hitChance[original.id];
+  if (unit.attack && selfHit !== undefined) unit.attack.hitChance[added] = selfHit;
+  return unit;
+}
 
+/** `unit` ataca a la nueva con el acierto con el que ataca a la original. true si la ataca. */
+function copyHitChance(unit: UnitDef, { original, added }: Copying): boolean {
+  const hitChance = unit.attack?.hitChance[original];
+  if (!unit.attack || hitChance === undefined) return false;
+  unit.attack.hitChance[added] = hitChance;
+  return true;
+}
+
+/** `unit` lleva a la nueva si lleva a la original. true si la lleva. */
+function copyCarriage(unit: UnitDef, { original, added }: Copying): boolean {
+  if (!unit.transport?.carries.includes(original)) return false;
+  unit.transport.carries.push(added);
+  return true;
+}
+
+/** `unit` repara a la nueva como a la original. true si la repara. */
+function copyHealing(unit: UnitDef, { original, added }: Copying): boolean {
+  const healing = unit.heals?.[original];
+  if (!unit.heals || healing === undefined) return false;
+  unit.heals[added] = healing;
+  return true;
+}
+
+/** Lo que se copia en las demas unidades, y donde se cuenta. */
+const COPIES: readonly { copy: (unit: UnitDef, copying: Copying) => boolean; into: keyof NewUnitResult['copied'] }[] = [
+  { copy: copyHitChance, into: 'attackers' },
+  { copy: copyCarriage, into: 'carriers' },
+  { copy: copyHealing, into: 'healers' },
+];
+
+function checkedOriginal(units: readonly UnitDef[], id: string, like: string): UnitDef {
+  if (!/^\w+$/.test(id)) throw new Error(`"${id}" no vale como id (letras, numeros y _)`);
+  if (units.some((unit) => unit.id === id)) throw new Error(`Ya hay una unidad "${id}"`);
+  const original = units.find((unit) => unit.id === like);
+  if (!original) throw new Error(`No hay ninguna unidad "${like}" (hay: ${units.map((unit) => unit.id).join(', ')})`);
+  return original;
+}
+
+export function addUnitLike(units: readonly UnitDef[], id: string, like: string): NewUnitResult {
+  const original = checkedOriginal(units, id, like);
+  const copying: Copying = { original: like, added: id };
   const copied: NewUnitResult['copied'] = { attackers: [], carriers: [], healers: [] };
-  const next = units.map((u) => {
-    const v = structuredClone(u);
-    const p = v.attack?.hitChance[like];
-    if (v.attack && p !== undefined) {
-      v.attack.hitChance[id] = p;
-      copied.attackers.push(v.id);
-    }
-    if (v.transport?.carries.includes(like)) {
-      v.transport.carries.push(id);
-      copied.carriers.push(v.id);
-    }
-    const heal = v.heals?.[like];
-    if (v.heals && heal !== undefined) {
-      v.heals[id] = heal;
-      copied.healers.push(v.id);
-    }
-    return v;
+  const updated = units.map((unit) => {
+    const copy = structuredClone(unit);
+    for (const { copy: copyInto, into } of COPIES) if (copyInto(copy, copying)) copied[into].push(copy.id);
+    return copy;
   });
-  return { units: [...next, copy], copied };
+  return { units: [...updated, newUnitFrom(original, copying)], copied };
 }

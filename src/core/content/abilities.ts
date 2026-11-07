@@ -5,23 +5,29 @@
  * (types.ts), su entrada aqui y la suya alli (el compilador obliga en los dos).
  */
 import type { Scope } from './check';
-import { MOVEMENTS, type AbilityDef, type UnitDef } from './types';
+import type { AbilityDef, ContentContext, UnitDef } from './types';
 
 /** Una habilidad de esa clase, tal como viene del JSON. */
 type AbilityOfKind<K extends AbilityDef['kind']> = Extract<AbilityDef, { kind: K }>;
 
 /** Comprueba los numeros de una habilidad de esa clase (`field` es donde esta, para los errores). */
-type ShapeCheck<K extends AbilityDef['kind']> = (scope: Scope, field: string, ability: AbilityOfKind<K>, unit: UnitDef) => void;
+type ShapeCheck<K extends AbilityDef['kind']> = (
+  scope: Scope,
+  field: string,
+  ability: AbilityOfKind<K>,
+  unit: UnitDef,
+  context: ContentContext,
+) => void;
 
 /** La validacion de cada clase de habilidad. */
 export const ABILITY_SHAPES: { readonly [K in AbilityDef['kind']]: ShapeCheck<K> } = {
   guard: (scope, field, ability) => {
     scope.num(`${field}.factor`, ability.factor, { min: 0, max: 1 });
   },
-  zoneOfControl: (scope, field, ability) => {
+  zoneOfControl: (scope, field, ability, _unit, context) => {
     if (!scope.expect(Array.isArray(ability.stops) && ability.stops.length > 0, `${field}.stops tiene que ser una lista de movimientos`))
       return;
-    for (const movement of ability.stops) scope.known(`${field}.stops`, movement, MOVEMENTS, 'el movimiento ');
+    for (const movement of ability.stops) scope.known(`${field}.stops`, movement, context.movementIds, 'el movimiento ');
   },
   aura: (scope, field, ability) => {
     scope.num(`${field}.radius`, ability.radius, { min: 1, max: 5, int: true });
@@ -47,7 +53,8 @@ export function validateAbilityShape<K extends AbilityDef['kind']>(
   field: string,
   ability: AbilityOfKind<K>,
   unit: UnitDef,
+  context: ContentContext,
 ): void {
   // TypeScript no sabe que la entrada de cada clase recibe una habilidad de esa misma clase.
-  (ABILITY_SHAPES[ability.kind] as ShapeCheck<K>)(scope, field, ability, unit);
+  (ABILITY_SHAPES[ability.kind] as ShapeCheck<K>)(scope, field, ability, unit, context);
 }

@@ -4,7 +4,8 @@ import { choosePower } from '@core/ai';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { generalHitFactor, appointGeneral } from '@core/generals';
-import { newUnit, engagement } from '@core/rules';
+import { engagement } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { teamState } from '@core/teams';
 
 const AI = defaultContent().ai;
@@ -71,7 +72,7 @@ describe('Roca: reparar', () => {
     for (const tank of tanks) tank.life = 40;
     const choice = choosePower(s, 1, AI)!;
     expect(choice.power).toBe('repair');
-    expect(choice.value).toBeGreaterThanOrEqual(AI.GENERALMINVALUE);
+    expect(choice.value).toBeGreaterThanOrEqual(AI.minPowerValue);
   });
 });
 

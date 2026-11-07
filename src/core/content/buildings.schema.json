@@ -14,12 +14,19 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "earning", "heals", "protection", "vision"],
+        "required": ["id", "name", "earning", "heals", "protection", "vision", "textLetter"],
         "properties": {
           "id": {
             "type": "string",
             "pattern": "^\\w+$",
             "description": "Nombre interno. Graficos: public/assets/b/<color>_<id>.png."
+          },
+          "textLetter": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1,
+            "description": "Letra del edificio en el mapa de la partida por texto (npm run play): mayuscula, distinta en cada edificio (en el mapa, minuscula si es de otro equipo).",
+            "pattern": "^[A-Z]$"
           },
           "name": {
             "type": "object",

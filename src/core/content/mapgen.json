@@ -13,5 +13,15 @@
   "spawnRadius": 2,
   "minSpawnWalkable": 9,
   "minSpawnBuildable": 6,
-  "minLandTiles": 200
+  "minLandTiles": 200,
+  "landMovement": "foot",
+  "minSpawnDistance": 14,
+  "controlPoints": {
+    "minLandShare": 0.6,
+    "minSpawnShare": 0.25,
+    "scoreNoise": 1.5,
+    "maxScore": 4,
+    "minGap": 3,
+    "gapShareOfSide": 0.25
+  }
 }

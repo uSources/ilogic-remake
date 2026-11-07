@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { changeSettings } from '@core/gameState';
 import { ABILITY_EFFECTS, auraFactor } from '@core/abilities';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { ABILITY_KINDS, ABILITY_SHAPES, MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
+import { ABILITY_KINDS, ABILITY_SHAPES, type AbilityDef, type MoveType, type UnitType, validateContent, type Content } from '@core/content';
 import { unitTypeOf } from '@core/gameContent';
 import {
   mergeProblem,
@@ -11,7 +11,6 @@ import {
   captureStrength,
   hitChance,
   moveRange,
-  newUnit,
   tileProtection,
   validPath,
   visibility,
@@ -21,6 +20,7 @@ import {
   abilitiesOf,
   loadProblem,
 } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { dispatch } from '@core/actions';
 import { settings } from '../src/settings';
 import { abilitiesVM } from '../src/ui/hudModels';
@@ -53,6 +53,10 @@ const minRangeOf = (unitType: UnitType) => unitType.attack?.minRange ?? 1;
 const TEST_SETTINGS = settingsWith(defaultContent(), { fog: false, terrainCost: false, veterancy: false });
 
 beforeEach(() => {
+  settings.lang = 'es';
+});
+// Sin aislar los ficheros (isolate: false): el idioma vuelve a ser el de siempre para los demas.
+afterEach(() => {
   settings.lang = 'es';
 });
 
@@ -121,8 +125,8 @@ describe('habilidades: escudo (guard)', () => {
 
 describe('habilidades: zona de control', () => {
   const zoneType = withAbility('zoneOfControl');
-  const TANK = plain(moves(MoveType.VEHICLE));
-  const PLANE = plain(moves(MoveType.AIR));
+  const TANK = plain(moves('vehicle'));
+  const PLANE = plain(moves('air'));
 
   it('quien entra al lado se para: no sigue desde ahi', () => {
     const s = blankState(TEST_SETTINGS);

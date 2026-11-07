@@ -1,16 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import {
-  attackZone,
-  captureEvent,
-  defenseStars,
-  moveEvent,
-  moveRange,
-  newUnit,
-  reachableTiles,
-  tileProtection,
-  unitThreat,
-} from '@core/rules';
+import { attackZone, captureEvent, defenseStars, moveEvent, moveRange, reachableTiles, tileProtection, unitThreat } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { deserialize, serialize } from '@core/save';
 import { blankState, unitTypeNamed, terrainNamed, hqId } from './helpers';
 
@@ -109,7 +100,7 @@ describe('partidas guardadas', () => {
 
   it.each([
     ['JSON roto', () => '{'],
-    ['version desconocida', () => serialize({ ...sample(), version: 12 as 11 })],
+    ['version desconocida', () => serialize({ ...sample(), version: 13 as 12 })],
     [
       'equipo caido sin caida apuntada',
       () => {

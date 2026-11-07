@@ -105,7 +105,7 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
 - **Campaña** (menú principal): 6 misiones en mapas hechos a mano, que se desbloquean en orden.
   La primera es un tutorial que va diciendo qué hacer; las demás tienen objetivos propios (capturar
   ciudades, aguantar unos días, escoltar un convoy, destruir a todo el enemigo, asalto final).
-  Las misiones están en `src/core/missions.ts` y es fácil añadir más.
+  Las misiones están en `src/core/content/missions.json` y es fácil añadir más (skill `nueva-mision`).
 - **Mover unidades:** se cogen y se arrastran (con el dedo, manteniendo pulsado). El camino sigue al
   puntero como una flecha y un bocadillo dice cuánto movimiento se gasta, la defensa de la casilla
   y si allí te pueden atacar. Al soltar pasa lo lógico: sobre un enemigo,
@@ -170,9 +170,12 @@ src/
     ai.ts        Inteligencia artificial (fachada de ai/: un plan que propone cada accion, con su perfil
                  AiProfile); las reglas, las acciones, autopilot/ y session/ no la importan (ESLint)
     playerView.ts Lo que sabe cada equipo (PlayerView): lo que recibe quien decide por el
-    mapgen.ts    Generador de mapas aleatorios
+    mapgen.ts    Generador de mapas aleatorios (fachada de mapgen/: un modulo por paso)
+    missions.ts  Misiones de la campaña (fachada de missions/; el contenido, en content/missions.json)
+    stats.ts     Estadisticas de la partida (se guardan con ella)
     save.ts      Guardar / cargar en JSON (solo el formato de ahora: las partidas de antes se descartan)
-    geom.ts      Rombos, distancias, numeros aleatorios con semilla
+    geom.ts      Rombos y distancias
+    util/random.ts Numeros aleatorios con semilla (seededRng, weightedPick, randomInt)
   scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida y final)
   ui/          Dibujo del mapa (mapView y sus capas en ui/map: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
     hudModels.ts Datos que enseña la interfaz (ficha de casilla, prevision de combate, minimapa), por panel en models/
@@ -184,7 +187,6 @@ src/
                (un componente por fichero), common/ (piezas compartidas), store.ts (estado que publican
                las escenas; tipos en state.ts, actions.ts y vm/) y hud.css (estilo "retro pixel", por partes en styles/)
   ui/fx.ts     Efectos pixel: explosiones, textos flotantes, destellos
-  core/stats.ts Estadisticas de la partida (se guardan con ella)
   display.ts   Lienzo a resolucion fisica de la pantalla (nitido en pantallas de alta densidad)
 public/assets/ img/ (cada imagen suelta, material de partida), atlas/ (lo que carga el juego) y musica
 tools/art/     Scripts que compilan los graficos a partir de los dibujos guardados (PixelLab, Retro Diffusion)

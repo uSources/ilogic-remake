@@ -7,14 +7,13 @@ import {
   letsAlliesThrough,
   mergeProblem,
   moveRulesOf,
-  newUnit,
   passBlockers,
   RULE_MODULES,
   stepAllowed,
   surroundingsOf,
-  traverse,
 } from '@core/rules';
-import { MoveType } from '@core/content';
+import { newUnit } from '@core/measure';
+import { traverse } from '@core/rules/traverse';
 import { sightOf } from '@core/rules/visibility';
 import { blankState, unitTypeNamed } from './helpers';
 
@@ -44,7 +43,7 @@ describe('reglas de paso', () => {
     expect([ally, hidden, seen].map((unit) => blocks(unit))).toEqual([false, true, true]);
     const notSeen = passBlockers(s, mover, [{ id: 'blind', passage: ({ sees }, other) => (sees(other) ? null : 'unnoticed') }]);
     expect([ally, hidden, seen].map((unit) => notSeen(unit))).toEqual([false, false, true]);
-    expect(distanceMap(s, mover, MoveType.VEHICLE, blocks).at({ x: 7, y: 10 })).toBe(2);
+    expect(distanceMap(s, mover, 'vehicle', blocks).at({ x: 7, y: 10 })).toBe(2);
 
     const closed = blankState({ fog: true, ambush: false, passAllies: false, forestHides: true });
     expect(letsAlliesThrough(closed)).toBe(false);

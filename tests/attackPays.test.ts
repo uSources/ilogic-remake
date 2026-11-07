@@ -3,7 +3,9 @@ import { changeSettings } from '@core/gameState';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { seededRng } from '@core/util/random';
-import { endRound, hitChance, newUnit, unhealable, engagement } from '@core/rules';
+import { hitChance, unhealable, engagement } from '@core/rules';
+import { endRound } from '@core/rules/round';
+import { newUnit } from '@core/measure';
 import { blankState, buildingTypeNamed, diceFrom, unitTypeNamed, fight } from './helpers';
 import { teamState } from '@core/teams';
 

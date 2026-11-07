@@ -3,7 +3,7 @@ import { blockersFor, playCtx } from '@core/autopilot/context';
 import { playerView } from '@core/playerView';
 import { autopilotProfileOf } from '@core/autopilot/defaultProfile';
 import { defaultContent } from '@core/content/default';
-import { newUnit } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { blankState, unitTypeNamed } from './helpers';
 
 const TANK = unitTypeNamed('Tank');

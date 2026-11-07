@@ -11,7 +11,7 @@ import { canCounter, expectedDamage } from '../rules/combat';
 import { engagement, reversed } from '../rules/engagement';
 import { captureProgress } from '../rules/capture';
 import { buildingAt } from '../rules/queries';
-import { bountyFor } from '../ruleModules/bounty';
+import { killReward } from '../rules/economy';
 import { posOf } from '../geom';
 import { MAX_LIFE } from '../data';
 import type { GameState, Pos, Unit } from '../model';
@@ -20,18 +20,19 @@ import type { AttackPlan, AttackScoreTerm } from './profile';
 
 /** Lo que vale una unidad de ese tipo al comparar ataques (su precio, escalado). */
 export const unitValue = (s: GameState, weights: Readonly<AiWeights>, unit: Pick<Unit, 'type'>): number =>
-  unitTypeOf(s, unit).cost / weights.COSTSCALE;
+  unitTypeOf(s, unit).cost / weights.costPerPoint;
 
 /** Lo que vale `money` en la escala de unitValue (lo que vale una unidad entera es su precio). */
-const moneyValue = (weights: Readonly<AiWeights>, money: number): number => (MAX_LIFE * money) / weights.COSTSCALE;
+const moneyValue = (weights: Readonly<AiWeights>, money: number): number => (MAX_LIFE * money) / weights.costPerPoint;
 
 const kills = (attack: AttackPlan): boolean => attack.damage >= attack.target.life;
 
 /**
- * Cuanto pesa echar a alguien segun el dano que le hace: nunca menos de MINEVICTION, para que se
+ * Cuanto pesa echar a alguien segun el dano que le hace: nunca menos de minEvictionWeight, para que se
  * intente aunque el golpe sea flojo.
  */
-const evictionWeight = (attack: AttackPlan): number => Math.max(attack.weights.MINEVICTION, attack.damage / attack.weights.BONUSDAMAGE);
+const evictionWeight = (attack: AttackPlan): number =>
+  Math.max(attack.weights.minEvictionWeight, attack.damage / attack.weights.fullBonusDamage);
 
 /** Lo que devolveria el objetivo al contraatacar, con la vida que le queda, en valor del atacante. */
 function counterattackLoss({ s, weights, attacker, from, target, damage }: AttackPlan): number {
@@ -51,12 +52,12 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
     value: (attack) => attack.damage * unitValue(attack.s, attack.weights, attack.target),
   },
   {
-    // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da el dinero que cobra (bountyFor), en la misma escala.
+    // Extra si lo destruye. [CAMBIO] Con botin, destruirla ademas da el dinero que cobra (killReward), en la misma escala.
     id: 'kill',
     value: (attack) =>
       kills(attack)
-        ? attack.weights.KILLBONUS * unitValue(attack.s, attack.weights, attack.target) +
-          moneyValue(attack.weights, bountyFor(attack.s, attack.target))
+        ? attack.weights.killBonus * unitValue(attack.s, attack.weights, attack.target) +
+          moneyValue(attack.weights, killReward(attack.s, attack.target))
         : 0,
   },
   {
@@ -70,7 +71,7 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
     value: (attack) => {
       const building = attack.targetBuilding;
       const defendsOwnHq = !!building && isHq(attack.s, building) && building.owner === attack.target.team;
-      return defendsOwnHq ? attack.weights.HQDEFENDER * evictionWeight(attack) : 0;
+      return defendsOwnHq ? attack.weights.hqDefenderBonus * evictionWeight(attack) : 0;
     },
   },
   {
@@ -79,7 +80,7 @@ export const ATTACK_SCORE_TERMS: readonly AttackScoreTerm[] = [
     value: (attack) => {
       const building = attack.targetBuilding;
       if (!building || building.owner !== attack.me || !captureProgress(attack.s, building)) return 0;
-      return (isHq(attack.s, building) ? attack.weights.STOPCAPTUREHQ : attack.weights.STOPCAPTURE) * evictionWeight(attack);
+      return (isHq(attack.s, building) ? attack.weights.stopHqCaptureBonus : attack.weights.stopCaptureBonus) * evictionWeight(attack);
     },
   },
 ];

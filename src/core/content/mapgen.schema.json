@@ -12,37 +12,63 @@
     "spawnRadius",
     "minSpawnWalkable",
     "minSpawnBuildable",
-    "minLandTiles"
+    "minLandTiles",
+    "minSpawnDistance",
+    "controlPoints",
+    "landMovement"
   ],
   "definitions": {
     "range": {
       "type": "array",
-      "items": { "type": "integer", "minimum": 0 },
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      },
       "minItems": 2,
       "maxItems": 2,
       "description": "[minimo, maximo]"
     }
   },
   "properties": {
-    "$schema": { "type": "string" },
+    "$schema": {
+      "type": "string"
+    },
     "startingUnits": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Unidades con las que empieza cada equipo (id de units.json), en orden."
     },
     "startingBuildings": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Edificios de cada salida (id de buildings.json), en orden."
     },
     "neutralBuildings": {
       "type": "object",
-      "additionalProperties": { "$ref": "#/definitions/range" },
+      "additionalProperties": {
+        "$ref": "#/definitions/range"
+      },
       "description": "Edificios neutrales de cada tipo: [minimo, maximo]. Los que no estan, ninguno."
     },
-    "neutralTotal": { "$ref": "#/definitions/range", "description": "Total de edificios neutrales admitido." },
-    "spawnRadius": { "type": "integer", "minimum": 1, "maximum": 6, "description": "Radio (rombo) de la zona de cada salida." },
-    "minSpawnWalkable": { "type": "integer", "minimum": 0, "description": "Casillas a pie que tiene que tener la zona de una salida." },
+    "neutralTotal": {
+      "$ref": "#/definitions/range",
+      "description": "Total de edificios neutrales admitido."
+    },
+    "spawnRadius": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 6,
+      "description": "Radio (rombo) de la zona de cada salida."
+    },
+    "minSpawnWalkable": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Casillas a pie que tiene que tener la zona de una salida."
+    },
     "minSpawnBuildable": {
       "type": "integer",
       "minimum": 0,
@@ -52,6 +78,56 @@
       "type": "integer",
       "minimum": 0,
       "description": "Casillas a pie que tiene que tener el mapa (si no, se intenta otro)."
+    },
+    "landMovement": {
+      "type": "string",
+      "description": "Tipo de movimiento (movements.json) con el que se mide lo que se pisa a pie: las salidas y la tierra del mapa."
+    },
+    "minSpawnDistance": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Distancia minima entre dos salidas en un mapa de 32 (se escala con el lado)."
+    },
+    "controlPoints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minLandShare", "minSpawnShare", "scoreNoise", "maxScore", "minGap", "gapShareOfSide"],
+      "description": "Donde pone los puntos de control (regla controlPoints).",
+      "properties": {
+        "minLandShare": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Parte de su zona que tiene que ser tierra para poder pelear por ella."
+        },
+        "minSpawnShare": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Ni pegados a las salidas: al menos esta parte del camino mas corto entre ellas."
+        },
+        "scoreNoise": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Azar que se suma a su puntuacion (lo desigual que esta de las salidas) para que no salgan siempre igual."
+        },
+        "maxScore": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Puntuacion maxima para valer como punto de control."
+        },
+        "minGap": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Distancia minima entre dos puntos (ademas de sus zonas)."
+        },
+        "gapShareOfSide": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "O esta parte del lado del mapa, si es mas."
+        }
+      }
     }
   }
 }

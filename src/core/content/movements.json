@@ -1,0 +1,38 @@
+{
+  "$schema": "./movements.schema.json",
+  "movements": [
+    {
+      "id": "foot",
+      "name": {
+        "es": "Infantería",
+        "en": "Infantry"
+      },
+      "motion": "march"
+    },
+    {
+      "id": "vehicle",
+      "name": {
+        "es": "Vehículos",
+        "en": "Vehicles"
+      },
+      "motion": "drive"
+    },
+    {
+      "id": "air",
+      "name": {
+        "es": "Aviones",
+        "en": "Aircraft"
+      },
+      "crossesEverything": true,
+      "motion": "fly"
+    },
+    {
+      "id": "amphibious",
+      "name": {
+        "es": "Anfibios",
+        "en": "Amphibious"
+      },
+      "motion": "drive"
+    }
+  ]
+}

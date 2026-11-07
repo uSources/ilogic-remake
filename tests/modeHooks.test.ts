@@ -1,17 +1,25 @@
 /**
  * Lo que un modo puede fijar y ningun modo del juego usa aun: pasos de turno propios y otro orden de
- * turnos. GAME_MODES esta congelado, asi que el modo de prueba entra por `gameModeOf` (vi.mock del
- * modulo: lo usan las reglas, la sesion y la preparacion de la partida).
+ * turnos. GAME_MODES esta congelado y nada es global: el modo de prueba se registra como uno de
+ * verdad (su nombre en GameModeIds, `declare module`) y se le da a quien crea la partida en un
+ * registro propio (`GameModeRegistry`: `newGameState({ modes })`, `buildMatch(config, { modes })`).
  */
-import { describe, expect, it, vi } from 'vitest';
-import type * as Modes from '@core/modes';
-import type { GameMode } from '@core/modes';
-import { createMatch } from '@core/defaultGames';
-import { skirmishConfig } from '@core/match';
-import { engagement, hitChance, hooksOf, isRuleOn, newUnit, traverse, unitById, type RuleModule } from '@core/rules';
+import { describe, expect, it } from 'vitest';
+import { GAME_MODES, gameModeOf, type GameMode, type GameModeRegistry } from '@core/modes';
+import { defaultContent } from '@core/content/default';
+import { newGameState } from '@core/gameState';
+import { blankMap } from '@core/mapGrid';
+import { settingsWith } from '@core/matchSettings';
+import { buildMatch, skirmishConfig } from '@core/match';
+import { deserialize, readSave, serialize } from '@core/save';
+import type { MatchSettings } from '@core/model';
+import type { TeamSetup } from '@core/teams';
+import { engagement, hitChance, hooksOf, isRuleOn, unitById, type RuleModule } from '@core/rules';
+import { newUnit } from '@core/measure';
+import { traverse } from '@core/rules/traverse';
 import { GameSession, passiveController, runMatch } from '@core/session';
 import { startsTurn } from '@core/actions';
-import { act, blankState, unitTypeNamed } from './helpers';
+import { act, BLANK_SEEDS, blankState, giveTurn, unitTypeNamed } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
 
 // Los modulos y el corte de camino del modo de prueba tienen sus propios nombres, como los de un modo de verdad.
@@ -31,36 +39,89 @@ declare module '@core/model/events' {
     testMine: true;
   }
 }
-
-const testMode = vi.hoisted(() => ({ changes: null as Partial<GameMode> | null }));
-
-vi.mock('@core/modes', async (importOriginal) => {
-  const original = await importOriginal<typeof Modes>();
-  return {
-    ...original,
-    gameModeOf: (s: { mode: keyof typeof original.GAME_MODES }) => ({ ...original.gameModeOf(s), ...(testMode.changes ?? {}) }),
-  };
-});
-
-/** Juega `run` con el modo de cada partida cambiado por `changes` (y lo deja como estaba). */
-function withMode<T>(changes: Partial<GameMode>, run: () => T): T {
-  testMode.changes = changes;
-  try {
-    return run();
-  } finally {
-    testMode.changes = null;
+declare module '@core/model/match' {
+  interface GameModeIds {
+    testMode: true;
   }
 }
 
+/** Los modos del juego y el de prueba, que es una escaramuza con `changes`. */
+const modesWith = (changes: Partial<GameMode>): GameModeRegistry => ({
+  ...GAME_MODES,
+  testMode: { ...GAME_MODES.skirmish, ...changes, id: 'testMode' },
+});
+
+/** Una partida vacia del modo de prueba (como blankState, ya en el turno del primer equipo). */
+function testModeState(changes: Partial<GameMode>, settingChanges: Partial<MatchSettings> = {}, teams?: readonly TeamSetup[]) {
+  const s = newGameState({
+    map: blankMap(24, defaultContent().plainTerrain.id),
+    settings: settingsWith(defaultContent(), { ...PLAIN_SETTINGS, ...settingChanges }),
+    content: defaultContent(),
+    mode: 'testMode',
+    modes: modesWith(changes),
+    teams: teams ?? [{ controller: 'human' }, { controller: 'ai' }],
+    seeds: BLANK_SEEDS,
+  });
+  s.teams.forEach((team, index) => s.buildings.push({ type: defaultContent().hq.id, owner: team.id, x: 23 - index, y: 23, capture: null }));
+  return giveTurn(s, s.turn);
+}
+
 describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
-  it('GAME_MODES no se puede cambiar en marcha', async () => {
-    const { GAME_MODES } = await import('@core/modes');
+  it('GAME_MODES no se puede cambiar en marcha', () => {
     expect(Object.isFrozen(GAME_MODES)).toBe(true);
     expect(Object.isFrozen(GAME_MODES.skirmish.victory)).toBe(true);
   });
 
+  it('un modo que no esta en el registro no se puede usar; la partida lleva el suyo y se lee con el mismo registro', () => {
+    const s = testModeState({ saves: false });
+    expect(gameModeOf(s)).toMatchObject({ id: 'testMode', saves: false });
+    expect(() =>
+      newGameState({
+        ...s,
+        mode: 'testMode',
+        settings: s.settings,
+        seeds: BLANK_SEEDS,
+        teams: [{ controller: 'ai' }, { controller: 'ai' }],
+      }),
+    ).toThrow(/no esta en los que se conocen/);
+    expect(readSave(serialize(s), defaultContent())).toEqual({ ok: false, error: 'badMode' });
+    expect(gameModeOf(deserialize(serialize(s), defaultContent(), modesWith({ saves: false }))!).saves).toBe(false);
+  });
+
   it('los pasos de turno del modo van detras de los de todos, y por las mismas comprobaciones', () => {
-    const s = blankState(PLAIN_SETTINGS, [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }]);
+    const teams = [{ controller: 'ai' as const }, { controller: 'ai' as const }, { controller: 'ai' as const }];
+    const seen: string[] = [];
+    const replies: unknown[] = [];
+    // Los pasos del modo nombran unidades que se ponen despues: se llaman al empezar y acabar el turno.
+    const changes: Partial<GameMode> = {
+      turnPhases: {
+        start: [
+          {
+            id: 'modeStart',
+            run: (state, team, perform) => {
+              // Los viajes (TURN_START_PHASES) ya han dado su paso.
+              seen.push(`start: viajero en y=${unitById(state, traveler.uid)!.y}`);
+              const result = perform(state, team, { kind: 'wait', uid: other.uid });
+              return result.ok ? result.events : [];
+            },
+          },
+        ],
+        end: [
+          {
+            id: 'modeEnd',
+            run: (state, team, perform) => {
+              // Las capturas (TURN_END_PHASES) ya se han hecho.
+              seen.push(`end: ciudad de ${String(state.buildings.at(-1)!.owner)}`);
+              replies.push(perform(state, team, { kind: 'wait', uid: other.uid }));
+              replies.push(perform(state, 1, { kind: 'wait', uid: enemy.uid }));
+              replies.push(perform(state, 1, { kind: 'surrender' }));
+              return [];
+            },
+          },
+        ],
+      },
+    };
+    const s = testModeState(changes, {}, teams);
     s.turnStarted = false;
     const traveler = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 2, y: 2 });
     traveler.standingOrder = { kind: 'goto', at: { x: 2, y: 20 } };
@@ -69,43 +130,9 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
     s.buildings.at(-1)!.capture = { team: 0, uid: capturer.uid, left: 1 };
     const other = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 5, y: 12 });
     const enemy = newUnit(s, unitTypeNamed('Soldier'), 1, { x: 12, y: 5 });
-    const seen: string[] = [];
-    const replies: unknown[] = [];
-    const result = withMode(
-      {
-        turnPhases: {
-          start: [
-            {
-              id: 'modeStart',
-              run: (state, team, perform) => {
-                // Los viajes (TURN_START_PHASES) ya han dado su paso.
-                seen.push(`start: viajero en y=${unitById(state, traveler.uid)!.y}`);
-                const result = perform(state, team, { kind: 'wait', uid: other.uid });
-                return result.ok ? result.events : [];
-              },
-            },
-          ],
-          end: [
-            {
-              id: 'modeEnd',
-              run: (state, team, perform) => {
-                // Las capturas (TURN_END_PHASES) ya se han hecho.
-                seen.push(`end: ciudad de ${String(state.buildings.at(-1)!.owner)}`);
-                replies.push(perform(state, team, { kind: 'wait', uid: other.uid }));
-                replies.push(perform(state, 1, { kind: 'wait', uid: enemy.uid }));
-                replies.push(perform(state, 1, { kind: 'surrender' }));
-                return [];
-              },
-            },
-          ],
-        },
-      },
-      () => {
-        const started = act(s, 0, { kind: 'startTurn' });
-        const ended = act(s, 0, { kind: 'endTurn' });
-        return { started, ended };
-      },
-    );
+    const started = act(s, 0, { kind: 'startTurn' });
+    const ended = act(s, 0, { kind: 'endTurn' });
+    const result = { started, ended };
     expect(seen[0]).not.toBe('start: viajero en y=2');
     expect(result.started.at(-1)).toMatchObject({ kind: 'wait', uid: other.uid });
     expect(seen[1]).toBe('end: ciudad de 0');
@@ -120,9 +147,12 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
 
   it('un modo con su propio orden de turnos: la partida lo guarda y la sesion lo sigue', () => {
     const reversed = (teams: readonly number[]) => [...teams].reverse();
-    const s = withMode({ turnOrder: reversed }, () =>
-      createMatch(skirmishConfig({ seed: 4, size: 16, teams: [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }] })),
-    );
+    const config = skirmishConfig({ seed: 4, size: 16, teams: [{ controller: 'ai' }, { controller: 'ai' }, { controller: 'ai' }] });
+    // Una escaramuza con otro orden de turnos: el registro cambia lo que es 'skirmish' para esta partida.
+    const s = buildMatch(config, {
+      content: defaultContent(),
+      modes: { ...GAME_MODES, skirmish: { ...GAME_MODES.skirmish, turnOrder: reversed } },
+    });
     expect(s.turnOrder).toEqual([2, 1, 0]);
     expect(s.turn).toBe(2);
     const session = new GameSession(
@@ -141,7 +171,7 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
       isOn: () => true,
       hooks: { hitModifiers: [{ id: 'modeBonus', factor: () => 2 }] },
     };
-    const s = withMode({ ruleModules: [modeModule] }, () => blankState({ ...PLAIN_SETTINGS, flankBonus: 0 }));
+    const s = testModeState({ ruleModules: [modeModule] }, { flankBonus: 0 });
     expect(s.ruleset.modules).toContain(modeModule);
     expect(isRuleOn(s, 'testBonus')).toBe(true);
     expect(isRuleOn(s, 'flank')).toBe(false);
@@ -156,7 +186,7 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
 
   it('un modulo del modo no puede llamarse como uno del juego (isRuleOn diria que esta puesto el otro)', () => {
     const impostor: RuleModule = { id: 'flank', isOn: () => true, hooks: {} };
-    expect(() => withMode({ ruleModules: [impostor] }, () => blankState({ ...PLAIN_SETTINGS, flankBonus: 0 }))).toThrow(/flank/);
+    expect(() => testModeState({ ruleModules: [impostor] }, { flankBonus: 0 })).toThrow(/flank/);
   });
 
   it('un modulo puede cortar caminos (pathInterruptions): manda el corte que llega antes', () => {
@@ -171,7 +201,7 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
       isOn: () => true,
       hooks: { pathInterruptions: [{ kind: 'testMine', cutAt: (_s, _unit, steps) => mineAt(steps) }] },
     };
-    const s = withMode({ ruleModules: [mine] }, () => blankState({ ...PLAIN_SETTINGS, ambush: true }));
+    const s = testModeState({ ruleModules: [mine] }, { ambush: true });
     expect(hooksOf(s, 'pathInterruptions')).toHaveLength(2);
     const unit = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     newUnit(s, unitTypeNamed('Soldier'), 1, { x: 6, y: 2 });
@@ -193,7 +223,7 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
         isOn: () => true,
         hooks: { pathInterruptions: [{ kind: 'testMine', cutAt: () => index }] },
       };
-      const s = withMode({ ruleModules: [broken] }, () => blankState({ ...PLAIN_SETTINGS }));
+      const s = testModeState({ ruleModules: [broken] });
       expect(() => traverse(s, newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 }), path)).toThrow(/corte/);
     }
   });

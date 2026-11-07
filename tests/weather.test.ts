@@ -6,8 +6,10 @@ import { entryOf, loadContent, validateContent, type Content, type WeatherType }
 
 import { mutableCopy } from '@core/util/freeze';
 import { deserialize, serialize } from '@core/save';
-import { endRound, hitChance, movementProfile, moveRange, newUnit, visibility, visionOf, engagement } from '@core/rules';
-import { ensureWeather, forecast, rollWeather, weatherNow } from '@core/weather';
+import { hitChance, movementProfile, moveRange, visibility, visionOf, engagement } from '@core/rules';
+import { endRound } from '@core/rules/round';
+import { newUnit } from '@core/measure';
+import { ensureWeather, rollWeather, upcomingWeather, weatherNow } from '@core/weather';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
 import { duel } from '@core/teams';
@@ -165,9 +167,9 @@ describe('clima: como cambia', () => {
   it('cambia al acabar los dias, entra el del pronostico y endRound lo cuenta', () => {
     const s = withWeather(CLEAR);
     s.weather = { kind: keyOfWeather(CLEAR), left: 2, next: keyOfWeather(RAIN) };
-    expect(forecast(s)).toBeNull();
+    expect(upcomingWeather(s)).toBeNull();
     expect(endRoundReport(s).weather).toBeUndefined();
-    expect(forecast(s)).toBe(RAIN);
+    expect(upcomingWeather(s)).toBe(RAIN);
     const round = endRoundReport(s);
     expect(round.weather).toEqual({ from: CLEAR, to: RAIN });
     expect(weatherNow(s)).toBe(RAIN);

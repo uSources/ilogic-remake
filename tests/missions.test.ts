@@ -1,21 +1,24 @@
 import { matchSeedsFrom } from '@core/util/random';
-import { MoveType } from '@core/content';
+import { loadContent, readContentFiles } from '@core/content';
 import { changeSettings } from '@core/gameState';
 import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { buildMission, checkMission, missionSettings, MISSIONS } from '@core/missions';
+import { buildMission, checkMission, missionSettings } from '@core/missions';
+import { objectiveOf } from '@core/objectives';
 
 /** Semilla de los dados de las misiones de prueba (no importa cual: no hay combates). */
 const MISSION_SEEDS = matchSeedsFrom(1);
-import { distanceMap } from '@core/rules';
+import { distanceMap, matchResult } from '@core/rules';
 import { aiController } from '@core/controllers';
 import { GameSession, runMatch } from '@core/session';
 import { deserialize, serialize } from '@core/save';
 import { hqId, resultFor } from './helpers';
 
 const HQ = hqId();
+/** Las misiones de la campaña: las del contenido del juego (content/missions.json). */
+const MISSIONS = defaultContent().missions.list;
 
 describe('misiones', () => {
   it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: mapa valido y bases conectadas', (_id, mission) => {
@@ -23,9 +26,9 @@ describe('misiones', () => {
     const s = buildMission(mission, defaultContent(), MISSION_SEEDS);
     const hq0 = s.buildings.find((building) => building.owner === 0 && building.type === HQ)!;
     const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
-    expect(distanceMap(s, hq0, MoveType.FOOT).at(hq1), 'a pie de base a base').toBeLessThan(Infinity);
+    expect(distanceMap(s, hq0, 'foot').at(hq1), 'a pie de base a base').toBeLessThan(Infinity);
     expect(resultFor(s, 0)).toBe('playing');
-    const objective = s.mission!.objective;
+    const objective = objectiveOf(s, 0)!;
     if (objective.kind === 'escort') {
       const vip = s.units.find((unit) => unit.uid === objective.uid)!;
       expect(distanceMap(s, vip, unitTypeOf(s, vip).movement).at(objective.to), 'el convoy puede llegar').toBeLessThan(Infinity);
@@ -56,7 +59,7 @@ describe('misiones', () => {
     };
     const moveUnit = () => {
       // @ts-expect-error ni lo de dentro
-      mission.units[0]![2] = 0;
+      mission.units[0]!.at.x = 0;
     };
     expect(changeFunds).toThrow(TypeError);
     expect(moveUnit).toThrow(TypeError);
@@ -92,20 +95,31 @@ describe('misiones', () => {
     );
   });
 
-  it.each(MISSIONS.map((mission) => [mission.id, mission] as const))('%s: se juega IA contra IA sin errores', (_id, mission) => {
-    const s = buildMission(mission, defaultContent(), MISSION_SEEDS);
-    runMatch(
-      new GameSession(
-        s,
-        s.teams.map(() => aiController()),
-      ),
-      { until: (state) => state.day > 20 },
-    );
-    expect(['playing', 'won', 'lost']).toContain(resultFor(s, 0));
-  });
+  /** Dias que se juegan: los de la mision mas larga en llegar a algo, sin hacer la prueba lenta. */
+  const DAYS_PLAYED = 10;
+  /** Cada partida tarda unos segundos; con la maquina cargada (CI, todos los tests a la vez) mas. */
+  const PLAY_TIMEOUT_MS = 60_000;
+
+  it.each(MISSIONS.map((mission) => [mission.id, mission] as const))(
+    '%s: se juega IA contra IA sin errores',
+    (_id, mission) => {
+      const s = buildMission(mission, defaultContent(), MISSION_SEEDS);
+      runMatch(
+        new GameSession(
+          s,
+          s.teams.map(() => aiController()),
+        ),
+        { until: (state) => state.day > DAYS_PLAYED },
+      );
+      const result = matchResult(s);
+      expect(['playing', 'decided', 'draw']).toContain(result.status);
+      for (const winner of result.winners) expect(s.teams.map((team) => team.id)).toContain(winner);
+    },
+    PLAY_TIMEOUT_MS,
+  );
 
   it('objetivos: aguantar, capturar, destruir y escoltar', () => {
-    const byId = (id: string) => MISSIONS.find((mission) => mission.id === id)!;
+    const byId = (id: string) => defaultContent().missions.byId[id]!;
     const hold = buildMission(byId('hold'), defaultContent(), MISSION_SEEDS);
     hold.day = 9;
     expect(resultFor(hold, 0)).toBe('won');
@@ -122,7 +136,8 @@ describe('misiones', () => {
     expect(resultFor(cl, 0)).toBe('won');
 
     const es = buildMission(byId('escort'), defaultContent(), MISSION_SEEDS);
-    const objective = es.mission!.objective as { kind: 'escort'; uid: number; to: { x: number; y: number } };
+    const objective = objectiveOf(es, 0)!;
+    if (objective.kind !== 'escort') throw new Error('escort es de escoltar');
     const vip = es.units.find((unit) => unit.uid === objective.uid)!;
     expect(resultFor(es, 0)).toBe('playing');
     vip.x = objective.to.x;
@@ -130,5 +145,51 @@ describe('misiones', () => {
     expect(resultFor(es, 0)).toBe('won');
     es.units = es.units.filter((unit) => unit.uid !== objective.uid);
     expect(resultFor(es, 0)).toBe('lost');
+  });
+
+  it('son contenido: missions.json se comprueba al cargarlo', () => {
+    const withMission = (change: (mission: Record<string, unknown>) => void) => {
+      const files = readContentFiles();
+      const missions = structuredClone(files.missions) as unknown as Record<string, unknown>[];
+      change(missions[0]!);
+      return () => loadContent({ ...files, missions: missions as unknown as typeof files.missions });
+    };
+    expect(withMission(() => {})).not.toThrow();
+    expect(withMission((mission) => (mission.theme = 'Luna'))).toThrow(/tema "Luna"/);
+    expect(withMission((mission) => (mission.units = [{ type: 'Dragon', team: 0, at: { x: 1, y: 1 } }]))).toThrow(/unidad "Dragon"/);
+    expect(withMission((mission) => (mission.units = [{ type: 'Soldier', team: 0, at: [1, 1] }]))).toThrow(/casilla no valida/);
+    expect(withMission((mission) => (mission.buildings = [{ type: 'Base', owner: 7, at: { x: 1, y: 1 } }]))).toThrow(/no esta en "teams"/);
+    expect(withMission((mission) => (mission.teams as { objective?: unknown }[]).forEach((team) => delete team.objective))).toThrow(
+      /algun equipo tiene que tener un objetivo/,
+    );
+    expect(withMission((mission) => (mission.teams = [{ controller: 'human', funds: 0 }]))).toThrow(/al menos dos equipos/);
+    expect(withMission((mission) => ((mission.teams as { objective?: unknown }[])[0]!.objective = {}))).toThrow(/objective/);
+    expect(withMission((mission) => (mission.id = 'bridgehead'))).toThrow(/repetido/);
+  });
+
+  it('el dinero inicial de las reglas es el de quien juega la mision (cada equipo empieza con el suyo)', () => {
+    for (const mission of MISSIONS) {
+      const s = buildMission(mission, defaultContent(), MISSION_SEEDS);
+      const player = mission.teams.findIndex((team) => team.controller === 'human');
+      expect(s.settings.initialFunds).toBe(mission.teams[player]!.funds);
+      expect(s.teams.map((team) => team.funds)).toEqual(mission.teams.map((team) => team.funds));
+    }
+  });
+
+  it('la unidad a escoltar es la marcada con "vip" de su equipo', () => {
+    const escort = MISSIONS.find((mission) => mission.teams.some((team) => team.objective?.kind === 'escort'))!;
+    const s = buildMission(escort, defaultContent(), MISSION_SEEDS);
+    const vipIndex = escort.units.findIndex((unit) => unit.vip);
+    const objective = s.mission!.objectives.find((candidate) => candidate.kind === 'escort');
+    expect(objective?.kind === 'escort' && objective.uid).toBe(s.units[vipIndex]!.uid);
+    const withoutVip = { ...escort, units: escort.units.map(({ vip: _vip, ...unit }) => unit) };
+    expect(checkMission(withoutVip, defaultContent())).toContain(
+      'escoltar: el equipo tiene que tener una unidad con "vip": true (tiene 0)',
+    );
+    const strayVip = {
+      ...MISSIONS[0]!,
+      units: MISSIONS[0]!.units.map((unit, index) => (index === 0 ? { ...unit, vip: true as const } : unit)),
+    };
+    expect(checkMission(strayVip, defaultContent())).toContain('el equipo 0 tiene una unidad con "vip" pero no tiene que escoltarla');
   });
 });

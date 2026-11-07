@@ -3,11 +3,11 @@
  */
 import { buildingsOf } from './core/rules';
 import { defaultContent } from './core/content/default';
-import { MISSIONS, type MissionDef } from './core/missions';
-import { measureObjective, missionGoal, type ObjectiveKind } from './core/objectives';
+import type { Mission } from './core/missions';
+import { measureObjective, missionGoal, objectiveOf, type ObjectiveKind } from './core/objectives';
 import type { GameEvent, GameState, ObjectiveGoal, TeamId } from './core/model';
 import { nameOf, settings } from './settings';
-import { entryOf, type GameContent } from './core/content';
+import { entryOf, type GameContent, type MissionObjective } from './core/content';
 
 const STORAGE_KEY = 'ilogic.campaign';
 
@@ -58,14 +58,18 @@ export function markCompleted(id: string, days?: number): void {
   }
 }
 
+/** Las misiones de la campaña del juego, en orden (el contenido del juego: content/missions.json). */
+export const campaignMissions = (): readonly Mission[] => defaultContent().missions.list;
+
 /** Se puede jugar si es la primera o la anterior esta hecha. */
 export function missionUnlocked(index: number, done = completedMissions()): boolean {
-  return index === 0 || done.has(MISSIONS[index - 1]!.id) || done.has(MISSIONS[index]!.id);
+  const missions = campaignMissions();
+  return index === 0 || done.has(missions[index - 1]!.id) || done.has(missions[index]!.id);
 }
 
 /** La primera mision que queda por hacer y se puede jugar, o -1. */
 export function nextMissionIndex(done = completedMissions()): number {
-  return MISSIONS.findIndex((mission, index) => !done.has(mission.id) && missionUnlocked(index, done));
+  return campaignMissions().findIndex((mission, index) => !done.has(mission.id) && missionUnlocked(index, done));
 }
 
 const es = () => settings.lang === 'es';
@@ -91,15 +95,24 @@ const OBJECTIVE_TEXT: { [K in ObjectiveKind]: (objective: Extract<ObjectiveGoal,
       : `Get the supply truck to the marked city before day ${days} ends.`,
 };
 
-/** Sin partida no hay uid de la unidad a escoltar, pero la frase no lo usa. */
-const NO_UNIT_UIDS: readonly number[] = [];
+/** El objetivo de quien juega la mision desde el menu (el del primer equipo de una persona que tiene uno). */
+export const playerObjective = (mission: Mission): MissionObjective | undefined =>
+  mission.teams.find((team) => team.controller === 'human' && team.objective)?.objective;
 
-/** El objetivo de la partida si la hay; si no, el de la mision; si no hay ninguna, conquistar la Base. */
-function objectiveToDescribe(mission: MissionDef | null, content: GameContent, s?: GameState): ObjectiveGoal {
-  const inGame = s?.mission?.objective;
-  if (inGame) return inGame;
-  if (mission) return missionGoal(mission.objective, NO_UNIT_UIDS, content);
-  return { kind: 'hq' };
+/** Quien mira la partida y que equipo es (el objetivo que se cuenta es el suyo). */
+export interface ObjectiveViewer {
+  s: GameState;
+  team: TeamId;
+}
+
+/**
+ * El objetivo de quien mira si hay partida; si no, el de quien juega la mision; si no hay ninguno,
+ * conquistar la Base.
+ */
+function objectiveToDescribe(mission: Mission | null, content: GameContent, viewer?: ObjectiveViewer): ObjectiveGoal {
+  if (viewer) return objectiveOf(viewer.s, viewer.team) ?? { kind: 'hq' };
+  const written = mission && playerObjective(mission);
+  return written ? missionGoal(written, {}, content) : { kind: 'hq' };
 }
 
 function describeObjective(objective: ObjectiveGoal, content: GameContent): string {
@@ -109,19 +122,19 @@ function describeObjective(objective: ObjectiveGoal, content: GameContent): stri
 }
 
 /**
- * Objetivo en una frase (para la pantalla de campaña y el panel de la partida). Con partida, con su
- * contenido; en el menu de campaña, antes de jugar, con el del juego.
+ * Objetivo en una frase (para la pantalla de campaña y el panel de la partida). Con partida, el de
+ * quien mira, con su contenido; en el menu de campaña, antes de jugar, el de quien la juega, con el
+ * del juego.
  */
-export function objectiveText(mission: MissionDef | null, s?: GameState): string {
-  const content = s?.content ?? defaultContent();
-  return describeObjective(objectiveToDescribe(mission, content, s), content);
+export function objectiveText(mission: Mission | null, viewer?: ObjectiveViewer): string {
+  const content = viewer?.s.content ?? defaultContent();
+  return describeObjective(objectiveToDescribe(mission, content, viewer), content);
 }
 
-/** Progreso en corto: "3/6", "día 4 de 8"... */
-export function objectiveStatusText(s: GameState): string | null {
-  const mission = s.mission;
-  const objective = mission?.objective;
-  if (!mission || !objective || objective.kind === 'hq') return null;
+/** Progreso en corto del objetivo de quien mira: "3/6", "día 4 de 8"... */
+export function objectiveStatusText({ s, team }: ObjectiveViewer): string | null {
+  const objective = objectiveOf(s, team);
+  if (!objective || objective.kind === 'hq') return null;
   const shownDay = Math.min(s.day, objective.days);
   const day = es() ? `Día ${shownDay} de ${objective.days}` : `Day ${shownDay} of ${objective.days}`;
   const progress = measureObjective(s, objective);

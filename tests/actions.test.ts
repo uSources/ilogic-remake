@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { cursorFor, menuActions, smartAction, type ActionCtx } from '../src/controls/actions';
-import { newUnit } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { formSquad } from '@core/squads/membership';
-import { giveStandingOrder } from '@core/squads/standingOrders';
+import { giveStandingOrder } from '@core/squads/standingOrderSteps';
 import type { GameState } from '@core/model';
 import { blankState, unitTypeNamed, hqId, someUnits } from './helpers';
 

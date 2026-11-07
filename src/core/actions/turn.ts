@@ -11,7 +11,7 @@
  */
 import { assistTurn } from '../autopilot/standingOrders';
 import { carryOut } from './plan';
-import { playerView, seeing } from '../playerView';
+import { decidingAs } from '../playerView';
 import { gameModeOf, type TurnPhase } from '../modes';
 import { autoCapturers } from '../rules/capture';
 import { endRound } from '../rules/round';
@@ -41,8 +41,8 @@ const followStandingOrders =
   (moment: StandingOrderMoment) =>
   (s: GameState, team: TeamId, perform: ActionDispatcher): GameEvent[] => {
     // Las cumple la partida con lo que sabe el equipo (su vista), como cualquiera que decide por el.
-    const view = playerView(s, team);
-    return carryOut(seeing(view, assistTurn(view.state, team, moment)), (action) => perform(s, team, action)).events;
+    const plan = decidingAs(s, team, (known) => assistTurn(known, team, moment));
+    return carryOut(plan, (action) => perform(s, team, action)).events;
   };
 
 /** [CAMBIO] Las que se han quedado sin usar encima de un edificio que pueden capturar, siguen capturando. */

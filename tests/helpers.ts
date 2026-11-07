@@ -19,6 +19,7 @@ import type {
   MatchSettings,
   TeamId,
   Unit,
+  GameModeId,
 } from '@core/model';
 import { aiController } from '@core/controllers';
 import { aiTurn, defaultAiProfile } from '@core/ai';
@@ -26,8 +27,9 @@ import { playerView, seeing } from '@core/playerView';
 import { GameSession } from '@core/session';
 import { carryOut, dispatch, isTurnBoundary } from '@core/actions';
 import { serialize } from '@core/save';
-import { uncheckedAttack } from '@core/sandbox';
-import { endRound, isWinner, matchResult, roundReport, type RoundReport } from '@core/rules';
+import { uncheckedAttack } from '@core/measure';
+import { isWinner, matchResult, roundReport, type RoundReport } from '@core/rules';
+import { endRound } from '@core/rules/round';
 import { teamIds, type TeamSetup } from '@core/teams';
 import { samePos } from '@core/geom';
 
@@ -93,12 +95,16 @@ const PERSON_VS_AI: TeamSetup[] = [
  * Una partida vacia (todo llano, sin unidades y sin mas edificios que una Base por equipo, ver
  * blankHeadquarters) con esas reglas y esos equipos, en el turno ya empezado del primero.
  */
-export function blankState(settingChanges: Partial<MatchSettings> = {}, teams: readonly TeamSetup[] = PERSON_VS_AI): GameState {
+export function blankState(
+  settingChanges: Partial<MatchSettings> = {},
+  teams: readonly TeamSetup[] = PERSON_VS_AI,
+  mode: GameModeId = 'skirmish',
+): GameState {
   const s = newGameState({
     map: blankMap(BLANK_SIZE, defaultContent().plainTerrain.id),
     settings: settingsWith(defaultContent(), settingChanges),
     content: defaultContent(),
-    mode: 'skirmish',
+    mode,
     teams,
     seeds: BLANK_SEEDS,
   });

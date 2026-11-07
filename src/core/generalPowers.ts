@@ -9,7 +9,20 @@ import { MAX_LIFE } from './data';
 import { chargeStars, generalOf, healedByPower } from './generals';
 import { posKey, posOf, squareArea } from './geom';
 import { isOnBoard, mapGrid } from './mapGrid';
-import type { ActionRegistry, ActionRejection, GameEventOf, GameState, GeneralState, Healing, Pos, TeamId, Unit } from './model';
+import type {
+  ActionRegistry,
+  ActionRejection,
+  GameEventOf,
+  GameState,
+  GeneralState,
+  Healing,
+  Pos,
+  PowerEventBase,
+  PowerEventParts,
+  PowerPartsFitEvent,
+  TeamId,
+  Unit,
+} from './model';
 import { earn } from './rules/funds';
 import { seesEverything, visibility } from './rules/visibility';
 import { isHostile } from './teams';
@@ -21,12 +34,23 @@ import { isOnMap } from './util/predicates';
 /** Un efecto de esa clase, como esta en el contenido (de solo lectura). */
 type EffectOf<K extends GeneralEffect['kind']> = Extract<DeepReadonly<GeneralEffect>, { kind: K }>;
 
-/** Lo que ha hecho un poder, para su evento. */
-interface PowerEffects {
-  hits: { uid: number; damage: number }[];
-  heals: Healing[];
-  funds: number;
+declare module './model/events' {
+  interface PowerEventParts {
+    /** Unidades propias curadas y vida que han recuperado (el efecto 'heal'; solo si ha curado a alguna). */
+    heals: Healing[];
+    /** Dinero conseguido (el efecto 'funds'), entero: lo que pase del maximo lo cuenta 'fundsCapped'. */
+    funds: number;
+  }
 }
+
+/** Ninguna parte de los efectos se llama como un campo del suceso del poder (si no, no compila). */
+export const POWER_PARTS_FIT_EVENT: PowerPartsFitEvent = true;
+
+/** Lo que ha hecho un efecto, para el suceso del poder: a quien ha tocado y lo que apunta su clase (PowerEventParts). */
+type PowerOutcome = { readonly hits?: PowerEventBase['hits'] } & Partial<PowerEventParts>;
+
+/** Un efecto que solo cambia algo de la partida (no toca unidades ni apunta nada mas). */
+const NOTHING_TO_TELL: PowerOutcome = {};
 
 /** Lo que necesita el efecto de un poder para aplicarse. */
 interface EffectContext<K extends GeneralEffect['kind']> {
@@ -36,7 +60,6 @@ interface EffectContext<K extends GeneralEffect['kind']> {
   effect: EffectOf<K>;
   /** Casilla elegida (los que la necesitan no se pueden usar sin ella: ver powerBlock). */
   target: Pos | null;
-  out: PowerEffects;
 }
 
 /** Donde apuntar un poder y cuanto vale usarlo ahi (precio × vida / 100, como el resto de la IA). */
@@ -51,7 +74,8 @@ interface PowerEffect<K extends GeneralEffect['kind']> {
   readonly needsTarget: boolean;
   /** Radio del area que se enseña al apuntar (null si no es de area). */
   area(effect: EffectOf<K>): number | null;
-  apply(context: EffectContext<K>): void;
+  /** Lo aplica y dice lo que ha hecho, para su suceso. */
+  apply(context: EffectContext<K>): PowerOutcome;
   /** Donde apuntarlo y cuanto vale usarlo ahora (null si no tiene sentido): lo que mira la IA. */
   aiValue(s: GameState, team: TeamId, effect: EffectOf<K>, weights: Readonly<AiWeights>): ValuedTarget | null;
 }
@@ -107,20 +131,24 @@ export const POWER_EFFECTS: { readonly [K in GeneralEffect['kind']]: PowerEffect
     area: () => null,
     apply: ({ general }) => {
       general.reveal = true;
+      return NOTHING_TO_TELL;
     },
-    aiValue: (s, team, _effect, weights) => (seesEverything(s, team) ? null : { target: null, value: weights.REVEALVALUE }),
+    aiValue: (s, team, _effect, weights) => (seesEverything(s, team) ? null : { target: null, value: weights.revealValue }),
   },
   // Daño en un area a los enemigos, sin dejar a nadie por debajo de `minLife` (nunca mata); la IA, en el mejor cuadrado que ve.
   areaDamage: {
     needsTarget: true,
     area: (effect) => effect.radius,
-    apply: ({ s, team, effect, target, out }) => {
+    apply: ({ s, team, effect, target }) => {
       const inArea = new Set(squareArea(mapGrid(s), checkedTarget(target), effect.radius).map(posKey));
-      for (const unit of hurtableByArea(s, team, effect).filter((enemy) => inArea.has(posKey(enemy)))) {
-        const damage = areaDamageTo(unit, effect);
-        unit.life -= damage;
-        out.hits.push({ uid: unit.uid, damage });
-      }
+      const hits = hurtableByArea(s, team, effect)
+        .filter((enemy) => inArea.has(posKey(enemy)))
+        .map((unit) => {
+          const damage = areaDamageTo(unit, effect);
+          unit.life -= damage;
+          return { uid: unit.uid, damage };
+        });
+      return { hits };
     },
     aiValue: (s, team, effect) => bestAreaTarget(s, team, effect),
   },
@@ -128,13 +156,15 @@ export const POWER_EFFECTS: { readonly [K in GeneralEffect['kind']]: PowerEffect
   heal: {
     needsTarget: false,
     area: () => null,
-    apply: ({ s, team, effect, out }) => {
+    apply: ({ s, team, effect }) => {
+      const heals: Healing[] = [];
       for (const unit of healedByPower(s, team, effect)) {
         const amount = healedLife(unit, effect.amount);
         if (amount <= 0) continue;
         unit.life += amount;
-        out.heals.push({ uid: unit.uid, amount });
+        heals.push({ uid: unit.uid, amount });
       }
+      return heals.length ? { heals } : NOTHING_TO_TELL;
     },
     aiValue: (s, team, effect) => {
       const value = healedByPower(s, team, effect).reduce((total, unit) => total + lifeValue(s, healedLife(unit, effect.amount), unit), 0);
@@ -145,9 +175,9 @@ export const POWER_EFFECTS: { readonly [K in GeneralEffect['kind']]: PowerEffect
   funds: {
     needsTarget: false,
     area: () => null,
-    apply: ({ s, team, effect, out }) => {
+    apply: ({ s, team, effect }) => {
       earn(s, team, effect.amount);
-      out.funds = effect.amount;
+      return effect.amount ? { funds: effect.amount } : NOTHING_TO_TELL;
     },
     aiValue: (_s, _team, effect) => ({ target: null, value: effect.amount }),
   },
@@ -210,17 +240,15 @@ export function applyPower(s: GameState, team: TeamId, powerId: string, target: 
   const { general, power } = checkedPower(s, team, powerId);
   general.state.charge = Math.max(0, general.state.charge - power.cost);
   general.state.used = true;
-  const out: PowerEffects = { hits: [], heals: [], funds: 0 };
-  powerEffectOf(power.effect).apply({ s, team, general: general.state, effect: power.effect, target, out });
+  const { hits = [], ...parts } = powerEffectOf(power.effect).apply({ s, team, general: general.state, effect: power.effect, target });
   return {
     kind: 'power',
     actor: team,
     general: general.definition.id,
     power: power.id,
     ...(target ? { target: posOf(target) } : {}),
-    hits: out.hits,
-    ...(out.heals.length ? { heals: out.heals } : {}),
-    ...(out.funds ? { funds: out.funds } : {}),
+    hits: [...hits],
+    ...parts,
   };
 }
 

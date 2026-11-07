@@ -3,6 +3,7 @@
   "buildings": [
     {
       "id": "City",
+      "textLetter": "C",
       "name": {
         "es": "Ciudad",
         "en": "City"
@@ -17,6 +18,7 @@
     },
     {
       "id": "Oil",
+      "textLetter": "O",
       "name": {
         "es": "Pozo de petróleo",
         "en": "Oil well"
@@ -31,6 +33,7 @@
     },
     {
       "id": "Factory",
+      "textLetter": "F",
       "name": {
         "es": "Fábrica",
         "en": "Factory"
@@ -45,6 +48,7 @@
     },
     {
       "id": "Stronghold",
+      "textLetter": "S",
       "name": {
         "es": "Fortaleza",
         "en": "Stronghold"
@@ -59,6 +63,7 @@
     },
     {
       "id": "Airport",
+      "textLetter": "A",
       "name": {
         "es": "Aeropuerto",
         "en": "Airport"
@@ -73,6 +78,7 @@
     },
     {
       "id": "Base",
+      "textLetter": "B",
       "name": {
         "es": "Base",
         "en": "HQ"

@@ -52,8 +52,16 @@ function startingWith(teams: readonly TeamId[], first: TeamId | null): TeamId[] 
   return [...teams.slice(at), ...teams.slice(0, at)];
 }
 
-/** Congelados: un modo es lo que dice aqui, no se cambia en marcha (los tests que prueban otro lo dan con vi.mock de gameModeOf). */
-export const GAME_MODES: { readonly [M in GameModeId]: GameMode & { readonly id: M } } = {
+/**
+ * Los modos que conoce quien crea o lee una partida, por su nombre. Las partidas resuelven el suyo al
+ * crearse o leerse (como sus modulos de reglas: `s.ruleset.mode`), asi que otro registro (un modo
+ * nuevo, uno de prueba, el de un servidor) se juega sin cambiar nada global: se le da a
+ * `newGameState`, a `buildMatch` (`MatchSetupContext.modes`) o a `readSave`.
+ */
+export type GameModeRegistry = { readonly [M in GameModeId]?: GameMode & { readonly id: M } };
+
+/** Los modos del juego (congelados: un modo es lo que dice aqui, no se cambia en marcha). */
+export const GAME_MODES = {
   skirmish: { id: 'skirmish', victory: ['lastAllianceStanding', 'dayLimit'], turnOrder: startingWith, saves: true },
   // El objetivo antes que el limite de dias: una mision de aguantar se gana al acabar sus dias.
   mission: {
@@ -65,11 +73,19 @@ export const GAME_MODES: { readonly [M in GameModeId]: GameMode & { readonly id:
   // Una partida preparada para ver algo (el laboratorio de animaciones): ni se acaba ni se guarda, y
   // sin clima que cambie lo que se mira.
   sandbox: { id: 'sandbox', victory: [], turnOrder: startingWith, fixedSettings: { weather: false }, saves: false },
-};
+} as const satisfies GameModeRegistry;
 deepFreeze(GAME_MODES);
 
-/** Los modos que hay (para lo que viene de fuera: partidas guardadas). */
-export const isGameModeId = (value: unknown): value is GameModeId => typeof value === 'string' && Object.hasOwn(GAME_MODES, value);
+/** El valor es el nombre de uno de los modos de `modes` (para lo que viene de fuera: partidas guardadas). */
+export const isGameModeId = (value: unknown, modes: GameModeRegistry = GAME_MODES): value is GameModeId =>
+  typeof value === 'string' && Object.hasOwn(modes, value);
+
+/** El modo con ese nombre en `modes`. Uno que no esta es un fallo de quien crea la partida. */
+export function modeIn(modes: GameModeRegistry, id: GameModeId): GameMode {
+  const mode = modes[id];
+  if (!mode) throw new Error(`El modo de juego "${id}" no esta en los que se conocen`);
+  return mode;
+}
 
 /**
  * La partida se puede perder: su modo tiene alguna forma de acabar. Sin ninguna (la partida para
@@ -77,5 +93,5 @@ export const isGameModeId = (value: unknown): value is GameModeId => typeof valu
  */
 export const canBeLost = (mode: GameMode): boolean => mode.victory.length > 0;
 
-/** El modo de la partida: la unica forma de leerlo (las reglas, la sesion y la preparacion). */
-export const gameModeOf = (s: { readonly mode: GameModeId }): GameMode => GAME_MODES[s.mode];
+/** El modo de la partida (el que se resolvio al crearla o leerla): la unica forma de leerlo (las reglas, la sesion y la preparacion). */
+export const gameModeOf = (s: GameState): GameMode => s.ruleset.mode;

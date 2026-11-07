@@ -12,7 +12,7 @@ import { createLayer, isOnBoard } from '../core/mapGrid';
 import { Grid } from '../core/util/grid';
 import { commandUsed, threatMap, unitAt, unitById, visibility, type BuyOption, canActNow, buildingsOf } from '../core/rules';
 import { serialize } from '../core/save';
-import type { GameSession, ActedStep } from '../core/session';
+import { people, screenEnd, type GameSession, type ActedStep } from '../core/session';
 import type { Building, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../core/model';
 import { enemiesOf, teamState } from '../core/teams';
 import { generalOf } from '../core/generals';
@@ -691,10 +691,10 @@ export class GameScene extends Phaser.Scene {
    * partida se cierra y se borra su guardado.
    */
   private checkEnd(): boolean {
-    const end = this.session.screenEnd(this.viewer);
+    const end = screenEnd(this.session, this.viewer);
     if (!end) return false;
     if (end.kind === 'decided') {
-      this.viewer = endViewer(end.result, this.viewer, this.session.people());
+      this.viewer = endViewer(end.result, this.viewer, people(this.session));
     }
     void this.endScreen.finish(screenEndFor(this.s, end, this.viewer));
     return true;
@@ -870,7 +870,7 @@ export class GameScene extends Phaser.Scene {
       intents: this.intentsToDraw(),
       captures: captureBars(this.s, this.viewer, this.vis),
       controlPoints: controlPointMarks(this.s, this.viewer, (pos) => this.visibleToPlayer(pos)),
-      ...escortMarks(this.s, this.hidden),
+      ...escortMarks(this.s, this.viewer, this.hidden),
     };
   }
 
@@ -975,7 +975,7 @@ export class GameScene extends Phaser.Scene {
       endTurn: { pending: this.turns.pendingUnits().length, armed: this.turns.endArmed() },
       anyStandingOrder: s.units.some((unit) => this.isOwn(unit) && !!this.standingOrderOf(unit)),
       hint: this.hint(busy),
-      mission: this.tutorial.panel(s, this.phase),
+      mission: this.tutorial.panel(s, this.viewer, this.phase),
     });
     this.publishCameraView();
   }

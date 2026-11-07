@@ -1,7 +1,7 @@
 /**
  * [CAMBIO] Formacion: una escuadra con la misma orden avanza junta. Sin ella, los jeeps y tanques
  * llegaban solos antes que la infanteria y los destrozaban. Las rapidas no se adelantan mas de
- * profile.weights.SQUADSPREAD casillas a la mas retrasada (por tierra hasta el destino), salvo para atacar a algo a
+ * profile.weights.squadSpread casillas a la mas retrasada (por tierra hasta el destino), salvo para atacar a algo a
  * tiro; cerca del destino, o con enemigos al alcance de la mas retrasada, cada una pelea a su aire.
  */
 
@@ -10,12 +10,12 @@ import { movementOf } from '../rules/queries';
 import { manhattan } from '../geom';
 import { stepToward, type MoveRange } from '../rules/movement';
 import { distanceMap, type DistanceMap } from '../rules/distance';
-import { effectiveStandingOrder, sameFormation } from '../squads/standingOrders';
+import { effectiveStandingOrder, sameFormation } from '../squads/standingOrderQueries';
 import { canStillMove } from '../rules/unitTurn';
 import type { GameState, Pos, Unit } from '../model';
 import { maxBy } from '../util/pick';
 import { bestMoveToward, needsRepair, strikeReach, type PlayCtx } from './context';
-import { visibleFoes } from '../rules/visibility';
+import { knownFoes } from '../playerView';
 import { isAlive, isOnMap } from '../util/predicates';
 import type { FiringPositions } from './engagement';
 
@@ -103,8 +103,8 @@ export function formation(s: GameState, play: PlayCtx, unit: Unit): Formation | 
   // Cerca del destino (la mas retrasada ya llega a tiro) o con enemigos a su alcance: se suelta.
   const rearReach = strikeReach(s, rear.unit);
   if (rear.remaining <= rearReach) return null;
-  if (visibleFoes(s, play.me).some((foe) => manhattan(foe, rear.unit) <= rearReach)) return null;
-  return { remaining, minRemaining: rearAfterThisTurn.afterThisTurn - play.profile.weights.SQUADSPREAD, rear: rearAfterThisTurn.unit };
+  if (knownFoes(s, play.me).some((foe) => manhattan(foe, rear.unit) <= rearReach)) return null;
+  return { remaining, minRemaining: rearAfterThisTurn.afterThisTurn - play.profile.weights.squadSpread, rear: rearAfterThisTurn.unit };
 }
 
 /**

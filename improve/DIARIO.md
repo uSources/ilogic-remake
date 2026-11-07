@@ -38,7 +38,7 @@ propuesta 13000 → 16000) y Antiaereo (1,6x; 8000 → 10000).
 Cambio: `src/core/ai.ts`, solo en `aiTurn` (bandera `GROUP`; `commandTurn` igual que antes):
 (1) `planFire`: plan de fuego concentrado del turno (enemigos visibles que se destruyen sumando el dano
 esperado de 2 o mas unidades, flanqueo incluido; las del plan juegan primero, las de distancia antes;
-peso nuevo `AI.FOCUSFIRE` 100 por cada 1000 de precio del objetivo); (2) `occupancyWithout`: con
+peso nuevo `AI.focusFireBonus` 100 por cada 1000 de precio del objetivo); (2) `occupancyWithout`: con
 `passAllies`, las propias (y las enemigas que no se ven) no cortan el camino al medir distancias.
 Hipotesis: la IA llegaba de una en una; ademas el 13 % de los turnos de unidad eran paseos al azar en
 casa porque una columna propia tapaba el unico camino (puente, salida de la Fabrica).
@@ -47,7 +47,7 @@ Resultado: arena (referencia = IA de la rama antes del cambio; la guardada del 2
 (160: 92,5 % → 90 %), mediana 46 → 40 dias, ventaja 23/44 → 24/43. Nota **67,7 → 76,2** (duracion
 34 → 29 dias, +7,5; precios +1,0; lados 25 → 25).
 Descartados (arena 200 / sin terminar en 80):
-- Preferir objetivos tocados (`FOCUSFIRE` sobre la vida que falta) + orden: 46 % / 92 %.
+- Preferir objetivos tocados (`focusFireBonus` sobre la vida que falta) + orden: 46 % / 92 %.
 - Solo orden de juego (distancia primero): 48 % / 94 %.
 - Las que no capturan marchan a la Base enemiga en vez de perseguir: 47 % / 95 %.
 - Asalto: las 2 que capturan mas cerca van derechas a la Base: 33 % / 86 % (termina mas, pierde edificios).

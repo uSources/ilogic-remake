@@ -5,7 +5,7 @@
  *
  * Cada poder se valora en "valor" (precio × vida que quita / 100, como el resto de la IA) con el
  * `aiValue` de su clase de efecto (POWER_EFFECTS, generalPowers.ts). Se usa el de mas valor si llega
- * a su GENERALMINVALUE (ai.json, en el perfil de la IA). Con la barra llena se usa cualquiera que valga algo, para no desperdiciar la
+ * a su minPowerValue (ai.json, en el perfil de la IA). Con la barra llena se usa cualquiera que valga algo, para no desperdiciar la
  * carga que seguiria ganando. Una clase de efecto nueva no toca esto.
  */
 import { chargeStars, generalOf } from '../generals';
@@ -35,7 +35,7 @@ export function choosePower(s: GameState, team: TeamId, weights: Readonly<AiWeig
   const best = maxBy(choices, (choice) => choice.value);
   if (!best) return null;
   const isChargeFull = stars >= general.definition.charge.max;
-  return best.value >= weights.GENERALMINVALUE || (isChargeFull && best.value > 0) ? best : null;
+  return best.value >= weights.minPowerValue || (isChargeFull && best.value > 0) ? best : null;
 }
 
 /** Turno del general de la IA: como mucho un poder. */

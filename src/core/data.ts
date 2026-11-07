@@ -7,7 +7,9 @@
 
 /** Tamaños de mapa admitidos en los mapas al azar (el tamaño de cada partida sale de su `map`). */
 export const MAP_SIZES = [20, 32, 40] as const;
-/** Tamaños admitidos en mapas hechos a mano (misiones, editor). */
-export const MAP_MIN = 10,
-  MAP_MAX = 48;
+/** El lado mas pequeño de un mapa hecho a mano (misiones, editor). */
+export const MAP_MIN = 10;
+/** El lado mas grande de un mapa hecho a mano. */
+export const MAP_MAX = 48;
+/** La vida de una unidad entera (la que tiene al comprarla). */
 export const MAX_LIFE = 100;

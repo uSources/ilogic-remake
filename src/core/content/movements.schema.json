@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tipos de movimiento de Ilogic",
+  "description": "Por donde se mueve una unidad: cada tipo tiene su coste en cada terreno (terrain.json, \"movement\"), su cambio con cada clima (weather.json, \"move\") y lo nombran las unidades (units.json, \"movement\"). Ver docs/CONTENIDO.md.",
+  "type": "object",
+  "required": ["movements"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "movements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "motion"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^\\w+$",
+            "description": "Nombre interno (el que escriben los demas ficheros)."
+          },
+          "name": {
+            "type": "object",
+            "required": ["es", "en"],
+            "additionalProperties": false,
+            "properties": {
+              "es": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              }
+            },
+            "description": "Como se dice en la interfaz (el clima: \"Vehículos −1 mov.\")."
+          },
+          "crossesEverything": {
+            "type": "boolean",
+            "description": "Pasa por todos los terrenos (los aviones): cada terreno tiene que tener un coste para el."
+          },
+          "motion": {
+            "enum": ["march", "drive", "fly"],
+            "description": "Como se ve al moverse y al disparar: a pie (salta, dispara balas), rodando (levanta polvo, dispara obuses) o volando."
+          }
+        }
+      }
+    }
+  }
+}

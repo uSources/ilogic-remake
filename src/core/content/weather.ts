@@ -3,7 +3,7 @@
  * Es la clase Climate del juego de 2013 (slow, blind, protection), que nunca se llego a usar.
  */
 import type { Checker, Scope } from './check';
-import { MOVEMENTS, type MoveType, type Texts } from './types';
+import type { ContentContext, MoveType, Texts } from './types';
 
 export interface WeatherDef {
   /** Nombre interno (en ingles, sin espacios); lo guardan las partidas. */
@@ -24,7 +24,8 @@ export interface WeatherDef {
   comment?: string;
 }
 
-export function validateWeather(list: readonly WeatherDef[], themeIds: ReadonlySet<string>, check: Checker): void {
+export function validateWeather(list: readonly WeatherDef[], context: ContentContext, check: Checker): void {
+  const { themeIds } = context;
   const top = check.scope('weather.json');
   if (!top.expect(Array.isArray(list) && list.length > 0, 'tiene que tener una lista "weather" con al menos un clima')) return;
   const ids = new Set<string>();
@@ -33,7 +34,7 @@ export function validateWeather(list: readonly WeatherDef[], themeIds: ReadonlyS
     scope.id(weather?.id);
     scope.expect(!ids.has(weather?.id), 'id repetido');
     ids.add(weather?.id);
-    validateOneWeather(weather, themeIds, scope);
+    validateOneWeather(weather, context, scope);
   });
   const clear = list.filter((weather) => weather?.clear);
   if (top.expect(clear.length === 1, 'tiene que haber exactamente un clima con "clear": true (con el empiezan las partidas)'))
@@ -46,7 +47,7 @@ export function validateWeather(list: readonly WeatherDef[], themeIds: ReadonlyS
 }
 
 /** Los numeros de un clima. */
-function validateOneWeather(weather: WeatherDef, themeIds: ReadonlySet<string>, scope: Scope): void {
+function validateOneWeather(weather: WeatherDef, { themeIds, movementIds }: ContentContext, scope: Scope): void {
   scope.texts('name', weather?.name);
   if (weather?.clear !== undefined) scope.bool('clear', weather.clear);
   scope.num('vision', weather?.vision, { min: -5, max: 5, int: true });
@@ -57,7 +58,7 @@ function validateOneWeather(weather: WeatherDef, themeIds: ReadonlySet<string>, 
     'days tiene que ser [minimo, maximo], de 1 a 30 dias',
   );
   for (const [movement, change] of Object.entries(weather?.move ?? {})) {
-    scope.known('move', movement, MOVEMENTS, 'el movimiento ');
+    scope.known('move', movement, movementIds, 'el movimiento ');
     scope.num(`move.${movement}`, change, { min: -5, max: 5, int: true });
   }
   for (const themeId of themeIds) scope.num(`chance.${themeId}`, weather?.chance?.[themeId], { min: 0 });
@@ -86,16 +87,17 @@ export interface WeatherType {
   readonly chance: Readonly<Record<string, number>>;
 }
 
-const moveChanges = (definition: WeatherDef): Record<MoveType, number> =>
-  Object.fromEntries(MOVEMENTS.map((movement) => [movement, definition.move[movement] ?? 0])) as Record<MoveType, number>;
+/** Lo que cambia el movimiento de cada tipo (de todos los de movements.json; los que no dice el clima, 0). */
+const moveChanges = (definition: WeatherDef, movementIds: readonly MoveType[]): Record<MoveType, number> =>
+  Object.fromEntries(movementIds.map((movement) => [movement, definition.move[movement] ?? 0]));
 
-export function buildWeatherTypes(list: readonly WeatherDef[]): WeatherType[] {
+export function buildWeatherTypes(list: readonly WeatherDef[], movementIds: readonly MoveType[]): WeatherType[] {
   return list.map((definition) => ({
     id: definition.id,
     name: definition.name,
     isClear: !!definition.clear,
     vision: definition.vision,
-    move: moveChanges(definition),
+    move: moveChanges(definition, movementIds),
     hitChance: definition.hitChance,
     days: [definition.days[0], definition.days[1]],
     chance: { ...definition.chance },

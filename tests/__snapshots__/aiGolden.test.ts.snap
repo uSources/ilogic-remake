@@ -24,7 +24,7 @@ exports[`IA: partidas de referencia > semilla 1 1`] = `
     ],
   },
   "reason": "timeout",
-  "winner": null,
+  "winners": [],
 }
 `;
 
@@ -52,7 +52,9 @@ exports[`IA: partidas de referencia > semilla 2 1`] = `
     ],
   },
   "reason": "hq",
-  "winner": 0,
+  "winners": [
+    0,
+  ],
 }
 `;
 
@@ -80,6 +82,6 @@ exports[`IA: partidas de referencia > semilla 3 1`] = `
     ],
   },
   "reason": "timeout",
-  "winner": null,
+  "winners": [],
 }
 `;

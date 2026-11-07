@@ -2,7 +2,8 @@ import { unitTypeOf } from '@core/gameContent';
 import { describe, expect, it } from 'vitest';
 import { bestAttackTile } from '@core/targeting';
 import { extendTrail } from '@core/trail';
-import { moveRange, newUnit, pathCost, stepToward, straightTo } from '@core/rules';
+import { moveRange, pathCost, stepToward, straightTo } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { blankState, unitTypeNamed } from './helpers';
 
 const type = unitTypeNamed;

@@ -86,6 +86,9 @@ export function menuKeyCommand(key: Pick<KeyInput, 'code' | 'repeat'>, context: 
   return binding.command;
 }
 
+/** El puesto al que se pasa en una lista de `count` dando la vuelta (despues del ultimo, el primero). */
+export const wrappedStep = (from: number, step: number, count: number): number => (from + step + count) % count;
+
 /** Paso en una lista de una sola dimension: izquierda o arriba es -1, derecha o abajo es +1. */
 export function listStep(command: MenuCommand): -1 | 0 | 1 {
   if (command.kind !== 'move') return 0;

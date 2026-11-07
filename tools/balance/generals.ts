@@ -11,27 +11,23 @@
  *
  * Referencia al hacerlo: Brisa contra sin general ganaba en torno al 64 % (#34).
  */
-import { duel, duelTeams } from '@core/teams';
+import { teamIds } from '@core/teams';
 import { controllersFor } from '@core/controllers';
 import { GameSession, runMatch } from '@core/session';
 import { defaultContent } from '@core/content/default';
 import { createMatch } from '@core/defaultGames';
 import { skirmishConfig } from '@core/match';
-import { appointGeneral } from '@core/generals';
 import { seededRng } from '@core/util/random';
 import { isWinner, matchResult, score } from '@core/rules';
-import type { GameState } from '@core/model';
-import { FIRST_SIDE, SECOND_SIDE, type Side } from './play';
+import type { GameState, TeamId } from '@core/model';
+import { commandLine } from '../cliArgs';
 
-const arg = (name: string, fallback: string): string => {
-  const index = process.argv.indexOf(`--${name}`);
-  return index >= 0 && process.argv[index + 1] ? process.argv[index + 1]! : fallback;
-};
-const challenger = arg('a', '');
-const rival = arg('b', 'none');
-const maps = Number(arg('maps', '40'));
-const from = Number(arg('from', '1'));
-const json = process.argv.includes('--json');
+const args = commandLine(import.meta.url, { a: 'text', b: 'text', maps: 'number', from: 'number', json: 'flag' });
+const challenger = args.text('a', '');
+const rival = args.text('b', 'none');
+const maps = args.number('maps', 40);
+const from = args.number('from', 1);
+const json = args.flag('json') === true;
 /** Las partidas se cortan al dia 60 y se deciden por puntos. */
 const MAX_DAYS = 60;
 /** Los generales pedidos existen en el contenido del juego (si no, para antes de jugar). */
@@ -40,18 +36,20 @@ function checkGeneralIds(ids: string[]): void {
   for (const id of ids) if (id !== 'none' && !known.has(id)) throw new Error(`General "${id}" no existe (${[...known].join(', ')}, none)`);
 }
 
-/** Una partida IA contra IA: quien gana (-1 empate) y si fue por puntos al dia 60. */
-function play(
-  seed: number,
-  firstGeneral: string,
-  secondGeneral: string,
-  uses: Map<string, number>,
-): { winner: Side | 'draw'; byScore: boolean } {
+/** El equipo con mas puntos, o null si hay empate arriba. */
+function topScorer(s: GameState): TeamId | null {
+  const scores = teamIds(s)
+    .map((team) => ({ team, points: score(s, team) }))
+    .sort((first, second) => second.points - first.points);
+  const [top, next] = scores;
+  return top && (!next || top.points > next.points) ? top.team : null;
+}
+
+/** Una partida IA contra IA con un general por equipo ('none': sin general): quien gana (null: empate) y si fue por puntos al dia 60. */
+function play(seed: number, generals: readonly string[], uses: Map<string, number>): { winner: TeamId | null; byScore: boolean } {
   const rng = seededRng(seed * 7919);
-  const s: GameState = createMatch(skirmishConfig({ seed: seed * 7919, teams: duel('ai', 'ai') }), rng);
-  const [first, second] = duelTeams(s);
-  appointGeneral(s, first, firstGeneral === 'none' ? null : firstGeneral);
-  appointGeneral(s, second, secondGeneral === 'none' ? null : secondGeneral);
+  const teams = generals.map((general) => ({ controller: 'ai' as const, general: general === 'none' ? null : general }));
+  const s: GameState = createMatch(skirmishConfig({ seed: seed * 7919, teams }), rng);
   const session = new GameSession(s, controllersFor(s));
   session.subscribe((step) => {
     for (const event of step.events)
@@ -59,29 +57,31 @@ function play(
   });
   runMatch(session, { until: (state) => state.day > MAX_DAYS });
   const result = matchResult(s);
-  if (result.status === 'draw') return { winner: 'draw', byScore: false };
-  if (result.status === 'decided') return { winner: isWinner(result, FIRST_SIDE) ? FIRST_SIDE : SECOND_SIDE, byScore: false };
-  const scoreGap = score(s, FIRST_SIDE) - score(s, SECOND_SIDE);
-  return { winner: scoreGap > 0 ? FIRST_SIDE : scoreGap < 0 ? SECOND_SIDE : 'draw', byScore: true };
+  if (result.status === 'draw') return { winner: null, byScore: false };
+  // Son dos equipos, uno contra otro (SEATINGS): si se decide, gana uno solo.
+  if (result.status === 'decided') return { winner: teamIds(s).find((team) => isWinner(result, team)) ?? null, byScore: false };
+  return { winner: topScorer(s), byScore: true };
 }
 
 checkGeneralIds([challenger, rival]);
-let winsA = 0,
-  winsB = 0,
-  draws = 0,
-  byScore = 0;
+const tally = { winsA: 0, winsB: 0, draws: 0, byScore: 0 };
 const uses = new Map<string, number>();
+/** En cada mapa, dos partidas: A con el primer equipo y A con el segundo. */
+const SEATINGS: readonly { generals: readonly string[]; seatOfA: TeamId }[] = [
+  { generals: [challenger, rival], seatOfA: 0 },
+  { generals: [rival, challenger], seatOfA: 1 },
+];
 for (let mapSeed = from; mapSeed < from + maps; mapSeed++) {
-  // Partida 1: A es el bando 0. Partida 2: A es el bando 1.
-  for (const aTeam of [FIRST_SIDE, SECOND_SIDE]) {
-    const result = play(mapSeed, aTeam === FIRST_SIDE ? challenger : rival, aTeam === FIRST_SIDE ? rival : challenger, uses);
-    if (result.byScore) byScore++;
-    if (result.winner === 'draw') draws++;
-    else if (result.winner === aTeam) winsA++;
-    else winsB++;
+  for (const { generals, seatOfA } of SEATINGS) {
+    const result = play(mapSeed, generals, uses);
+    if (result.byScore) tally.byScore++;
+    if (result.winner === null) tally.draws++;
+    else if (result.winner === seatOfA) tally.winsA++;
+    else tally.winsB++;
   }
 }
-const games = maps * 2;
+const { winsA, winsB, draws, byScore } = tally;
+const games = maps * SEATINGS.length;
 if (json) {
   console.log(JSON.stringify({ a: challenger, b: rival, games, winsA, winsB, draws, byScore, uses: Object.fromEntries(uses) }));
 } else {

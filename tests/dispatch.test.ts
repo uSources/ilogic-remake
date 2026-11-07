@@ -10,7 +10,10 @@ import {
   isValidAction,
   ORDER_OPTIONS,
 } from '@core/actions';
-import { canCaptureAt, endRound, INVARIANTS, newUnit, restoreInvariants, roundReport, targetProblem, unitById } from '@core/rules';
+import { canCaptureAt, INVARIANTS, roundReport, targetProblem, unitById } from '@core/rules';
+import { endRound } from '@core/rules/round';
+import { newUnit } from '@core/measure';
+import { restoreInvariants } from '@core/rules/invariants';
 import { appointGeneral } from '@core/generals';
 import { teamState } from '@core/teams';
 import { manhattan } from '@core/geom';

@@ -1,17 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { PLAIN_SETTINGS } from './plainSettings';
 import { seededRng } from '@core/util/random';
-import {
-  attackTargets,
-  endRound,
-  moveRange,
-  newUnit,
-  combatForecast,
-  threatMap,
-  canStillFire,
-  canStillMove,
-  engagement,
-} from '@core/rules';
+import { attackTargets, moveRange, combatForecast, threatMap, canStillFire, canStillMove, engagement } from '@core/rules';
+import { endRound } from '@core/rules/round';
+import { newUnit } from '@core/measure';
 import { availableActions, dispatch } from '@core/actions';
 import { teamState } from '@core/teams';
 import {

@@ -8,10 +8,10 @@
 import { buildingsOf } from './queries';
 import { gameModeOf } from '../modes';
 import { armyValue } from '../stats';
-import { measureObjective, objectiveStatus, type ObjectiveProgress } from '../objectives';
+import { measureObjective, missionObjectives, objectiveOf, objectiveStatus, type ObjectiveProgress } from '../objectives';
 import { alliesOf, enemiesOf, teamIds, teamState } from '../teams';
 import { maxBy } from '../util/pick';
-import type { EndReason, GameState, MatchResult, TeamId, VictoryRuleId } from '../model';
+import type { EndReason, GameState, MatchResult, Objective, TeamId, VictoryRuleId } from '../model';
 import { isDefeated, lastFallen, mainFall, type FallenTeam } from './falls';
 
 /** Puntos que vale cada edificio para el limite de dias. */
@@ -110,11 +110,9 @@ function lastAllianceStanding(s: GameState): MatchResult | null {
   return allianceWins(s, survivor, lossReason(s, enemiesOf(s, survivor)));
 }
 
-/** El objetivo de la mision: si su dueño lo cumple, gana su alianza; si falla, todos sus enemigos. */
-function missionObjective(s: GameState): MatchResult | null {
+/** Lo que decide un objetivo de la mision: si su dueño lo cumple, gana su alianza; si falla, todos sus enemigos. */
+function decidedBy(s: GameState, objective: Objective): MatchResult | null {
   // Conquistar la Base ('hq') nunca se cumple aqui: lo decide 'lastAllianceStanding'.
-  const objective = s.mission?.objective;
-  if (!objective) return null;
   switch (objectiveStatus(s, objective)) {
     case 'achieved':
       return allianceWins(s, objective.owner, 'objective');
@@ -123,6 +121,15 @@ function missionObjective(s: GameState): MatchResult | null {
     case 'pending':
       return null;
   }
+}
+
+/** Los objetivos de la mision, en el orden de los equipos: el primero que se cumple o falla decide. */
+function missionObjective(s: GameState): MatchResult | null {
+  for (const objective of missionObjectives(s)) {
+    const result = decidedBy(s, objective);
+    if (result) return result;
+  }
+  return null;
 }
 
 /**
@@ -172,8 +179,8 @@ export function outcomeFor(result: Exclude<MatchResult, { status: 'playing' }>, 
   return isWinner(result, team) ? 'won' : 'lost';
 }
 
-/** Progreso del objetivo de la mision para su dueño, para enseñarlo (p. ej. "2/3 ciudades", "dia 4 de 8"). */
-export function objectiveProgress(s: GameState): ObjectiveProgress | null {
-  const objective = s.mission?.objective;
+/** Progreso del objetivo del equipo `team` en la mision, para enseñarlo (p. ej. "2/3 ciudades", "dia 4 de 8"). */
+export function objectiveProgress(s: GameState, team: TeamId): ObjectiveProgress | null {
+  const objective = objectiveOf(s, team);
   return objective ? measureObjective(s, objective) : null;
 }

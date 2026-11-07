@@ -13,6 +13,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { buildDraft, insertDraft, renderDraft, type Commit } from './draft';
+import { commandLine } from '../cliArgs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const CHANGELOG = `${ROOT}CHANGELOG.md`;
@@ -27,20 +28,20 @@ function lastRelease(changelog: string): { version: string; commit: string } | n
 
 /** Commit de la etiqueta en esta historia (si la historia se reescribio, el equivalente por autor y fecha). */
 function tagCommit(tag: string): string | null {
-  let c: string;
+  let commit: string;
   try {
-    c = git('rev-parse', '-q', '--verify', `refs/tags/${tag}^{commit}`).trim();
+    commit = git('rev-parse', '-q', '--verify', `refs/tags/${tag}^{commit}`).trim();
   } catch {
     return null;
   }
   try {
-    git('merge-base', '--is-ancestor', c, 'HEAD');
-    return c;
+    git('merge-base', '--is-ancestor', commit, 'HEAD');
+    return commit;
   } catch {
-    const id = git('log', '-1', '--format=%at %ae', c).trim();
+    const id = git('log', '-1', '--format=%at %ae', commit).trim();
     const match = git('log', '--format=%H %at %ae', 'HEAD')
       .split('\n')
-      .find((l) => l.slice(41) === id);
+      .find((line) => line.slice(41) === id);
     return match?.slice(0, 40) ?? null;
   }
 }
@@ -56,15 +57,16 @@ function commitsSince(from: string | null): Commit[] {
   const out = git('log', '--reverse', '--format=%H%x1f%s%x1f%b%x1e', ...range);
   return out
     .split('\x1e')
-    .map((r) => r.trim())
+    .map((record) => record.trim())
     .filter(Boolean)
-    .map((r) => {
-      const [hash = '', subject = '', body = ''] = r.split('\x1f');
+    .map((record) => {
+      const [hash = '', subject = '', body = ''] = record.split('\x1f');
       return { hash, subject, body };
     });
 }
 
 function main(): void {
+  const write = commandLine(import.meta.url, { write: 'flag' }).flag('write') === true;
   const md = readFileSync(CHANGELOG, 'utf8');
   const rel = lastRelease(md);
   const commits = commitsSince(rel?.commit ?? null);
@@ -74,7 +76,7 @@ function main(): void {
     `${commits.length} commits ${since}: ${commits.length - draft.internal - draft.unknown.length} para el jugador, ${draft.internal} internos.`,
   );
   if (draft.unknown.length) console.log(`Sin emoji de la lista (no salen): ${draft.unknown.join(' | ')}`);
-  if (process.argv.includes('--write')) {
+  if (write) {
     writeFileSync(CHANGELOG, insertDraft(md, draft));
     console.log('Borrador escrito en CHANGELOG.md, [Sin publicar]. Reescribirlo para el jugador, traducirlo y borrar las marcas.');
   } else console.log(`\n${renderDraft(draft, 'es') || '(nada para el jugador)'}`);

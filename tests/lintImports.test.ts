@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
+import { readdirSync } from 'node:fs';
 import { ESLint, Linter } from 'eslint';
-import { DECIDERS_ONLY_PROPOSE, NO_PLUGGED_PIECES_EXCEPT_POWERS, ONLY_THROUGH_RULE_MODULES } from '../eslint.config.js';
+import {
+  APPLY_STEPS,
+  APPLY_STEPS_BY_MODULE,
+  APPLY_STEP_NAMES,
+  DECIDERS_ONLY_PROPOSE,
+  NO_PLUGGED_PIECES_EXCEPT_POWERS,
+  ONLY_THROUGH_RULE_MODULES,
+} from '../eslint.config.js';
+import * as rulesFacade from '@core/rules';
+import * as squadsFacade from '@core/squads';
+import * as actionsFacade from '@core/actions';
+import { stateWriters } from './stateWriters';
 
 /**
  * La regla L7 de eslint.config.js (las reglas y las acciones no importan las piezas que se
@@ -97,13 +109,15 @@ describe('quien decide solo propone (DECIDERS_ONLY_PROPOSE, eslint.config.js)', 
     "import { GameSession } from '../session/gameSession';",
     "import { playerView } from '../playerView';",
     "import { diceOf } from '../dice';",
+    "import { turnSeedOf } from '../turnSeeds';",
+    "import { turnSeedOf } from '@core/turnSeeds';",
   ])('prohibe %s', (code) => expect(forbidsCode(`${code}\nexport const used = 1;\n`)).toBe(true));
 
   it.each([
     "import { actorProblem } from '../actions/checks';",
     "import { carryOut } from '../actions/plan';",
-    "import { seeing, unitsKnownTo } from '../playerView';",
-    "import { decisionRng } from '../dice';",
+    "import { foggedCopy, seeing } from '../playerView';",
+    "import { decisionRngOf } from '../playerView';",
   ])('deja %s', (code) => expect(forbidsCode(`${code}\nexport const used = 1;\n`)).toBe(false));
 
   it('la configuracion de verdad lo pone en la IA y en autopilot/', async () => {
@@ -113,5 +127,145 @@ describe('quien decide solo propone (DECIDERS_ONLY_PROPOSE, eslint.config.js)', 
       const options = config.rules?.['no-restricted-imports']?.[1] as { patterns?: object[] } | undefined;
       for (const pattern of DECIDERS_ONLY_PROPOSE) expect(options?.patterns ?? []).toContainEqual(pattern);
     }
+  });
+});
+
+/** ESTILO, regla 12: los pasos que cambian la partida (en rules/ y squads/) solo los llaman las acciones, las fases y las INVARIANTS. */
+describe('los pasos que cambian la partida no se usan para decidir ni mirar (APPLY_STEPS, eslint.config.js)', () => {
+  const forbidsIn = (filename: string, code: string): boolean =>
+    linter
+      .verify(
+        `${code}\nexport const used = 1;\n`,
+        [{ rules: { 'no-restricted-imports': ['error', { patterns: APPLY_STEPS }] } }] as Linter.Config[],
+        {
+          filename,
+        },
+      )
+      .some((message) => message.ruleId === 'no-restricted-imports');
+
+  it.each([
+    "import { earn } from '../rules/funds';",
+    "import { pay } from '../rules/funds.ts';",
+    "import { advanceCapture } from '../rules/capture';",
+    "import { traverse } from '../rules/traverse';",
+    "import { spendUnit } from '../rules/unitTurn';",
+    "import { giveStandingOrder } from '../squads/standingOrderSteps';",
+    "import { formSquad } from '../squads/membership';",
+    "import { endRound } from '../rules/round';",
+    "import { advanceWeather, ensureWeather } from '../weather';",
+    "import { applyPower } from '../generalPowers';",
+    "import { appointGeneral, chargeFromCombat, generalsNewRound } from '../generals';",
+    "import { recordEvents, recordEvent, sampleArmy } from '../stats.ts';",
+    "import { changeSettings } from '../gameState';",
+  ])('prohibe %s a quien decide', (code) => expect(forbidsIn('src/core/ai/example.js', code)).toBe(true));
+
+  it.each([
+    "import { endsInterrupted } from '../rules/traverse';",
+    "import { captureProgress } from '../rules/capture';",
+    "import { canStillAct } from '../rules/unitTurn';",
+    "import { effectiveStandingOrder } from '../squads/standingOrderQueries';",
+    "import { assistTurn } from '../autopilot/standingOrders';",
+    "import { weatherNow } from '../weather';",
+    "import { armyValue } from '../stats';",
+    "import { generalOf } from '../generals';",
+  ])('deja %s', (code) => expect(forbidsIn('src/core/ai/example.js', code)).toBe(false));
+
+  it('la configuracion de verdad lo pone en quien decide, la sesion, los controladores y la vista', async () => {
+    const eslint = new ESLint({ overrideConfigFile: 'eslint.config.js' });
+    const files = [
+      'src/core/ai/tactics.ts',
+      'src/core/autopilot/tactics.ts',
+      'src/core/session/gameSession.ts',
+      'src/core/controllers/aiController.ts',
+      'src/core/playerView.ts',
+      'src/core/targeting.ts',
+    ];
+    for (const file of files) {
+      const config = (await eslint.calculateConfigForFile(file)) as { rules?: Record<string, unknown[]> };
+      const options = config.rules?.['no-restricted-imports']?.[1] as { patterns?: object[] } | undefined;
+      for (const pattern of APPLY_STEPS) expect(options?.patterns ?? [], file).toContainEqual(pattern);
+    }
+  });
+
+  /**
+   * Lo que cambia la partida pero no es un paso de APPLY_STEPS, y por que quien decide ya no lo puede
+   * usar (o no le sirve): crear o cargar una partida escribe en la que se esta creando, y lo demas lo
+   * prohiben otras reglas de eslint.config.js.
+   */
+  const NOT_STEPS: Readonly<Record<string, string>> = {
+    'core/savedParts.ts#cleanCounters': 'limpia una partida que se esta leyendo',
+    'core/savedParts.ts#cleanOptionalParts': 'limpia una partida que se esta leyendo',
+    'core/save.ts#readSave': 'carga una partida nueva',
+    'core/save.ts#deserialize': 'carga una partida nueva',
+    'core/defaultGames.ts#createMatch': 'crea una partida nueva',
+    'core/defaultGames.ts#loadGame': 'carga una partida nueva',
+    'core/match.ts#buildMatch': 'crea una partida nueva',
+    'core/missions/build.ts#buildMission': 'crea una partida nueva',
+    'core/mapgen/buildings.ts#placeStartingUnits': 'el generador de mapas, en la partida que crea',
+    'core/mapgen/buildings.ts#placeStartingBuildings': 'el generador de mapas, en la partida que crea',
+    'core/mapgen/buildings.ts#placeNeutralBuildings': 'el generador de mapas, en la partida que crea',
+    'core/mapgen/controlPoints.ts#placeControlPoints': 'el generador de mapas, en la partida que crea',
+    'core/dice.ts#diceOf': 'tira los dados de la partida: DECIDERS_ONLY_PROPOSE',
+    'core/actions/dispatch.ts#dispatch': 'manda una accion: DECIDERS_ONLY_PROPOSE',
+    'core/actions/combat.ts#resolveAttack': 'el combate sin comprobar: UNCHECKED_ATTACK_ONLY_IN_MEASURE',
+    'core/measure.ts#uncheckedAttack': 'solo para medir: MEASURING_IS_NOT_THE_GAME',
+    'core/autopilot/preview.ts#plannedStandingOrders': 'simula en su propia copia de la partida (foggedCopy)',
+    'core/autopilot/preview.ts#previewStandingOrders': 'simula en su propia copia de la partida (foggedCopy)',
+  };
+
+  it('toda funcion del nucleo que cambia la partida esta en APPLY_STEPS (o se sabe por que no): la lista no se queda atras', () => {
+    const files = readdirSync('src/core', { recursive: true, encoding: 'utf8' })
+      .filter((file) => file.endsWith('.ts') && !file.startsWith('model/'))
+      .map((file) => `src/core/${file}`);
+    // Cada paso en su modulo (`file#name`, no solo por el nombre: uno que se llamara igual en otro sitio no vale).
+    const listed = new Set(
+      Object.entries(APPLY_STEPS_BY_MODULE).flatMap(([module, names]) => names.map((name) => `core/${module}.ts#${name}`)),
+    );
+    const found = stateWriters(files)
+      .map(({ file, name }) => `${file.replace(/^src\//, '')}#${name}`)
+      .filter((id) => !listed.has(id) && !(id in NOT_STEPS));
+    expect(found).toEqual([]);
+  }, 60_000);
+
+  it('la busqueda ve cada forma de cambiar la partida (tests/stateWriterKinds.ts) y no lo que solo mira', () => {
+    const found = stateWriters(['tests/stateWriterKinds.ts']).map(({ name }) => name);
+    expect(found.sort()).toEqual(
+      [
+        'writesDirectly',
+        'writesThroughHelper',
+        'writesThroughAlias',
+        'writesWithAssign',
+        'writesWithReflect',
+        'writesWithDefineProperty',
+        'writesLength',
+        'writesParameter',
+      ].sort(),
+    );
+  }, 60_000);
+
+  it('la busqueda ve lo que cambia la partida: directamente, en un campo guardado en una variable y a traves de un gancho', () => {
+    const found = stateWriters(['src/core/weather.ts', 'src/core/stats.ts', 'src/core/rules/funds.ts']).map(({ name }) => name);
+    expect(found).toEqual(
+      expect.arrayContaining(['ensureWeather', 'advanceWeather', 'sampleArmy', 'recordEvent', 'recordEvents', 'earn', 'pay']),
+    );
+    expect(found).not.toContain('weatherNow');
+    expect(found).not.toContain('armyValue');
+  }, 60_000);
+
+  it.each([
+    ['tools/example.ts', "import { appointGeneral } from '@core/generals';"],
+    ['tools/example.ts', "import { advanceWeather } from '@core/weather';"],
+    // Un fichero de src/ que existe (el lint de src/ usa los tipos del proyecto); el texto es el de la prueba.
+    ['src/setup.ts', "import { recordEvents } from './core/stats';"],
+    ['src/setup.ts', "import { changeSettings } from './core/gameState';"],
+  ])('fuera del nucleo tampoco: %s no puede %s (los pasos de la raiz del nucleo no tienen fachada)', async (filePath, code) => {
+    const eslint = new ESLint({ overrideConfigFile: 'eslint.config.js' });
+    const [result] = await eslint.lintText(`${code}\nexport const used = 1;\n`, { filePath });
+    expect(result!.messages.some((message) => message.ruleId === 'no-restricted-imports')).toBe(true);
+  });
+
+  it('las fachadas del nucleo no dan ninguno: fuera del nucleo la partida solo cambia con acciones', () => {
+    const exported = [...Object.keys(rulesFacade), ...Object.keys(squadsFacade), ...Object.keys(actionsFacade)];
+    expect(exported.filter((name) => APPLY_STEP_NAMES.includes(name))).toEqual([]);
   });
 });

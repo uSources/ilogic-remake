@@ -1,7 +1,7 @@
 /**
  * Lo que comparten los pasos de un turno jugado por el nucleo (las ordenes permanentes) o por la IA
- * (PlayCtx) y las ayudas que usan todos: medir distancias
- * desde una unidad, la mejor casilla para acercarse a algo y proponer lo que hace una unidad.
+ * (PlayCtx) y las ayudas que usan todos: medir distancias desde una unidad, la mejor casilla para
+ * acercarse a algo y proponer lo que hace una unidad.
  */
 
 import { unitTypeOf } from '../gameContent';
@@ -120,4 +120,4 @@ export const strikeReach = (s: GameState, unit: Unit): number => moveBudget(s, u
 export const canAct = (s: GameState, unit: Unit): boolean => isAlive(unit) && actorProblem(s, unit.team, unit.uid) === null;
 
 /** Necesita volver a curarse a un edificio. */
-export const needsRepair = (play: PlayCtx, unit: Unit): boolean => unit.life < play.profile.weights.LIFETOBACK;
+export const needsRepair = (play: PlayCtx, unit: Unit): boolean => unit.life < play.profile.weights.retreatBelowLife;

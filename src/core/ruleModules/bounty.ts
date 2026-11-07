@@ -4,12 +4,9 @@ import type { AttackRecord, GameState, Unit } from '../model';
 import { fallenIn } from '../rules/attackRecord';
 import { earn } from '../rules/funds';
 import type { RuleModule } from './hooks';
-import { isRuleOn } from './ruleset';
 
-/** Lo que se cobra por destruir una unidad como `lost` (0 si la partida no lleva botin). */
-export function bountyFor(s: GameState, lost: Pick<Unit, 'type'>): number {
-  return isRuleOn(s, 'bounty') ? Math.round(unitTypeOf(s, lost).cost * s.settings.bounty) : 0;
-}
+/** Lo que se cobra por destruir una unidad como `lost`: ese tanto por uno de su precio, entero. */
+const bountyFor = (s: GameState, lost: Pick<Unit, 'type'>): number => Math.round(unitTypeOf(s, lost).cost * s.settings.bounty);
 
 declare module '../model/combat' {
   interface AttackRecordParts {
@@ -33,5 +30,8 @@ function payBounty(s: GameState, attack: AttackRecord): void {
 export const BOUNTY: RuleModule = {
   id: 'bounty',
   isOn: (settings) => settings.bounty > 0,
-  hooks: { combatSteps: [{ id: 'bounty', stage: 'kill', run: payBounty }] },
+  hooks: {
+    combatSteps: [{ id: 'bounty', stage: 'kill', run: payBounty }],
+    killRewards: [{ id: 'bounty', amount: bountyFor }],
+  },
 };

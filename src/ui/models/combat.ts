@@ -1,6 +1,6 @@
 import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
-import { bountyFor, combatForecast, engagement, flankBonusFor } from '../../core/rules';
+import { combatForecast, engagement, flankBonusFor, killReward } from '../../core/rules';
 import type { CombatInfo, GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, CombatSideVM, CombatVM, ForecastVM } from '../../hud/store';
 import { nameOf } from '../../settings';
@@ -32,7 +32,7 @@ export function forecastVM(
     killChance: forecast.killChance,
     anchor,
     flank: flankBonusFor(s, target),
-    bounty: bountyFor(s, target),
+    bounty: killReward(s, target),
     counter: forecast.counter
       ? {
           low: forecast.counter.low,

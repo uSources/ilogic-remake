@@ -17,6 +17,7 @@ import type { DeepReadonly } from './util/freeze';
 import { findEntry, type GeneralDef, type GeneralModifier, type UnitFilter } from './content';
 import { teamState } from './teams';
 import { isOnMap } from './util/predicates';
+import { teamUnits } from './rules/queries';
 import type { Engagement, GameState, GeneralCharge, GeneralState, TeamId, Unit } from './model';
 import { lifeValue } from './unitValue';
 
@@ -52,7 +53,7 @@ export function applies(s: GameState, filter: DeepReadonly<UnitFilter>, unit: Pi
  * [CAMBIO] Fallo K5: antes curaba tambien a las que iban dentro de un transporte.
  */
 export function healedByPower(s: GameState, team: TeamId, filter: DeepReadonly<UnitFilter>): Unit[] {
-  return s.units.filter((unit) => unit.team === team && isOnMap(unit) && applies(s, filter, unit));
+  return teamUnits(s, team).filter((unit) => isOnMap(unit) && applies(s, filter, unit));
 }
 
 /**

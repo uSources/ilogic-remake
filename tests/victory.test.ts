@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_MODES, gameModeOf } from '@core/modes';
-import { currentDefeat, isWinner, matchResult, newUnit, restoreInvariants, VICTORY_RULES } from '@core/rules';
+import { currentDefeat, isWinner, matchResult, VICTORY_RULES } from '@core/rules';
+import { newUnit } from '@core/measure';
+import { restoreInvariants } from '@core/rules/invariants';
 import { buildMission, missionById } from '@core/missions';
+import { objectiveOf } from '@core/objectives';
 import { defaultContent } from '@core/content/default';
-import type { GameModeId, VictoryRuleId } from '@core/model';
+import type { VictoryRuleId } from '@core/model';
 import { act, blankState, BLANK_SEEDS, expectRejected, hqId, resultFor, unitTypeNamed } from './helpers';
 
 /** Quita al equipo su Base (con eso ha perdido) y le deja una unidad: ha caido por la Base, no por quedarse sin nada. */
@@ -16,7 +19,7 @@ const takeHeadquarters = (s: ReturnType<typeof blankState>, team: number) => {
 
 describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
   it('cada modo dice sus formas de acabar, y todas existen', () => {
-    const modes = Object.keys(GAME_MODES) as GameModeId[];
+    const modes = Object.keys(GAME_MODES) as (keyof typeof GAME_MODES)[];
     for (const mode of modes) {
       expect(GAME_MODES[mode].id).toBe(mode);
       for (const rule of GAME_MODES[mode].victory) expect(VICTORY_RULES[rule as VictoryRuleId]).toBeDefined();
@@ -79,8 +82,7 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
   });
 
   it('rendirse no vale donde la partida no se puede perder (el laboratorio)', () => {
-    const s = blankState();
-    s.mode = 'sandbox';
+    const s = blankState({}, undefined, 'sandbox');
     expectRejected(s, 0, { kind: 'surrender' }, 'cannotLose');
   });
 
@@ -100,8 +102,7 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
   });
 
   it('una partida para mirar (sandbox) no acaba sola, aunque no quede nadie', () => {
-    const s = blankState();
-    s.mode = 'sandbox';
+    const s = blankState({}, undefined, 'sandbox');
     takeHeadquarters(s, 0);
     takeHeadquarters(s, 1);
     expect(gameModeOf(s).victory).toEqual([]);
@@ -109,10 +110,18 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
   });
 
   it('mision: si su dueño falla el objetivo, ganan sus enemigos', () => {
-    const s = buildMission(missionById('bridgehead')!, defaultContent(), BLANK_SEEDS);
-    const objective = s.mission!.objective;
+    const s = buildMission(missionById(defaultContent(), 'bridgehead')!, defaultContent(), BLANK_SEEDS);
+    const objective = objectiveOf(s, 0)!;
     if (objective.kind !== 'capture') throw new Error('bridgehead es de capturar');
     s.day = objective.days + 1;
+    expect(matchResult(s)).toEqual({ status: 'decided', winners: [1], reason: 'objective' });
+  });
+
+  it('mision con objetivo para varios equipos: decide el primero, en el orden de los equipos, que se cumple o falla', () => {
+    const s = buildMission(missionById(defaultContent(), 'bridgehead')!, defaultContent(), BLANK_SEEDS);
+    s.mission!.objectives.push({ kind: 'survive', days: 3, owner: 1 });
+    expect(matchResult(s).status).toBe('playing');
+    s.day = 4;
     expect(matchResult(s)).toEqual({ status: 'decided', winners: [1], reason: 'objective' });
   });
 });

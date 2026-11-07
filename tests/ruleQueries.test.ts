@@ -2,15 +2,17 @@ import { describe, expect, it } from 'vitest';
 import {
   buildingIncome,
   canRepair,
-  flankBonusOnceHit,
+  engagement,
+  expectedDamage,
   hasFullArmy,
   isEnemyHq,
-  newUnit,
+  killReward,
   projectedIncome,
   upkeepOf,
   usesCommandPoints,
   visibleFoes,
 } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { buildingTypeOf } from '@core/gameContent';
 import type { Building } from '@core/model';
 import { blankState, hqId, unitTypeNamed } from './helpers';
@@ -70,8 +72,22 @@ describe('consultas de las reglas que usa la IA', () => {
     expect(usesCommandPoints(blankState({ commandPoints: 30 }))).toBe(true);
   });
 
-  it('flankBonusOnceHit: el flanqueo de la partida, si lo lleva', () => {
-    expect(flankBonusOnceHit(blankState({ flankBonus: 0.15 }))).toBe(0.15);
-    expect(flankBonusOnceHit(blankState({ flankBonus: 0 }))).toBe(0);
+  it('el flanqueo como pregunta: rematar a quien otro ya ha dado hoy, sin tocar la partida', () => {
+    for (const flankBonus of [0.15, 0]) {
+      const s = blankState({ flankBonus, fog: false });
+      const shooter = newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+      const foe = newUnit(s, SOLDIER, 1, { x: 3, y: 2 });
+      const alone = expectedDamage(s, engagement(shooter, foe));
+      const followUp = expectedDamage(s, engagement(shooter, foe, { defenderHitToday: true }));
+      if (flankBonus) expect(followUp).toBeGreaterThan(alone);
+      else expect(followUp).toBe(alone);
+      expect(foe.hitDay).toBeUndefined();
+      expect(expectedDamage(s, engagement(shooter, foe, { defenderHitToday: false }))).toBe(alone);
+    }
+  });
+
+  it('killReward: lo que se cobra por destruir una unidad (el botin, si la partida lo lleva)', () => {
+    expect(killReward(blankState({ bounty: 0.25 }), { type: 'Soldier' })).toBe(Math.round(SOLDIER.cost * 0.25));
+    expect(killReward(blankState({ bounty: 0 }), { type: 'Soldier' })).toBe(0);
   });
 });

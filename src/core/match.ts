@@ -11,7 +11,7 @@ import { entryOf, type GameContent } from './content';
 import { appointGeneral } from './generals';
 import { changeSettings, newGameState } from './gameState';
 import { generateGame } from './mapgen';
-import { gameModeOf } from './modes';
+import { gameModeOf, type GameModeRegistry } from './modes';
 import { blankMap } from './mapGrid';
 import { buildMission, missionById } from './missions';
 import { assertAllStanding } from './rules/falls';
@@ -38,10 +38,11 @@ export interface SkirmishConfig {
   /** El equipo que juega primero cada ronda (si no, el primero de la lista). */
   firstTeam?: TeamId;
   /**
-   * Con dos equipos, cada uno empieza donde le tocaba al otro (sus unidades y sus edificios): para
-   * medir si el mapa favorece a un lado (la herramienta de equilibrio). La revancha no lo repite.
+   * Cada equipo empieza donde le tocaba al que va `rotateStarts` puestos detras (sus unidades y sus
+   * edificios; con dos equipos y 1, se cambian): para medir si el mapa favorece a alguien (la
+   * herramienta de equilibrio). La revancha no lo repite.
    */
-  swapStarts?: true;
+  rotateStarts?: number;
 }
 
 /**
@@ -94,6 +95,8 @@ export type MatchConfigOf<M extends GameModeId> = Extract<MatchConfig, { mode: M
 export interface MatchSetupContext {
   content: GameContent;
   mapRng?: Rng;
+  /** Los modos que se conocen (si no, los del juego: GAME_MODES): un modo de prueba o de un servidor. */
+  modes?: GameModeRegistry;
 }
 
 type MatchSetup<M extends GameModeId> = (config: MatchConfigOf<M>, context: MatchSetupContext) => GameState;
@@ -106,7 +109,7 @@ function appointGenerals(s: GameState, teams: readonly MatchTeam[]): void {
   teams.forEach((team, id) => appointGeneral(s, id, team.general));
 }
 
-function skirmish(config: SkirmishConfig, { content, mapRng }: MatchSetupContext): GameState {
+function skirmish(config: SkirmishConfig, { content, mapRng, modes }: MatchSetupContext): GameState {
   const { map } = config;
   const theme = map.theme === null ? null : entryOf(content.themes, map.theme, 'tema');
   const s = generateGame(mapRng ?? seededRng(map.seed), {
@@ -116,31 +119,35 @@ function skirmish(config: SkirmishConfig, { content, mapRng }: MatchSetupContext
     content,
     teams: config.teams,
     firstTeam: config.firstTeam,
+    modes,
   });
   s.setup = { ...map };
-  if (config.swapStarts) swapStarts(s);
+  if (config.rotateStarts) rotateStarts(s, config.rotateStarts);
   appointGenerals(s, config.teams);
   return s;
 }
 
-/** Cada uno de los dos equipos se queda con las unidades y los edificios con los que empezaba el otro. */
-function swapStarts(s: GameState): void {
-  const [first, second, ...more] = teamIds(s);
-  if (first === undefined || second === undefined || more.length)
-    throw new Error(`Cambiar de sitio es para dos equipos (hay ${s.teams.length})`);
-  const other = (team: TeamId): TeamId => (team === first ? second : first);
-  for (const unit of s.units) unit.team = other(unit.team);
-  for (const building of s.buildings) if (building.owner !== null) building.owner = other(building.owner);
+/**
+ * Cada equipo se queda con las unidades y los edificios con los que empezaba el que va `steps`
+ * puestos detras (el ultimo, con los del primero si da la vuelta): lo del equipo t pasa al t + steps.
+ */
+function rotateStarts(s: GameState, steps: number): void {
+  const teams = teamIds(s);
+  if (!Number.isInteger(steps) || steps < 0) throw new Error(`Girar las salidas va de puesto en puesto: ${steps}`);
+  const next = (team: TeamId): TeamId => teams[(teams.indexOf(team) + steps) % teams.length]!;
+  for (const unit of s.units) unit.team = next(unit.team);
+  for (const building of s.buildings) if (building.owner !== null) building.owner = next(building.owner);
 }
 
-function mission(config: MissionConfig, { content }: MatchSetupContext): GameState {
-  const found = missionById(config.mission);
+function mission(config: MissionConfig, { content, modes }: MatchSetupContext): GameState {
+  const found = missionById(content, config.mission);
   if (!found) throw new Error(`No existe la mision "${config.mission}"`);
-  return buildMission(found, content, matchSeedsFrom(config.seed));
+  return buildMission(found, content, matchSeedsFrom(config.seed), modes);
 }
 
-function sandbox(config: SandboxConfig, { content }: MatchSetupContext): GameState {
+function sandbox(config: SandboxConfig, { content, modes }: MatchSetupContext): GameState {
   const s = newGameState({
+    modes,
     map: blankMap(config.size, content.plainTerrain.id),
     settings: settingsWith(content, config.settingChanges ?? {}),
     content,
@@ -158,8 +165,8 @@ function sandbox(config: SandboxConfig, { content }: MatchSetupContext): GameSta
   return s;
 }
 
-/** Como se prepara cada modo (el tipo obliga a tener uno por modo de GAME_MODES). */
-export const MATCH_SETUPS: { readonly [M in GameModeId]: MatchSetup<M> } = { skirmish, mission, sandbox };
+/** Como se prepara cada modo que se configura con un `MatchConfig` (el tipo obliga a tener uno por cada uno). */
+export const MATCH_SETUPS: { readonly [M in MatchConfig['mode']]: MatchSetup<M> } = { skirmish, mission, sandbox };
 
 /** La preparacion del modo de la configuracion. */
 function setupOf(config: MatchConfig): (config: MatchConfig, context: MatchSetupContext) => GameState {

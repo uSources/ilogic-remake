@@ -18,13 +18,13 @@ describe('arena: la IA de referencia', () => {
 
   it('unos pesos con una clave de mas o de menos no valen', () => {
     expect(() => readWeights({ ...savedWeights(), EXTRA: 1 })).toThrow(/peso desconocido/);
-    const { KILLBONUS: _killBonus, ...missing } = savedWeights();
-    expect(() => readWeights(missing)).toThrow(/KILLBONUS/);
+    const { killBonus: _killBonus, ...missing } = savedWeights();
+    expect(() => readWeights(missing)).toThrow(/killBonus/);
   });
 
   it('el perfil de referencia es el de la IA con esos pesos', () => {
     const content = defaultContent();
-    const weights = { ...savedWeights(), KILLBONUS: 1 };
+    const weights = { ...savedWeights(), killBonus: 1 };
     const profile = baselineProfile(content, weights);
     expect(profile.weights).toBe(weights);
     expect(profile.behaviours).toBe(defaultAiProfile(content).behaviours);

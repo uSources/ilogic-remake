@@ -4,19 +4,18 @@
  * lo que sabe su equipo (la `PlayerView` que le da la sesion, que la pone al dia tras cada accion).
  */
 import { defaultAiProfile, type AiProfile } from '../ai';
-import { seededRng } from '../util/random';
+import { decisionRngOf } from '../playerView';
 import { proposing, type Controller } from '../session/controller';
 
 /**
  * La IA que juega con `profile` (la del juego con el contenido de la partida, si no se dice: su
- * `defaultAiProfile`). Su azar de cada turno sale de la partida (el de su vista, `turnSeed`): la misma partida da
+ * `defaultAiProfile`). Su azar de cada turno sale de la partida (el de su vista, `decisionRngOf`): la misma partida da
  * las mismas decisiones, se juegue donde se juegue.
  */
 export const aiController = (profile?: AiProfile): Controller => ({
   name: 'ai',
   playTurn: (view) => {
-    const rng = seededRng(view.turnSeed);
     const played = profile ?? defaultAiProfile(view.state.content);
-    return proposing(played.turn(view, played, rng));
+    return proposing(played.turn(view, played, decisionRngOf(view)));
   },
 });

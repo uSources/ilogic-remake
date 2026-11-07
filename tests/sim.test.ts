@@ -1,6 +1,5 @@
 import { hqId, resultFor } from './helpers';
 import { duel } from '@core/teams';
-import { MoveType } from '@core/content';
 import { describe, expect, it } from 'vitest';
 import { aiController } from '@core/controllers';
 import { GameSession, passiveController, runMatch } from '@core/session';
@@ -20,7 +19,7 @@ describe('generador de mapas', () => {
       const hq1 = s.buildings.find((building) => building.owner === 1 && building.type === HQ)!;
       expect(hq0, `seed ${seed}`).toBeTruthy();
       expect(hq1, `seed ${seed}`).toBeTruthy();
-      expect(distanceMap(s, hq0, MoveType.FOOT).at(hq1)).toBeLessThan(Infinity);
+      expect(distanceMap(s, hq0, 'foot').at(hq1)).toBeLessThan(Infinity);
       expect(s.units.filter((unit) => unit.team === 0)).toHaveLength(3);
       expect(s.units.filter((unit) => unit.team === 1)).toHaveLength(3);
       const neutral = s.buildings.filter((building) => building.owner === null).length;
@@ -29,7 +28,7 @@ describe('generador de mapas', () => {
       expect(new Set(s.buildings.map((building) => `${building.x},${building.y}`)).size).toBe(s.buildings.length);
       checkInvariants(s);
     }
-  });
+  }, 60_000); // 100 mapas: con la maquina cargada pasaba de los 5 s por defecto
 });
 
 describe('partidas simuladas', () => {

@@ -1,13 +1,8 @@
 /** Acciones de las ordenes permanentes: darlas, quitarlas y darlas por cumplidas. */
 import { posOf } from '../geom';
 import { isOnBoard } from '../mapGrid';
-import {
-  cancelStandingOrder,
-  effectiveStandingOrder,
-  finishStandingOrder,
-  giveStandingOrder,
-  standingOrderBlock,
-} from '../squads/standingOrders';
+import { effectiveStandingOrder, standingOrderBlock } from '../squads/standingOrderQueries';
+import { cancelStandingOrder, finishStandingOrder, giveStandingOrder } from '../squads/standingOrderSteps';
 import { checkedUnit, checkedUnits, ownUnitProblem, ownUnitsProblem } from './checks';
 import type { ActionRegistry } from '../model';
 

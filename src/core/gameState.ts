@@ -3,7 +3,7 @@
  * generador de mapas, las misiones, el laboratorio, las herramientas y los tests.
  */
 import type { GameContent } from './content';
-import { gameModeOf } from './modes';
+import { GAME_MODES, modeIn, type GameModeRegistry } from './modes';
 import { rulesetFor } from './ruleModules/registry';
 import type { MatchSeeds } from './util/random';
 import { SAVE_VERSION } from './saveVersion';
@@ -19,6 +19,8 @@ export interface NewGameStateOptions {
   content: GameContent;
   /** El modo de juego (core/modes.ts): como se acaba y en que orden se juegan los turnos. */
   mode: GameModeId;
+  /** De donde sale la definicion del modo (si no, los del juego: GAME_MODES). */
+  modes?: GameModeRegistry;
   /** Tema del mapa (id de themes.json; si no, el primero). */
   theme?: string;
   /** Los equipos, en orden (quien los juega, su alianza y su dinero): no hay equipos por defecto. */
@@ -36,7 +38,8 @@ export interface NewGameStateOptions {
 export function newGameState(options: NewGameStateOptions): GameState {
   const { map, settings } = options;
   const teams = newTeams(options.teams, settings.initialFunds);
-  const turnOrder = gameModeOf(options).turnOrder(
+  const mode = modeIn(options.modes ?? GAME_MODES, options.mode);
+  const turnOrder = mode.turnOrder(
     teams.map((team) => team.id),
     options.firstTeam ?? null,
   );
@@ -59,7 +62,7 @@ export function newGameState(options: NewGameStateOptions): GameState {
     // Una copia: quien crea la partida puede seguir usando las suyas sin cambiar las de esta.
     settings: { ...settings },
     content: options.content,
-    ruleset: rulesetFor(options, settings),
+    ruleset: rulesetFor(mode, settings),
   };
 }
 
@@ -69,5 +72,5 @@ export function newGameState(options: NewGameStateOptions): GameState {
  * sitio que los cambia despues de crearla.
  */
 export function changeSettings(s: GameState, settings: Readonly<MatchSettings>): void {
-  Object.assign(s, { settings: { ...settings }, ruleset: rulesetFor(s, settings) });
+  Object.assign(s, { settings: { ...settings }, ruleset: rulesetFor(s.ruleset.mode, settings) });
 }

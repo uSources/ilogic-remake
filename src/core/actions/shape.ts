@@ -6,7 +6,7 @@
  * `validate`. ACTION_SHAPES tiene una comprobacion por cada campo de cada tipo de accion, y el tipo
  * lo obliga: un campo nuevo en GameAction no compila sin la suya.
  */
-import { isStandingOrderKind } from '../squads/standingOrders';
+import { isStandingOrderKind } from '../squads/standingOrderTypes';
 import { isObject, isPos, isUid } from '../util/validation';
 import type { GameAction, GameActionKind, GameActionOf } from '../model';
 

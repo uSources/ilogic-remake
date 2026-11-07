@@ -10,23 +10,38 @@
  * y el clima, y las caidas (`TeamState.fell`: la partida las anuncia a todos, «El equipo N queda
  * fuera»). Un enemigo del que no se ve ninguna unidad no ha caido por eso: lo dice lo apuntado,
  * no lo que se ve (y las reglas que cuentan unidades para saber si alguien ha caido miran la
- * partida de verdad, nunca una vista). Las semillas (dados, decisiones y la del mapa, `setup`) no se
+ * partida de verdad, nunca una vista). De los enemigos tampoco se saben sus estadisticas (lo que han
+ * comprado, gastado y perdido, y su ejercito cada dia) ni cuantas unidades y escuadras llevan hechas
+ * (`nextUid`, `nextSquadId`: la vista da el siguiente a lo que conoce); esto, aunque la partida no
+ * tenga niebla (sin niebla se ven todas las unidades, pero las cuentas de los demas no son de nadie mas).
+ * Que la vista sea de solo lectura hasta el fondo lo hacen las envolturas de util/readOnly.ts. Las semillas (dados, decisiones y la del mapa, `setup`) no se
  * ven: el equipo solo sabe la de sus propias decisiones de este turno (`turnSeed`). Ojo: la pantalla
  * enseña a la persona el codigo del mapa (de el salen las semillas de una escaramuza) y son de 32
  * bits; una partida por la red que tenga que guardarlas en secreto no las manda (lo hace el servidor).
  */
-import { turnSeedOf } from './dice';
-import type { ActionPlan, Building, GameState, TeamId, Unit } from './model';
-import { sightOf, type Sight } from './rules/visibility';
-import { areAllied } from './teams';
+import { cloneState } from './gameContent';
+import type { ActionPlan, Building, GameState, Rng, TeamId, Unit } from './model';
+import { unitById } from './rules/queries';
+import { sightOf, visibleFoes, type Sight } from './rules/visibility';
+import { areAllied, emptyTeamStats, isHostile } from './teams';
+import { isAlive, isOnMap } from './util/predicates';
+import { turnSeedOf } from './turnSeeds';
+import { seededRng } from './util/random';
+import { readOnly, REFUSED_CHANGES, shownDescriptor, UNSHOWN_KEYS } from './util/readOnly';
 
 /** Lo que cambia la niebla en la vista (los campos de la partida que se ven de otra forma). */
-type FoggedParts = Partial<Pick<GameState, 'units' | 'squads' | 'buildings' | 'dice' | 'decisionSeed' | 'setup'>>;
+type FoggedParts = Partial<
+  Pick<
+    GameState,
+    'units' | 'squads' | 'buildings' | 'teams' | 'dice' | 'decisionSeed' | 'setup' | 'undoableMoves' | 'nextUid' | 'nextSquadId'
+  >
+>;
 
 /** Una cosa que el equipo no sabe: lo que deja ver de esa parte de la partida. */
 interface FogRule {
   id: string;
-  hide(s: GameState, team: TeamId, sees: Sight): FoggedParts;
+  /** `before`: lo que ya han cambiado las entradas de antes (las unidades que ve, por ejemplo). */
+  hide(s: GameState, team: TeamId, sees: Sight, before: FoggedParts): FoggedParts;
 }
 
 /**
@@ -38,6 +53,15 @@ function asSeenByEnemy(unit: Unit): Unit {
   return { ...seen, cargo: unit.cargo.map(() => null) };
 }
 
+/** El equipo sabe de esta unidad: es suya o de un aliado, o es de un enemigo y la ve (fuera de un transporte). */
+const isKnownTo =
+  (s: GameState, team: TeamId, sees: Sight) =>
+  (unit: Unit): boolean =>
+    areAllied(s, unit.team, team) || (unit.carrier === null && sees(unit));
+
+/** El siguiente numero despues de los que el equipo conoce (el contador de verdad diria cuantos hay que no ve). */
+const nextAfter = (ids: readonly number[]): number => 1 + Math.max(0, ...ids);
+
 /** Un edificio en una casilla que el equipo no ve, como lo sabe: de quien es, pero no quien lo esta capturando. */
 const withoutUnseenCapture = (building: Building): Building => ({ ...building, capture: null });
 
@@ -48,10 +72,24 @@ const FOG: readonly FogRule[] = [
     // ve, solo lo que se ve. Las suyas y las de sus aliados, enteras (comparten lo que ven).
     id: 'unseenUnits',
     hide: (s, team, sees) => ({
-      units: s.units.flatMap((unit) => {
-        if (areAllied(s, unit.team, team)) return [unit];
-        return unit.carrier === null && sees(unit) ? [asSeenByEnemy(unit)] : [];
-      }),
+      units: s.units.filter(isKnownTo(s, team, sees)).map((unit) => (areAllied(s, unit.team, team) ? unit : asSeenByEnemy(unit))),
+    }),
+  },
+  {
+    // Las estadisticas de los enemigos (lo que han comprado, gastado, perdido y capturado, y el valor
+    // de su ejercito cada dia, que cuenta las unidades que no se ven): solo las de su alianza.
+    id: 'foreignStats',
+    hide: (s, team) => ({
+      teams: s.teams.map((other) => (areAllied(s, other.id, team) ? other : { ...other, stats: emptyTeamStats() })),
+    }),
+  },
+  {
+    // Los contadores de unidades y escuadras (diria cuantas ha hecho un enemigo sin verlas): el
+    // siguiente despues de las que conoce. Asi una copia para simular sigue dando numeros nuevos.
+    id: 'counters',
+    hide: (s, team, sees, before) => ({
+      nextUid: nextAfter((before.units ?? s.units.filter(isKnownTo(s, team, sees))).map((unit) => unit.uid)),
+      nextSquadId: nextAfter((s.squads ?? []).filter((squad) => areAllied(s, squad.team, team)).map((squad) => squad.id)),
     }),
   },
   {
@@ -71,6 +109,11 @@ const FOG: readonly FogRule[] = [
     }),
   },
   {
+    // Lo que puede deshacer otro equipo (de donde venian sus unidades, la captura que perdieron).
+    id: 'othersUndo',
+    hide: (s, team) => (s.undoableMoves ? { undoableMoves: s.undoableMoves.filter((move) => unitById(s, move.uid)?.team === team) } : {}),
+  },
+  {
     // El azar de la partida: los dados (se sabria como va a salir cada combate), la semilla de las
     // decisiones (se sabria lo que va a hacer la IA de los demas) y la del mapa (de ella salen las dos
     // en una escaramuza). Lo suyo de este turno lo da la vista aparte (`turnSeed`).
@@ -82,14 +125,20 @@ const FOG: readonly FogRule[] = [
 /** Lo que ve un equipo de una semilla que no sabe (nada: siempre lo mismo). */
 const HIDDEN_SEED = 0;
 
-/** Lo que el equipo `team` ve distinto de la partida ahora mismo (lo que deja cada entrada de FOG). */
-function foggedParts(s: GameState, team: TeamId): FoggedParts {
-  const sees = sightOf(s, team);
-  return FOG.reduce<FoggedParts>((parts, rule) => ({ ...parts, ...rule.hide(s, team, sees) }), {});
+/** Lo que el equipo `team` ve distinto de la partida ahora mismo, viendo lo que dice `sees` (lo que deja cada entrada de FOG). */
+function foggedParts(s: GameState, team: TeamId, sees: Sight = sightOf(s, team)): FoggedParts {
+  return FOG.reduce<FoggedParts>((parts, rule) => ({ ...parts, ...rule.hide(s, team, sees, parts) }), {});
 }
 
-/** Las unidades que conoce el equipo `team` (las suyas y las de sus aliados, y lo que ve de las enemigas). */
-export const unitsKnownTo = (s: GameState, team: TeamId): Unit[] => foggedParts(s, team).units ?? s.units;
+/**
+ * Una copia de la partida tal como la sabe el equipo `team` (con todo lo que quita FOG), para simular
+ * en ella lo que haria (la prevision de sus ordenes): se puede cambiar sin tocar la de verdad, y lo
+ * que se simule no puede delatar lo que el equipo no ve.
+ */
+export function foggedCopy(s: GameState, team: TeamId): GameState {
+  const copy = cloneState(s);
+  return Object.assign(copy, foggedParts(copy, team));
+}
 
 export interface PlayerView {
   /** El equipo que mira. */
@@ -101,47 +150,55 @@ export interface PlayerView {
    * (unidades, equipos, edificios...): se proponen acciones.
    */
   readonly state: GameState;
-  /** La semilla del azar de las decisiones de su equipo en este turno (`decisionRng` de la partida): lo unico que sabe de ella. */
+  /** La semilla del azar de las decisiones de su equipo en este turno (`turnSeedOf` de la partida): lo unico que sabe de ella. */
   readonly turnSeed: number;
   /** Vuelve a mirar la partida (tras una accion, o algo que haya pasado fuera del turno). */
   refresh(): void;
 }
 
-/** Lo que se le dice a quien intenta cambiar la vista. */
-const READ_ONLY = 'La vista de un equipo no se cambia: quien decide propone acciones';
-
-const refuseChange = (): never => {
-  throw new Error(READ_ONLY);
-};
-
-/** Un objeto de la partida que hay que proteger: los datos (objetos planos y listas) que no esten ya congelados. */
-const needsGuard = (value: unknown): value is object =>
-  typeof value === 'object' &&
-  value !== null &&
-  !Object.isFrozen(value) &&
-  (Array.isArray(value) || Object.getPrototypeOf(value) === Object.prototype);
+/**
+ * El azar de las decisiones de quien decide con esta vista, en este turno: el mismo cada vez que se
+ * juegue el turno (al cargar, al repetir, por la red). Es el unico azar de quien decide: los dados son
+ * de las reglas y la semilla de la partida no se ve en la vista.
+ */
+export const decisionRngOf = (view: PlayerView): Rng => seededRng(view.turnSeed);
 
 /**
- * Lo mismo que `value`, pero de solo lectura hasta el fondo: lo que se lee de ella tambien lo es.
- * Cada objeto tiene siempre la misma envoltura (`guards`), asi que comparar dos unidades de la vista
- * sigue dando lo que debe.
+ * Lo que no cambia en un turno, congelado una vez: el terreno, los ajustes y los modulos de reglas
+ * que salen de ellos (estos ya vienen congelados de arriba). La vista es de un turno: si algo de esto
+ * cambiara (el laboratorio cambia los ajustes), lo vera la del turno siguiente.
  */
-function readOnly<T>(value: T, guards: WeakMap<object, object>): T {
-  if (!needsGuard(value)) return value;
-  const known = guards.get(value);
-  if (known) return known as T;
-  const guarded = new Proxy(value, {
-    get: (target, key): unknown => {
-      const property: unknown = Reflect.get(target, key);
-      // Lo que no es un objeto (numeros, textos) se da tal cual, sin mas: es lo que mas se lee.
-      return typeof property === 'object' ? readOnly(property, guards) : property;
+const fixedPartsOf = (s: GameState): Record<string, unknown> => ({
+  map: Object.freeze(s.map.map((column) => Object.freeze([...column]))),
+  settings: Object.freeze({ ...s.settings }),
+  ruleset: s.ruleset,
+});
+
+/**
+ * La envoltura de la partida de la vista: lo que da `replacing` (lo fijo del turno o lo que cambia la
+ * niebla) en lugar de lo de la partida; lo demas, de la partida, de solo lectura.
+ */
+function viewHandler(
+  replacing: (key: string | symbol) => Record<string, unknown> | null,
+  guard: (value: unknown) => unknown,
+): ProxyHandler<GameState> {
+  return {
+    // Lo que mas se lee de la vista: sin crear nada por el camino.
+    get: (target, key, receiver): unknown => {
+      if (UNSHOWN_KEYS.has(key)) return undefined;
+      const instead = replacing(key);
+      return instead ? Reflect.get(instead, key) : guard(Reflect.get(target, key, receiver));
     },
-    set: refuseChange,
-    deleteProperty: refuseChange,
-    defineProperty: refuseChange,
-  });
-  guards.set(value, guarded);
-  return guarded;
+    getOwnPropertyDescriptor: (target, key) => {
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+      const instead = replacing(key);
+      if (!instead) return shownDescriptor(descriptor, guard);
+      // Lo que la niebla quita de la partida (`setup`) puede no estar en ella: se da como una propiedad mas.
+      const value: unknown = Reflect.get(instead, key);
+      return { ...(descriptor ?? { writable: false, enumerable: true }), configurable: descriptor?.configurable ?? true, value };
+    },
+    ...REFUSED_CHANGES,
+  };
 }
 
 /**
@@ -151,29 +208,57 @@ function readOnly<T>(value: T, guards: WeakMap<object, object>): T {
  */
 export function playerView(s: GameState, team: TeamId): PlayerView {
   const guards = new WeakMap<object, object>();
-  // Lo que no cambia en un turno, congelado una vez: el terreno, los ajustes y los modulos de reglas
-  // que salen de ellos (estos ya vienen congelados de arriba). La vista es de un turno: si algo de esto
-  // cambiara (el laboratorio cambia los ajustes), lo vera la del turno siguiente.
-  const fixed: Record<string, unknown> = {
-    map: Object.freeze(s.map.map((column) => Object.freeze([...column]))),
-    settings: Object.freeze({ ...s.settings }),
-    ruleset: s.ruleset,
+  const fixed = fixedPartsOf(s);
+  // Lo que ve ahora: se vuelve a mirar la primera vez que se lee algo despues de `refresh` (tras una
+  // accion), no en cada una: varias acciones seguidas sin mirar no cuestan nada.
+  let current: SeenNow | null = null;
+  const seenNow = (): SeenNow => (current ??= seenNowIn(s, team, guards));
+  /** Donde esta lo que la vista da en lugar de lo de la partida (lo fijo del turno o lo que cambia la niebla), o null. */
+  const replacing = (key: string | symbol): Record<string, unknown> | null => {
+    if (Reflect.has(fixed, key)) return fixed;
+    const { parts } = seenNow();
+    return Reflect.has(parts, key) ? parts : null;
   };
-  let seen = seenParts(s, team, guards);
-  const state = new Proxy(s, {
-    get: (target, key, receiver): unknown => {
-      if (Reflect.has(fixed, key)) return Reflect.get(fixed, key);
-      if (Reflect.has(seen, key)) return Reflect.get(seen, key);
-      return readOnly(Reflect.get(target, key, receiver), guards);
-    },
-    set: refuseChange,
-    deleteProperty: refuseChange,
-    defineProperty: refuseChange,
-  });
+  const state = new Proxy(
+    s,
+    viewHandler(replacing, (value) => readOnly(value, guards)),
+  );
   const refresh = () => {
-    seen = seenParts(s, team, guards);
+    current = null;
   };
+  VIEW_SIGHTS.set(state, { team, sees: (pos) => seenNow().sees(pos) });
   return { team, state, turnSeed: turnSeedOf(s, team), refresh };
+}
+
+/** Lo que ve el equipo de la vista ahora: sus listas y demas partes con niebla, y lo que ve (`sees`, calculado una vez). */
+interface SeenNow {
+  parts: Record<string, unknown>;
+  sees: Sight;
+}
+
+/** Lo que ve cada vista que hay (por su partida, `PlayerView.state`): de que equipo es y lo que ve ahora. */
+const VIEW_SIGHTS = new WeakMap<GameState, { team: TeamId; sees: Sight }>();
+
+/** Lo que ve ahora la vista de `team` cuya partida es `s`, o null si `s` no es la vista de ese equipo. */
+const viewSightOf = (s: GameState, team: TeamId): Sight | null => {
+  const view = VIEW_SIGHTS.get(s);
+  return view?.team === team ? view.sees : null;
+};
+
+/**
+ * Lo que ve el equipo `team`: en su vista, lo que ve desde que se puso al dia (calculado una vez, al
+ * mirarla); en otra partida (una copia para simular), lo que ve en ella ahora (`sightOf`).
+ */
+export const sightIn = (s: GameState, team: TeamId): Sight => viewSightOf(s, team) ?? sightOf(s, team);
+
+/**
+ * Los enemigos de `team` que conoce: en su vista, los que hay en ella (la niebla ya ha quitado los
+ * que no ve, asi que no hace falta volver a mirar: lo mismo que `visibleFoes`, sin calcular la
+ * vision); en otra partida, los que ve en ella ahora (`visibleFoes`). Lo que usa quien decide.
+ */
+export function knownFoes(s: GameState, team: TeamId): Unit[] {
+  if (!viewSightOf(s, team)) return visibleFoes(s, team);
+  return s.units.filter((unit) => isHostile(s, team, unit.team) && isOnMap(unit) && isAlive(unit));
 }
 
 /** Las listas de la partida que mas se recorren, ya con la niebla. */
@@ -182,16 +267,17 @@ const LISTS = ['units', 'buildings', 'teams', 'squads', 'controlPoints', 'undoab
 /**
  * Lo que ve ahora el equipo de las listas de la partida (con la niebla de FOG): listas congeladas
  * (recorrerlas no pasa por la envoltura) de cosas de solo lectura; y lo demas que cambia FOG.
- * Las listas se vuelven a sacar al poner la vista al dia (tras cada accion).
+ * Las listas se vuelven a sacar la primera vez que se mira la vista despues de ponerla al dia.
  */
-function seenParts(s: GameState, team: TeamId, guards: WeakMap<object, object>): Record<string, unknown> {
-  const fogged = foggedParts(s, team);
+function seenNowIn(s: GameState, team: TeamId, guards: WeakMap<object, object>): SeenNow {
+  const sees = sightOf(s, team);
+  const fogged = foggedParts(s, team, sees);
   const parts: Record<string, unknown> = { ...fogged };
   for (const key of LISTS) {
     const list: unknown = Reflect.has(fogged, key) ? Reflect.get(fogged, key) : Reflect.get(s, key);
     if (Array.isArray(list)) parts[key] = Object.freeze(list.map((item: unknown) => readOnly(item, guards)));
   }
-  return parts;
+  return { parts, sees };
 }
 
 /**
@@ -206,4 +292,15 @@ export function* seeing<Result>(view: PlayerView, plan: ActionPlan<Result>): Act
     view.refresh();
     step = plan.next(result);
   }
+}
+
+/**
+ * El plan de quien decide por `team` (`planFor`, con la partida tal como la sabe), mirando la vista de
+ * su equipo, al dia tras cada accion, fuera de una sesion: lo que hacen las ordenes que cumple la
+ * partida al empezar y acabar un turno (actions/turn.ts) y las que empieza la escena al darlas
+ * (scenes/game/orders.ts). Asi deciden con lo que sabe el equipo, las cumpla quien las cumpla.
+ */
+export function decidingAs<Result>(s: GameState, team: TeamId, planFor: (known: GameState) => ActionPlan<Result>): ActionPlan<Result> {
+  const view = playerView(s, team);
+  return seeing(view, planFor(view.state));
 }

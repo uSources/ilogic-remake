@@ -10,7 +10,7 @@ import { readyUnit } from '../rules/unitTurn';
 import { visibleFoes } from '../rules/visibility';
 import type { ActionRegistry, GameEvent, GameState, Pos, TeamId, UndoableMove, Unit } from '../model';
 import { actorProblem, checkedUndoableMove, checkedUnit, ownUnitProblem } from './checks';
-import { gotoDestination } from '../squads/standingOrders';
+import { gotoDestination } from '../squads/standingOrderQueries';
 
 /** La captura a medias que lleva la unidad en el edificio en el que esta (la que perderia al irse). */
 function ownCaptureHere(s: GameState, unit: Unit): UndoableMove['capture'] {

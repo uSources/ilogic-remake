@@ -2,13 +2,18 @@ import { samePos } from '../../core/geom';
 import { turnEndOrderOf, isDetached, squadInFormation } from '../../core/squads';
 import type { TurnEndOrderKind, GameState } from '../../core/model';
 import type { SquadVM } from '../../hud/store';
-import { t } from '../../settings';
+import { t, type TextKey } from '../../settings';
 
 /** Tus unidades: nombre de las ordenes y escuadras de la bandeja. */
 
+/** El texto del nombre de cada orden de pelear (una por tipo: el tipo lo exige). */
+const ORDER_LABELS = { attack: 'orderAttack', capture: 'orderCapture', defend: 'orderDefend' } as const satisfies Record<
+  TurnEndOrderKind,
+  TextKey
+>;
+
 /** [CAMBIO] Nombre de una orden con destino ("Atacar aquí"...). */
-export const standingOrderLabel = (kind: TurnEndOrderKind): string =>
-  t(kind === 'capture' ? 'orderCapture' : kind === 'defend' ? 'orderDefend' : 'orderAttack');
+export const standingOrderLabel = (kind: TurnEndOrderKind): string => t(ORDER_LABELS[kind]);
 
 /**
  * [CAMBIO] Escuadras del jugador para la bandeja: nombre, cuantas unidades, su orden (la de la

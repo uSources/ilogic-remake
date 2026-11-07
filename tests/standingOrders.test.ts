@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/autopilot';
 import { defaultContent } from '@core/content/default';
 import { manhattan, posOf } from '@core/geom';
-import { newUnit } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { availableActions, carryOut, dispatch } from '@core/actions';
 import { deserialize, serialize } from '@core/save';
 import {
@@ -17,7 +17,9 @@ import {
   squadUnits,
 } from '@core/squads';
 import { addToGroup, disbandSquad, formSquad, pruneSquads, renameSquad, setGroup } from '@core/squads/membership';
-import { cancelStandingOrder, finishStandingOrder, giveStandingOrder, turnEndOrderOf } from '@core/squads/standingOrders';
+import { STANDING_ORDER_KINDS, STANDING_ORDER_TYPES } from '@core/squads/standingOrderTypes';
+import { turnEndOrderOf } from '@core/squads/standingOrderQueries';
+import { cancelStandingOrder, finishStandingOrder, giveStandingOrder } from '@core/squads/standingOrderSteps';
 import type { GameState } from '@core/model';
 import { squadsVM } from '../src/ui/hudModels';
 import { act, blankState, unitTypeNamed, hqId, placedBuildings, playPlan } from './helpers';
@@ -125,6 +127,21 @@ describe('ordenes con destino', () => {
     expect(standingOrderBlock(s, 0, 'capture', { x: 12, y: 5 }, [tank])).toBe('noCapturer');
     expect(standingOrderBlock(s, 0, 'capture', { x: 12, y: 5 }, [tank, sol])).toBeNull();
     expect(standingOrderBlock(s, 0, 'attack', { x: 3, y: 3 }, [tank])).toBeNull();
+  });
+
+  it('cada tipo de orden dice lo suyo (STANDING_ORDER_TYPES): uno guarda el sitio, uno toma edificios y manda en la escuadra', () => {
+    const kindsWith = (field: 'holdsPosition' | 'takesBuilding' | 'leadsSquad') =>
+      STANDING_ORDER_KINDS.filter((kind) => STANDING_ORDER_TYPES[kind][field]);
+    expect(kindsWith('holdsPosition')).toEqual(['defend']);
+    expect(kindsWith('takesBuilding')).toEqual(['capture']);
+    expect(kindsWith('leadsSquad')).toEqual(['capture']);
+    // Las de cada unidad no son de una escuadra: ni mandan en ella ni se ofrecen en el menu de una casilla.
+    for (const kind of STANDING_ORDER_KINDS.filter((candidate) => STANDING_ORDER_TYPES[candidate].unitOnly)) {
+      expect(STANDING_ORDER_TYPES[kind].leadsSquad).toBe(false);
+      expect(STANDING_ORDER_TYPES[kind].menuRank({ enemyHere: true, canGive: () => true })).toBeNull();
+    }
+    // Con capturar, quien no captura va de escolta atacando.
+    expect(STANDING_ORDER_TYPES.capture.escort?.as).toBe('attack');
   });
 
   it('ordenes que se ofrecen en una casilla (gesto en el mapa): atacar primero si hay enemigo, capturar si se puede', () => {
@@ -256,7 +273,7 @@ describe('escuadras', () => {
 describe('escuadras en formacion', () => {
   /** Casillas que le quedan hasta el destino (todo hierba: en linea recta). */
   const left = (unit: { x: number; y: number }, at: { x: number; y: number }) => Math.abs(unit.x - at.x) + Math.abs(unit.y - at.y);
-  const SPREAD = 2; // SQUADSPREAD de ai.json (profile.weights.SQUADSPREAD)
+  const SPREAD = 2; // squadSpread de ai.json (profile.weights.squadSpread)
 
   it('el jeep no deja atras al soldado: van juntos hacia un destino lejano', () => {
     const s = world();

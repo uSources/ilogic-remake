@@ -7,16 +7,13 @@ import { defaultContent } from '@core/content/default';
 import { createMatch } from '@core/defaultGames';
 import { manhattan } from '@core/geom';
 import { seededRng } from '@core/util/random';
-import { MoveType } from '@core/content';
 import { generateGame } from '@core/mapgen';
 import { settingsWith } from '@core/matchSettings';
 import {
   attackTargets,
   canCapture,
-  controlRound,
   distanceMap,
   isMatchOver,
-  newUnit,
   matchResult,
   isDefeated,
   standingTeams,
@@ -26,8 +23,10 @@ import {
   unitById,
   visibility,
   roundReport,
-  restoreInvariants,
 } from '@core/rules';
+import { controlRound } from '@core/rules/control';
+import { newUnit } from '@core/measure';
+import { restoreInvariants } from '@core/rules/invariants';
 import { deserialize, serialize } from '@core/save';
 import {
   alliesOf,
@@ -313,7 +312,7 @@ describe('mapas al azar para mas de dos equipos', () => {
       const hqs = teamIds(s).map((team) => s.buildings.find((building) => building.owner === team && building.type === HQ)!);
       expect(hqs.every(Boolean), `semilla ${seed}`).toBe(true);
       for (const team of teamIds(s)) expect(s.units.filter((unit) => unit.team === team).length).toBeGreaterThan(0);
-      const fromFirst = distanceMap(s, hqs[0]!, MoveType.FOOT);
+      const fromFirst = distanceMap(s, hqs[0]!, 'foot');
       for (const hq of hqs.slice(1)) expect(fromFirst.at(hq)).toBeLessThan(Infinity);
       for (const [i, hq] of hqs.entries()) for (const other of hqs.slice(i + 1)) expect(manhattan(hq, other)).toBeGreaterThan(5);
       checkInvariants(s);

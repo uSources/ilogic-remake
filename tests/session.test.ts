@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createMatch, loadGame } from '@core/defaultGames';
 import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
-import { canMoveNow, matchResult, moveRange, newUnit, reachableTiles } from '@core/rules';
+import { canMoveNow, matchResult, moveRange, reachableTiles } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { serialize } from '@core/save';
 import { aiController, controllersFor } from '@core/controllers';
 import type { ActionPlan, ActionResult } from '@core/model';
@@ -22,6 +23,11 @@ import {
   sequence,
   type ActedStep,
   type Controller,
+  isAutosaveMoment,
+  isPerson,
+  people,
+  personStillPlays,
+  screenEnd,
 } from '@core/session';
 import { GAME_MODES } from '@core/modes';
 import { startsTurn } from '@core/actions';
@@ -74,14 +80,14 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     const { session } = personVsAi(s);
     let saved: string | null = null;
     session.subscribe((step) => {
-      if (session.isAutosaveMoment(step)) saved = serialize(s);
+      if (isAutosaveMoment(session, step)) saved = serialize(s);
     });
     runMatch(session);
     expect(saved).not.toBeNull();
     const loaded = loadGame(saved!)!;
     expect(loaded.turnStarted).toBe(true);
     expect(new GameSession(loaded, [humanController(), passiveController()]).step()).toEqual({ kind: 'awaitingInput', team: 0 });
-    expect(session.isAutosaveMoment({ kind: 'acted', team: 1, action: { kind: 'startTurn' }, events: [] })).toBe(false);
+    expect(isAutosaveMoment(session, { kind: 'acted', team: 1, action: { kind: 'startTurn' }, events: [] })).toBe(false);
   });
 
   it('el registro se repite igual desde la partida de antes (los dados van en la partida)', () => {
@@ -397,6 +403,26 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(session.log).toEqual([{ team: 0, action: { kind: 'endTurn' } }]);
   });
 
+  it('handOver: la persona deja su turno a otro controlador; la sesion lo juega y pasa el turno', () => {
+    const s = blankState();
+    const soldier = newUnit(s, unitTypeNamed('Soldier'), 0, { x: 3, y: 3 });
+    const { session, steps } = personVsAi(s);
+    expect(() => session.handOver(0, aiController())).toThrow(/no esta decidiendo/);
+    expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
+    const waits = planning(function* () {
+      yield { kind: 'wait', uid: soldier.uid };
+    });
+    session.handOver(0, waits);
+    expect(session.awaitingInput).toBeNull();
+    steps.length = 0;
+    runMatch(session, { until: (state) => state.turn !== 0 });
+    expect(steps.map((step) => [step.team, step.action.kind])).toEqual([
+      [0, 'wait'],
+      [0, 'endTurn'],
+    ]);
+    expect(session.log.at(-2)).toEqual({ team: 0, action: { kind: 'wait', uid: soldier.uid } });
+  });
+
   it('el dispatcher de la sesion solo vale para su partida (no para simular en una copia)', () => {
     const s = blankState();
     const session = new GameSession(s, [humanController(), passiveController()]);
@@ -414,26 +440,26 @@ describe('la sesion: turnos, controladores y registro (core/session)', () => {
     expect(runMatch(session)).toEqual({ kind: 'awaitingInput', team: 0 });
     expect(soldier.y).toBeGreaterThan(3);
     expect(session.log.every((entry) => entry.team === 0)).toBe(true);
-    expect(session.isPerson(0)).toBe(true);
+    expect(isPerson(session, 0)).toBe(true);
   });
 
   it('screenEnd: sigue, decidida, o fuera cuando ya no juega ninguna persona; people y personStillPlays', () => {
     const s = blankState({}, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
     const session = new GameSession(s, [humanController(), passiveController(), passiveController()]);
-    expect([session.people(), session.personStillPlays(), session.screenEnd(0)]).toEqual([[0], true, null]);
+    expect([people(session), personStillPlays(session), screenEnd(session, 0)]).toEqual([[0], true, null]);
     act(s, 0, { kind: 'surrender' });
-    expect(session.personStillPlays()).toBe(false);
-    expect(session.screenEnd(0)).toEqual({ kind: 'out', fall: { order: 1, reason: 'surrender' } });
+    expect(personStillPlays(session)).toBe(false);
+    expect(screenEnd(session, 0)).toEqual({ kind: 'out', fall: { order: 1, reason: 'surrender' } });
     s.turn = 1;
     act(s, 1, { kind: 'surrender' });
-    expect(session.screenEnd(0)).toEqual({ kind: 'decided', result: { status: 'decided', winners: [2], reason: 'surrender' } });
+    expect(screenEnd(session, 0)).toEqual({ kind: 'decided', result: { status: 'decided', winners: [2], reason: 'surrender' } });
   });
 
   it('sin ninguna persona (IA contra IA) no hay pantalla que acabar: mirar desde un equipo en pie es un fallo', () => {
     const s = blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]);
     const session = new GameSession(s, [passiveController(), passiveController()]);
-    expect([session.people(), session.personStillPlays()]).toEqual([[], false]);
-    expect(() => session.screenEnd(0)).toThrow(/no ha caido/);
+    expect([people(session), personStillPlays(session)]).toEqual([[], false]);
+    expect(() => screenEnd(session, 0)).toThrow(/no ha caido/);
   });
 
   it('un controlador por equipo', () => {

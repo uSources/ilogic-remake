@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { canStillAct, canStillFire, canStillMove, isUnitTurnState, newUnit } from '@core/rules';
+import { canStillAct, canStillFire, canStillMove, isUnitTurnState } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { markMoved, readyUnit, spendUnit } from '@core/rules/unitTurn';
 import { act, blankState, unitTypeNamed } from './helpers';
 

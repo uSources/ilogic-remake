@@ -1,20 +1,24 @@
 /** Edificios (buildings.json): validacion y su tipo resuelto (`BuildingType`). */
-import { type Checker, checkSprites } from './check';
+import { MAX_LIFE } from '../data';
+import { type Checker, checkSprites, uniqueLetter } from './check';
 import type { BuildingDef, ContentContext, Texts } from './types';
 
-export function validateBuildings(buildings: readonly BuildingDef[], ctx: ContentContext, check: Checker): void {
-  for (const b of buildings) {
-    const s = check.scope(`edificio ${b?.id}`);
-    s.texts('name', b?.name);
-    s.num('earning', b?.earning, { min: 0, int: true });
-    s.num('heals', b?.heals, { min: 0, max: 100, int: true });
-    s.num('protection', b?.protection, { min: 0.05, max: 1 });
-    s.num('vision', b?.vision, { min: 0, max: 20, int: true });
-    checkSprites(s, b?.classicSprite, ctx.terrainIds);
+export function validateBuildings(buildings: readonly BuildingDef[], context: ContentContext, check: Checker): void {
+  const letters = new Set<string>();
+  for (const building of buildings) {
+    const scope = check.scope(`edificio ${building?.id}`);
+    scope.texts('name', building?.name);
+    scope.num('earning', building?.earning, { min: 0, int: true });
+    scope.num('heals', building?.heals, { min: 0, max: MAX_LIFE, int: true });
+    scope.num('protection', building?.protection, { min: 0.05, max: 1 });
+    scope.num('vision', building?.vision, { min: 0, max: 20, int: true });
+    checkSprites(scope, building?.classicSprite, context.terrainIds);
+    if (uniqueLetter(scope, 'textLetter', building?.textLetter, letters))
+      scope.expect(/^[A-Z]$/.test(building.textLetter), 'textLetter tiene que ser una mayuscula (la de otro equipo sale en minuscula)');
   }
   check
     .scope('buildings.json')
-    .expect(buildings.filter((b) => b?.hq).length === 1, 'tiene que haber exactamente un edificio con "hq": true');
+    .expect(buildings.filter((building) => building?.hq).length === 1, 'tiene que haber exactamente un edificio con "hq": true');
 }
 
 /** Un tipo de edificio, resuelto al cargar el contenido (buildings.json). */
@@ -32,6 +36,8 @@ export interface BuildingType {
   readonly vision: number;
   /** Graficos de 2013: prefijo de la imagen segun el terreno, por id de terreno (si no esta, ''). */
   readonly classicSprite: Readonly<Record<string, string>>;
+  /** Letra en el mapa de la partida por texto (mayuscula; minuscula si es de otro equipo). */
+  readonly textLetter: string;
 }
 
 export function buildBuildingTypes(buildings: readonly BuildingDef[]): BuildingType[] {
@@ -44,5 +50,6 @@ export function buildBuildingTypes(buildings: readonly BuildingDef[]): BuildingT
     protection: definition.protection,
     vision: definition.vision,
     classicSprite: { ...definition.classicSprite },
+    textLetter: definition.textLetter,
   }));
 }

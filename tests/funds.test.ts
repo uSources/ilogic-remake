@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { appointGeneral } from '@core/generals';
-import { newUnit } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { capFunds, earn, pay } from '@core/rules/funds';
 import { teamState } from '@core/teams';
 import { blankState, endRoundReport, unitTypeNamed, usePower } from './helpers';

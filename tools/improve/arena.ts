@@ -35,6 +35,7 @@ import { isWinner, matchResult, buildingsOf } from '@core/rules';
 import { armyValue } from '@core/stats';
 import type { GameState, TeamId } from '@core/model';
 import { clearLeader, type Holdings } from '../balance/strength';
+import { commandLine, type CliArgs } from '../cliArgs';
 
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 /** Los pesos de la IA de referencia (los de ai.json al guardarla con --snapshot). */
@@ -47,6 +48,9 @@ function holdingsOf(s: GameState, team: TeamId): Holdings {
 
 /** Que IA ha ganado una partida: la primera de `profiles`, la segunda o ninguna (empate). */
 export type DuelWinner = 'first' | 'second' | null;
+
+/** La IA de cada puesto de la partida (la primera lleva el primer equipo). */
+const DUEL_WINNERS = ['first', 'second'] as const;
 
 /** Una partida: la primera IA lleva el primer equipo y la segunda, el segundo. */
 export function playDuel(seed: number, profiles: [AiProfile, AiProfile], size: number, maxDays: number): DuelWinner {
@@ -61,7 +65,8 @@ export function playDuel(seed: number, profiles: [AiProfile, AiProfile], size: n
   const result = matchResult(s);
   if (result.status === 'draw') return null;
   if (result.status === 'decided') return isWinner(result, first) ? 'first' : 'second';
-  return clearLeader(holdingsOf(s, first), holdingsOf(s, second));
+  const leader = clearLeader([holdingsOf(s, first), holdingsOf(s, second)]);
+  return leader === null ? null : DUEL_WINNERS[leader]!;
 }
 
 export interface ArenaResult {
@@ -75,18 +80,20 @@ export interface ArenaResult {
   high: number;
 }
 
+/** Como acaba una partida para la IA a probar. */
+type Outcome = 'wins' | 'losses' | 'draws';
+
+const outcomeOf = (winner: DuelWinner, swapped: boolean): Outcome =>
+  winner === null ? 'draws' : (winner === 'first') !== swapped ? 'wins' : 'losses';
+
 export function arena(current: AiProfile, baseline: AiProfile, games: number, size: number, maxDays: number): ArenaResult {
-  let wins = 0,
-    losses = 0,
-    draws = 0;
+  const tally: Record<Outcome, number> = { wins: 0, losses: 0, draws: 0 };
   for (let i = 0; i < games; i++) {
     const seed = 1 + Math.floor(i / 2);
     const swapped = i % 2 === 1; // mismo mapa, equipos cambiados
-    const winner = playDuel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays);
-    if (winner === null) draws++;
-    else if ((winner === 'first') !== swapped) wins++;
-    else losses++;
+    tally[outcomeOf(playDuel(seed, swapped ? [baseline, current] : [current, baseline], size, maxDays), swapped)]++;
   }
+  const { wins, losses, draws } = tally;
   const played = wins + losses;
   const rate = played ? wins / played : 0.5;
   const se = played ? 1.96 * Math.sqrt((rate * (1 - rate)) / played) : 0.5;
@@ -128,37 +135,45 @@ function savedBaseline(content: GameContent): AiProfile {
   return baselineProfile(content, readWeights(JSON.parse(readFileSync(BASELINE_FILE, 'utf8'))));
 }
 
+const ARENA_OPTIONS = { snapshot: 'flag', games: 'number', size: 'number', days: 'number', candidate: 'text', rival: 'text' } as const;
+
+type ArenaArgs = CliArgs<typeof ARENA_OPTIONS>;
+
+/** Contra quien juega la IA a probar: la de --rival; si no, la del juego si se prueba un --candidate, y si no, la de referencia. */
+async function rivalFor(args: ArenaArgs, content: GameContent): Promise<{ profile: AiProfile; name: string }> {
+  const rivalFile = args.text('rival');
+  if (rivalFile) return { profile: await profileFrom(rivalFile, content), name: rivalFile };
+  if (args.text('candidate')) return { profile: defaultAiProfile(content), name: 'la del juego' };
+  return { profile: savedBaseline(content), name: 'la de referencia' };
+}
+
+/** El veredicto: el primero cuyo intervalo del 95 % encaja con el resultado. */
+const VERDICTS: readonly { holds: (result: ArenaResult) => boolean; text: string }[] = [
+  { holds: (result) => result.low > 0.5, text: 'MEJOR: la IA a probar gana claramente' },
+  { holds: (result) => result.high < 0.5, text: 'PEOR: la IA a probar pierde claramente' },
+  { holds: () => true, text: 'SIN DIFERENCIA CLARA (hacen falta mas partidas o el cambio no importa)' },
+];
+
+const verdictOf = (result: ArenaResult): string => VERDICTS.find((verdict) => verdict.holds(result))!.text;
+
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  if (args.includes('--snapshot')) return snapshot();
-  const opt = (key: string, fallback: number) => (args.includes(`--${key}`) ? Number(args[args.indexOf(`--${key}`) + 1]) : fallback);
+  const args = commandLine(import.meta.url, ARENA_OPTIONS);
+  if (args.flag('snapshot')) return snapshot();
   const content = defaultContent();
-  const games = opt('games', 200),
-    size = opt('size', 20),
-    days = opt('days', 40);
-  const fileOf = (key: string) => (args.includes(`--${key}`) ? (args[args.indexOf(`--${key}`) + 1] ?? '') : null);
-  const candidateFile = fileOf('candidate'),
-    rivalFile = fileOf('rival');
+  const games = args.number('games', 200);
+  const size = args.number('size', 20);
+  const days = args.number('days', 40);
+  const candidateFile = args.text('candidate');
   const current = candidateFile ? await profileFrom(candidateFile, content) : defaultAiProfile(content);
-  const [rival, rivalName] = rivalFile
-    ? [await profileFrom(rivalFile, content), rivalFile]
-    : candidateFile
-      ? [defaultAiProfile(content), 'la del juego']
-      : [savedBaseline(content), 'la de referencia'];
+  const rival = await rivalFor(args, content);
   const t0 = Date.now();
-  const result = arena(current, rival, games, size, days);
+  const result = arena(current, rival.profile, games, size, days);
   const pct = (x: number) => `${Math.round(x * 100)} %`;
   console.log(
-    `IA a probar contra ${rivalName}: ${result.wins} ganadas, ${result.losses} perdidas, ${result.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`,
+    `IA a probar contra ${rival.name}: ${result.wins} ganadas, ${result.losses} perdidas, ${result.draws} empates (${games} partidas ${size}x${size}, ${((Date.now() - t0) / 1000).toFixed(0)} s)`,
   );
   console.log(`Gana el ${pct(result.rate)} de las decididas (95 %: ${pct(result.low)}-${pct(result.high)})`);
-  const verdict =
-    result.low > 0.5
-      ? 'MEJOR: la IA a probar gana claramente'
-      : result.high < 0.5
-        ? 'PEOR: la IA a probar pierde claramente'
-        : 'SIN DIFERENCIA CLARA (hacen falta mas partidas o el cambio no importa)';
-  console.log(verdict);
+  console.log(verdictOf(result));
 }
 
 if (process.argv[1]?.endsWith('arena.ts')) await main();

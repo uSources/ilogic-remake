@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { armyLimit, buyOptions, commandUsed, newUnit, upkeepOf } from '@core/rules';
+import { armyLimit, buyOptions, commandUsed, upkeepOf } from '@core/rules';
+import { newUnit } from '@core/measure';
 import { dispatch } from '@core/actions';
 import { blankState, unitTypeNamed, endRoundReport, withoutHeadquarters } from './helpers';
 import { teamState } from '@core/teams';

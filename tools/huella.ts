@@ -14,13 +14,14 @@ import { createMatch } from '@core/defaultGames';
 import { skirmishConfig, type MatchTeam } from '@core/match';
 import { seededRng } from '@core/util/random';
 import { defaultContent } from '@core/content/default';
-import { isMatchOver, matchResult } from '@core/rules';
+import { isMatchOver, matchResult, teamUnits } from '@core/rules';
 import { serialize } from '@core/save';
 import { posOf } from '@core/geom';
 import { aiController, controllersFor } from '@core/controllers';
 import { autopilotController, GameSession, runMatch, scriptedController, sequence, type Controller } from '@core/session';
 import { duel, enemiesOf, playerTeam } from '@core/teams';
 import type { GameAction, GameState, MatchSettings, TeamId } from '@core/model';
+import { commandLine } from './cliArgs';
 
 const MAX_DAYS = 30;
 const FIRST_DAY = 1;
@@ -63,8 +64,8 @@ function squadOrders(s: GameState, person: TeamId): GameAction[] {
   if (s.day !== FIRST_DAY) return [];
   const enemies = enemiesOf(s, person);
   const target = s.buildings.find((building) => building.owner !== null && enemies.includes(building.owner));
-  const squad = s.units
-    .filter((unit) => unit.team === person && unit.squad === undefined)
+  const squad = teamUnits(s, person)
+    .filter((unit) => unit.squad === undefined)
     .map((unit) => unit.uid)
     .slice(0, 3);
   if (!target || squad.length < 2) return [];
@@ -115,7 +116,7 @@ function playScenario(scenario: Scenario): string {
   return hash.digest('hex').slice(0, 16);
 }
 
-const onlyTotal = process.argv.includes('--total');
+const onlyTotal = commandLine(import.meta.url, { total: 'flag' }).flag('total') === true;
 const total = createHash('sha256');
 for (const scenario of scenarios()) {
   const fingerprint = playScenario(scenario);

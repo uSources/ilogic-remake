@@ -1,0 +1,434 @@
+{
+  "$schema": "./missions.schema.json",
+  "missions": [
+    {
+      "id": "tutorial",
+      "tutorial": true,
+      "title": {
+        "es": "Primeros pasos",
+        "en": "First steps"
+      },
+      "brief": {
+        "es": "Aprende lo básico en un mapa pequeño: mover, capturar, comprar y atacar. Te iré diciendo qué hacer en cada paso.",
+        "en": "Learn the basics on a small map: moving, capturing, buying and attacking. I will tell you what to do at each step."
+      },
+      "theme": "Plains",
+      "map": [
+        "~~~~~~~~~~~~~~~~",
+        "~...TT.....*..~~",
+        "~..TTT.........~",
+        "~..T....M......~",
+        "~.......M...TT.~",
+        "~..*....MM..T..~",
+        "~.......*......~",
+        "~..TT..........~",
+        "~..T......TT...~",
+        "~.......*..T...~",
+        "~....MM........~",
+        "~.....M....T...~",
+        "~..............~",
+        "~.....TT.....*.~",
+        "~~.....T.......~",
+        "~~~~~~~~~~~~~~~~"
+      ],
+      "buildings": [
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 13 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 13 } },
+        { "type": "City", "owner": 0, "at": { "x": 2, "y": 11 } },
+        { "type": "City", "owner": null, "at": { "x": 4, "y": 10 } },
+        { "type": "City", "owner": null, "at": { "x": 9, "y": 11 } },
+        { "type": "City", "owner": null, "at": { "x": 6, "y": 4 } },
+        { "type": "Base", "owner": 1, "at": { "x": 13, "y": 2 } },
+        { "type": "City", "owner": 1, "at": { "x": 11, "y": 3 } }
+      ],
+      "units": [
+        { "type": "Soldier", "team": 0, "at": { "x": 3, "y": 12 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 1, "y": 12 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 10, "y": 5 }, "life": 50 }
+      ],
+      "teams": [
+        {
+          "controller": "human",
+          "funds": 6000,
+          "objective": {
+            "kind": "hq"
+          }
+        },
+        {
+          "controller": "ai",
+          "funds": 0
+        }
+      ]
+    },
+    {
+      "id": "bridgehead",
+      "title": {
+        "es": "Cabeza de puente",
+        "en": "Bridgehead"
+      },
+      "brief": {
+        "es": "El río parte el valle en dos. Hazte con 6 ciudades antes de que acabe el día 14: la infantería cruza el agua poco profunda, los vehículos no.",
+        "en": "The river splits the valley in two. Own 6 cities before day 14 ends: infantry can wade through shallow water, vehicles cannot."
+      },
+      "theme": "Plains",
+      "map": [
+        "....TT......,,......",
+        "...TTT.....,,..T....",
+        "..........,,..TTT...",
+        ".*........,,........",
+        "......M...,,....*...",
+        "..TT..M....,,.......",
+        "..T........,,...TT..",
+        "............,,..T...",
+        "....*.......,,......",
+        "..........,,,,......",
+        "..TT......,,.....TT.",
+        "...T.....,,......T..",
+        ".........,,..M......",
+        "..M......,,..M...*..",
+        "..M.....,,..........",
+        ".......,,.....TT....",
+        "..*....,,......T....",
+        "......,,............",
+        "..TT..,,.....*......",
+        "......,,............"
+      ],
+      "buildings": [
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 17 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 17 } },
+        { "type": "City", "owner": 0, "at": { "x": 3, "y": 15 } },
+        { "type": "City", "owner": null, "at": { "x": 8, "y": 13 } },
+        { "type": "City", "owner": null, "at": { "x": 5, "y": 10 } },
+        { "type": "City", "owner": null, "at": { "x": 12, "y": 16 } },
+        { "type": "City", "owner": null, "at": { "x": 15, "y": 12 } },
+        { "type": "City", "owner": null, "at": { "x": 15, "y": 8 } },
+        { "type": "City", "owner": null, "at": { "x": 7, "y": 3 } },
+        { "type": "City", "owner": null, "at": { "x": 13, "y": 3 } },
+        { "type": "City", "owner": null, "at": { "x": 17, "y": 2 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 1 } },
+        { "type": "Factory", "owner": 1, "at": { "x": 18, "y": 3 } },
+        { "type": "City", "owner": 1, "at": { "x": 15, "y": 3 } }
+      ],
+      "units": [
+        { "type": "Soldier", "team": 0, "at": { "x": 1, "y": 16 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 3, "y": 16 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 5, "y": 16 } },
+        { "type": "Car", "team": 0, "at": { "x": 5, "y": 17 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 13, "y": 2 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 12, "y": 4 } },
+        { "type": "Tank", "team": 1, "at": { "x": 16, "y": 4 } }
+      ],
+      "teams": [
+        {
+          "controller": "human",
+          "funds": 4000,
+          "objective": {
+            "kind": "capture",
+            "count": 6,
+            "type": "City",
+            "days": 14
+          }
+        },
+        {
+          "controller": "ai",
+          "funds": 6000
+        }
+      ]
+    },
+    {
+      "id": "hold",
+      "title": {
+        "es": "Resistir",
+        "en": "Hold the line"
+      },
+      "brief": {
+        "es": "Un ejército mucho mayor viene hacia tu Base. Aguanta hasta el final del día 8. Aprovecha el terreno y el contraataque: no salgas a buscarlos.",
+        "en": "A much larger army is marching on your HQ. Hold out until the end of day 8. Use the terrain and counterattacks: let them come to you."
+      },
+      "theme": "Desert",
+      "map": [
+        "..........TT........",
+        "....T.....T.....M...",
+        "...TT...........M...",
+        "...........*........",
+        "......MM............",
+        ".......M.....TT.....",
+        "..T..........T......",
+        "..TT.......*........",
+        "........M...........",
+        "........M......TT...",
+        "..*.............T...",
+        ".....TT.............",
+        ".....T.....M........",
+        "...........M....*...",
+        ".M...............T..",
+        ".M......TT.......T..",
+        "........T...........",
+        "...*................",
+        ".......MM.....T.....",
+        "..............T....."
+      ],
+      "buildings": [
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 17 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 18 } },
+        { "type": "City", "owner": 0, "at": { "x": 2, "y": 15 } },
+        { "type": "City", "owner": 0, "at": { "x": 6, "y": 16 } },
+        { "type": "City", "owner": null, "at": { "x": 10, "y": 10 } },
+        { "type": "City", "owner": null, "at": { "x": 12, "y": 6 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 2 } },
+        { "type": "Factory", "owner": 1, "at": { "x": 15, "y": 1 } },
+        { "type": "Airport", "owner": 1, "at": { "x": 18, "y": 4 } },
+        { "type": "City", "owner": 1, "at": { "x": 13, "y": 3 } }
+      ],
+      "units": [
+        { "type": "Tank", "team": 0, "at": { "x": 4, "y": 15 } },
+        { "type": "Tank", "team": 0, "at": { "x": 7, "y": 14 } },
+        { "type": "Artillery", "team": 0, "at": { "x": 3, "y": 16 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 5, "y": 13 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 8, "y": 15 } },
+        { "type": "Antiair", "team": 0, "at": { "x": 6, "y": 15 } },
+        { "type": "Tank", "team": 1, "at": { "x": 14, "y": 6 } },
+        { "type": "Tank", "team": 1, "at": { "x": 12, "y": 8 } },
+        { "type": "Tank", "team": 1, "at": { "x": 16, "y": 7 } },
+        { "type": "LTank", "team": 1, "at": { "x": 10, "y": 5 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 13, "y": 9 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 11, "y": 11 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 15, "y": 10 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 9, "y": 7 } },
+        { "type": "Artillery", "team": 1, "at": { "x": 16, "y": 4 } },
+        { "type": "Artillery", "team": 1, "at": { "x": 18, "y": 6 } }
+      ],
+      "teams": [
+        {
+          "controller": "human",
+          "funds": 6000,
+          "objective": {
+            "kind": "survive",
+            "days": 8
+          }
+        },
+        {
+          "controller": "ai",
+          "funds": 15000
+        }
+      ]
+    },
+    {
+      "id": "escort",
+      "title": {
+        "es": "Convoy",
+        "en": "Convoy"
+      },
+      "brief": {
+        "es": "Lleva el camión de suministros (el que tiene la flecha) hasta la ciudad del noreste antes de que acabe el día 12. Si lo destruyen, se acabó.",
+        "en": "Take the supply truck to the city in the north-east before day 12 ends. If it is destroyed, the mission is over."
+      },
+      "theme": "Forest",
+      "map": [
+        "..TT..TTTT..TT......",
+        ".TT...TTTT...T......",
+        ".....TTT.......TTT..",
+        "..*..........TTTT...",
+        "....TT..M.....TT....",
+        "...TTT..M...........",
+        ".......MM...TT...*..",
+        "..TT.........T......",
+        "..TTT....*........TT",
+        "......TT.....M....T.",
+        ".....TTT.....M......",
+        "..M.........TTT.....",
+        "..M...*......T....*.",
+        ".....TT.............",
+        "....TTT...M....TT...",
+        "..........M...TTT...",
+        ".TT.....*.......T...",
+        ".T..........TT......",
+        "...........TTT..*...",
+        "....TT.............."
+      ],
+      "buildings": [
+        { "type": "Base", "owner": 0, "at": { "x": 1, "y": 19 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 3, "y": 18 } },
+        { "type": "City", "owner": null, "at": { "x": 18, "y": 2 } },
+        { "type": "City", "owner": null, "at": { "x": 9, "y": 9 } },
+        { "type": "City", "owner": null, "at": { "x": 3, "y": 13 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 0 } },
+        { "type": "Factory", "owner": 1, "at": { "x": 19, "y": 1 } },
+        { "type": "City", "owner": 1, "at": { "x": 12, "y": 3 } }
+      ],
+      "units": [
+        { "type": "Supplier", "team": 0, "at": { "x": 2, "y": 17 }, "vip": true },
+        { "type": "Tank", "team": 0, "at": { "x": 3, "y": 16 } },
+        { "type": "Tank", "team": 0, "at": { "x": 4, "y": 17 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 1, "y": 15 } },
+        { "type": "Antiair", "team": 0, "at": { "x": 5, "y": 18 } },
+        { "type": "Tank", "team": 1, "at": { "x": 10, "y": 8 } },
+        { "type": "Tank", "team": 1, "at": { "x": 14, "y": 11 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 8, "y": 12 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 12, "y": 5 } },
+        { "type": "Artillery", "team": 1, "at": { "x": 15, "y": 6 } },
+        { "type": "LTank", "team": 1, "at": { "x": 16, "y": 9 } }
+      ],
+      "teams": [
+        {
+          "controller": "human",
+          "funds": 5000,
+          "objective": {
+            "kind": "escort",
+            "to": {
+              "x": 18,
+              "y": 2
+            },
+            "days": 12
+          }
+        },
+        {
+          "controller": "ai",
+          "funds": 8000
+        }
+      ]
+    },
+    {
+      "id": "cleanup",
+      "title": {
+        "es": "Limpieza",
+        "en": "Clean sweep"
+      },
+      "brief": {
+        "es": "Los restos de un ejército enemigo resisten en la nieve, sin fábricas. Destruye todas sus unidades antes de que acabe el día 10.",
+        "en": "The remains of an enemy army hold out in the snow, with no factories. Destroy all their units before day 10 ends."
+      },
+      "theme": "Snowy",
+      "map": [
+        "iii.......PP....iiii",
+        "ii.....*..P.......ii",
+        "i...PP.........*...i",
+        "....P.....NN.......i",
+        "..........N.........",
+        "..*...........PP....",
+        "......PP.......P....",
+        ".......P...*........",
+        "...N..........N.....",
+        "...N...........N....",
+        "........PP..........",
+        "..*......P.....*....",
+        "..............PP....",
+        "....PP...N.....P....",
+        ".....P...N..........",
+        "..........*.....PP..",
+        "i...*...........P..i",
+        "ii....PP...........i",
+        "iii....P......*...ii",
+        "iiii.............iii"
+      ],
+      "buildings": [
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 16 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 15 } },
+        { "type": "City", "owner": 0, "at": { "x": 3, "y": 13 } },
+        { "type": "Airport", "owner": 0, "at": { "x": 6, "y": 16 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 3 } }
+      ],
+      "units": [
+        { "type": "Tank", "team": 0, "at": { "x": 5, "y": 14 } },
+        { "type": "Tank", "team": 0, "at": { "x": 4, "y": 12 } },
+        { "type": "Artillery", "team": 0, "at": { "x": 2, "y": 14 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 6, "y": 13 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 13, "y": 5 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 15, "y": 8 } },
+        { "type": "Tank", "team": 1, "at": { "x": 11, "y": 7 } },
+        { "type": "Tank", "team": 1, "at": { "x": 16, "y": 11 } },
+        { "type": "Artillery", "team": 1, "at": { "x": 14, "y": 2 } },
+        { "type": "Antiair", "team": 1, "at": { "x": 12, "y": 10 } },
+        { "type": "LTank", "team": 1, "at": { "x": 17, "y": 13 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 10, "y": 15 } }
+      ],
+      "teams": [
+        {
+          "controller": "human",
+          "funds": 10000,
+          "objective": {
+            "kind": "destroy",
+            "days": 10
+          }
+        },
+        {
+          "controller": "ai",
+          "funds": 0
+        }
+      ]
+    },
+    {
+      "id": "assault",
+      "title": {
+        "es": "Asalto final",
+        "en": "Final assault"
+      },
+      "brief": {
+        "es": "El enemigo tiene más dinero y se ha atrincherado tras los pantanos. Conquista su Base.",
+        "en": "The enemy has more money and has dug in behind the swamps. Take their HQ."
+      },
+      "theme": "Swamp",
+      "map": [
+        "....,,......TT......",
+        "...,,..*.....T...TT.",
+        "..,,..............T.",
+        ".,,....TT.....M.....",
+        ",,.....T......M..*..",
+        "......,,............",
+        "..*..,,....TT.......",
+        ".....,,....T.....,,.",
+        "......,,........,,..",
+        "..TT...,,......,,...",
+        "..T.....,,....,,..*.",
+        ".........,,..,,.....",
+        "....*.....,,,,......",
+        "..M........,,...TT..",
+        "..M.........,,..T...",
+        ".......TT....,,.....",
+        "..*....T......,,....",
+        "...............,,...",
+        ".TT....*........,,..",
+        ".T...............,,."
+      ],
+      "buildings": [
+        { "type": "Base", "owner": 0, "at": { "x": 2, "y": 17 } },
+        { "type": "Factory", "owner": 0, "at": { "x": 4, "y": 18 } },
+        { "type": "City", "owner": 0, "at": { "x": 3, "y": 15 } },
+        { "type": "Airport", "owner": 0, "at": { "x": 6, "y": 16 } },
+        { "type": "City", "owner": null, "at": { "x": 9, "y": 6 } },
+        { "type": "City", "owner": null, "at": { "x": 14, "y": 9 } },
+        { "type": "City", "owner": null, "at": { "x": 6, "y": 12 } },
+        { "type": "City", "owner": null, "at": { "x": 15, "y": 13 } },
+        { "type": "City", "owner": null, "at": { "x": 11, "y": 17 } },
+        { "type": "City", "owner": null, "at": { "x": 4, "y": 3 } },
+        { "type": "Oil", "owner": null, "at": { "x": 9, "y": 15 } },
+        { "type": "Stronghold", "owner": null, "at": { "x": 10, "y": 8 } },
+        { "type": "Base", "owner": 1, "at": { "x": 17, "y": 2 } },
+        { "type": "Factory", "owner": 1, "at": { "x": 15, "y": 1 } },
+        { "type": "City", "owner": 1, "at": { "x": 18, "y": 4 } },
+        { "type": "Airport", "owner": 1, "at": { "x": 13, "y": 2 } }
+      ],
+      "units": [
+        { "type": "Soldier", "team": 0, "at": { "x": 3, "y": 16 } },
+        { "type": "Soldier", "team": 0, "at": { "x": 5, "y": 17 } },
+        { "type": "Tank", "team": 0, "at": { "x": 5, "y": 15 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 16, "y": 3 } },
+        { "type": "Soldier", "team": 1, "at": { "x": 14, "y": 4 } },
+        { "type": "Tank", "team": 1, "at": { "x": 16, "y": 2 } }
+      ],
+      "teams": [
+        {
+          "controller": "human",
+          "funds": 8000,
+          "objective": {
+            "kind": "hq"
+          }
+        },
+        {
+          "controller": "ai",
+          "funds": 14000
+        }
+      ]
+    }
+  ]
+}

@@ -7,14 +7,10 @@ export interface Texts {
 }
 
 /**
- * Tipos de movimiento: por donde pasa una unidad y cuanto le cuesta cada terreno (terrain.json,
- * "movement"). Es el nombre que se escribe en los JSON.
+ * Un tipo de movimiento: por donde pasa una unidad y cuanto le cuesta cada terreno. Es el id de
+ * movements.json (contenido, no codigo: `content.movements`), el nombre que escriben los demas JSON.
  */
-export const MoveType = { FOOT: 'foot', VEHICLE: 'vehicle', AIR: 'air', AMPHIBIOUS: 'amphibious' } as const;
-export type MoveType = (typeof MoveType)[keyof typeof MoveType];
-
-/** Todos los tipos de movimiento, en el orden de MoveType. */
-export const MOVEMENTS: readonly MoveType[] = Object.values(MoveType);
+export type MoveType = string;
 
 /**
  * Habilidad pasiva de una unidad (units.json, "abilities"). Siempre esta activa; no es una orden.
@@ -86,6 +82,8 @@ export interface BuildingDef {
   /** Multiplicador de la probabilidad de acierto contra quien esta encima (menos = mas defensa). */
   protection: number;
   vision: number;
+  /** Letra en el mapa de la partida por texto (mayuscula; minuscula si es de otro equipo). */
+  textLetter: string;
   classicSprite?: Record<string, string>;
   notes?: string;
 }
@@ -103,12 +101,16 @@ export interface TerrainDef {
   movement: Record<MoveType, number | null>;
   /** Letra del terreno en los mapas en texto de las misiones si no depende del tema (themes.json, "mapLetters"). */
   mapLetter?: string;
+  /** Letra en el mapa de la partida por texto (npm run play), una por terreno. */
+  textLetter: string;
   /** El suelo llano: el de los mapas vacios (laboratorio, duelos, pruebas). Exactamente uno. */
   plain?: boolean;
 }
 
 /** Lo que cada parte del contenido puede consultar de las demas al validarse (ids conocidos). */
 export interface ContentContext {
+  /** Los tipos de movimiento (movements.json), en su orden. */
+  movementIds: readonly string[];
   unitIds: ReadonlySet<string>;
   buildingIds: ReadonlySet<string>;
   terrainIds: ReadonlySet<string>;

@@ -5,6 +5,7 @@
  */
 import Phaser from 'phaser';
 import type { InputCommand } from '../../controls/inputCommands';
+import { onceEachKey } from '../../controls/browserKeys';
 import { keyCommand } from '../../controls/keyboard';
 import { menuKeyCommand, type ControlContext, type MenuCommand } from '../../controls/menu';
 import type { PointerGestures, PointerIn } from '../../controls/pointer';
@@ -56,7 +57,10 @@ export function bindInput(scene: Phaser.Scene, target: InputTarget, gestures: Po
   if (scene.input.manager.pointersTotal < 3) scene.input.addPointer(1);
   // Que el navegador no use estas teclas (Tab cambia el foco, Espacio desplaza la pagina...).
   scene.input.keyboard!.addCapture('TAB,SPACE,UP,DOWN,LEFT,RIGHT,BACKSPACE');
-  scene.input.keyboard!.on('keydown', (event: KeyboardEvent) => onKey(event, target));
+  scene.input.keyboard!.on(
+    'keydown',
+    onceEachKey((event: KeyboardEvent) => onKey(event, target)),
+  );
   // Raton y dedos: el adaptador decide el gesto; GameScene.pointerTarget() dice que hace en la partida.
   scene.input.on(Phaser.Input.Events.POINTER_MOVE, (pointer: Phaser.Input.Pointer) => gestures.move(pointerIn(pointer, false)));
   scene.input.on(Phaser.Input.Events.POINTER_DOWN, (pointer: Phaser.Input.Pointer) =>

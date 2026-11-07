@@ -5,16 +5,12 @@
  * al terminar el turno, en orden. La partida se juega con la misma sesion que la pantalla (GameSession):
  * lo que pasa solo al acabar y empezar cada turno, igual.
  */
-import { aiTurn, defaultAiProfile } from '@core/ai';
-import { carryOut } from '@core/actions';
-import { playerView, seeing } from '@core/playerView';
 import { playerTeam, shownTeamNumber, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createMatch, loadGame } from '@core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '@core/match';
 import { posKey } from '@core/geom';
-import { seededRng } from '@core/util/random';
 import { mapGrid } from '@core/mapGrid';
 import { generalOf } from '@core/generals';
 import { missionById } from '@core/missions';
@@ -34,32 +30,12 @@ import {
   visibility,
   canStillAct,
   buildingsOf,
+  teamUnits,
 } from '@core/rules';
 import { serialize } from '@core/save';
-import { screenControllers } from '@core/controllers';
-import { GameSession, runMatch, type ActedStep } from '@core/session';
-import type { DefeatReason, GameAction, GameEvent, GameState, InterruptionKind, Pos, TeamId, Unit } from '@core/model';
-
-/** Una letra por terreno (por id de terrain.json; uno que no este sale como '?'). */
-const TERRAIN_CHAR: Readonly<Record<string, string>> = {
-  Grass: '.',
-  Flowers: ',',
-  Woods: 'f',
-  GrassCliff: '^',
-  Sand: ':',
-  Cactus: 'c',
-  SandCliff: 'M',
-  Snow: '_',
-  Frosty: 'o',
-  SnowWood: 't',
-  SnowCliff: '%',
-  Ice: 'i',
-  Water: '~',
-  SWater: '-',
-  DWater: '=',
-};
-/** Edificios: inicial (mayuscula = tuyo, minuscula = enemigo, * delante = neutral). */
-const BUILDING_CHAR: Readonly<Record<string, string>> = { City: 'C', Oil: 'O', Factory: 'F', Stronghold: 'S', Airport: 'A', Base: 'B' };
+import { aiController, screenControllers } from '@core/controllers';
+import { GameSession, personStillPlays, runMatch, screenEnd, type ActedStep } from '@core/session';
+import type { DefeatReason, GameAction, GameEvent, GameEventOf, GameState, InterruptionKind, Pos, TeamId, Unit } from '@core/model';
 
 export interface TextMatchOptions {
   seed?: number;
@@ -87,6 +63,8 @@ export class TextMatch {
   private told: string[] = [];
   /** Los sucesos del ultimo fin de ronda (para contar lo cobrado). */
   private lastRound: GameEvent[] = [];
+  /** La IA esta jugando el turno de la persona (orden `ai`): lo que hace se cuenta como suyo. */
+  private aiPlaysForMe = false;
 
   /** Los demas equipos, en orden. */
   private get others(): TeamId[] {
@@ -106,93 +84,81 @@ export class TextMatch {
   /** Apunta lo que pasa: los sucesos que se cuentan (con quien los hace) y lo del fin de ronda. */
   private note(step: ActedStep): void {
     if (step.events.some((event) => event.kind === 'newDay')) this.lastRound = step.events;
-    const prefix = step.team === this.me ? 'tu: ' : `equipo ${shownTeamNumber(step.team)}: `;
+    // Lo que pasa al acabar el turno ya no es de la IA que jugaba por ti (como cuando lo acabas tu).
+    if (step.action.kind === 'endTurn') this.aiPlaysForMe = false;
+    const prefix = step.team !== this.me ? `equipo ${shownTeamNumber(step.team)}: ` : this.aiPlaysForMe ? 'tu IA: ' : 'tu: ';
     this.told.push(...describeAll(this.s, step.events, prefix));
   }
 
   /**
    * La partida sigue sola hasta que le toca a una persona (desde entonces se juega con ella), se acaba
-   * o ya no juega ninguna persona (se acaba para esta pantalla, como en el juego: GameSession.screenEnd).
+   * o ya no juega ninguna persona (se acaba para esta pantalla, como en el juego: screenEnd).
    */
   private advance(): void {
-    const step = runMatch(this.session, { until: () => !this.session.personStillPlays() });
+    const step = runMatch(this.session, { until: () => !personStillPlays(this.session) });
     if (step.kind === 'awaitingInput') this.me = step.team;
   }
 
+  /** Las ordenes, en ingles y en español; `plays`: juega (no vale con la partida acabada para esta pantalla). */
+  private static readonly COMMANDS: readonly TextCommand[] = [
+    { names: ['', '#'], plays: false, run: () => '' },
+    { names: ['help', 'ayuda'], plays: false, run: () => HELP },
+    { names: ['map', 'mapa'], plays: false, run: (match) => match.map() },
+    {
+      names: ['units', 'unidades'],
+      plays: false,
+      run: (match, words) => match.units(words.list[0] === undefined ? null : match.teamShownAs(words.numberAt(0))),
+    },
+    { names: ['unit', 'unidad'], plays: false, run: (match, words) => match.unitInfo(match.mine(words.numberAt(0), false)) },
+    { names: ['move', 'mover'], plays: true, run: (match, words) => match.move(match.mine(words.numberAt(0)), words.posAt(1)) },
+    { names: ['attack', 'atacar'], plays: true, run: (match, words) => match.attack(match.mine(words.numberAt(0)), words.posAt(1)) },
+    { names: ['capture', 'capturar'], plays: true, run: (match, words) => match.capture(match.mine(words.numberAt(0))) },
+    {
+      names: ['wait', 'esperar'],
+      plays: true,
+      run: (match, words) => {
+        match.perform({ kind: 'wait', uid: match.mine(words.numberAt(0)).uid }, 'no puede esperar');
+        return 'ok';
+      },
+    },
+    { names: ['buy', 'comprar'], plays: true, run: (match, words) => match.buy(words.posAt(0), words.list[2] ?? '') },
+    {
+      names: ['power', 'poder'],
+      plays: true,
+      run: (match, words) => match.power(words.list[0] ?? '', words.list[1] === undefined ? null : words.posAt(1)),
+    },
+    { names: ['end', 'fin'], plays: true, run: (match) => match.endTurn(false) },
+    { names: ['ai', 'ia'], plays: true, run: (match) => match.endTurn(true) },
+    { names: ['surrender', 'rendirse'], plays: true, run: (match) => match.surrender() },
+    { names: ['status', 'estado'], plays: false, run: (match) => match.status() },
+    { names: ['state', 'json'], plays: false, run: (match) => serialize(match.s) },
+  ];
+
+  private static readonly COMMAND_BY_NAME: ReadonlyMap<string, TextCommand> = new Map(
+    TextMatch.COMMANDS.flatMap((command) => command.names.map((name) => [name, command] as const)),
+  );
+
   /** Ejecuta una orden y devuelve la respuesta. Errores de uso: texto que empieza por "error:". */
   run(line: string): string {
-    const [command = '', ...words] = line.trim().split(/\s+/);
-    const numberAt = (position: number) => {
-      const value = Number(words[position]);
-      if (!Number.isInteger(value)) throw new UsageError(`falta un numero en la posicion ${position + 1}`);
-      return value;
-    };
+    const [name = '', ...words] = line.trim().split(/\s+/);
     try {
-      const verb = command.toLowerCase();
+      const command = TextMatch.COMMAND_BY_NAME.get(name.toLowerCase());
+      if (!command) return `error: orden desconocida "${name}" (help para ver las ordenes)`;
       // Acabada para esta pantalla, solo se mira: nada de seguir jugando (ni de exportar mas jugadas).
-      if (PLAY_COMMANDS.has(verb) && this.session.screenEnd(this.me)) return `error: la partida ha acabado (${this.result()})`;
-      switch (verb) {
-        case '':
-        case '#':
-          return '';
-        case 'help':
-        case 'ayuda':
-          return HELP;
-        case 'map':
-        case 'mapa':
-          return this.map();
-        case 'units':
-        case 'unidades':
-          return this.units(words[0] === undefined ? null : numberAt(0));
-        case 'unit':
-        case 'unidad':
-          return this.unitInfo(this.mine(numberAt(0), false));
-        case 'move':
-        case 'mover':
-          return this.move(this.mine(numberAt(0)), { x: numberAt(1), y: numberAt(2) });
-        case 'attack':
-        case 'atacar':
-          return this.attack(this.mine(numberAt(0)), { x: numberAt(1), y: numberAt(2) });
-        case 'capture':
-        case 'capturar':
-          return this.capture(this.mine(numberAt(0)));
-        case 'wait':
-        case 'esperar':
-          this.perform({ kind: 'wait', uid: this.mine(numberAt(0)).uid }, 'no puede esperar');
-          return 'ok';
-        case 'buy':
-        case 'comprar':
-          return this.buy({ x: numberAt(0), y: numberAt(1) }, words[2] ?? '');
-        case 'power':
-        case 'poder':
-          return this.power(words[0] ?? '', words[1] === undefined ? null : { x: numberAt(1), y: numberAt(2) });
-        case 'end':
-        case 'fin':
-          return this.endTurn(false);
-        case 'ai':
-        case 'ia':
-          return this.endTurn(true);
-        case 'surrender':
-        case 'rendirse': {
-          // Lo que cuenta rendirse (tu caida), y despues lo que pase al seguir los demas.
-          this.told = [];
-          this.perform({ kind: 'surrender' }, 'no puede rendirse');
-          const said = this.told;
-          return [...said, this.endTurn(false)].join('\n');
-        }
-        case 'status':
-        case 'estado':
-          return this.status();
-        case 'state':
-        case 'json':
-          return serialize(this.s);
-        default:
-          return `error: orden desconocida "${command}" (help para ver las ordenes)`;
-      }
+      if (command.plays && screenEnd(this.session, this.me)) return `error: la partida ha acabado (${this.result()})`;
+      return command.run(this, commandWords(words));
     } catch (error) {
       if (error instanceof UsageError) return `error: ${error.message}`;
       throw error;
     }
+  }
+
+  /** Rendirse: lo que cuenta (tu caida) y despues lo que pase al seguir los demas. */
+  private surrender(): string {
+    this.told = [];
+    this.perform({ kind: 'surrender' }, 'no puede rendirse');
+    const said = this.told;
+    return [...said, this.endTurn(false)].join('\n');
   }
 
   private mine(uid: number, needActive = true): Unit {
@@ -207,10 +173,9 @@ export class TextMatch {
   /** Mapa en texto: terreno, edificios y unidades (las enemigas solo si se ven). */
   map(): string {
     const s = this.s;
-    const vis = visibility(s, this.me);
+    const visible = visibility(s, this.me);
     const map = mapGrid(s);
-    const width = map.width,
-      height = map.height;
+    const { width, height } = map;
     const head = '    ' + Array.from({ length: width }, (_, x) => String(x % 10).padStart(3)).join('');
     const rows = [head];
     for (let y = 0; y < height; y++) {
@@ -218,14 +183,14 @@ export class TextMatch {
       for (let x = 0; x < width; x++) {
         const unit = unitAt(s, { x, y });
         const building = buildingAt(s, { x, y });
-        let cell = ' ' + (TERRAIN_CHAR[terrainAt(s, { x, y }).id] ?? '?') + ' ';
+        let cell = ` ${terrainAt(s, { x, y }).textLetter} `;
         if (building) {
-          const char = BUILDING_CHAR[buildingTypeOf(s, building).id] ?? '?';
+          const char = buildingTypeOf(s, building).textLetter;
           cell = building.owner === null ? `*${char} ` : ` ${building.owner === this.me ? char : char.toLowerCase()} `;
         }
-        if (unit && unit.carrier === null && (unit.team === this.me || vis.at({ x, y })))
+        if (unit && unit.carrier === null && (unit.team === this.me || visible.at({ x, y })))
           cell = (unit.team === this.me ? '+' : '-') + String(unit.uid).padStart(2, '0').slice(-2);
-        else if (!vis.at({ x, y }) && !building) cell = ' ? ';
+        else if (!visible.at({ x, y }) && !building) cell = ' ? ';
         row += cell;
       }
       rows.push(row);
@@ -233,13 +198,20 @@ export class TextMatch {
     return `${rows.join('\n')}\n${legend(this.s)}`;
   }
 
-  units(team: number | null): string {
-    const vis = visibility(this.s, this.me);
-    const list = this.s.units.filter((unit) => (team === null || unit.team === team) && (unit.team === this.me || vis.at(unit)));
+  /** El equipo que se enseña con ese numero (`shownTeamNumber`: el 1 es el primero). */
+  private teamShownAs(shown: number): TeamId {
+    const team = teamIds(this.s).find((candidate) => shownTeamNumber(candidate) === shown);
+    if (team === undefined) throw new UsageError(`no hay equipo ${shown} (son del 1 al ${this.s.teams.length})`);
+    return team;
+  }
+
+  units(team: TeamId | null): string {
+    const visible = visibility(this.s, this.me);
+    const list = this.s.units.filter((unit) => (team === null || unit.team === team) && (unit.team === this.me || visible.at(unit)));
     if (!list.length) return '(ninguna)';
     return list
       .map((unit) => {
-        const usedTag = [canStillAct(unit) ? '' : 'usada'].filter(Boolean).join(' ');
+        const usedTag = canStillAct(unit) ? '' : 'usada';
         return `${String(unit.uid).padStart(3)} ${unit.team === this.me ? 'tuya   ' : 'enemiga'} ${unitTypeOf(this.s, unit).id.padEnd(13)} (${unit.x},${unit.y}) vida ${unit.life} ${usedTag}`;
       })
       .join('\n');
@@ -251,7 +223,7 @@ export class TextMatch {
     const tiles = reachableTiles(range);
     return [
       `${unit.uid} ${unitTypeOf(this.s, unit).id} en (${unit.x},${unit.y}), vida ${unit.life}, ${canStillAct(unit) ? 'puede actuar' : 'ya ha actuado'}`,
-      `puede ir a ${tiles.length} casillas: ${tiles.slice(0, 40).map(posKey).join(' ')}${tiles.length > 40 ? ' ...' : ''}`,
+      `puede ir a ${tiles.length} casillas: ${tiles.slice(0, TILES_SHOWN).map(posKey).join(' ')}${tiles.length > TILES_SHOWN ? ' ...' : ''}`,
       `objetivos desde aqui: ${targets.length ? targets.map((unit) => `${unit.uid} ${unitTypeOf(this.s, unit).id} (${unit.x},${unit.y})`).join(', ') : 'ninguno'}`,
       canCapture(this.s, unit) ? 'puede capturar el edificio de debajo' : '',
     ]
@@ -324,12 +296,12 @@ export class TextMatch {
    */
   private endTurn(aiForMe: boolean): string {
     const before = this.me;
-    const out = aiForMe ? this.playMyTurnWithAi() : [];
     this.told = [];
     this.lastRound = [];
-    this.session.finishInput(before);
+    if (aiForMe) this.handTurnToAi();
+    else this.session.finishInput(before);
     this.advance();
-    out.push(...this.told);
+    const out = [...this.told];
     out.push(this.dayLine(before));
     if (this.me !== before) out.push(`--- turno del equipo ${shownTeamNumber(this.me)}`);
     const result = this.result();
@@ -345,21 +317,19 @@ export class TextMatch {
     return `--- dia ${this.s.day}: +${income} de ingresos, ${funds}`;
   }
 
-  /** La IA juega tu turno, por la sesion (sus acciones quedan apuntadas como las tuyas): lo que ha hecho. */
-  private playMyTurnWithAi(): string[] {
-    return describeAll(this.s, this.aiPlaysMyTurn(), 'tu IA: ');
-  }
-
-  /** Los sucesos de la IA jugando tu turno: propone y la sesion manda, como si fueras tu. */
-  private aiPlaysMyTurn(): GameEvent[] {
-    const view = playerView(this.s, this.me);
-    const plan = seeing(view, aiTurn(view, defaultAiProfile(this.s.content), seededRng(view.turnSeed)));
-    return carryOut(plan, (action) => this.session.act(this.me, action)).events;
+  /**
+   * La IA juega lo que queda de tu turno: se lo dejas a la sesion (`handOver`), que lo juega como el
+   * de cualquier equipo de la IA (su perfil, su vista; sus acciones quedan apuntadas como tuyas) y
+   * despues pasa el turno.
+   */
+  private handTurnToAi(): void {
+    this.aiPlaysForMe = true;
+    this.session.handOver(this.me, aiController());
   }
 
   /** Como va la partida para ti: sigue, ganada, perdida o empate (y por que). */
   private result(): string {
-    const end = this.session.screenEnd(this.me);
+    const end = screenEnd(this.session, this.me);
     if (!end) return 'sigue';
     if (end.kind === 'out') return `perdida (${DEFEAT_TEXT[end.fall.reason]}; los demas siguen sin personas)`;
     return `${OUTCOME_TEXT[outcomeFor(end.result, this.me)]} (${end.result.reason})`;
@@ -369,7 +339,7 @@ export class TextMatch {
     const s = this.s;
     const me = this.me;
     const own = (team: TeamId) => buildingsOf(s, team).length;
-    const unitsOf = (team: TeamId) => s.units.filter((unit) => unit.team === team).length;
+    const unitsOf = (team: TeamId) => teamUnits(s, team).length;
     const others = (count: (team: TeamId) => number) => this.others.map(count).join('/');
     const general = teamState(s, me).general;
     return [
@@ -377,8 +347,8 @@ export class TextMatch {
       ...(general ? [`general ${general.id}: carga ${general.charge.toFixed(1)}`] : []),
       `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${this.result()}`,
       `sin usar: ${
-        s.units
-          .filter((unit) => unit.team === me && canStillAct(unit) && unit.carrier === null)
+        teamUnits(s, me)
+          .filter((unit) => canStillAct(unit) && unit.carrier === null)
           .map((unit) => unit.uid)
           .join(' ') || 'ninguna'
       }`,
@@ -387,6 +357,33 @@ export class TextMatch {
 }
 
 class UsageError extends Error {}
+
+/** Cuantas casillas a las que puede ir una unidad se enumeran (`unit`); de las demas, solo cuantas son. */
+const TILES_SHOWN = 40;
+
+/** Las palabras que siguen a una orden y como leer de ellas un numero o una casilla. */
+interface CommandWords {
+  list: readonly string[];
+  numberAt(position: number): number;
+  /** La casilla de las palabras `position` (x) y la siguiente (y). */
+  posAt(position: number): Pos;
+}
+
+function commandWords(list: readonly string[]): CommandWords {
+  const numberAt = (position: number) => {
+    const value = Number(list[position]);
+    if (!Number.isInteger(value)) throw new UsageError(`falta un numero en la posicion ${position + 1}`);
+    return value;
+  };
+  return { list, numberAt, posAt: (position) => ({ x: numberAt(position), y: numberAt(position + 1) }) };
+}
+
+/** Una orden de la partida por texto: sus nombres, si juega y lo que hace. */
+interface TextCommand {
+  names: readonly string[];
+  plays: boolean;
+  run(match: TextMatch, words: CommandWords): string;
+}
 
 /** La partida guardada (si no es valida, para aqui). */
 function loadedGame(json: string): GameState {
@@ -409,7 +406,7 @@ function checkedGeneral(id: string | undefined): string | null {
  */
 function matchConfigOf(options: TextMatchOptions, seed: number): MatchConfig {
   if (options.mission) {
-    if (!missionById(options.mission)) throw new Error(`No existe la mision "${options.mission}"`);
+    if (!missionById(defaultContent(), options.mission)) throw new Error(`No existe la mision "${options.mission}"`);
     return { mode: 'mission', mission: options.mission, seed };
   }
   return skirmishConfig({
@@ -437,28 +434,6 @@ function describeAll(s: GameState, events: Iterable<GameEvent>, prefix: string):
   return lines;
 }
 
-/** Las ordenes que juegan (las demas solo miran: mapa, unidades, estado, la partida en JSON). */
-const PLAY_COMMANDS: ReadonlySet<string> = new Set([
-  'move',
-  'mover',
-  'attack',
-  'atacar',
-  'capture',
-  'capturar',
-  'wait',
-  'esperar',
-  'buy',
-  'comprar',
-  'power',
-  'poder',
-  'end',
-  'fin',
-  'ai',
-  'ia',
-  'surrender',
-  'rendirse',
-]);
-
 /** Como ha acabado para ti, en una palabra. */
 const OUTCOME_TEXT: Record<MatchOutcome, string> = { won: 'ganada', lost: 'perdida', draw: 'empate' };
 
@@ -468,49 +443,56 @@ const DEFEAT_TEXT: Record<DefeatReason, string> = { hq: 'sin Base', wipeout: 'si
 /** Que ha cortado un camino, en una palabra (los que no estan aqui, por su nombre en el codigo). */
 const INTERRUPTION_NAMES: Partial<Record<InterruptionKind, string>> = { ambush: 'emboscada' };
 
-/** Un suceso en una linea, o null si no merece la pena contarlo. */
-function describe(s: GameState, event: GameEvent): string | null {
-  const name = (uid: number) => {
-    const unit = unitById(s, uid);
-    return unit ? `${uid} ${unitTypeOf(s, unit).id}` : `${uid}`;
-  };
-  switch (event.kind) {
-    case 'move':
-      return `${name(event.uid)} mueve a (${event.path[event.path.length - 1]!.x},${event.path[event.path.length - 1]!.y})${event.interruption ? ` (${INTERRUPTION_NAMES[event.interruption.kind] ?? event.interruption.kind})` : ''}`;
-    case 'attack':
-      return `${name(event.attacker)} ataca (${event.at.x},${event.at.y}): daño ${event.damage}${event.killed ? ', destruida' : ''}`;
-    case 'capture':
-      return `${name(event.uid)} captura (${event.at.x},${event.at.y})${event.left ? `, quedan ${event.left}` : ''}`;
-    case 'spawn':
-      return `compra ${name(event.uid)} en (${event.at.x},${event.at.y})`;
-    case 'merge':
-      return `${name(event.uid)} se une a ${name(event.into)}`;
-    case 'load':
-      return `${name(event.uid)} sube a ${name(event.into)}`;
-    case 'unload':
-      return `${name(event.uid)} baja a ${name(event.passenger)} en (${event.to.x},${event.to.y})`;
-    case 'supply':
-      return `${name(event.uid)} repara a ${event.repairs.length}`;
-    case 'power':
-      return `general ${event.general} usa ${event.power}${event.target ? ` en (${event.target.x},${event.target.y})` : ''}${event.hits.length ? `: ${event.hits.map((hit) => `${name(hit.uid)} -${hit.damage}`).join(', ')}` : ''}`;
-    case 'surrender':
-      return `el equipo ${shownTeamNumber(event.actor)} se rinde`;
-    case 'teamDefeated':
-      return `el equipo ${shownTeamNumber(event.team)} queda fuera (${DEFEAT_TEXT[event.reason]})`;
-    default:
-      // Esperar, ordenes, escuadras, viajes y el fin de ronda (eso lo resume endTurn) no se cuentan.
-      return null;
-  }
+/** Como se nombra una unidad en el texto: su uid y su tipo (si ya no esta, solo el uid). */
+function unitName(s: GameState, uid: number): string {
+  const unit = unitById(s, uid);
+  return unit ? `${uid} ${unitTypeOf(s, unit).id}` : `${uid}`;
 }
 
-const legend = (s: GameState): string => `+NN unidad tuya · -NN enemiga · ? no se ve
-Terreno: . hierba , flores f bosque ^ acantilado : arena c cactus M meseta _ nieve o muñeco t pinos % roca nevada i hielo ~ agua - poco profunda = profunda
-Edificios: C ciudad O petroleo F fabrica S fortaleza A aeropuerto B base (mayuscula tuyo, minuscula enemigo, * neutral)
-Edificios de tipo: ${s.content.buildings.list.map((building) => building.id).join(', ')}`;
+const at = (pos: Pos): string => `(${pos.x},${pos.y})`;
+
+/** Cada suceso que se cuenta, en una linea. Los que no estan (esperar, ordenes, escuadras, viajes y el fin de ronda, que resume endTurn) no se cuentan. */
+const EVENT_TEXT: { readonly [Kind in GameEvent['kind']]?: (s: GameState, event: GameEventOf<Kind>) => string } = {
+  move: (s, event) => {
+    const interruption = event.interruption ? ` (${INTERRUPTION_NAMES[event.interruption.kind] ?? event.interruption.kind})` : '';
+    return `${unitName(s, event.uid)} mueve a ${at(event.path[event.path.length - 1]!)}${interruption}`;
+  },
+  attack: (s, event) => `${unitName(s, event.attacker)} ataca ${at(event.at)}: daño ${event.damage}${event.killed ? ', destruida' : ''}`,
+  capture: (s, event) => `${unitName(s, event.uid)} captura ${at(event.at)}${event.left ? `, quedan ${event.left}` : ''}`,
+  spawn: (s, event) => `compra ${unitName(s, event.uid)} en ${at(event.at)}`,
+  merge: (s, event) => `${unitName(s, event.uid)} se une a ${unitName(s, event.into)}`,
+  load: (s, event) => `${unitName(s, event.uid)} sube a ${unitName(s, event.into)}`,
+  unload: (s, event) => `${unitName(s, event.uid)} baja a ${unitName(s, event.passenger)} en ${at(event.to)}`,
+  supply: (s, event) => `${unitName(s, event.uid)} repara a ${event.repairs.length}`,
+  power: (s, event) => {
+    const target = event.target ? ` en ${at(event.target)}` : '';
+    const hits = event.hits.length ? `: ${event.hits.map((hit) => `${unitName(s, hit.uid)} -${hit.damage}`).join(', ')}` : '';
+    return `general ${event.general} usa ${event.power}${target}${hits}`;
+  },
+  surrender: (_s, event) => `el equipo ${shownTeamNumber(event.actor)} se rinde`,
+  teamDefeated: (_s, event) => `el equipo ${shownTeamNumber(event.team)} queda fuera (${DEFEAT_TEXT[event.reason]})`,
+};
+
+/** Un suceso en una linea, o null si no merece la pena contarlo. */
+function describe(s: GameState, event: GameEvent): string | null {
+  const text = EVENT_TEXT[event.kind] as ((s: GameState, event: GameEvent) => string) | undefined;
+  return text ? text(s, event) : null;
+}
+
+/** La leyenda del mapa: lo de las unidades y la letra de cada terreno y edificio (textLetter del contenido). */
+function legend(s: GameState): string {
+  const terrain = s.content.terrain.list.map((type) => `${type.textLetter} ${type.name.es.toLowerCase()}`).join(' ');
+  const buildings = s.content.buildings.list.map((type) => `${type.textLetter} ${type.name.es.toLowerCase()}`).join(' ');
+  return [
+    '+NN unidad tuya · -NN enemiga · ? no se ve',
+    `Terreno: ${terrain}`,
+    `Edificios: ${buildings} (mayuscula tuyo, minuscula de otro equipo, * delante neutral)`,
+  ].join('\n');
+}
 
 const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   map                      mapa en texto
-  units [0|1]              unidades (las enemigas solo si se ven)
+  units [equipo]           unidades, todas o las de un equipo (el 1 es el primero; las enemigas solo si se ven)
   unit <id>                a donde puede ir y a quien puede atacar
   move <id> <x> <y>        mover
   attack <id> <x> <y>      atacar a la unidad de (x,y) desde donde esta (mover antes si hace falta)

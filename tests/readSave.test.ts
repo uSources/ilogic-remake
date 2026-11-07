@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import { loadGame } from '@core/defaultGames';
+import { createMatch, loadGame } from '@core/defaultGames';
 import { readSave, serialize } from '@core/save';
 import { SAVE_VERSION } from '@core/saveVersion';
-import { newUnit } from '@core/rules';
+import { cleanTeams, hasValidTeams } from '@core/savedParts';
+import { newUnit } from '@core/measure';
 import { formSquad } from '@core/squads/membership';
 import { blankState, unitTypeNamed } from './helpers';
 
@@ -85,5 +86,32 @@ describe('readSave: los contadores rotos se arreglan', () => {
 
   it('con Infinity el fichero no es JSON: no se lee', () => {
     expect(withCounters('Infinity').read).toEqual({ ok: false, error: 'notJson' });
+  });
+
+  it('los equipos: comprobar solo mira; limpiar arregla el general y las estadisticas rotas', () => {
+    const saved = JSON.parse(serialize(blankState())) as { teams: Record<string, unknown>[] };
+    saved.teams[0]!.general = { id: 'ya-no-existe' };
+    saved.teams[0]!.stats = 'rotas';
+    const before = structuredClone(saved.teams);
+    expect(hasValidTeams(saved.teams)).toBe(true);
+    expect(saved.teams).toEqual(before);
+    cleanTeams(defaultContent(), saved.teams);
+    expect(saved.teams[0]!.general).toBeNull();
+    expect(saved.teams[0]!.stats).not.toBe('rotas');
+    expect(hasValidTeams([saved.teams[0]])).toBe(false);
+    expect(hasValidTeams([saved.teams[0], { ...saved.teams[1], alliance: saved.teams[0]!.alliance }])).toBe(false);
+  });
+
+  it('una mision: sus objetivos, cada uno de un equipo distinto de la partida', () => {
+    const s = createMatch({ mode: 'mission', mission: 'bridgehead', seed: 3 });
+    const saved = JSON.parse(serialize(s)) as { mission: { objectives: { owner: number }[] } };
+    expect(readSave(JSON.stringify(saved), defaultContent()).ok).toBe(true);
+    saved.mission.objectives.push({ ...saved.mission.objectives[0]! });
+    expect(readSave(JSON.stringify(saved), defaultContent())).toEqual({ ok: false, error: 'badMission' });
+    saved.mission.objectives = [{ ...saved.mission.objectives[0]!, owner: 7 }];
+    expect(readSave(JSON.stringify(saved), defaultContent())).toEqual({ ok: false, error: 'badMission' });
+    // Sin ningun objetivo no es una mision (missions.json tampoco la acepta).
+    saved.mission.objectives = [];
+    expect(readSave(JSON.stringify(saved), defaultContent())).toEqual({ ok: false, error: 'badMission' });
   });
 });

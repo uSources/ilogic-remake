@@ -8,8 +8,8 @@
  */
 import { unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
-import { MoveType, type UnitType } from '../../core/content';
-import { movementOf, unitAt, unitById } from '../../core/rules';
+import type { UnitType } from '../../core/content';
+import { unitAt, unitById } from '../../core/rules';
 import { generalOf } from '../../core/generals';
 import { powerArea, powerOf } from '../../core/generalPowers';
 import { squareArea, posOf } from '../../core/geom';
@@ -292,8 +292,8 @@ function walkerFor(stage: EventStage, uid: number, image: Phaser.GameObjects.Ima
   // Al unirse o subir a un transporte la unidad ya no esta en el estado: entonces no se sabe su tipo.
   const mover = unitById(stage.state, uid);
   const side = sideOf(stage.state, stage.viewer, mover?.team ?? stage.acting);
-  const moveType = mover ? movementOf(stage.state, mover) : null;
-  return { image, side, hops: moveType === MoveType.FOOT, raisesDust: moveType !== MoveType.FOOT && moveType !== MoveType.AIR };
+  const motion = mover ? unitTypeOf(stage.state, mover).motion : null;
+  return { image, side, hops: motion === 'march', raisesDust: motion !== 'march' && motion !== 'fly' };
 }
 
 /**

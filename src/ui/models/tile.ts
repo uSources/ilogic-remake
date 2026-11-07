@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
-import { MoveType, type AbilityDef, type UnitAttack, type UnitType } from '../../core/content';
+import type { AbilityDef, MoveType, UnitAttack, UnitType } from '../../core/content';
+import { defaultContent } from '../../core/content/default';
 import type { DeepReadonly } from '../../core/util/freeze';
 import { unitTypeOf, buildingTypeOf, terrainAt } from '../../core/gameContent';
 import {
@@ -25,7 +26,7 @@ import { isHostile } from '../../core/teams';
 import type { Grid } from '../../core/util/grid';
 import { turnEndOrderOf, isDetached, squadById } from '../../core/squads';
 import type { AbilityVM, StatChipVM, TileVM } from '../../hud/store';
-import { nameOf, t } from '../../settings';
+import { nameOf, t, type TextKey } from '../../settings';
 import { isFriendly, ownerSideOf, sideLetter, sideOf } from '../sides';
 import { AS_ACTIVE, buildingKey, terrainKey, unitKey } from '../sprites';
 import { standingOrderLabel } from './army';
@@ -53,6 +54,20 @@ export function unitStatsText(unitType: UnitType): string {
 
 const pct = (factor: number): string => String(Math.round(factor * 100));
 
+/** Como se dice cada tipo de movimiento dentro de una frase ("a pie, vehículos"); uno nuevo, por su nombre en movements.json. */
+const MOVEMENT_PHRASES: Readonly<Partial<Record<MoveType, TextKey>>> = {
+  foot: 'move_foot',
+  vehicle: 'move_vehicle',
+  air: 'move_air',
+  amphibious: 'move_amphibious',
+};
+
+function movementPhrase(movement: MoveType): string {
+  const key = MOVEMENT_PHRASES[movement];
+  const type = defaultContent().movements.byId[movement];
+  return key ? t(key) : type ? nameOf(type) : movement;
+}
+
 /** Nombre y explicacion de una habilidad, con sus numeros. */
 export function abilityVM(ability: DeepReadonly<AbilityDef>): AbilityVM {
   switch (ability.kind) {
@@ -61,7 +76,7 @@ export function abilityVM(ability: DeepReadonly<AbilityDef>): AbilityVM {
     case 'zoneOfControl':
       return {
         name: t('ability_zoneOfControl'),
-        desc: t('ability_zoneOfControl_desc').replace('{m}', ability.stops.map((kind) => t(`move_${kind}`)).join(', ')),
+        desc: t('ability_zoneOfControl_desc').replace('{m}', ability.stops.map(movementPhrase).join(', ')),
       };
     case 'aura':
       return {
@@ -115,7 +130,7 @@ export function tileVM(
   if (isRuleOn(s, 'terrainCost')) {
     // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
     const cost = (moveType: MoveType) => (canMoveOn(moveType, terr) ? terrainAccess(s, moveType).enterCost(pos) : null);
-    info.terrain.cost = { foot: cost(MoveType.FOOT), vehicle: cost(MoveType.VEHICLE) };
+    info.terrain.cost = { foot: cost('foot'), vehicle: cost('vehicle') };
   }
   if (building) {
     const owner = ownerSideOf(s, viewer, building.owner);

@@ -3,10 +3,10 @@ import type { GameContent } from '@core/content';
 import { seededRng } from '@core/util/random';
 import { buildMatch, skirmishConfig } from '@core/match';
 import { isTurnBoundary } from '@core/actions';
-import { isMatchOver, isWinner, matchResult, buildingsOf } from '@core/rules';
+import { isMatchOver, isWinner, matchResult, buildingsOf, teamUnits } from '@core/rules';
 import { aiController } from '@core/controllers';
 import { GameSession, passiveController, runMatch, type ActedStep, type Controller } from '@core/session';
-import { duel, teamState } from '@core/teams';
+import { teamIds, teamState } from '@core/teams';
 import { unitTypeOf } from '@core/gameContent';
 import { armyValue } from '@core/stats';
 import { lifeValue } from '@core/unitValue';
@@ -15,34 +15,24 @@ import type { EndReason, GameEvent, GameEventOf, GameState, Rng, MatchSettings, 
 export type Policy = 'ai' | 'passive';
 
 /**
- * Los dos equipos de una partida de equilibrio: el primero (0) y el segundo (1) del mapa al azar.
- * Las tablas del informe van por estos dos lados.
+ * Un valor por equipo, por su numero (el numero de un equipo es su puesto en `GameState.teams`).
+ * Las tablas del informe van por equipos: tantos como tenga la partida.
  */
-export type Side = 0 | 1;
-/** El primer equipo del mapa (el que en el juego seria la persona) y el segundo. */
-export const FIRST_SIDE: Side = 0;
-export const SECOND_SIDE: Side = 1;
-export const SIDES: readonly Side[] = [FIRST_SIDE, SECOND_SIDE];
+export type PerTeam<T> = T[];
 
-/** El lado de un equipo de estas partidas (solo hay dos: otro numero es un fallo). */
-export function sideOfTeam(team: TeamId): Side {
-  if (team === FIRST_SIDE || team === SECOND_SIDE) return team;
-  throw new Error(`Las partidas de equilibrio son de dos equipos: no hay equipo ${team}`);
-}
-
-/** El otro lado. */
-export const opponentOf = (side: Side): Side => (side === FIRST_SIDE ? SECOND_SIDE : FIRST_SIDE);
+/** El primer equipo del mapa (en el juego, el de la persona): el que mueve primero si no se dice otro. */
+export const FIRST_TEAM: TeamId = 0;
 
 export interface PlayOptions {
   seed: number;
   maxDays: number;
-  /** Quien juega cada lado. 'passive' no hace nada (para medir a la IA). */
-  policies: [Policy, Policy];
-  /** Equipo que mueve primero en cada ronda (en el juego, el de la persona: el primero). */
-  firstTeam?: Side;
-  /** Intercambiar los lados en el mapa generado (para ver si el mapa favorece a un lado). */
-  swapSides?: boolean;
-  /** Lado del mapa (32 por defecto). */
+  /** Quien juega cada equipo, por numero de equipo (hay tantos equipos como politicas). 'passive' no hace nada (para medir a la IA). */
+  policies: readonly Policy[];
+  /** Equipo que mueve primero en cada ronda (si no, FIRST_TEAM). */
+  firstTeam?: TeamId;
+  /** Girar las salidas del mapa generado tantos puestos (rotateStarts; para ver si el mapa favorece a alguien). */
+  rotateStarts?: number;
+  /** Lado del mapa (si no, el de una escaramuza del juego: DEFAULT_MAP_SIZE). */
   size?: number;
   /** Reglas de la partida. */
   settings: MatchSettings;
@@ -50,7 +40,7 @@ export interface PlayOptions {
   content: GameContent;
 }
 
-/** Por tipo de unidad y bando. */
+/** Por tipo de unidad y equipo. */
 export interface UnitTally {
   bought: number;
   spent: number;
@@ -66,29 +56,32 @@ export interface UnitTally {
   captures: number;
 }
 
+/** Como va cada equipo al empezar un dia. */
 export interface DaySample {
   day: number;
-  funds: [number, number];
-  buildings: [number, number];
+  funds: PerTeam<number>;
+  buildings: PerTeam<number>;
   /** Valor del ejercito: coste x vida/100. */
-  army: [number, number];
-  /** Unidades en el mapa (informes antiguos: no esta). */
-  units?: [number, number];
+  army: PerTeam<number>;
+  /** Unidades en el mapa. */
+  units: PerTeam<number>;
 }
 
 export interface GameRecord {
   seed: number;
-  winner: Side | null;
-  /** Por que acabo; 'timeout' si se llego a `maxDays` sin acabar (entonces `winner` es null). */
+  /** Los equipos que ganan (toda la alianza ganadora), o ninguno si no gana nadie. */
+  winners: TeamId[];
+  /** Por que acabo; 'timeout' si se llego a `maxDays` sin acabar (entonces no gana nadie). */
   reason: EndReason | 'timeout';
   days: number;
   samples: DaySample[];
-  /** Lo de cada tipo de unidad, por lado y por id de tipo. */
-  units: Record<string, UnitTally>[];
+  /** Lo de cada tipo de unidad, por equipo y por id de tipo. */
+  units: PerTeam<Record<string, UnitTally>>;
   events: number;
 }
 
-const emptyTally = (): UnitTally => ({
+/** Nada apuntado todavia. */
+export const emptyTally = (): UnitTally => ({
   bought: 0,
   spent: 0,
   damageDealt: 0,
@@ -102,38 +95,35 @@ const emptyTally = (): UnitTally => ({
 
 const costOf = (s: GameState, unit: Pick<Unit, 'type'>): number => unitTypeOf(s, unit).cost;
 
-/** Un valor por lado: [primero, segundo]. */
-const bySide = (valueOf: (side: Side) => number): [number, number] => [valueOf(FIRST_SIDE), valueOf(SECOND_SIDE)];
+/** Un valor por equipo de la partida. */
+const perTeam = (s: GameState, valueOf: (team: TeamId) => number): PerTeam<number> => teamIds(s).map(valueOf);
 
 function sample(s: GameState): DaySample {
-  const unitsOf = (side: Side) => s.units.filter((unit) => unit.team === side);
-  const army = (side: Side) => armyValue(s, side);
-  const buildings = (side: Side) => buildingsOf(s, side).length;
   return {
     day: s.day,
-    funds: bySide((side) => teamState(s, side).funds),
-    buildings: bySide(buildings),
-    army: bySide(army),
-    units: bySide((side) => unitsOf(side).length),
+    funds: perTeam(s, (team) => teamState(s, team).funds),
+    buildings: perTeam(s, (team) => buildingsOf(s, team).length),
+    army: perTeam(s, (team) => armyValue(s, team)),
+    units: perTeam(s, (team) => teamUnits(s, team).length),
   };
 }
 
 /** Lo que hace falta para apuntar un suceso: como estaba cada unidad antes y lo de cada tipo y lado. */
 interface Tallies {
   known: ReadonlyMap<number, Pick<Unit, 'type' | 'team' | 'x' | 'y' | 'life'>>;
-  tallyOf(side: Side, unit: Pick<Unit, 'type'>): UnitTally;
+  tallyOf(team: TeamId, unit: Pick<Unit, 'type'>): UnitTally;
 }
 
-/** Apunta un ataque: daño, valor y bajas de los dos lados (con el contraataque, si lo hubo). */
+/** Apunta un ataque: daño, valor y bajas de los dos equipos (con el contraataque, si lo hubo). */
 function tallyAttack(s: GameState, event: GameEventOf<'attack'>, team: TeamId, { known, tallyOf }: Tallies): void {
   const attacker = known.get(event.attacker);
   const victimInfo = known.get(event.target);
   if (!attacker) return;
-  const tally = tallyOf(sideOfTeam(team), attacker);
+  const tally = tallyOf(team, attacker);
   tally.attacks++;
   tally.damageDealt += event.damage;
   if (!victimInfo) return;
-  const victimTally = tallyOf(sideOfTeam(victimInfo.team), victimInfo);
+  const victimTally = tallyOf(victimInfo.team, victimInfo);
   const dealt = lifeValue(s, event.damage, victimInfo);
   tally.valueDealt += dealt;
   victimTally.valueLost += dealt;
@@ -162,31 +152,37 @@ function tallyEvent(s: GameState, event: GameEvent, team: TeamId, tallies: Talli
   if (event.kind === 'spawn') {
     const unit = unitOf(event.uid);
     if (!unit) return;
-    tallies.tallyOf(sideOfTeam(team), unit).bought++;
-    tallies.tallyOf(sideOfTeam(team), unit).spent += costOf(s, unit);
+    const tally = tallies.tallyOf(team, unit);
+    tally.bought++;
+    tally.spent += costOf(s, unit);
   }
   if (event.kind === 'capture') {
     const unit = unitOf(event.uid);
-    if (unit) tallies.tallyOf(sideOfTeam(team), unit).captures++;
+    if (unit) tallies.tallyOf(team, unit).captures++;
   }
 }
 
-/** Quien juega cada lado: la IA (con el azar de la partida) o nadie ('passive'). */
+/** Quien juega cada equipo: la IA (con el azar de la partida) o nadie ('passive'). */
 function controllersOf(s: GameState, policies: PlayOptions['policies']): Controller[] {
-  const controllerFor = (policy: Policy) => (policy === 'passive' ? passiveController() : aiController());
-  return s.teams.map((team) => controllerFor(policies[sideOfTeam(team.id)]));
+  return teamIds(s).map((team) => (policyOf(policies, team) === 'passive' ? passiveController() : aiController()));
 }
 
-/** La partida de equilibrio de estas opciones (mapa al azar con su semilla, quiza con los lados cambiados). */
+function policyOf(policies: PlayOptions['policies'], team: TeamId): Policy {
+  const policy = policies[team];
+  if (!policy) throw new Error(`No se ha dicho quien juega el equipo ${team} (hay ${policies.length} politicas)`);
+  return policy;
+}
+
+/** La partida de equilibrio de estas opciones (mapa al azar con su semilla, quiza con las salidas cambiadas): un equipo por politica, todos de la IA. */
 function balanceMatch(options: PlayOptions, mapRng: Rng): GameState {
   const config = skirmishConfig({
     seed: options.seed,
     size: options.size,
     settingChanges: options.settings,
-    teams: duel('ai', 'ai'),
-    firstTeam: options.firstTeam ?? FIRST_SIDE,
+    teams: options.policies.map(() => ({ controller: 'ai' })),
+    firstTeam: options.firstTeam ?? FIRST_TEAM,
   });
-  return buildMatch(options.swapSides ? { ...config, swapStarts: true } : config, { content: options.content, mapRng });
+  return buildMatch({ ...config, rotateStarts: options.rotateStarts }, { content: options.content, mapRng });
 }
 
 /** Lo que se apunta de una partida mientras se juega: muestras de cada dia, lo de cada tipo de unidad y cuantos sucesos. */
@@ -199,13 +195,13 @@ class GameLog {
 
   constructor(private readonly s: GameState) {
     this.samples = [sample(s)];
-    this.units = SIDES.map(() => Object.fromEntries(s.content.units.list.map((unitType) => [unitType.id, emptyTally()])));
+    this.units = teamIds(s).map(() => Object.fromEntries(s.content.units.list.map((unitType) => [unitType.id, emptyTally()])));
     this.remember();
   }
 
-  /** Lo apuntado de ese tipo de unidad para ese lado. */
-  private readonly tallyOf = (side: Side, unit: Pick<Unit, 'type'>): UnitTally => {
-    const tally = this.units[side]?.[unit.type];
+  /** Lo apuntado de ese tipo de unidad para ese equipo. */
+  private readonly tallyOf = (team: TeamId, unit: Pick<Unit, 'type'>): UnitTally => {
+    const tally = this.units[team]?.[unit.type];
     if (!tally) throw new Error(`Tipo de unidad desconocido en el informe: ${unit.type}`);
     return tally;
   };
@@ -232,12 +228,12 @@ class GameLog {
   };
 }
 
-/** Quien ha ganado (por lado) y por que; sin acabar, nadie y 'timeout'. */
-function outcomeOf(s: GameState): Pick<GameRecord, 'winner' | 'reason'> {
+/** Quien ha ganado y por que; sin acabar, nadie y 'timeout'. */
+function outcomeOf(s: GameState): Pick<GameRecord, 'winners' | 'reason'> {
   const result = matchResult(s);
-  if (result.status === 'playing') return { winner: null, reason: 'timeout' };
-  if (result.status === 'draw') return { winner: null, reason: result.reason };
-  return { winner: isWinner(result, FIRST_SIDE) ? FIRST_SIDE : SECOND_SIDE, reason: result.reason };
+  if (result.status === 'playing') return { winners: [], reason: 'timeout' };
+  if (result.status === 'draw') return { winners: [], reason: result.reason };
+  return { winners: teamIds(s).filter((team) => isWinner(result, team)), reason: result.reason };
 }
 
 /** Una partida de equilibrio entera, con todo lo que pasa apuntado. */

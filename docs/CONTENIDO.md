@@ -6,6 +6,7 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 |---|---|
 | `src/core/content/units.json` | Las 19 unidades: precio, movimiento, vision, **ataque y daño contra cada unidad**, quien las fabrica y repara, transportes |
 | `src/core/content/buildings.json` | Los 6 edificios: ingresos, curacion, proteccion, vision y cual es el cuartel general |
+| `src/core/content/movements.json` | Los tipos de movimiento (a pie, vehiculos, aviones, anfibios): su nombre, como se ven (`motion`: a pie, rodando o volando) y si pasan por todo (`crossesEverything`). Uno nuevo es su entrada aqui y su coste en cada terreno |
 | `src/core/content/terrain.json` | Los 15 terrenos: nombre, defensa, si esconde, por donde pasa y cuanto cuesta a cada tipo de movimiento, y su letra en los mapas en texto |
 | `src/core/content/themes.json` | Los 5 temas de mapa (llanura, desierto...): que terreno es cada letra de los mapas en texto y con que probabilidad sale cada terreno en los mapas al azar |
 | `src/core/content/mapgen.json` | El generador de mapas al azar: unidades y edificios de salida, edificios neutrales y lo que tiene que tener cada salida |
@@ -13,6 +14,7 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 | `src/core/content/generals.json` | Los generales: ventaja fija, barra de carga y poderes (ataque aereo, reconocimiento...) |
 | `src/core/content/settings.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
 | `src/core/content/ai.json` | Pesos de la IA (cuanto valora matar, capturar, defender la Base...) |
+| `src/core/content/missions.json` | Las misiones de la campaña, en orden: mapa en texto, edificios, unidades y equipos (quien los juega, su dinero y su objetivo, si tiene; skill `nueva-mision`) |
 
 Cada fichero tiene su esquema (`units.schema.json`, `buildings.schema.json`): VS Code y otros editores
 autocompletan los campos, explican cada uno al pasar el raton y marcan los errores mientras escribes.
@@ -132,7 +134,7 @@ Una clase nueva: su forma en `AbilityDef` (`core/content/types.ts`), su validaci
 `ABILITY_SHAPES` (`content/abilities.ts`, de ahi sale `ABILITY_KINDS`), lo que aporta a las listas de
 las reglas en `ABILITY_HOOKS` y su sitio en `ABILITY_ORDER` (`core/abilities.ts`: un modificador del acierto, una regla de paso...;
 ver `docs/ARQUITECTURA.md`, "Modulos de reglas"), sus textos
-(`ability_<kind>` en `settings.ts`, y `abilityVM` en `ui/hudModels.ts`), el esquema y un test en
+(`ability_<kind>` en `src/i18n/es/cards.ts` y `en/cards.ts`, y `abilityVM` en `ui/models/tile.ts`), el esquema y un test en
 `tests/abilities.test.ts`.
 
 ## Campos de un edificio
@@ -145,6 +147,7 @@ ver `docs/ARQUITECTURA.md`, "Modulos de reglas"), sus textos
 | `heals` | Vida que cura a las unidades que repara |
 | `protection` | Multiplica el acierto contra quien esta encima: `0.7` = un 30 % menos de daño |
 | `vision` | Radio de vision |
+| `textLetter` | Letra del edificio en el mapa de la partida por texto (`npm run play`): una mayuscula distinta por edificio; la de otro equipo sale en minuscula, asi que ningun terreno puede tener esa letra (ni en minuscula) |
 
 Un edificio nuevo necesita ademas graficos (`public/assets/b/`) y, para que salga en los mapas al
 azar, su sitio en `mapgen.json` (ver "Mapas al azar").
@@ -164,9 +167,10 @@ numeros; uno nuevo necesita su arte (`terrainArt.ts`) y salir en algun tema (`th
 | `buildable`, `water` | Para el generador de mapas: se puede poner un edificio, cuenta como agua |
 | `movement` | Coste de entrar por tipo: `{ "foot": 1, "vehicle": 2, "air": 1, "amphibious": null }`; `null` = no se puede pasar |
 | `mapLetter` | Letra que lo nombra en los mapas en texto de las misiones en cualquier tema (agua `~`, carretera `=`...). Los que cambian con el tema (la hierba, el bosque) los da `themes.json` |
+| `textLetter` | Letra del terreno en el mapa de la partida por texto (`npm run play`), distinta en cada terreno (no depende del tema) y de la de cada edificio |
 
 En el codigo se consulta con el tipo resuelto y por la partida: `movementOf(s, unit)` (el
-movimiento de una unidad), `canMoveOn(MoveType.VEHICLE, terrainAt(s, pos))`,
+movimiento de una unidad), `canMoveOn(unitType.movement, terrainAt(s, pos))`,
 `terrainMoveCost(movimiento, terreno)` (core/rules/queries.ts).
 
 ## Temas y mapas al azar
@@ -182,8 +186,10 @@ movimiento de una unidad), `canMoveOn(MoveType.VEHICLE, terrainAt(s, pos))`,
 
 `mapgen.json` es lo que el generador pone en cada mapa: `startingUnits` y `startingBuildings` de cada
 salida, `neutralBuildings` (cuantos de cada tipo, `[minimo, maximo]`) y `neutralTotal`, y lo que tiene
-que tener una salida para valer (`spawnRadius`, `minSpawnWalkable`, `minSpawnBuildable`) y un mapa
-(`minLandTiles`). Reglas en `src/core/mapgen.ts`; un mapa sale siempre igual con la misma semilla (el
+que tener una salida para valer (`spawnRadius`, `minSpawnWalkable`, `minSpawnBuildable`, y lo lejos
+que estan dos, `minSpawnDistance`) y un mapa (`minLandTiles`, medido con el movimiento de
+`landMovement`), y donde van los puntos de control (`controlPoints`: cuanta tierra tiene su zona,
+lo lejos que estan de las salidas y entre ellos, y el azar de su puntuacion). Reglas en `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios, puntos de control; los pasos en orden, `steps.ts`); un mapa sale siempre igual con la misma semilla (el
 codigo de mapa) y el mismo contenido.
 
 ## Clima
@@ -235,7 +241,7 @@ Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es cod
 La IA usa a su general sin saber cual es (`core/ai/general.ts`): al empezar su turno valora cada
 poder que puede pagar (el daño en area, en el mejor cuadrado sobre los enemigos que ve; el
 reconocimiento, un valor fijo con niebla; curar, por la vida que recuperan sus unidades; el dinero,
-por lo que es) y usa la mejor si vale al menos `GENERALMINVALUE`
+por lo que es) y usa la mejor si vale al menos `minPowerValue`
 (`ai.json`); con la barra llena, cualquiera que valga algo. Cada valoracion es el `aiValue` de su clase
 en `POWER_EFFECTS`: un efecto nuevo trae la suya y la IA no se toca.
 
@@ -266,12 +272,12 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
 - `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
   `npm run balance` (skill `equilibrar`). Los lee quien juega por su perfil (`AiProfile.weights`; las
   ordenes de la partida, `autopilotProfileOf(contenido)`), nunca de un sitio comun: la arena juega
-  con otros sin tocar el fichero. Ningun numero de la IA va suelto en el codigo: `HQHEADSTART` (la
-  Base enemiga, al elegir que capturar), `BIGUNITCOST` (desde que precio un edificio fabrica lo
-  grande) y `MINEVICTION` (lo minimo que pesa echar a quien defiende o captura) tambien son pesos.
-  `GUARDRADIUS` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
+  con otros sin tocar el fichero. Ningun numero de la IA va suelto en el codigo: `hqCaptureHeadStart` (la
+  Base enemiga, al elegir que capturar), `bigUnitCost` (desde que precio un edificio fabrica lo
+  grande) y `minEvictionWeight` (lo minimo que pesa echar a quien defiende o captura) tambien son pesos.
+  `guardRadius` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
   unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar).
-  `SQUADSPREAD` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
+  `squadSpread` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion
   (misma orden y destino) a la mas retrasada antes de esperarla. Las ordenes
   las cumple la partida, no la IA (`assistTurn` en `src/core/autopilot/standingOrders.ts`, con los
   pasos de unidad que la IA reutiliza, al acabar el turno de cada equipo: la fase 'standingOrders'
@@ -280,7 +286,7 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
 
 Para probar sin tocar ficheros, las variantes de equilibrio cambian los campos de los ficheros por
 ruta (`tools/balance/variant.ts`): `--set UNIT.move.Car=7 --set HIT_CHANCE.Tank.Soldier=+0.05
---set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.KILLBONUS=60
+--set MOVE_COST.vehicle.Woods=3 --set TERRAIN.protection.Woods=0.8 --set AI.killBonus=60
 --set SETTINGS.initialFunds=8000` (`UNIT.<campo>.<unidad>` con los campos de units.json: `cost`,
 `command`, `move`, `vision`; `TERRAIN.<campo>.<terreno>`: `protection`, `buildable`, `water`).
 
@@ -308,7 +314,7 @@ Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 `GameState.content` (no se guarda: `serialize` escribe el resto). Las reglas y la IA lo leen por la partida:
 `unitTypeOf(s, unit).cost`, `buildingTypeOf(s, building).earning`, `terrainAt(s, pos)`, `themeOf(s)`,
 `s.content.generals` (los pesos de la IA, `s.content.ai`, los lee quien juega por su perfil: `defaultAiProfile(contenido).weights`); las reglas por defecto, `settingsWith(contenido, cambios)`;
-los nombres en pantalla, `nameOf(unitType)` (settings.ts). Nada lee el contenido al
+los nombres en pantalla, `nameOf(unitType)` (settings.ts: el nombre de la entrada en el idioma elegido). Nada lee el contenido al
 importar un modulo: el del juego es `defaultContent()` (content/default.ts, se carga la primera vez
 que se pide), y lo usan `createMatch`/`loadGame` (core/defaultGames.ts), la interfaz y las
 herramientas.

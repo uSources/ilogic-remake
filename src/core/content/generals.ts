@@ -4,7 +4,7 @@
  * la forma de los datos y su validacion. Ver docs/CONTENIDO.md, "Generales".
  */
 import { type Checker, type Scope } from './check';
-import { MOVEMENTS, type MoveType, type Texts } from './types';
+import type { ContentContext, MoveType, Texts } from './types';
 
 /** A que unidades afecta una ventaja o un efecto: por tipo de movimiento y/o por id (sin nada = a todas). */
 export interface UnitFilter {
@@ -66,7 +66,7 @@ export interface GeneralDef {
 type EffectOfKind<K extends GeneralEffect['kind']> = Extract<GeneralEffect, { kind: K }>;
 
 /** Comprueba los numeros de un efecto de esa clase. */
-type EffectShapeCheck<K extends GeneralEffect['kind']> = (scope: Scope, effect: EffectOfKind<K>, unitIds: ReadonlySet<string>) => void;
+type EffectShapeCheck<K extends GeneralEffect['kind']> = (scope: Scope, effect: EffectOfKind<K>, context: ContentContext) => void;
 
 /**
  * La validacion de cada clase de efecto de un poder. Lo que hace cada una en la partida (y lo que le
@@ -80,9 +80,9 @@ export const EFFECT_SHAPES: { readonly [K in GeneralEffect['kind']]: EffectShape
     scope.num('effect.damage', effect.damage, { min: 1, max: 100, int: true });
     scope.num('effect.minLife', effect.minLife, { min: 1, max: 99, int: true });
   },
-  heal: (scope, effect, unitIds) => {
+  heal: (scope, effect, { unitIds, movementIds }) => {
     scope.num('effect.amount', effect.amount, { min: 1, max: 100, int: true });
-    for (const movement of effect.movement ?? []) scope.known('effect.movement', movement, MOVEMENTS);
+    for (const movement of effect.movement ?? []) scope.known('effect.movement', movement, movementIds);
     for (const unit of effect.units ?? []) scope.known('effect.units', unit, unitIds);
   },
   funds: (scope, effect) => {
@@ -94,29 +94,29 @@ export const EFFECT_SHAPES: { readonly [K in GeneralEffect['kind']]: EffectShape
 export const GENERAL_EFFECT_KINDS = Object.keys(EFFECT_SHAPES) as readonly GeneralEffect['kind'][];
 
 /** Comprueba el efecto de un poder: una clase que existe, con los numeros de su clase. */
-function validateEffect(scope: Scope, effect: GeneralEffect | undefined, unitIds: ReadonlySet<string>): void {
+function validateEffect(scope: Scope, effect: GeneralEffect | undefined, context: ContentContext): void {
   if (!scope.known('effect.kind', effect?.kind, GENERAL_EFFECT_KINDS, 'la clase de efecto ') || !effect) return;
   // TypeScript no sabe que la entrada de cada clase recibe un efecto de esa misma clase.
-  (EFFECT_SHAPES[effect.kind] as EffectShapeCheck<typeof effect.kind>)(scope, effect, unitIds);
+  (EFFECT_SHAPES[effect.kind] as EffectShapeCheck<typeof effect.kind>)(scope, effect, context);
 }
 
 /** Una ventaja fija: una clase que existe, un factor razonable y un filtro de movimientos y unidades que existen. */
-function validatePassive(scope: Scope, passive: GeneralModifier, unitIds: ReadonlySet<string>): void {
+function validatePassive(scope: Scope, passive: GeneralModifier, { unitIds, movementIds }: ContentContext): void {
   const kinds: readonly string[] = GENERAL_MODIFIER_KINDS;
   scope.expect(kinds.includes(String(passive?.kind)), `passive: kind "${String(passive?.kind)}" no existe (${kinds.join(', ')})`);
   scope.num(`passive.${passive?.kind}.factor`, passive?.factor, { min: 0.1, max: 3 });
-  for (const movement of passive?.movement ?? []) scope.known(`passive.${passive?.kind}.movement`, movement, MOVEMENTS);
+  for (const movement of passive?.movement ?? []) scope.known(`passive.${passive?.kind}.movement`, movement, movementIds);
   for (const unit of passive?.units ?? []) scope.known(`passive.${passive?.kind}.units`, unit, unitIds);
 }
 
 /** Lo que comparte la validacion de todos los generales: donde se apuntan los fallos y los ids de unidades que existen. */
 interface GeneralsCheck {
   readonly check: Checker;
-  readonly unitIds: ReadonlySet<string>;
+  readonly context: ContentContext;
 }
 
 /** Un poder de `general`: id propio (sin repetir en el general: `powerIds`), textos, un coste que cabe en su barra y su efecto. */
-function validatePower({ check, unitIds }: GeneralsCheck, general: GeneralDef, power: GeneralPowerDef, powerIds: Set<string>): void {
+function validatePower({ check, context }: GeneralsCheck, general: GeneralDef, power: GeneralPowerDef, powerIds: Set<string>): void {
   const scope = check.scope(`general ${general?.id} · poder ${typeof power?.id === 'string' ? power.id : '?'}`);
   if (scope.id(power?.id)) {
     scope.expect(!powerIds.has(power.id), 'id repetido');
@@ -125,12 +125,12 @@ function validatePower({ check, unitIds }: GeneralsCheck, general: GeneralDef, p
   scope.texts('name', power?.name);
   scope.texts('description', power?.description);
   scope.num('cost', power?.cost, { min: 1, max: general?.charge?.max ?? 20, int: true });
-  validateEffect(scope, power?.effect, unitIds);
+  validateEffect(scope, power?.effect, context);
 }
 
 /** Un general (el `index` de la lista, para nombrarlo si no tiene id): id sin repetir, textos, barra, ventajas y poderes. */
-function validateGeneral(context: GeneralsCheck, general: GeneralDef, index: number, ids: Set<string>): void {
-  const scope = context.check.scope(`general ${typeof general?.id === 'string' ? general.id : `#${index}`}`);
+function validateGeneral(checking: GeneralsCheck, general: GeneralDef, index: number, ids: Set<string>): void {
+  const scope = checking.check.scope(`general ${typeof general?.id === 'string' ? general.id : `#${index}`}`);
   if (scope.id(general?.id)) {
     scope.expect(!ids.has(general.id), 'id repetido');
     ids.add(general.id);
@@ -141,15 +141,15 @@ function validateGeneral(context: GeneralsCheck, general: GeneralDef, index: num
   scope.num('charge.max', general?.charge?.max, { min: 1, max: 20, int: true });
   scope.num('charge.per', general?.charge?.per, { min: 100, max: 1e6, int: true });
   if (scope.expect(Array.isArray(general?.passive), 'passive tiene que ser una lista (puede estar vacia)'))
-    for (const passive of general.passive) validatePassive(scope, passive, context.unitIds);
+    for (const passive of general.passive) validatePassive(scope, passive, checking.context);
   const powerIds = new Set<string>();
   if (scope.expect(Array.isArray(general?.powers) && general.powers.length > 0, 'powers: al menos un poder'))
-    for (const power of general.powers) validatePower(context, general, power, powerIds);
+    for (const power of general.powers) validatePower(checking, general, power, powerIds);
 }
 
 /** Comprueba generals.json: una lista de generales validos y sin ids repetidos. */
-export function validateGenerals(list: readonly GeneralDef[], unitIds: ReadonlySet<string>, check: Checker): void {
+export function validateGenerals(list: readonly GeneralDef[], context: ContentContext, check: Checker): void {
   if (!check.scope('generals.json').expect(Array.isArray(list), 'tiene que tener una lista "generals"')) return;
   const ids = new Set<string>();
-  list.forEach((general, index) => validateGeneral({ check, unitIds }, general, index, ids));
+  list.forEach((general, index) => validateGeneral({ check, context }, general, index, ids));
 }
