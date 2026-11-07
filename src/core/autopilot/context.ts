@@ -10,8 +10,7 @@ import { moveBudget } from '../rules/movementProfile';
 import { posOf, samePos } from '../geom';
 import { canReach, stepToward, type MoveRange } from '../rules/movement';
 import { distanceMap, unitsBlock, type Blockers, type DistanceMap } from '../rules/distance';
-import { letsAlliesThrough, passBlockers, UNSEEN_FOES_UNNOTICED } from '../rules/passage';
-import type { PassRule } from '../ruleModules/hooks';
+import { letsAlliesThrough, passBlockers } from '../rules/passage';
 import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
 import type { ActionPlan, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
@@ -51,19 +50,15 @@ export function playCtx(
 }
 
 /**
- * [CAMBIO] La IA que mueve el ejercito a la vez planea con lo que ve: los enemigos que no ve no le cortan el camino al
- * medir, haya emboscadas o no (al moverse de verdad manda lo que diga la partida).
- */
-export const PLANS_WITH_WHAT_IT_SEES: PassRule = UNSEEN_FOES_UNNOTICED;
-
-/**
- * Lo que corta el paso a `unit` al medir distancias: las demas unidades.
- * [CAMBIO] Con el ejercito a la vez ('army'), si las reglas de paso dejan atravesar a los aliados, mide con esas reglas y
- * con lo que ve (PLANS_WITH_WHAT_IT_SEES): antes una columna en un puente o en la salida de la
- * Fabrica dejaba a las de detras "sin camino" a nada y paseaban al azar en casa.
+ * Lo que corta el paso a `unit` al medir distancias: las demas unidades que conoce (quien decide mide
+ * sobre la vista de su equipo: los enemigos que no ve no estan, asi que no le cortan el camino al
+ * medir, haya emboscadas o no; al moverse de verdad manda lo que diga la partida).
+ * [CAMBIO] Con el ejercito a la vez ('army'), si las reglas de paso dejan atravesar a los aliados, mide
+ * con esas reglas: antes una columna en un puente o en la salida de la Fabrica dejaba a las de detras
+ * "sin camino" a nada y paseaban al azar en casa.
  */
 export function blockersFor(s: GameState, play: PlayCtx, unit: Unit): Blockers {
-  return play.paths === 'army' && letsAlliesThrough(s) ? passBlockers(s, unit, [PLANS_WITH_WHAT_IT_SEES]) : unitsBlock(s, unit);
+  return play.paths === 'army' && letsAlliesThrough(s) ? passBlockers(s, unit) : unitsBlock(s, unit);
 }
 
 /** Pasos por tierra (mar o aire, segun la unidad) desde `from` hasta cada casilla, con lo que le corta el paso (blockersFor). */

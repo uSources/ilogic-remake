@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { aiTurn, defaultAiProfile } from '@core/ai';
-import { dispatch } from '@core/actions';
+import { dispatch, TURN_END_PHASES } from '@core/actions';
+import { previewStandingOrders } from '@core/autopilot';
 import { playerView, seeing, unitsKnownTo } from '@core/playerView';
 import { newUnit, unitById } from '@core/rules';
 import type { ActionPlan, GameAction, GameState } from '@core/model';
@@ -128,5 +129,35 @@ describe('PlayerView: lo que sabe un equipo', () => {
     const without = decide(make(false));
     expect(without.length).toBeGreaterThan(0);
     expect(decide(make(true))).toEqual(without);
+  });
+});
+
+describe('las ordenes que cumple la partida deciden con lo que sabe el equipo', () => {
+  /** Un pasillo entre agua, un soldado propio con orden de defender al fondo y, si se pide, un enemigo escondido en el camino. */
+  function corridor(withHidden: boolean) {
+    const s = giveTurn(blankState({ fog: true, forestHides: true, terrainCost: false }), 0);
+    for (let x = 0; x < 32; x++) for (const y of [4, 6]) s.map[x]![y] = 'Water';
+    s.map[15]![5] = 'Woods';
+    const soldier = newUnit(s, SOLDIER, 0, { x: 2, y: 5 });
+    if (withHidden) newUnit(s, SOLDIER, 1, { x: 15, y: 5 });
+    act(s, 0, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'defend', at: { x: 25, y: 5 } } });
+    return { s, soldier };
+  }
+  const standingOrderPhase = TURN_END_PHASES.find((phase) => phase.id === 'standingOrders')!;
+  const runPhase = (s: GameState) => standingOrderPhase.run(s, 0, (state, team, action) => dispatch(state, team, action));
+
+  it('un enemigo escondido que corta el unico camino no cambia lo que hacen', () => {
+    const without = corridor(false);
+    const withHidden = corridor(true);
+    expect(playerView(withHidden.s, 0).state.units).toHaveLength(1);
+    expect(runPhase(withHidden.s)).toEqual(runPhase(without.s));
+    expect(withHidden.soldier.x).toBeGreaterThan(2);
+  });
+
+  it('la prevision es lo que despues hacen', () => {
+    const { s, soldier } = corridor(true);
+    const preview = previewStandingOrders(s, 0, dispatch).get(soldier.uid);
+    const moved = runPhase(s).find((event) => event.kind === 'move');
+    expect(moved?.kind === 'move' ? moved.path : null).toEqual(preview?.path);
   });
 });

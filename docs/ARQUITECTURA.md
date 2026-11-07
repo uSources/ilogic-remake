@@ -396,9 +396,9 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
   subir y el paso de un viaje usan lo mismo. Distancias sin limite: `distanceMap(s, desde,
   movimiento, blockers)`; acercarse a algo: `stepToward(alcance, approach)` (`overGroundTo`,
   `straightTo` o el `Approach` de la IA y de la formacion). La IA mide con `stepsMap`
-  (`autopilot/context.ts`): sola, todas las unidades cortan el paso; en grupo y si las reglas de paso
-  dejan atravesar a los aliados, mide con esas reglas y con `PLANS_WITH_WHAT_IT_SEES` delante (los
-  enemigos que no ve no le cortan el camino al planear, haya emboscadas o no).
+  (`autopilot/context.ts`) sobre la vista de su equipo, asi que los enemigos que no ve no le cortan el
+  camino al planear, haya emboscadas o no: sola, todas las unidades que conoce cortan el paso; con el
+  ejercito a la vez y si las reglas de paso dejan atravesar a los aliados, mide con esas reglas.
 - **La rejilla**: el mapa es una rejilla de casillas con cuatro vecinas (`neighbors4`) y distancia
   en linea `manhattan` (`geom.ts`). Es la unica suposicion fija del nucleo: alcance, distancias,
   zona de control, rombos de vision y de alcance la dan por hecha. Otra forma (hexagonos) seria
@@ -451,8 +451,13 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   ordenes y escuadras de los enemigos, los dados). Es la misma partida por debajo (un Proxy de
   solo lectura; sus unidades son las de verdad) y se pone al dia tras cada accion (`seeing`). Las
   caidas son publicas (la partida las anuncia): la vista las lleva como estan apuntadas
-  (`TeamState.fell`), nunca las deduce de lo que ve. Las ordenes permanentes que cumple la partida
-  deciden igual, con la vista del equipo (y su prevision quita lo mismo: `unitsKnownTo`).
+  (`TeamState.fell`), nunca las deduce de lo que ve. Las ordenes permanentes deciden igual, con la
+  vista del equipo, las cumpla quien las cumpla: los pasos de turno (`followStandingOrders` en
+  actions/turn.ts: `playerView` + `seeing`), la escena al darlas (scenes/game/orders.ts) y
+  `autopilotController` (con la vista que le da la sesion). Su prevision simula sobre una copia con
+  lo mismo quitado (`unitsKnownTo`), asi que sin combates ni emboscadas dice lo que despues hacen.
+  La sesion pone al dia la vista de quien juega tras cada accion; fuera de una sesion lo hace
+  `seeing`. La vista es de solo lectura hasta el fondo (lo que se lee de ella tambien).
 - **Un perfil que se le da**: como juega una IA es su `AiProfile` (`weights` de ai.json,
   `scoreTerms`, `behaviours`), que recibe su controlador (`aiController(perfil?)`; sin el, el del
   contenido de la partida: `defaultAiProfile`). Nada de la IA lee pesos de un sitio comun: dos IAs
