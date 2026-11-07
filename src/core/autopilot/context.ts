@@ -114,7 +114,13 @@ export function* doMove(s: GameState, play: PlayCtx, unit: Unit, dest: Pos | nul
   return events !== null && endsInterrupted(events);
 }
 
-/** Hasta donde puede llegar y disparar este turno: lo que puede gastar al moverse (con el clima) y su alcance. */
+/**
+ * Radio en linea hasta el que una unidad puede llegar y disparar este turno: lo que puede gastar al
+ * moverse (con el clima) mas su alcance. Es una cota: decide a que enemigos mira tryAttack (a cuales
+ * dispara o, si no puede a ninguno, a cual persigue), cuando se suelta una formacion y que enemigos
+ * prueba la tabla de fuego de la IA (que despues mira el alcance de verdad). [CAMBIO] Antes usaba el
+ * movimiento del tipo sin el clima, asi que con mal tiempo perseguia enemigos que no iba a alcanzar.
+ */
 export const strikeReach = (s: GameState, unit: Unit): number => moveBudget(s, unit) + (unitTypeOf(s, unit).attack?.maxRange ?? 0);
 
 /** Enemigos de `me` vivos y en el mapa (no transportados), se vean o no. */

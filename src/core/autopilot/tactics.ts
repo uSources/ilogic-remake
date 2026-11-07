@@ -124,6 +124,8 @@ export function* tryAttack(
   const { zone, chase = true, stay = false, from: allowedOrigin } = options;
   // [CAMBIO] el original atacaba aunque la unidad no pudiera luchar o no hiciera dano.
   if (unitTypeOf(s, unit).attack === null || !canStillFire(s, unit)) return false;
+  // Solo mira a los enemigos dentro del radio al que llega a disparar este turno (strikeReach, con el
+  // clima): de ellos sale a quien dispara y, si no puede a ninguno, a quien persigue (chaseNearest).
   const reach = strikeReach(s, unit);
   const isInReach = (enemy: Unit) => manhattan(unit, enemy) <= reach && (!zone || zone(enemy));
   // Solo a los que puede hacer daño: un ataque que no quita vida no vale (ver attackProblem).
