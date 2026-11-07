@@ -48,8 +48,8 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   turnos a mano. Las fachadas (`core/rules`, `core/squads`) solo preguntan; ESLint no deja usar sus
   modulos de dentro fuera del nucleo. Ver `docs/ARQUITECTURA.md`, "Acciones" y "Sucesos".
 - El azar: los dados de las reglas son de la partida (`GameState.dice`, `diceOf(s)`) y el de las
-  decisiones de la IA tambien, aparte (`GameState.decisionSeed`; el de cada turno, `decisionRng(s,
-  equipo)`); el generador de mapas lleva su `Rng` (`seededRng`); elegir al azar, `pick`/`weightedPick`
+  decisiones de la IA tambien, aparte (`GameState.decisionSeed`; el de cada turno, `turnSeedOf(s,
+  equipo)`, y quien decide lo lee de su vista: `decisionRngOf(vista)`); el generador de mapas lleva su `Rng` (`seededRng`); elegir al azar, `pick`/`weightedPick`
   (`core/util/random.ts`); nada de `Math.random` en core. La IA y los mapas son deterministas con la
   misma partida.
 

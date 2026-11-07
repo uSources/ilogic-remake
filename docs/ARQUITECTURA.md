@@ -211,7 +211,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 | `modes.ts` | `GAME_MODES`: lo que fija cada modo de juego (congelado; se lee con `gameModeOf`) |
 | `match.ts` | empezar una partida: `MatchConfig`, `MATCH_SETUPS`, `buildMatch`, `skirmishConfig`, `rematchOf` |
 | `gameState.ts` | `newGameState(...)`: el unico sitio que escribe la forma de una partida nueva |
-| `dice.ts` + `util/random.ts` | el azar: los dados de la partida (`diceOf`), el de las decisiones de la IA en cada turno (`decisionRng`), el `Rng` con semilla (`seededRng`) y elegir al azar (`pick`, `weightedPick`) |
+| `dice.ts`, `turnSeeds.ts` + `util/random.ts` | el azar: los dados de la partida (`diceOf`), la semilla de las decisiones de cada turno (`turnSeedOf`; quien decide, de su vista: `decisionRngOf`, playerView.ts), el `Rng` con semilla (`seededRng`) y elegir al azar (`pick`, `weightedPick`) |
 | `playerView.ts` | lo que sabe cada equipo (`PlayerView`, con lo que no sabe en `FOG`) y un plan con la vista al dia (`seeing`) |
 | `settingsSchema.ts` | `SETTINGS_SCHEMA`: que valores puede tener cada ajuste |
 | `matchSettings.ts` | `settingsWith(contenido, cambios)`: los ajustes por defecto con cambios (`MatchSettings`, `s.settings`) |
@@ -291,8 +291,11 @@ partida. Las decisiones de la IA tienen su propio azar, tambien de la partida pe
 `GameState.decisionSeed` (fija; quien crea la partida la saca aparte de la de los dados: `MatchSeeds`,
 `matchSeedsFrom(semilla)` para una mision o un laboratorio, dos tiradas distintas del generador en
 mapgen) y, para cada
-turno, `decisionRng(s, equipo)` (dice.ts: la semilla del turno, `turnSeed`, mezcla la de la
-partida, el dia y el equipo). Asi el mismo turno da las mismas decisiones al cargar la partida, al
+turno, `turnSeedOf(s, equipo)` (turnSeeds.ts: la semilla del turno, `turnSeed`, mezcla la de la
+partida, el dia y el equipo). Quien decide no la saca de la partida: la vista se la da
+(`PlayerView.turnSeed`) y su azar es `decisionRngOf(vista)`; en la vista la semilla de la partida es
+0, asi que `turnSeedOf(vista.state, ...)` daria siempre lo mismo, y por eso ESLint no deja a la IA ni
+a autopilot/ importar `dice.ts` ni `turnSeeds.ts` (`DECIDERS_ONLY_PROPOSE`). Asi el mismo turno da las mismas decisiones al cargar la partida, al
 repetirla o en otra maquina (por la red), y lo que decide no cambia lo que sale en los dados. El
 generador de mapas lleva su `Rng` (`seededRng`), que da quien crea la partida. `util/random.ts`: el
 paso de mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `matchSeedsFrom`, `turnSeed`, y
@@ -469,7 +472,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   contenido de la partida: `defaultAiProfile`). Nada de la IA lee pesos de un sitio comun: dos IAs
   con otros perfiles juegan a la vez (la arena). Las ordenes de la partida usan
   `autopilotProfileOf(contenido)`.
-- **Su azar, de la partida**: `decisionRng(s, equipo)` (ver "El azar"): el mismo turno decide igual
+- **Su azar, de la partida**: `decisionRngOf(vista)` (ver "El azar"): el mismo turno decide igual
   al cargar, al repetir o por la red.
 - **Sin estado global**: el equipo que juega, su perfil, como mide los caminos (`paths`: 'alone',
   cada unidad sola, o 'army', el ejercito a la vez: atraviesa a los aliados si las reglas lo
@@ -728,7 +731,7 @@ la sesion manda 'endTurn'.
 
 Los de la IA (`aiController`, y `controllersFor`, que da el de cada equipo segun su
 `TeamState.controller`) estan en `core/controllers/` (fachada `core/controllers.ts`), fuera de
-session/: la sesion no importa la IA. El azar de la IA sale de la partida (`decisionRng`, ver "El
+session/: la sesion no importa la IA. El azar de la IA sale de la partida (`decisionRngOf` de su vista, ver "El
 azar"): nadie se lo da, asi que la pantalla, el fondo del menu y las herramientas deciden igual.
 
 - La partida en juego es una `GameSession` (`session/gameSession.ts`): la partida, sus
@@ -810,7 +813,7 @@ sequenceDiagram
   lo que saldra en sus combates: el resultado de un ataque ya esta fijado por la partida, y volver a
   cargar para atacar otra vez da el mismo.
 - [CAMBIO] La semilla de las decisiones de la IA es de la partida (`GameState.decisionSeed`, se
-  guarda con ella) y la de cada turno sale de ella, del dia y del equipo (`decisionRng`): cargar y
+  guarda con ella) y la de cada turno sale de ella, del dia y del equipo (`turnSeedOf`; quien decide, `decisionRngOf(vista)`): cargar y
   pasar turno da las mismas decisiones, y una partida por la red o una repeticion decide igual en
   cada maquina. Va aparte de los dados: lo que decide la IA no cambia lo que sale en los combates.
 - **Nada de estado global de partida**: los ajustes van en `s.settings` (obligatorios; los de siempre,

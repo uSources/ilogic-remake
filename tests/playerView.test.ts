@@ -5,7 +5,7 @@ import { previewStandingOrders } from '@core/autopilot';
 import { playerView, seeing, unitsKnownTo } from '@core/playerView';
 import { newUnit, unitById } from '@core/rules';
 import type { ActionPlan, Building, GameAction, GameState } from '@core/model';
-import { turnSeedOf } from '@core/dice';
+import { turnSeedOf } from '@core/turnSeeds';
 import { act, blankState, giveTurn, unitTypeNamed } from './helpers';
 import { seededRng } from '@core/util/random';
 

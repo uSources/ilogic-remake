@@ -109,9 +109,9 @@ export const DECIDERS_ONLY_PROPOSE = [
     message: 'Quien decide recibe la vista de su equipo (PlayerView): no se la hace de la partida de verdad.',
   },
   {
-    regex: '(^|/)dice(\\.ts)?$',
-    importNames: ['diceOf'],
-    message: 'Los dados son de las reglas: quien decide usa su propio azar (decisionRng, que le da su controlador).',
+    regex: '(^|/)(dice|turnSeeds)(\\.ts)?$',
+    message:
+      'Los dados son de las reglas y la semilla de cada turno se lee de la partida de verdad: quien decide usa el azar de su vista (decisionRngOf).',
   },
 ];
 const AI_FILES = ['src/core/ai/**/*.ts', 'src/core/ai.ts'];

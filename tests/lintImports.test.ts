@@ -97,13 +97,15 @@ describe('quien decide solo propone (DECIDERS_ONLY_PROPOSE, eslint.config.js)', 
     "import { GameSession } from '../session/gameSession';",
     "import { playerView } from '../playerView';",
     "import { diceOf } from '../dice';",
+    "import { turnSeedOf } from '../turnSeeds';",
+    "import { turnSeedOf } from '@core/turnSeeds';",
   ])('prohibe %s', (code) => expect(forbidsCode(`${code}\nexport const used = 1;\n`)).toBe(true));
 
   it.each([
     "import { actorProblem } from '../actions/checks';",
     "import { carryOut } from '../actions/plan';",
     "import { seeing, unitsKnownTo } from '../playerView';",
-    "import { decisionRng } from '../dice';",
+    "import { decisionRngOf } from '../playerView';",
   ])('deja %s', (code) => expect(forbidsCode(`${code}\nexport const used = 1;\n`)).toBe(false));
 
   it('la configuracion de verdad lo pone en la IA y en autopilot/', async () => {

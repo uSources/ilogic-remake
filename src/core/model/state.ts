@@ -55,7 +55,7 @@ export interface GameState {
   dice: number;
   /**
    * Semilla de las decisiones de quien juega por un equipo sin ser una persona (la IA): fija toda la
-   * partida. El azar de cada turno sale de ella, del dia y del equipo (`decisionRng`, dice.ts), asi
+   * partida. El azar de cada turno sale de ella, del dia y del equipo (`turnSeedOf`, turnSeeds.ts; quien decide, de su vista: `decisionRngOf`), asi
    * que la misma partida da las mismas decisiones al repetirla, al cargarla o en otra maquina
    * (una partida por la red). Va aparte de los dados: lo que decide no cambia lo que sale en ellos.
    */

@@ -15,10 +15,11 @@
  * enseña a la persona el codigo del mapa (de el salen las semillas de una escaramuza) y son de 32
  * bits; una partida por la red que tenga que guardarlas en secreto no las manda (lo hace el servidor).
  */
-import { turnSeedOf } from './dice';
-import type { ActionPlan, Building, GameState, TeamId, Unit } from './model';
+import type { ActionPlan, Building, GameState, Rng, TeamId, Unit } from './model';
 import { sightOf, type Sight } from './rules/visibility';
 import { areAllied } from './teams';
+import { turnSeedOf } from './turnSeeds';
+import { seededRng } from './util/random';
 
 /** Lo que cambia la niebla en la vista (los campos de la partida que se ven de otra forma). */
 type FoggedParts = Partial<Pick<GameState, 'units' | 'squads' | 'buildings' | 'dice' | 'decisionSeed' | 'setup'>>;
@@ -101,11 +102,18 @@ export interface PlayerView {
    * (unidades, equipos, edificios...): se proponen acciones.
    */
   readonly state: GameState;
-  /** La semilla del azar de las decisiones de su equipo en este turno (`decisionRng` de la partida): lo unico que sabe de ella. */
+  /** La semilla del azar de las decisiones de su equipo en este turno (`turnSeedOf` de la partida): lo unico que sabe de ella. */
   readonly turnSeed: number;
   /** Vuelve a mirar la partida (tras una accion, o algo que haya pasado fuera del turno). */
   refresh(): void;
 }
+
+/**
+ * El azar de las decisiones de quien decide con esta vista, en este turno: el mismo cada vez que se
+ * juegue el turno (al cargar, al repetir, por la red). Es el unico azar de quien decide: los dados son
+ * de las reglas y la semilla de la partida no se ve en la vista.
+ */
+export const decisionRngOf = (view: PlayerView): Rng => seededRng(view.turnSeed);
 
 /** Lo que se le dice a quien intenta cambiar la vista. */
 const READ_ONLY = 'La vista de un equipo no se cambia: quien decide propone acciones';

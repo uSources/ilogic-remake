@@ -7,14 +7,13 @@
  */
 import { aiTurn, defaultAiProfile } from '@core/ai';
 import { carryOut } from '@core/actions';
-import { playerView, seeing } from '@core/playerView';
+import { decisionRngOf, playerView, seeing } from '@core/playerView';
 import { playerTeam, shownTeamNumber, teamIds, teamState, teamValue } from '@core/teams';
 import { defaultContent } from '@core/content/default';
 import { buildingTypeOf, terrainAt, unitTypeOf } from '@core/gameContent';
 import { createMatch, loadGame } from '@core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '@core/match';
 import { posKey } from '@core/geom';
-import { seededRng } from '@core/util/random';
 import { mapGrid } from '@core/mapGrid';
 import { generalOf } from '@core/generals';
 import { missionById } from '@core/missions';
@@ -353,7 +352,7 @@ export class TextMatch {
   /** Los sucesos de la IA jugando tu turno: propone y la sesion manda, como si fueras tu. */
   private aiPlaysMyTurn(): GameEvent[] {
     const view = playerView(this.s, this.me);
-    const plan = seeing(view, aiTurn(view, defaultAiProfile(this.s.content), seededRng(view.turnSeed)));
+    const plan = seeing(view, aiTurn(view, defaultAiProfile(this.s.content), decisionRngOf(view)));
     return carryOut(plan, (action) => this.session.act(this.me, action)).events;
   }
 
