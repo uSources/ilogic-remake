@@ -31,7 +31,7 @@ import {
   type SavedGame,
   type SavedLists,
 } from './savedParts';
-import { isGameModeId } from './modes';
+import { GAME_MODES, isGameModeId, modeIn, type GameModeRegistry } from './modes';
 import { isValidSettings } from './settingsSchema';
 import { rulesetFor } from './ruleModules/registry';
 import { isObject } from './util/validation';
@@ -70,22 +70,22 @@ export function serialize(s: GameState): string {
 }
 
 /** Lee una partida guardada. El contenido con el que se juega no se guarda: lo da quien lee (`content`). */
-export function readSave(json: string, content: GameContent): ReadSaveResult {
+export function readSave(json: string, content: GameContent, modes: GameModeRegistry = GAME_MODES): ReadSaveResult {
   const saved = parseObject(json);
   if (!saved) return { ok: false, error: 'notJson' };
   if (saved.version !== SAVE_VERSION) return { ok: false, error: 'badVersion' };
-  const check = checkGame(saved, content);
+  const check = checkGame(saved, content, modes);
   if (!check.ok) return check;
   const game = cleanGame(saved, check);
-  const state: GameState = { ...game, content, ruleset: rulesetFor(game, game.settings) };
+  const state: GameState = { ...game, content, ruleset: rulesetFor(modeIn(modes, game.mode), game.settings) };
   // Las caidas apuntadas tienen que cuadrar con la partida: quien ha caido tiene la suya, y solo el.
   if (!fallsMatch(state)) return { ok: false, error: 'badTeams' };
   return { ok: true, state };
 }
 
 /** Lee una partida guardada (ver readSave): null si no se ha podido. */
-export function deserialize(json: string, content: GameContent): GameState | null {
-  const result = readSave(json, content);
+export function deserialize(json: string, content: GameContent, modes: GameModeRegistry = GAME_MODES): GameState | null {
+  const result = readSave(json, content, modes);
   return result.ok ? result.state : null;
 }
 
@@ -111,7 +111,7 @@ interface CheckedGame {
  * contenido, las unidades el mapa y los equipos...). Solo mira: el primer error, o lo que hace falta
  * para limpiarla (cleanGame).
  */
-function checkGame(saved: SavedGame, content: GameContent): CheckedGame | { ok: false; error: SaveError } {
+function checkGame(saved: SavedGame, content: GameContent, modes: GameModeRegistry): CheckedGame | { ok: false; error: SaveError } {
   const fail = (error: SaveError) => ({ ok: false as const, error });
   if (!hasGameShape(saved)) return fail('badShape');
   const { map, teams, units, buildings } = saved;
@@ -119,7 +119,7 @@ function checkGame(saved: SavedGame, content: GameContent): CheckedGame | { ok: 
   if (!isEntryId(content.themes, saved.theme)) return fail('badTheme');
   if (!isRandomState(saved.dice) || !isRandomState(saved.decisionSeed)) return fail('badDice');
   if (!hasValidTeams(teams)) return fail('badTeams');
-  if (!isGameModeId(saved.mode)) return fail('badMode');
+  if (!isGameModeId(saved.mode, modes)) return fail('badMode');
   const frame: SaveFrame = { content, board: boardOf(map), teamCount: teams.length };
   if (!isValidTurn(frame, saved)) return fail('badTurn');
   if (!hasValidUnits(frame, units)) return fail('badUnits');

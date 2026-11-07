@@ -265,10 +265,15 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   crear la partida y se guarda con ella), las reglas que impone (`fixedSettings`, que aplica
   `buildMatch`: la partida para mirar no tiene clima), sus pasos de turno (`turnPhases`, detras de
   los de siempre) y si la pantalla guarda sola al empezar el turno de una persona
-  (`saves`). Esta congelado y todo lo lee por `gameModeOf` (las reglas, la sesion,
-  `newGameState`); los tests que prueban otro modo lo dan con `vi.mock` de `gameModeOf`
-  (tests/modeHooks.test.ts). Un modo nuevo es su entrada aqui, su configuracion en `MatchConfig` y
-  su forma de prepararse en `MATCH_SETUPS`.
+  (`saves`). Esta congelado. Cada partida resuelve su modo al crearse o leerse, como sus modulos de
+  reglas (`s.ruleset.mode`), de un registro (`GameModeRegistry`; los del juego, `GAME_MODES`), y
+  todo lo lee por `gameModeOf(s)` (las reglas, la sesion, la preparacion). Asi otro modo (uno de
+  prueba, uno de un servidor) se juega sin tocar nada global: su nombre en `GameModeIds`
+  (model/match.ts, `declare module`, como ModuleEvents) y su definicion en el registro que se da a
+  `newGameState({ modes })`, `buildMatch(config, { modes })` o `readSave(json, contenido, modes)`
+  (tests/modeHooks.test.ts lo hace asi). Un modo del juego nuevo es su nombre en `GameModeIds`, su
+  entrada en `GAME_MODES` y, si se empieza desde una configuracion, esta en `MatchConfig` y su
+  forma de prepararse en `MATCH_SETUPS` (el compilador pide las dos).
 - `match.ts`: `MatchConfig` son datos (`SkirmishConfig`, `MissionConfig`, `SandboxConfig`);
   `MATCH_SETUPS`, como se prepara cada modo; `buildMatch(config, { content, mapRng? })`, con su
   clima y la muestra del ejercito del primer dia. Todo lo de la partida va en la configuracion, nada

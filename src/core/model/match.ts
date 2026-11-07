@@ -8,8 +8,17 @@ import type { TeamId } from './team';
  * - skirmish: mapa al azar (o con codigo), gana la ultima alianza en pie o la de mas puntos al limite de dias;
  * - mission: una mision de la campaña, con su objetivo;
  * - sandbox: una partida preparada a mano (el laboratorio de animaciones): no se acaba sola.
+ * Un modo nuevo (o uno de prueba) añade su nombre ampliando esta interfaz (`declare module`, como
+ * ModuleEvents) y da su definicion en un `GameModeRegistry` (core/modes.ts) a quien crea o lee la
+ * partida.
  */
-export type GameModeId = 'skirmish' | 'mission' | 'sandbox';
+export interface GameModeIds {
+  skirmish: true;
+  mission: true;
+  sandbox: true;
+}
+/** El nombre de un modo de juego (ver GameModeIds). */
+export type GameModeId = keyof GameModeIds;
 
 /**
  * Una forma de acabar la partida (rules/victory.ts, `VICTORY_RULES`). Cada modo dice las suyas, en

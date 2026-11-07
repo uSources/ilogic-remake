@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_MODES, gameModeOf } from '@core/modes';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { RULE_MODULES, hooksOf, isRuleOn, resolveRuleset, rulesetFor, type RuleModuleId } from '@core/rules';
@@ -69,7 +70,7 @@ describe('modulos de reglas (RULE_MODULES)', () => {
     const s = blankState(DEFAULTS);
     expect(Object.isFrozen(s.ruleset)).toBe(true);
     // El modelo de daño es una funcion hecha con los ajustes: se compara lo que reparte, no la funcion.
-    const { damageModel, ...rest } = rulesetFor(s, s.settings);
+    const { damageModel, ...rest } = rulesetFor(gameModeOf(s), s.settings);
     expect(s.ruleset).toMatchObject(rest);
     expect(s.ruleset.damageModel.distribution(10, 0.5)).toEqual(damageModel.distribution(10, 0.5));
     const loaded = deserialize(serialize(s), defaultContent())!;
@@ -80,7 +81,7 @@ describe('modulos de reglas (RULE_MODULES)', () => {
   });
 
   it('resolveRuleset: solo los que se enchufan con esos ajustes, con sus listas juntas en orden', () => {
-    const ruleset = resolveRuleset(RULE_MODULES, settingsWith(defaultContent(), { weather: false }));
+    const ruleset = resolveRuleset(RULE_MODULES, settingsWith(defaultContent(), { weather: false }), GAME_MODES.skirmish);
     expect(ruleset.modules.map((module) => module.id)).not.toContain('weather');
     expect(ruleset.hooks.roundPhases.map((phase) => phase.id)).toEqual(['generals', 'control', 'upkeep']);
   });

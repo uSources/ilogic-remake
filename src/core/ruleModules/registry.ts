@@ -4,8 +4,8 @@
  * (o en los `ruleModules` de un modo, si es solo de ese modo); las reglas que miran esas listas no
  * cambian. Las reglas no importan esto: preguntan a `GameState.ruleset` (ruleset.ts).
  */
-import type { GameModeId, MatchSettings, ModuleEventsAreNew } from '../model';
-import { gameModeOf } from '../modes';
+import type { MatchSettings, ModuleEventsAreNew } from '../model';
+import type { GameMode } from '../modes';
 import { ABILITIES } from './abilities';
 import { AMBUSH } from './ambush';
 import { BOUNTY } from './bounty';
@@ -51,8 +51,8 @@ export const RULE_MODULES: readonly RuleModule[] = [
  * los que añade el modo (`GameMode.ruleModules`), los que se enchufen con esos ajustes. Se resuelve
  * una vez por partida (newGameState, readSave, changeSettings) y se guarda en `GameState.ruleset`.
  */
-export function rulesetFor(match: { readonly mode: GameModeId }, settings: Readonly<MatchSettings>): Ruleset {
-  return resolveRuleset([...RULE_MODULES, ...(gameModeOf(match).ruleModules ?? [])], settings);
+export function rulesetFor(mode: GameMode, settings: Readonly<MatchSettings>): Ruleset {
+  return resolveRuleset([...RULE_MODULES, ...(mode.ruleModules ?? [])], settings, mode);
 }
 
 /**

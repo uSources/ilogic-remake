@@ -7,6 +7,7 @@ import { entryOf, findEntry, type GameContent, type MissionDef, type TerrainType
 import { settingsWith } from '../matchSettings';
 import type { DeepReadonly } from '../util/freeze';
 import { newGameState } from '../gameState';
+import type { GameModeRegistry } from '../modes';
 import type { GameState, Pos, MatchSettings, TeamId } from '../model';
 import { objectiveFromMission } from '../objectives';
 import { newUnit } from '../rules/lifecycle';
@@ -54,7 +55,7 @@ function placeUnits(s: GameState, units: Mission['units']): number[] {
  * Crea la partida de una mision, con sus reglas (`missionSettings`) guardadas en la partida. `seeds`:
  * las de su azar (cada vez que se juega, las que diga quien la empieza).
  */
-export function buildMission(mission: Mission, content: GameContent, seeds: MatchSeeds): GameState {
+export function buildMission(mission: Mission, content: GameContent, seeds: MatchSeeds, modes?: GameModeRegistry): GameState {
   const s = newGameState({
     map: terrainGrid(content, mission),
     settings: missionSettings(mission, content),
@@ -63,6 +64,7 @@ export function buildMission(mission: Mission, content: GameContent, seeds: Matc
     theme: missionTheme(content, mission).id,
     teams: mission.teams,
     seeds,
+    modes,
   });
   for (const [type, owner, x, y] of mission.buildings)
     s.buildings.push({ type: entryOf(content.buildings, type, 'edificio').id, owner, x, y });

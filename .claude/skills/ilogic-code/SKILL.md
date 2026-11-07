@@ -134,7 +134,9 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   puede traer sus propios modulos (`GameMode.ruleModules`: se resuelven con la partida, `s.ruleset`); las reglas no preguntan por un ajuste (`if (!s.settings.x)`); paso al empezar o acabar cada turno =
   entrada en `TURN_START_PHASES`/`TURN_END_PHASES` (`core/actions/turn.ts`); forma de acabar la
   partida = entrada en `VICTORY_RULES` (`core/rules/victory.ts`) y en la lista de su modo; modo de
-  juego = entrada en `GAME_MODES` (`core/modes.ts`), su configuracion en `MatchConfig` y su
+  juego = su nombre en `GameModeIds` (model), su entrada en `GAME_MODES` (`core/modes.ts`; la partida
+  lo resuelve al crearse, `s.ruleset.mode`, y uno de prueba va en un registro propio que se da a
+  `newGameState({ modes })`, sin `vi.mock`), su configuracion en `MatchConfig` y su
   preparacion en `MATCH_SETUPS` (`core/match.ts`); quien juega un equipo = un `Controller`
   (`core/session`); habilidad de unidad nueva = su forma en `AbilityDef`, su validacion en
   `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta en `ABILITY_HOOKS` y su sitio

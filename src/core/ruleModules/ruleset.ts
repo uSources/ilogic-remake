@@ -7,6 +7,7 @@
 import type { DamageModel, GameState, MatchSettings } from '../model';
 import { damageModelFor } from '../damage';
 import { deepFreeze } from '../util/freeze';
+import type { GameMode } from '../modes';
 import type { RuleHooks, RuleModule, RuleModuleId } from './hooks';
 
 /** Lo que es una entrada de esa lista. */
@@ -14,6 +15,8 @@ export type HookOf<K extends keyof RuleHooks> = NonNullable<RuleHooks[K]>[number
 
 /** Los modulos que lleva una partida y lo que aportan, ya juntado lista a lista. */
 export interface Ruleset {
+  /** El modo de la partida (`GameState.mode`), resuelto del registro con el que se creo o se leyo (ver GameModeRegistry). */
+  readonly mode: GameMode;
   readonly modules: readonly RuleModule[];
   readonly hooks: { readonly [K in keyof RuleHooks]-?: readonly HookOf<K>[] };
   /** Como sale el daño en esta partida (el ajuste `damageModel`, construido una vez). */
@@ -55,16 +58,16 @@ function collect<K extends keyof RuleHooks>(modules: readonly RuleModule[], list
   return modules.flatMap((module): readonly HookOf<K>[] => module.hooks[list] ?? []);
 }
 
-/** Los modulos de `available` que se enchufan con estos ajustes, con sus listas ya juntas. */
-export function resolveRuleset(available: readonly RuleModule[], settings: Readonly<MatchSettings>): Ruleset {
+/** Los modulos de `available` que se enchufan con estos ajustes, con sus listas ya juntas, para una partida de ese modo. */
+export function resolveRuleset(available: readonly RuleModule[], settings: Readonly<MatchSettings>, mode: GameMode): Ruleset {
   const repeated = available.find((module, index) => available.findIndex((other) => other.id === module.id) !== index);
   if (repeated) throw new Error(`Dos modulos de reglas con el mismo nombre: ${repeated.id}`);
   const modules = available.filter((module) => module.isOn(settings));
   const lists = Object.keys(HOOK_LISTS) as (keyof RuleHooks)[];
   // Cada lista se junta con su propio tipo (collect); el objeto entero no lo sabe ver TypeScript.
   const hooks = Object.fromEntries(lists.map((list) => [list, collect(modules, list)])) as Ruleset['hooks'];
-  const ruleset: Ruleset = { modules, hooks, damageModel: damageModelFor(settings) };
-  // Congelado hasta el fondo (las listas, los modulos y sus entradas): se comparte entre partidas y
+  const ruleset: Ruleset = { mode, modules, hooks, damageModel: damageModelFor(settings) };
+  // Congelado hasta el fondo (el modo, las listas, los modulos y sus entradas): se comparte entre partidas y
   // llega a quien decide por su vista; nadie puede cambiar las reglas de una partida tocandolo.
   deepFreeze(ruleset);
   return ruleset;

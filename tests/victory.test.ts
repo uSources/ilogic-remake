@@ -5,7 +5,7 @@ import { newUnit } from '@core/measure';
 import { restoreInvariants } from '@core/rules/invariants';
 import { buildMission, missionById } from '@core/missions';
 import { defaultContent } from '@core/content/default';
-import type { GameModeId, VictoryRuleId } from '@core/model';
+import type { VictoryRuleId } from '@core/model';
 import { act, blankState, BLANK_SEEDS, expectRejected, hqId, resultFor, unitTypeNamed } from './helpers';
 
 /** Quita al equipo su Base (con eso ha perdido) y le deja una unidad: ha caido por la Base, no por quedarse sin nada. */
@@ -18,7 +18,7 @@ const takeHeadquarters = (s: ReturnType<typeof blankState>, team: number) => {
 
 describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
   it('cada modo dice sus formas de acabar, y todas existen', () => {
-    const modes = Object.keys(GAME_MODES) as GameModeId[];
+    const modes = Object.keys(GAME_MODES) as (keyof typeof GAME_MODES)[];
     for (const mode of modes) {
       expect(GAME_MODES[mode].id).toBe(mode);
       for (const rule of GAME_MODES[mode].victory) expect(VICTORY_RULES[rule as VictoryRuleId]).toBeDefined();
@@ -81,8 +81,7 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
   });
 
   it('rendirse no vale donde la partida no se puede perder (el laboratorio)', () => {
-    const s = blankState();
-    s.mode = 'sandbox';
+    const s = blankState({}, undefined, 'sandbox');
     expectRejected(s, 0, { kind: 'surrender' }, 'cannotLose');
   });
 
@@ -102,8 +101,7 @@ describe('como acaba una partida (rules/victory.ts, VICTORY_RULES)', () => {
   });
 
   it('una partida para mirar (sandbox) no acaba sola, aunque no quede nadie', () => {
-    const s = blankState();
-    s.mode = 'sandbox';
+    const s = blankState({}, undefined, 'sandbox');
     takeHeadquarters(s, 0);
     takeHeadquarters(s, 1);
     expect(gameModeOf(s).victory).toEqual([]);

@@ -21,6 +21,7 @@ import { buildingAt, canMoveOn, unitAt } from './rules/queries';
 import type { Grid, GridBounds, GridSize } from './util/grid';
 import { pick, randomInt, seedFromDraw, shuffleInPlace, type MatchSeeds } from './util/random';
 import type { GameState, Pos, Rng, MatchSettings, TeamId } from './model';
+import type { GameModeRegistry } from './modes';
 
 const WALK = MoveType.FOOT;
 /** Lado del mapa del original, con el que estan medidos los numeros de mapgen.json. */
@@ -49,6 +50,7 @@ function emptyState(size: number, options: NewMapOptions, seeds: MatchSeeds): Ga
     teams: options.teams,
     firstTeam: options.firstTeam,
     seeds,
+    modes: options.modes,
   });
 }
 
@@ -496,6 +498,8 @@ export interface NewMapOptions {
   teams: readonly TeamSetup[];
   /** El equipo que juega primero cada ronda (si no, el primero). */
   firstTeam?: TeamId;
+  /** Los modos que se conocen (si no, los del juego): ver MatchSetupContext.modes. */
+  modes?: GameModeRegistry;
 }
 
 /**

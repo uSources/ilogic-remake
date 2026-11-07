@@ -11,7 +11,7 @@ import { entryOf, type GameContent } from './content';
 import { appointGeneral } from './generals';
 import { changeSettings, newGameState } from './gameState';
 import { generateGame } from './mapgen';
-import { gameModeOf } from './modes';
+import { gameModeOf, type GameModeRegistry } from './modes';
 import { blankMap } from './mapGrid';
 import { buildMission, missionById } from './missions';
 import { assertAllStanding } from './rules/falls';
@@ -94,6 +94,8 @@ export type MatchConfigOf<M extends GameModeId> = Extract<MatchConfig, { mode: M
 export interface MatchSetupContext {
   content: GameContent;
   mapRng?: Rng;
+  /** Los modos que se conocen (si no, los del juego: GAME_MODES): un modo de prueba o de un servidor. */
+  modes?: GameModeRegistry;
 }
 
 type MatchSetup<M extends GameModeId> = (config: MatchConfigOf<M>, context: MatchSetupContext) => GameState;
@@ -106,7 +108,7 @@ function appointGenerals(s: GameState, teams: readonly MatchTeam[]): void {
   teams.forEach((team, id) => appointGeneral(s, id, team.general));
 }
 
-function skirmish(config: SkirmishConfig, { content, mapRng }: MatchSetupContext): GameState {
+function skirmish(config: SkirmishConfig, { content, mapRng, modes }: MatchSetupContext): GameState {
   const { map } = config;
   const theme = map.theme === null ? null : entryOf(content.themes, map.theme, 'tema');
   const s = generateGame(mapRng ?? seededRng(map.seed), {
@@ -116,6 +118,7 @@ function skirmish(config: SkirmishConfig, { content, mapRng }: MatchSetupContext
     content,
     teams: config.teams,
     firstTeam: config.firstTeam,
+    modes,
   });
   s.setup = { ...map };
   if (config.swapStarts) swapStarts(s);
@@ -133,14 +136,15 @@ function swapStarts(s: GameState): void {
   for (const building of s.buildings) if (building.owner !== null) building.owner = other(building.owner);
 }
 
-function mission(config: MissionConfig, { content }: MatchSetupContext): GameState {
+function mission(config: MissionConfig, { content, modes }: MatchSetupContext): GameState {
   const found = missionById(content, config.mission);
   if (!found) throw new Error(`No existe la mision "${config.mission}"`);
-  return buildMission(found, content, matchSeedsFrom(config.seed));
+  return buildMission(found, content, matchSeedsFrom(config.seed), modes);
 }
 
-function sandbox(config: SandboxConfig, { content }: MatchSetupContext): GameState {
+function sandbox(config: SandboxConfig, { content, modes }: MatchSetupContext): GameState {
   const s = newGameState({
+    modes,
     map: blankMap(config.size, content.plainTerrain.id),
     settings: settingsWith(content, config.settingChanges ?? {}),
     content,
@@ -158,8 +162,8 @@ function sandbox(config: SandboxConfig, { content }: MatchSetupContext): GameSta
   return s;
 }
 
-/** Como se prepara cada modo (el tipo obliga a tener uno por modo de GAME_MODES). */
-export const MATCH_SETUPS: { readonly [M in GameModeId]: MatchSetup<M> } = { skirmish, mission, sandbox };
+/** Como se prepara cada modo que se configura con un `MatchConfig` (el tipo obliga a tener uno por cada uno). */
+export const MATCH_SETUPS: { readonly [M in MatchConfig['mode']]: MatchSetup<M> } = { skirmish, mission, sandbox };
 
 /** La preparacion del modo de la configuracion. */
 function setupOf(config: MatchConfig): (config: MatchConfig, context: MatchSetupContext) => GameState {
