@@ -16,8 +16,7 @@ import { endRound } from '../rules/round';
 import { isMatchOver } from '../rules/victory';
 import { nextTurn } from '../rules/turnOrder';
 import { canMoveNow } from '../rules/unitTurn';
-import type { ActionRejection, ActionResult, GameAction, GameEvent, GameState, TeamId } from '../model';
-import type { ActionDispatcher, ActionRegistry } from './types';
+import type { ActionDispatcher, ActionRegistry, ActionRejection, ActionResult, GameAction, GameEvent, GameState, TeamId } from '../model';
 
 /** Los sucesos de una accion hecha (ninguno si no valia). */
 const eventsOf = (result: ActionResult): GameEvent[] => (result.ok ? result.events : []);

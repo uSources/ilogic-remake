@@ -4,9 +4,8 @@ import { moveEvent, type Traversal } from '../rules/traverse';
 import { unitById } from '../rules/queries';
 import { endTravel } from '../rules/travel';
 import { boardTransport, dropPassenger, loadProblem, mergeInto, mergeProblem, unloadProblem } from '../rules/transport';
-import type { ActionRejection, GameEvent, GameState, TeamId, Unit } from '../model';
+import type { ActionRegistry, ActionRejection, GameEvent, GameState, TeamId, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
-import type { ActionRegistry } from './types';
 
 /** Por que no vale que `uid` vaya hasta la unidad `otherUid` (que tiene que existir) y entre en ella. */
 function joinProblem(

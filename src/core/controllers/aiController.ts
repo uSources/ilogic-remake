@@ -4,8 +4,7 @@
  * apunta de session/selfDispatched.ts: solo las de su equipo y nunca los limites de turno.
  */
 import { aiTurn } from '../ai';
-import type { ActionDispatcher } from '../actions/types';
-import type { GameEvent, GameState, Rng, TeamId } from '../model';
+import type { ActionDispatcher, GameEvent, GameState, Rng, TeamId } from '../model';
 import type { Controller } from '../session/controller';
 import { selfDispatched } from '../session/selfDispatched';
 

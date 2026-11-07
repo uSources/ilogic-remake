@@ -15,7 +15,7 @@ import { SQUAD_ACTIONS } from './squads';
 import { STANDING_ORDER_ACTIONS } from './standingOrders';
 import { TRANSPORT_ACTIONS } from './transport';
 import { UNIT_ACTIONS } from './units';
-import type { ActionRegistry } from './types';
+import type { ActionRegistry } from '../model';
 
 export const ACTIONS: ActionRegistry = {
   ...MOVEMENT_ACTIONS,

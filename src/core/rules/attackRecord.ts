@@ -2,8 +2,6 @@
 import type { AttackRecord, Unit } from '../model';
 import { isAlive } from '../util/predicates';
 
-export type { AttackRecord } from '../model';
-
 /** Un ataque recien empezado: nada hecho aun ni apuntado por ningun modulo. */
 export const newAttackRecord = (attacker: Unit, defender: Unit): AttackRecord => ({ attacker, defender, damage: 0, counter: 0, parts: {} });
 

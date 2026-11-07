@@ -1,7 +1,7 @@
 /** Acciones de la partida entera, no de una unidad: rendirse. */
 import { canBeLost, gameModeOf } from '../modes';
 import { teamState } from '../teams';
-import type { ActionRegistry } from './types';
+import type { ActionRegistry } from '../model';
 
 export const MATCH_ACTIONS: Pick<ActionRegistry, 'surrender'> = {
   surrender: {

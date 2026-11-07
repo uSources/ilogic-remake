@@ -132,18 +132,11 @@ export { abilitiesOf } from './ruleModules/abilities';
 export { bountyFor } from './ruleModules/bounty';
 export { MELEE_COUNTER } from './ruleModules/counterattack';
 export { inAttackRange, canDamage, basePower } from './rules/weapons';
-export { fallenIn, type AttackRecord } from './rules/attackRecord';
-export { engagement, fighterOf, reversed, type Engagement, type EngagementOptions, type Fighter } from './rules/engagement';
+export { fallenIn } from './rules/attackRecord';
+export type { AttackRecord, AttackRecordParts, DamageModel, Engagement, Fighter } from './model';
+export { engagement, fighterOf, reversed, type EngagementOptions } from './rules/engagement';
 export { combatForecast, threatMap, unitThreat, attackZone, type CombatForecast } from './rules/forecast';
-export {
-  boundedDistribution,
-  DAMAGE_MODELS,
-  DAMAGE_MODEL_IDS,
-  damageModelFor,
-  SHOT_BY_SHOT,
-  spreadAround,
-  type DamageModel,
-} from './damage';
+export { boundedDistribution, DAMAGE_MODELS, DAMAGE_MODEL_IDS, damageModelFor, SHOT_BY_SHOT, spreadAround } from './damage';
 export { mergeTargets, mergeProblem, loadTargets, loadProblem, unloadTiles, unloadProblem } from './rules/transport';
 export { canSupply } from './rules/supply';
 export {

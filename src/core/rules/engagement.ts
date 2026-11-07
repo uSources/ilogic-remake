@@ -7,8 +7,6 @@
 import { posOf } from '../geom';
 import type { Engagement, Fighter, Pos, Unit } from '../model';
 
-export type { Engagement, Fighter } from '../model';
-
 /** La unidad tal como esta, o en otra casilla o con otra vida. */
 export const fighterOf = (unit: Unit, at: Pos = unit, life = unit.life): Fighter => ({ unit, at: posOf(at), life });
 

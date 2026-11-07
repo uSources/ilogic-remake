@@ -8,10 +8,9 @@
  * equipos) esta en `MATCH_SETUPS` (core/match.ts), que necesita el generador de mapas y las
  * misiones; aqui solo lo que leen las reglas y la sesion.
  */
-import type { ActionDispatcher } from './actions/types';
 import { deepFreeze } from './util/freeze';
 import type { RuleModule } from './ruleModules/hooks';
-import type { GameEvent, GameModeId, GameState, MatchSettings, TeamId, VictoryRuleId } from './model';
+import type { ActionDispatcher, GameEvent, GameModeId, GameState, MatchSettings, TeamId, VictoryRuleId } from './model';
 
 /**
  * Un paso del principio o del final de un turno: lo que pasa solo por el equipo `team`, con sus

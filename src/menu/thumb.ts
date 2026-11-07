@@ -2,7 +2,7 @@ import { isHq, terrainAt } from '../core/gameContent';
 import { mapGrid } from '../core/mapGrid';
 import type { GameState } from '../core/model';
 import { playerTeam } from '../core/teams';
-import { isOnMap } from '../core/util/predicates';
+import { isOnMap } from '../core/rules';
 import { ownerSideOf, sideOf, sidePaint } from '../ui/sides';
 import { PAL_CSS } from '../ui/palette';
 import type { TerrainPalette } from '../ui/terrainColors';

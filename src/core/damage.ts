@@ -7,8 +7,6 @@
  */
 import type { DamageModel, DamageModelId, MatchSettings } from './model';
 
-export type { DamageModel } from './model';
-
 /** El reparto despues de un disparo mas que acierta con probabilidad `chance`. */
 function afterOneMoreShot(distribution: readonly number[], chance: number): number[] {
   // Lo que habia con `hits` aciertos pasa a `hits` si este falla y a `hits + 1` si acierta. Cada

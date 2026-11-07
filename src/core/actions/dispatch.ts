@@ -6,22 +6,28 @@
  * repeticion mandarian lo mismo.
  */
 import { diceOf } from '../dice';
-import type { ActionRejection, ActionResult, GameAction, GameActionOf, GameEvent, GameState, TeamId } from '../model';
+import type {
+  ActionDefinition,
+  ActionDispatcher,
+  ActionRejection,
+  ActionResult,
+  CompositeActionDefinition,
+  CompositeActionKind,
+  CompositeActionRegistry,
+  GameAction,
+  GameActionOf,
+  GameEvent,
+  GameState,
+  PlainActionKind,
+  PlainActionRegistry,
+  TeamId,
+} from '../model';
 import { guardProblem } from './guards';
 import { isGameAction } from './shape';
 import { restoreInvariants } from '../rules/invariants';
 import { forgetUndoableMoves } from '../rules/undo';
 import { recordEvents } from '../stats';
 import { ACTIONS } from './registry';
-import type {
-  ActionDefinition,
-  ActionDispatcher,
-  CompositeActionDefinition,
-  CompositeActionKind,
-  CompositeActionRegistry,
-  PlainActionKind,
-  PlainActionRegistry,
-} from './types';
 
 /** Las acciones que no hacen otras y las de turno, cada una con su forma de entrada. */
 const PLAIN: PlainActionRegistry = ACTIONS;

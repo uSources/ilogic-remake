@@ -3,7 +3,7 @@ import { canSupply, repairNeighbours } from '../rules/supply';
 import { removeWithCargo } from '../rules/lifecycle';
 import { spendUnit } from '../rules/unitTurn';
 import { actorProblem, checkedUnit, ownUnitOnMapProblem } from './checks';
-import type { ActionRegistry } from './types';
+import type { ActionRegistry } from '../model';
 
 export const UNIT_ACTIONS: Pick<ActionRegistry, 'wait' | 'supply' | 'deleteUnit'> = {
   wait: {

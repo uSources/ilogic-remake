@@ -11,11 +11,11 @@ import { canFight, firesAfterMove, isAlive, areEnemies, isOnMap } from '../util/
 import type { HitModifier } from '../ruleModules/hooks';
 import { damageModelOf, hooksOf } from '../ruleModules/ruleset';
 import { rank } from './rank';
-import type { ActionRejection, CombatInfo, Dice, GameState, Pos, Unit } from '../model';
+import type { ActionRejection, CombatInfo, Dice, Engagement, GameState, Pos, Unit } from '../model';
 import { reachableTiles, type MoveRange } from './movement';
 import { buildingAt } from './queries';
 import { sightOf, type Sight } from './visibility';
-import { reversed, type Engagement } from './engagement';
+import { reversed } from './engagement';
 import { canStillFire } from './unitTurn';
 import { basePower, canDamage, inAttackRange } from './weapons';
 

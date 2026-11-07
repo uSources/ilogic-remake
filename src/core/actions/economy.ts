@@ -5,7 +5,7 @@ import { buildUnit, buyProblem } from '../rules/economy';
 import { buildingAt } from '../rules/queries';
 import { posOf } from '../geom';
 import { checkedBuilding } from './checks';
-import type { ActionRegistry } from './types';
+import type { ActionRegistry } from '../model';
 
 export const ECONOMY_ACTIONS: Pick<ActionRegistry, 'buy'> = {
   buy: {

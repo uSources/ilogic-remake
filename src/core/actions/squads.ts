@@ -13,9 +13,19 @@ import {
 import { cleanSquadName, SQUAD_KEYS } from '../squads/naming';
 import { squadEvent } from '../squads/events';
 import { squadById } from '../squads/queries';
-import type { ActionRejection, GameActionOf, GameEvent, GameState, Squad, SquadChange, TeamId, Unit } from '../model';
+import type {
+  ActionDefinition,
+  ActionRegistry,
+  ActionRejection,
+  GameActionOf,
+  GameEvent,
+  GameState,
+  Squad,
+  SquadChange,
+  TeamId,
+  Unit,
+} from '../model';
 import { checkedUnits, ownUnitsProblem, someCheckedUnits } from './checks';
-import type { ActionDefinition, ActionRegistry } from './types';
 
 /** Una tecla de grupo (1-9). */
 const isGroupKey = (key: number): boolean => key >= 1 && key <= SQUAD_KEYS;

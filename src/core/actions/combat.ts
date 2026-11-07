@@ -4,7 +4,7 @@
  */
 import { posOf } from '../geom';
 import { attackProblem, canCounter, combatInfoBefore, strike } from '../rules/combat';
-import { fallenIn, newAttackRecord, type AttackRecord } from '../rules/attackRecord';
+import { fallenIn, newAttackRecord } from '../rules/attackRecord';
 import { unitById } from '../rules/queries';
 import { endTravel } from '../rules/travel';
 import { canStillMove, spendUnit } from '../rules/unitTurn';
@@ -12,9 +12,8 @@ import { engagement } from '../rules/engagement';
 import type { CombatStage, CombatStep } from '../ruleModules/hooks';
 import { hooksOf, inStageOrder } from '../ruleModules/ruleset';
 import { isAlive } from '../util/predicates';
-import type { AttackRecordParts, Dice, GameEventOf, GameState, Unit } from '../model';
+import type { ActionRegistry, AttackRecord, AttackRecordParts, Dice, GameEventOf, GameState, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
-import type { ActionRegistry } from './types';
 
 /** Los momentos de un ataque, en orden: el golpe, el contraataque, lo de herir y lo de que una caiga. */
 export const COMBAT_STAGES: readonly CombatStage[] = ['strike', 'counter', 'wound', 'kill'];

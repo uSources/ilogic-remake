@@ -1,7 +1,7 @@
 /** [CAMBIO] Botin (ajuste `bounty`): quien destruye una unidad cobra ese tanto por uno de su precio (atacar sale a cuenta). */
 import { unitTypeOf } from '../gameContent';
-import type { GameState, Unit } from '../model';
-import { fallenIn, type AttackRecord } from '../rules/attackRecord';
+import type { AttackRecord, GameState, Unit } from '../model';
+import { fallenIn } from '../rules/attackRecord';
 import { earn } from '../rules/funds';
 import type { RuleModule } from './hooks';
 import { isRuleOn } from './ruleset';

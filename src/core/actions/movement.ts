@@ -8,9 +8,8 @@ import { captureProgress } from '../rules/capture';
 import { dropLastUndoableMove, forgetUndoableMoves, rememberMove, undoMoveProblem } from '../rules/undo';
 import { readyUnit } from '../rules/unitTurn';
 import { visibleEnemies } from '../rules/visibility';
-import type { GameEvent, GameState, Pos, TeamId, UndoableMove, Unit } from '../model';
+import type { ActionRegistry, GameEvent, GameState, Pos, TeamId, UndoableMove, Unit } from '../model';
 import { actorProblem, checkedUndoableMove, checkedUnit, ownUnitOnMapProblem, ownUnitProblem } from './checks';
-import type { ActionRegistry } from './types';
 
 /** La captura a medias que lleva la unidad en el edificio en el que esta (la que perderia al irse). */
 function ownCaptureHere(s: GameState, unit: Unit): UndoableMove['capture'] {

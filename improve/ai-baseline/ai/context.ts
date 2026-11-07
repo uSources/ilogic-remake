@@ -13,7 +13,7 @@ import { canReach, reachableTiles, type MoveRange } from '@core/rules/movement';
 import { distanceMap } from '@core/rules/distance';
 import { endsInterrupted } from '@core/rules/traverse';
 import { dispatch } from '@core/actions/dispatch';
-import type { ActionDispatcher } from '@core/actions/types';
+import type { ActionDispatcher } from '@core/model';
 import { visibility } from '@core/rules/visibility';
 import { canStillAct } from '@core/rules/unitTurn';
 import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '@core/model';

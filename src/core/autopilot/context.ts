@@ -15,9 +15,8 @@ import { letsAlliesThrough, passBlockers, UNSEEN_FOES_UNNOTICED } from '../rules
 import type { PassRule } from '../ruleModules/hooks';
 import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
-import type { ActionDispatcher } from '../actions/types';
 import { visibility } from '../rules/visibility';
-import type { GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+import type { ActionDispatcher, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { isAlive, isOnMap } from '../util/predicates';
 
 /**

@@ -24,7 +24,7 @@
  */
 import { aiGeneral } from '@core/aiGenerals';
 import { teamUnits } from '@core/rules/queries';
-import type { ActionDispatcher } from '@core/actions/types';
+import type { ActionDispatcher } from '@core/model';
 import type { GameEvent, GameState, Rng, TeamId } from '@core/model';
 import { aiCtx, finish } from './ai/context';
 import { planFire } from './ai/fire';
