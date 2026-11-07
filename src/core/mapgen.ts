@@ -19,7 +19,7 @@ import { newUnit } from './rules/lifecycle';
 import { distanceMap, type DistanceMap } from './rules/distance';
 import { buildingAt, canMoveOn, unitAt } from './rules/queries';
 import type { Grid, GridBounds, GridSize } from './util/grid';
-import { seedFromDraw, type MatchSeeds } from './util/random';
+import { pick, randomInt, seedFromDraw, shuffleInPlace, type MatchSeeds } from './util/random';
 import type { GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 
 const WALK = MoveType.FOOT;
@@ -207,17 +207,6 @@ function findMoreSpawns(s: GameState, first: Pos, count: number): Pos[] | null {
   return spawns.map((found) => found.spawn);
 }
 
-/**
- * Baraja la lista en su sitio (Fisher-Yates desde el final). Con dos, un solo numero: por debajo de
- * 0.5 se quedan como estan (como el sorteo de siempre, para que los mapas de dos no cambien).
- */
-function shuffleInPlace<T>(list: T[], rng: Rng): void {
-  for (let i = list.length - 1; i > 0; i--) {
-    const j = i - Math.floor(rng() * (i + 1));
-    [list[i], list[j]] = [list[j]!, list[i]!];
-  }
-}
-
 // ---------------------------------------------------------------------------------------------
 // Edificios y unidades
 // ---------------------------------------------------------------------------------------------
@@ -281,7 +270,7 @@ function rollNeutralCounts(s: GameState, size: GridSize, rng: Rng): number[] {
   for (;;) {
     // [CAMBIO] en mapas de otro tamaño, el numero de edificios neutrales se escala con la superficie.
     const scale = areaScale(size);
-    const counts = ranges.map(([min, max]) => Math.round((min + Math.floor(rng() * (max - min + 1))) * scale));
+    const counts = ranges.map(([min, max]) => Math.round(randomInt(rng, min, max) * scale));
     if (isTotalAllowed(counts.reduce((sum, count) => sum + count, 0))) return counts;
   }
 }
@@ -411,8 +400,10 @@ function spawnsOf(draft: MapDraft): Pos[] {
 /** Siempre se tira el dado del tema, aunque venga fijado, para no mover el resto de la secuencia. */
 function chooseTheme(draft: MapDraft): boolean {
   const themes = draft.s.content.themes;
-  const randomTheme = themes.list[Math.floor(draft.rng() * themes.list.length)]!;
-  draft.s.theme = (draft.forcedTheme ?? randomTheme).id;
+  const randomTheme = pick(themes.list, draft.rng);
+  const theme = draft.forcedTheme ?? randomTheme;
+  if (!theme) throw new Error('El contenido no tiene temas');
+  draft.s.theme = theme.id;
   return true;
 }
 

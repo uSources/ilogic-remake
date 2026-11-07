@@ -14,8 +14,8 @@ import { weightedPick } from '../util/random';
 import { compareKeys } from '../util/pick';
 
 /** Elige una compra al azar, con mas peso a lo mas caro (raiz del precio). */
-const pickByCost = (options: readonly BuyOption[], rng: Rng): BuyOption | undefined =>
-  weightedPick(options, (option) => Math.sqrt(option.cost), rng);
+const pickByCost = (options: readonly BuyOption[], rng: Rng): BuyOption | null =>
+  weightedPick(options, (option) => Math.sqrt(option.cost), rng, null);
 
 /**
  * En que orden fabrican los edificios. Con puntos de mando (`limited`), primero los de lo grande,
@@ -56,11 +56,9 @@ function choosePurchase(options: BuyOption[], fundsNextTurn: number, rng: Rng): 
   if (!choice) return null;
   if (choice.affordable) return choice;
   if (choice.cost <= fundsNextTurn) return 'save';
-  return (
-    pickByCost(
-      options.filter((option) => option.affordable),
-      rng,
-    ) ?? null
+  return pickByCost(
+    options.filter((option) => option.affordable),
+    rng,
   );
 }
 

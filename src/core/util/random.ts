@@ -83,15 +83,41 @@ export function pick<T>(items: readonly T[], rng: Rng): T | undefined {
   return items[Math.floor(rng() * items.length)];
 }
 
-/** Uno de la lista al azar, con probabilidad proporcional a su peso (`weightOf`; undefined si esta vacia: entonces no tira). */
-export function weightedPick<T>(items: readonly T[], weightOf: (item: T) => number, rng: Rng): T | undefined {
-  if (!items.length) return undefined;
-  const weighted = items.map((item) => ({ item, weight: weightOf(item) }));
+/** Un entero al azar entre `min` y `max`, los dos incluidos, todos con la misma probabilidad. */
+export function randomInt(rng: Rng, min: number, max: number): number {
+  return min + Math.floor(rng() * (max - min + 1));
+}
+
+/**
+ * Uno de la lista al azar, con probabilidad proporcional a su peso (`weightOf`). Si no hay a quien
+ * elegir (la lista esta vacia o nada pesa), `otherwise`, lo que dice quien pregunta (con la lista
+ * vacia no tira).
+ */
+export function weightedPick<T, Otherwise>(
+  items: readonly T[],
+  weightOf: (item: T) => number,
+  rng: Rng,
+  otherwise: Otherwise,
+): T | Otherwise {
+  if (!items.length) return otherwise;
+  const weighted = items.map((item) => ({ item, weight: weightOf(item) })).filter((entry) => entry.weight > 0);
   let remaining = rng() * weighted.reduce((total, entry) => total + entry.weight, 0);
   for (const entry of weighted) {
     remaining -= entry.weight;
     if (remaining < 0) return entry.item;
   }
-  // Por el redondeo, el ultimo.
-  return weighted.at(-1)?.item;
+  // Por el redondeo (la tirada casi en el total), el ultimo que pesa; si nada pesa, `otherwise`.
+  return weighted.at(-1)?.item ?? otherwise;
+}
+
+/**
+ * Baraja la lista en su sitio (Fisher-Yates desde el final: en cada paso, la ultima sin barajar se
+ * cambia por una de las de antes o se queda). Con dos, un solo numero: por debajo de 0.5 se quedan
+ * como estan.
+ */
+export function shuffleInPlace<T>(list: T[], rng: Rng): void {
+  for (let last = list.length - 1; last > 0; last--) {
+    const other = last - randomInt(rng, 0, last);
+    [list[last], list[other]] = [list[other]!, list[last]!];
+  }
 }

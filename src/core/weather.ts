@@ -13,7 +13,7 @@
  */
 import { themeOf, weatherTypeOf } from './gameContent';
 import type { MoveType, Theme, WeatherType } from './content';
-import { seededRng } from './util/random';
+import { randomInt, seededRng, weightedPick } from './util/random';
 import type { GameState, Rng, WeatherState } from './model';
 
 /** Clima de la partida ahora mismo (despejado, `content.clearWeather`, si no tiene: sin el modulo del clima). */
@@ -30,40 +30,39 @@ export const weatherVision = (s: GameState): number => weatherNow(s).vision;
 /** Multiplicador de la probabilidad de acierto por el clima. */
 export const weatherHit = (s: GameState): number => weatherNow(s).hitChance;
 
-/** Numero aleatorio del dia: depende solo de la semilla del mapa y del dia. */
+/** Multiplicador con el que el dia entra en la semilla del clima (la razon aurea en 32 bits: separa bien dias seguidos). */
+const WEATHER_DAY_MIX = 0x9e3779b1;
+/** Lo que distingue la semilla del clima de las demas que salen de la del mapa. */
+const WEATHER_SALT = 0x5eed;
+
+/** La semilla del clima del dia `day` en un mapa con semilla `mapSeed`: la misma siempre para ese dia. */
+const weatherSeed = (mapSeed: number, day: number): number => (mapSeed ^ Math.imul(day + 1, WEATHER_DAY_MIX) ^ WEATHER_SALT) >>> 0;
+
+/**
+ * El azar del clima del dia: depende solo de la semilla del mapa y del dia (la primera tirada se
+ * salta, como desde el principio: cambiarlo cambiaria el tiempo de todas las partidas).
+ */
 function dayRng(s: GameState): Rng {
-  const seed = (s.setup?.seed ?? 0) >>> 0;
-  const rng = seededRng((seed ^ Math.imul(s.day + 1, 0x9e3779b1) ^ 0x5eed) >>> 0);
+  const rng = seededRng(weatherSeed((s.setup?.seed ?? 0) >>> 0, s.day));
   rng();
   return rng;
 }
 
 /**
- * Elige un clima segun los pesos del tema (weather.json, "chance"); si sale el mismo mal tiempo que
- * hay, despeja.
+ * Elige un clima segun los pesos del tema (weather.json, "chance"; si ninguno pesa, despejado); si
+ * sale el mismo mal tiempo que hay, despeja.
  */
 export function rollWeather(s: GameState, theme: Theme, rng: Rng, current: WeatherType = s.content.clearWeather): WeatherType {
   const clear = s.content.clearWeather;
-  const rolled = pickWeighted(s.content.weather.list, (weather) => weather.chance[theme.id] ?? 0, rng) ?? clear;
+  const rolled = weightedPick(s.content.weather.list, (weather) => weather.chance[theme.id] ?? 0, rng, clear);
   // El mismo mal tiempo dos veces seguidas se haria eterno: despeja.
   return rolled === current && rolled !== clear ? clear : rolled;
-}
-
-/** Uno elegido al azar segun los pesos (null si la tirada se pasa de todos). */
-function pickWeighted<T>(items: readonly T[], weightOf: (item: T) => number, rng: Rng): T | null {
-  const total = items.reduce((sum, item) => sum + weightOf(item), 0);
-  let roll = rng() * total;
-  for (const item of items) {
-    roll -= weightOf(item);
-    if (roll < 0) return item;
-  }
-  return null;
 }
 
 /** Dias que dura un clima. */
 export function rollDays(weather: WeatherType, rng: Rng): number {
   const [min, max] = weather.days;
-  return min + Math.floor(rng() * (max - min + 1));
+  return randomInt(rng, min, max);
 }
 
 /** Pone el clima del principio (despejado) si la partida aun no lo tiene (al prepararla: el modulo del clima). */
@@ -101,8 +100,8 @@ export function advanceWeather(s: GameState): WeatherChange | null {
   return from === to ? null : { from, to };
 }
 
-/** Pronostico: el clima que entra al empezar la ronda siguiente, o null si mañana sigue igual. */
-export function forecast(s: GameState): WeatherType | null {
+/** El pronostico: el clima que entra al empezar la ronda siguiente, o null si mañana sigue igual. */
+export function upcomingWeather(s: GameState): WeatherType | null {
   if (!s.weather || s.weather.left > 1 || s.weather.next === s.weather.kind) return null;
   return weatherTypeOf(s, s.weather.next);
 }

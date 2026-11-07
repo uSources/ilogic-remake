@@ -299,7 +299,9 @@ a autopilot/ importar `dice.ts` ni `turnSeeds.ts` (`DECIDERS_ONLY_PROPOSE`). Asi
 repetirla o en otra maquina (por la red), y lo que decide no cambia lo que sale en los dados. El
 generador de mapas lleva su `Rng` (`seededRng`), que da quien crea la partida. `util/random.ts`: el
 paso de mulberry32 (`randomStep`), `seededRng`, `seedFromDraw`, `matchSeedsFrom`, `turnSeed`, y
-elegir al azar (`pick`, `weightedPick`: con la lista vacia no tiran).
+elegir al azar (`pick`, `weightedPick` con lo que sale si no hay a quien elegir; con la lista vacia no
+tiran), un entero entre dos (`randomInt`) y barajar (`shuffleInPlace`). El clima del dia tiene su azar,
+de la semilla del mapa y del dia (`weatherSeed`, weather.ts).
 
 #### Guardar y leer
 

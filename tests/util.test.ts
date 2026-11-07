@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Grid } from '@core/util/grid';
 import { compareKeys, maxBy, minBy } from '@core/util/pick';
-import { pick, seededRng, weightedPick } from '@core/util/random';
+import { pick, randomInt, seededRng, shuffleInPlace, weightedPick } from '@core/util/random';
 
 describe('rejillas', () => {
   it('lee y escribe por posicion', () => {
@@ -78,11 +78,43 @@ describe('elegir al azar (util/random.ts)', () => {
   it('weightedPick: proporcional al peso (lo que no pesa no sale), y la misma semilla da lo mismo', () => {
     const rng = seededRng(7);
     const picks = Array.from({ length: 200 }, () =>
-      weightedPick(['nada', 'poco', 'mucho'], (item) => ({ nada: 0, poco: 1, mucho: 9 })[item] ?? 0, rng),
+      weightedPick(['nada', 'poco', 'mucho'], (item) => ({ nada: 0, poco: 1, mucho: 9 })[item] ?? 0, rng, null),
     );
     expect(picks).not.toContain('nada');
     expect(picks.filter((item) => item === 'mucho').length).toBeGreaterThan(picks.filter((item) => item === 'poco').length * 3);
-    expect(weightedPick([], () => 1, rng)).toBeUndefined();
-    expect(weightedPick(['x', 'y'], () => 1, seededRng(3))).toBe(weightedPick(['x', 'y'], () => 1, seededRng(3)));
+    expect(weightedPick(['x', 'y'], () => 1, seededRng(3), null)).toBe(weightedPick(['x', 'y'], () => 1, seededRng(3), null));
+  });
+
+  it('weightedPick: si no hay a quien elegir, lo que dice quien pregunta (con la lista vacia, sin tirar)', () => {
+    let draws = 0;
+    const counted = () => {
+      draws++;
+      return 0.5;
+    };
+    expect(weightedPick([], () => 1, counted, 'despejado')).toBe('despejado');
+    expect(draws).toBe(0);
+    expect(weightedPick(['a', 'b'], () => 0, counted, 'despejado')).toBe('despejado');
+    expect(
+      weightedPick(
+        ['a', 'b'],
+        (item) => (item === 'a' ? 0 : 1),
+        () => 0.999999,
+        null,
+      ),
+    ).toBe('b');
+  });
+
+  it('randomInt: entre los dos, incluidos, y shuffleInPlace baraja sin perder ninguno', () => {
+    const rng = seededRng(11);
+    const rolls = Array.from({ length: 300 }, () => randomInt(rng, 2, 4));
+    expect(new Set(rolls)).toEqual(new Set([2, 3, 4]));
+    expect(randomInt(() => 0, 5, 9)).toBe(5);
+    expect(randomInt(() => 0.999999, 5, 9)).toBe(9);
+    const list = [1, 2, 3, 4, 5, 6];
+    shuffleInPlace(list, seededRng(4));
+    expect([...list].sort()).toEqual([1, 2, 3, 4, 5, 6]);
+    const pair = ['a', 'b'];
+    shuffleInPlace(pair, () => 0.2);
+    expect(pair).toEqual(['a', 'b']);
   });
 });
