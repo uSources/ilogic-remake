@@ -665,11 +665,12 @@ alias: `import { createMatch } from '@core/defaultGames'` (definido en `tsconfig
 `vite.config.ts`; `tsx` lo entiende solo). ESLint prohibe que `tools/` importe nada mas de `src/`
 (escenas, interfaz, ajustes) o Phaser/Preact, y que los tests importen el nucleo por ruta relativa.
 Lo que mide una regla fuera de una partida de verdad, sin comprobar nada (el combate suelto del
-laboratorio de duelos y de los tests: `uncheckedAttack`), esta en `core/sandbox.ts`. ESLint prohibe
+laboratorio de duelos y de los tests: `uncheckedAttack`), esta en `core/measure.ts` (no es el modo
+'sandbox', la partida para mirar). ESLint prohibe
 importar ese fichero desde cualquier fichero de `src/`, tambien del nucleo y con cualquier ruta
-(`SANDBOX_IS_NOT_THE_GAME`): solo lo usan `tools/` y `tests/`. Y `resolveAttack`, el combate sin
-comprobar que hay debajo, solo se puede importar en `sandbox.ts` (su modulo, `actions/combat.ts`, lo
-usa para la accion 'attack'; `UNCHECKED_ATTACK_ONLY_IN_SANDBOX`).
+(`MEASURING_IS_NOT_THE_GAME`): solo lo usan `tools/` y `tests/`. Y `resolveAttack`, el combate sin
+comprobar que hay debajo, solo se puede importar en `measure.ts` (su modulo, `actions/combat.ts`, lo
+usa para la accion 'attack'; `UNCHECKED_ATTACK_ONLY_IN_MEASURE`).
 
 Es el paso previo a un monorepo: si algun dia hace falta (un servidor para partidas online que use el
 nucleo, una herramienta con dependencias propias, publicar el nucleo), `src/core` pasa a ser el paquete

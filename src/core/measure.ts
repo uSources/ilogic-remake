@@ -2,8 +2,8 @@
  * Lo que solo usan las herramientas y los tests para medir una regla fuera de una partida de verdad:
  * aqui no se comprueba nada (ni turnos, ni alcance, ni vision). ESLint (eslint.config.js) prohibe
  * importar este fichero desde cualquier fichero de src/, tambien del nucleo y con cualquier ruta
- * (SANDBOX_IS_NOT_THE_GAME), y usar `resolveAttack` fuera de su modulo (actions/combat.ts) y de aqui
- * (UNCHECKED_ATTACK_ONLY_IN_SANDBOX). Quien juega usa `dispatch` (core/actions.ts).
+ * (MEASURING_IS_NOT_THE_GAME), y usar `resolveAttack` fuera de su modulo (actions/combat.ts) y de aqui
+ * (UNCHECKED_ATTACK_ONLY_IN_MEASURE). (No es el modo de juego 'sandbox', la partida para mirar.) Quien juega usa `dispatch` (core/actions.ts).
  */
 import { resolveAttack } from './actions/combat';
 import { restoreInvariants } from './rules/invariants';

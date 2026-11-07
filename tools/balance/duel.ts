@@ -1,6 +1,6 @@
 /**
  * Laboratorio de duelos: una unidad contra otra, sin mapa ni IA, usando las reglas reales
- * (uncheckedAttack de core/sandbox.ts, el combate de la accion 'attack': incluye contraataque o menos
+ * (uncheckedAttack de core/measure.ts, el combate de la accion 'attack': incluye contraataque o menos
  * azar si las reglas lo tienen).
  */
 import { findEntry, type GameContent, type TerrainType, type UnitType } from '@core/content';
@@ -11,7 +11,7 @@ import { newGameState } from '@core/gameState';
 import { duel, duelTeams } from '@core/teams';
 import { blankMap } from '@core/mapGrid';
 import { inAttackRange, newUnit } from '@core/rules';
-import { uncheckedAttack } from '@core/sandbox';
+import { uncheckedAttack } from '@core/measure';
 import type { GameState, Rng, MatchSettings, Unit } from '@core/model';
 
 export interface DuelCell {

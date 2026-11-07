@@ -58,18 +58,18 @@ const CORE_FACADES_ONLY = [
 ];
 
 /**
- * El banco de pruebas (core/sandbox.ts: combate sin comprobar) es de las herramientas y los tests, no
- * del juego: ningun fichero de src/ lo importa, con la ruta que sea (con o sin `.ts`, por alias).
+ * Medir sin comprobar (core/measure.ts: el combate suelto, poner unidades) es de las herramientas y los
+ * tests, no del juego: ningun fichero de src/ lo importa, con la ruta que sea (con o sin `.ts`, por alias).
  */
-const SANDBOX_IS_NOT_THE_GAME = {
-  regex: '(^|/)sandbox(\\.ts)?$',
-  message: 'core/sandbox.ts no comprueba nada: es para tools/ y tests/. El juego cambia la partida con dispatch.',
+const MEASURING_IS_NOT_THE_GAME = {
+  regex: '(^|/)measure(\\.ts)?$',
+  message: 'core/measure.ts no comprueba nada: es para tools/ y tests/. El juego cambia la partida con dispatch.',
 };
-/** El combate sin comprobar (`resolveAttack`) solo lo usan la accion 'attack' (su propio modulo) y sandbox.ts. */
-const UNCHECKED_ATTACK_ONLY_IN_SANDBOX = {
+/** El combate sin comprobar (`resolveAttack`) solo lo usan la accion 'attack' (su propio modulo) y measure.ts. */
+const UNCHECKED_ATTACK_ONLY_IN_MEASURE = {
   regex: '(^|/)actions/combat(\\.ts)?$|^\\./combat(\\.ts)?$',
   importNames: ['resolveAttack'],
-  message: "resolveAttack no comprueba nada: el juego ataca con la accion 'attack' (dispatch); fuera de una partida, core/sandbox.ts.",
+  message: "resolveAttack no comprueba nada: el juego ataca con la accion 'attack' (dispatch); fuera de una partida, core/measure.ts.",
 };
 /**
  * Las reglas, las acciones, las ordenes permanentes y la sesion no dependen de la IA (ai/, ai.ts,
@@ -142,7 +142,7 @@ const ACTION_LIST_FILE = 'src/core/actions/registry.ts';
 export const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces(`generals|weather|abilities|${FACADES}`);
 
 /** Lo que se prohibe en todo el nucleo (cada bloque de src/core lo repite, porque cada uno pone su lista entera). */
-const CORE_LIMITS = [...CORE_IS_PURE, SANDBOX_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_SANDBOX];
+const CORE_LIMITS = [...CORE_IS_PURE, MEASURING_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_MEASURE];
 
 export default tseslint.config(
   {
@@ -258,8 +258,8 @@ export default tseslint.config(
     },
   },
   {
-    // El banco de pruebas es el unico sitio del nucleo que usa el combate sin comprobar.
-    files: ['src/core/sandbox.ts'],
+    // Medir sin comprobar es el unico sitio del nucleo que usa el combate sin comprobar.
+    files: ['src/core/measure.ts'],
     rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_IS_PURE, NO_DEFAULT_CONTENT] }] },
   },
   {
@@ -269,7 +269,7 @@ export default tseslint.config(
   {
     files: ['src/**/*.ts', 'src/**/*.tsx'],
     ignores: ['src/core/**'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_FACADES_ONLY, SANDBOX_IS_NOT_THE_GAME] }] },
+    rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_FACADES_ONLY, MEASURING_IS_NOT_THE_GAME] }] },
   },
   {
     // Las herramientas solo usan el nucleo, y por su alias: asi se podrian separar en su propio paquete
