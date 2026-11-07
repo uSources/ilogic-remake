@@ -36,7 +36,7 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
     const reach = strikeReach(s, shooter);
     const nearby = foes.filter((foe) => manhattan(shooter, foe) <= reach && canDamage(s, shooter, foe));
     if (!nearby.length) continue;
-    const origins = fireOrigins(s, shooter, firesAfterMove(s, shooter) ? moveRange(s, shooter) : null);
+    const origins = fireOrigins(s, shooter, () => moveRange(s, shooter));
     const damageByTarget = new Map<number, number>();
     for (const foe of nearby)
       if (origins.some((from) => inAttackRange(s, shooter, from, foe)))

@@ -10,7 +10,7 @@ import { endTravel } from '../rules/travel';
 import { canStillMove, spendUnit } from '../rules/unitTurn';
 import { engagement } from '../rules/engagement';
 import type { CombatStage, CombatStep } from '../ruleModules/hooks';
-import { hooksOf } from '../ruleModules/ruleset';
+import { hooksOf, inStageOrder } from '../ruleModules/ruleset';
 import { isAlive } from '../util/predicates';
 import type { AttackRecordParts, Dice, GameEventOf, GameState, Unit } from '../model';
 import { actorProblem, checkedUnit } from './checks';
@@ -55,8 +55,7 @@ export const COMBAT_RESOLUTION: readonly CombatStep[] = [
 
 /** Los pasos de un ataque en esta partida, en orden: por momento y, en cada uno, los de siempre y luego los de sus modulos. */
 export function combatResolutionOf(s: GameState): CombatStep[] {
-  const order = (step: CombatStep) => COMBAT_STAGES.indexOf(step.stage);
-  return [...COMBAT_RESOLUTION, ...hooksOf(s, 'combatSteps')].sort((first, second) => order(first) - order(second));
+  return inStageOrder(COMBAT_STAGES, COMBAT_RESOLUTION, hooksOf(s, 'combatSteps'));
 }
 
 /** Lo que han apuntado los modulos, por orden de nombre (el suceso sale igual sea cual sea el orden de sus pasos). */

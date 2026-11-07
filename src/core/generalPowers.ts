@@ -5,7 +5,7 @@
  * validacion estan en content/generals.ts (`EFFECT_SHAPES`), con las mismas claves.
  */
 import type { GeneralEffect, GeneralPowerDef } from './content';
-import { unitTypeOf, weightsOf } from './gameContent';
+import { weightsOf } from './gameContent';
 import { MAX_LIFE } from './data';
 import { chargeStars, generalOf, healedByPower } from './generals';
 import { posKey, posOf, squareArea } from './geom';
@@ -16,6 +16,7 @@ import { seesEverything, visibility } from './rules/visibility';
 import { isHostile } from './teams';
 import type { DeepReadonly } from './util/freeze';
 import { maxBy } from './util/pick';
+import { lifeValue } from './unitValue';
 import { isOnMap } from './util/predicates';
 
 /** Un efecto de esa clase, como esta en el contenido (de solo lectura). */
@@ -55,9 +56,6 @@ interface PowerEffect<K extends GeneralEffect['kind']> {
   /** Donde apuntarlo y cuanto vale usarlo ahora (null si no tiene sentido): lo que mira la IA. */
   aiValue(s: GameState, team: TeamId, effect: EffectOf<K>): ValuedTarget | null;
 }
-
-/** Lo que vale quitar (o devolver) `life` puntos de vida a una unidad de ese tipo (precio × vida / 100). */
-const lifeValue = (s: GameState, life: number, unit: Pick<Unit, 'type'>): number => (life * unitTypeOf(s, unit).cost) / 100;
 
 /** La vida que recuperaria la unidad con una cura de `amount` (lo que ya esta entero no cuenta). */
 const healedLife = (unit: Unit, amount: number): number => Math.min(amount, MAX_LIFE - unit.life);

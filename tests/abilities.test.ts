@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { changeSettings } from '@core/gameState';
-import { ABILITY_EFFECT_ORDER, ABILITY_EFFECTS, auraFactor } from '@core/abilities';
+import { ABILITY_EFFECTS, auraFactor } from '@core/abilities';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
 import { ABILITY_KINDS, ABILITY_SHAPES, MoveType, type AbilityDef, type UnitType, validateContent, type Content } from '@core/content';
@@ -83,10 +83,9 @@ describe('habilidades: contenido', () => {
   });
 
   it('cada clase tiene su validacion y lo que aporta, con las mismas claves, y el modulo lo junta todo', () => {
-    expect(Object.keys(ABILITY_EFFECTS)).toEqual([...ABILITY_KINDS]);
     expect(Object.keys(ABILITY_SHAPES)).toEqual([...ABILITY_KINDS]);
     // El orden en que entran en las listas es uno a proposito, con todas las clases una vez.
-    expect([...ABILITY_EFFECT_ORDER].sort()).toEqual([...ABILITY_KINDS].sort());
+    expect(ABILITY_EFFECTS.map((effect) => effect.kind).sort()).toEqual([...ABILITY_KINDS].sort());
     const s = blankState(TEST_SETTINGS);
     const hitIds = hooksOf(s, 'hitModifiers').map((modifier) => modifier.id);
     expect(hitIds.filter((id) => id === 'guard' || id === 'aura')).toEqual(['guard', 'aura']); // el escudo multiplica antes que el aura

@@ -18,6 +18,7 @@ import { findEntry, type GeneralDef, type GeneralModifier, type UnitFilter } fro
 import { teamState } from './teams';
 import { isOnMap } from './util/predicates';
 import type { Engagement, GameState, GeneralCharge, GeneralState, TeamId, Unit } from './model';
+import { lifeValue } from './unitValue';
 
 export const generalDef = (s: GameState, id: string): DeepReadonly<GeneralDef> | undefined => findEntry(s.content.generals, id);
 
@@ -87,8 +88,8 @@ function addCharge(s: GameState, team: TeamId, value: number): number {
  * (solo los que ganan algo), para el suceso del ataque.
  */
 export function chargeFromCombat(s: GameState, attacker: Unit, defender: Unit, toDefender: number, toAttacker: number): GeneralCharge[] {
-  const defenderValueLost = (toDefender * unitTypeOf(s, defender).cost) / 100;
-  const attackerValueLost = (toAttacker * unitTypeOf(s, attacker).cost) / 100;
+  const defenderValueLost = lifeValue(s, toDefender, defender);
+  const attackerValueLost = lifeValue(s, toAttacker, attacker);
   const charges = [attacker.team, defender.team].map((team) => ({
     team,
     amount: addCharge(s, team, defenderValueLost + attackerValueLost),

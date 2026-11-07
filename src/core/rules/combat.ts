@@ -21,14 +21,18 @@ import { basePower, canDamage, inAttackRange } from './weapons';
 
 // ---- Alcance y objetivos ----
 
+/** El alcance de una unidad, o como sacarlo si hace falta (fireOrigins solo lo pide si puede moverse y disparar). */
+export type LazyMoveRange = MoveRange | (() => MoveRange);
+
 /**
  * Casillas desde las que `unit` puede disparar este turno: donde esta y, si puede moverse y disparar
- * y se pasa su alcance `range`, las que alcanza (las que acepte `allowed`).
+ * y se pasa su alcance `range`, las que alcanza (las que acepte `allowed`). Es el unico sitio que
+ * mira `firesAfterMove`: quien no sabe aun si hara falta pasa el alcance como funcion.
  */
-export function fireOrigins(s: GameState, unit: Unit, range: MoveRange | null, allowed?: (pos: Pos) => boolean): Pos[] {
+export function fireOrigins(s: GameState, unit: Unit, range: LazyMoveRange | null, allowed?: (pos: Pos) => boolean): Pos[] {
   const origins: Pos[] = [posOf(unit)];
   if (!range || !firesAfterMove(s, unit)) return origins;
-  const reachable = reachableTiles(range);
+  const reachable = reachableTiles(typeof range === 'function' ? range() : range);
   origins.push(...(allowed ? reachable.filter((pos) => allowed(pos)) : reachable));
   return origins;
 }

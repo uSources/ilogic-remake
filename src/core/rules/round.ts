@@ -5,7 +5,7 @@ import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import { MAX_LIFE } from '../data';
 import type { Building, GameEvent, GameState, RoundReport, Unit } from '../model';
 import type { RoundPhase, RoundReportPart, RoundStage } from '../ruleModules/hooks';
-import { hooksOf } from '../ruleModules/ruleset';
+import { hooksOf, inStageOrder } from '../ruleModules/ruleset';
 import { addForTeam, perTeam, teamIds } from '../teams';
 import { earn } from './funds';
 import { restoreInvariants } from './invariants';
@@ -90,8 +90,7 @@ export const ROUND_PHASES: readonly RoundPhase[] = [
  * los de siempre y luego los de sus modulos (en el orden de RULE_MODULES; sort es estable).
  */
 export function roundPhasesOf(s: GameState): RoundPhase[] {
-  const order = (phase: RoundPhase) => ROUND_STAGES.indexOf(phase.stage);
-  return [...ROUND_PHASES, ...hooksOf(s, 'roundPhases')].sort((first, second) => order(first) - order(second));
+  return inStageOrder(ROUND_STAGES, ROUND_PHASES, hooksOf(s, 'roundPhases'));
 }
 
 /**

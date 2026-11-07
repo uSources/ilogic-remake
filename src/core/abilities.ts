@@ -62,30 +62,34 @@ function zoneOfControlTiles(s: GameState, mover: Unit, noticedFoes: readonly Uni
   return noticedFoes.filter(stopsMover).flatMap((enemy) => neighbors4(mapGrid(s), enemy));
 }
 
-/**
- * En que orden entra lo de cada clase en las listas de las reglas. Decide: en el acierto, el escudo
- * multiplica antes que el aura (otro orden cambia el redondeo de la huella). Una clase nueva va aqui
- * tambien (lo mira tests/abilities.test.ts).
- */
-export const ABILITY_EFFECT_ORDER: readonly AbilityKind[] = ['guard', 'zoneOfControl', 'aura', 'piercing', 'scout', 'quickCapture'];
+/** Lo que aporta una clase de habilidad a las listas de las reglas (ver AbilityDef). */
+export interface AbilityEffect {
+  readonly kind: AbilityKind;
+  readonly hooks: RuleHooks;
+}
 
 /**
- * Lo que aporta cada clase de habilidad a las listas de las reglas (ver AbilityDef), juntas en el
- * orden de ABILITY_EFFECT_ORDER.
+ * Lo que aporta cada clase de habilidad, en el orden en que entra en las listas de las reglas. El
+ * orden decide: en el acierto, el escudo multiplica antes que el aura (otro orden cambia el redondeo
+ * de la huella). Cada clase de ABILITY_SHAPES esta una vez (lo mira tests/abilities.test.ts).
  */
-export const ABILITY_EFFECTS: { readonly [K in AbilityKind]: RuleHooks } = {
+export const ABILITY_EFFECTS: readonly AbilityEffect[] = [
   // Escudo contra los disparos a distancia: hace fuertes a los grupos con quien lo lleva delante.
-  guard: { hitModifiers: [{ id: 'guard', factor: guardFactor }] },
+  { kind: 'guard', hooks: { hitModifiers: [{ id: 'guard', factor: guardFactor }] } },
   // En una zona de control enemiga se puede entrar, pero no seguir desde ella.
-  zoneOfControl: { stopRules: [{ id: 'zoneOfControl', stopTiles: zoneOfControlTiles }] },
+  { kind: 'zoneOfControl', hooks: { stopRules: [{ id: 'zoneOfControl', stopTiles: zoneOfControlTiles }] } },
   // A las propias de alrededor les aciertan menos (cuenta la mejor).
-  aura: { hitModifiers: [{ id: 'aura', factor: (s, fight) => auraFactor(s, fight.defender) }] },
+  { kind: 'aura', hooks: { hitModifiers: [{ id: 'aura', factor: (s, fight) => auraFactor(s, fight.defender) }] } },
   // Ignora parte de la proteccion del objetivo.
-  piercing: {
-    coverPiercing: [{ id: 'piercing', ignoredCover: (s, attacker) => abilityOfUnit(s, attacker, 'piercing')?.ignoreCover ?? 0 }],
+  {
+    kind: 'piercing',
+    hooks: { coverPiercing: [{ id: 'piercing', ignoredCover: (s, attacker) => abilityOfUnit(s, attacker, 'piercing')?.ignoreCover ?? 0 }] },
   },
   // Ve dentro del terreno que esconde (bosque) en todo su radio de vision.
-  scout: { coverSight: [{ id: 'scout', seesIntoCover: (s, unit) => !!abilityOfUnit(s, unit, 'scout') }] },
+  { kind: 'scout', hooks: { coverSight: [{ id: 'scout', seesIntoCover: (s, unit) => !!abilityOfUnit(s, unit, 'scout') }] } },
   // Resta mas al capturar.
-  quickCapture: { captureFactors: [{ id: 'quickCapture', factor: (s, unit) => abilityOfUnit(s, unit, 'quickCapture')?.factor ?? 1 }] },
-};
+  {
+    kind: 'quickCapture',
+    hooks: { captureFactors: [{ id: 'quickCapture', factor: (s, unit) => abilityOfUnit(s, unit, 'quickCapture')?.factor ?? 1 }] },
+  },
+];

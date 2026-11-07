@@ -1,9 +1,9 @@
 /**
  * [CAMBIO] Las habilidades de las unidades (ajuste `abilities`): lo que aporta cada clase
- * (ABILITY_EFFECTS, core/abilities.ts), todo junto en el orden de ABILITY_EFFECT_ORDER, si la
+ * (ABILITY_EFFECTS, core/abilities.ts), todo junto en el orden de esa lista, si la
  * partida las tiene.
  */
-import { ABILITY_EFFECT_ORDER, ABILITY_EFFECTS } from '../abilities';
+import { ABILITY_EFFECTS } from '../abilities';
 import type { AbilityDef, UnitType } from '../content';
 import type { GameState } from '../model';
 import type { DeepReadonly } from '../util/freeze';
@@ -14,7 +14,7 @@ import { isRuleOn } from './ruleset';
 export const ABILITIES: RuleModule = {
   id: 'abilities',
   isOn: (settings) => settings.abilities,
-  hooks: mergeHooks(ABILITY_EFFECT_ORDER.map((kind) => ABILITY_EFFECTS[kind])),
+  hooks: mergeHooks(ABILITY_EFFECTS.map((effect) => effect.hooks)),
 };
 
 /** Las habilidades de un tipo de unidad que cuentan en esta partida (para enseñarlas). */
