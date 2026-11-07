@@ -14,7 +14,6 @@ import { canStillFire } from '../rules/unitTurn';
 import type { GameState, Unit } from '../model';
 import { needsRepair, strikeReach, type PlayCtx } from '../autopilot/context';
 import { visibleFoes } from '../rules/visibility';
-import { flankBonusOnceHit } from '../ruleModules/flank';
 
 /** Plan de fuego del turno y orden en que juegan las unidades. */
 export interface FirePlan {
@@ -27,8 +26,20 @@ export interface FirePlan {
 /** Tiradores que hacen falta para que sea fuego concentrado: si basta con uno, ya lo hace cada unidad por su cuenta. */
 const MIN_FOCUS_SHOOTERS = 2;
 
-/** uid del tirador -> (uid del objetivo -> dano esperado). Solo objetivos a los que llega este turno. */
-type DamageTable = Map<number, Map<number, number>>;
+/** El dano esperado de un tirador a un objetivo: si es el primero en darle hoy y si otro ya le ha dado (el flanqueo). */
+interface ShotDamage {
+  first: number;
+  followUp: number;
+}
+
+/** uid del tirador -> (uid del objetivo -> su dano esperado). Solo objetivos a los que llega este turno. */
+type DamageTable = Map<number, Map<number, ShotDamage>>;
+
+/** Lo que le haria `shooter` a `foe`, preguntado a las reglas: tal como esta y si otro ya le hubiera dado hoy. */
+const shotDamage = (s: GameState, shooter: Unit, foe: Unit): ShotDamage => ({
+  first: expectedDamage(s, engagement(shooter, foe)),
+  followUp: expectedDamage(s, engagement(shooter, foe, { defenderHitToday: true })),
+});
 
 /** Puede disparar este turno y no tiene que irse a curar. */
 const isShooter = (s: GameState, play: PlayCtx, unit: Unit): boolean =>
@@ -42,10 +53,9 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
     const nearby = foes.filter((foe) => manhattan(shooter, foe) <= reach && canDamage(s, shooter, foe));
     if (!nearby.length) continue;
     const origins = fireOrigins(s, shooter, () => moveRange(s, shooter));
-    const damageByTarget = new Map<number, number>();
+    const damageByTarget = new Map<number, ShotDamage>();
     for (const foe of nearby)
-      if (origins.some((from) => inAttackRange(s, shooter, from, foe)))
-        damageByTarget.set(foe.uid, expectedDamage(s, engagement(shooter, foe)));
+      if (origins.some((from) => inAttackRange(s, shooter, from, foe))) damageByTarget.set(foe.uid, shotDamage(s, shooter, foe));
     if (damageByTarget.size) table.set(shooter.uid, damageByTarget);
   }
   return table;
@@ -55,21 +65,21 @@ function damageTable(s: GameState, shooters: Unit[], foes: Unit[]): DamageTable 
  * Los tiradores libres que destruyen a `foe` entre todos, de mas a menos dano, o null si no basta o
  * bastaria con uno solo (eso ya lo hace cada unidad por su cuenta).
  */
-function squadToDestroy(s: GameState, foe: Unit, free: Set<number>, damage: DamageTable): number[] | null {
+function squadToDestroy(foe: Unit, free: Set<number>, damage: DamageTable): number[] | null {
   // Lo que le haria cada tirador libre (solo los que le llegan).
-  const damageTo = (shooterUid: number): number | undefined => damage.get(shooterUid)?.get(foe.uid);
+  const damageTo = (shooterUid: number): ShotDamage | undefined => damage.get(shooterUid)?.get(foe.uid);
   const candidates = [...free]
     .flatMap((uid) => {
       const dealt = damageTo(uid);
       return dealt === undefined ? [] : [{ uid, dealt }];
     })
-    .sort((first, second) => second.dealt - first.dealt);
+    .sort((first, second) => second.dealt.first - first.dealt.first);
   let total = 0;
   const squad: number[] = [];
   for (const candidate of candidates) {
     if (total >= foe.life) break;
     // Despues del primero, el objetivo ya esta flanqueado.
-    total += candidate.dealt * (squad.length ? 1 + flankBonusOnceHit(s) : 1);
+    total += squad.length ? candidate.dealt.followUp : candidate.dealt.first;
     squad.push(candidate.uid);
   }
   return total >= foe.life && squad.length >= MIN_FOCUS_SHOOTERS ? squad : null;
@@ -104,7 +114,7 @@ export function planFire(s: GameState, play: PlayCtx): FirePlan {
   const free = new Set(damage.keys());
   const mostValuableFirst = [...foes].sort((firstUnit, secondUnit) => remainingValue(s, secondUnit) - remainingValue(s, firstUnit));
   for (const foe of mostValuableFirst) {
-    const squad = squadToDestroy(s, foe, free, damage);
+    const squad = squadToDestroy(foe, free, damage);
     if (!squad) continue;
     for (const uid of squad) {
       plan.set(uid, foe.uid);

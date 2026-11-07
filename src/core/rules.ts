@@ -129,7 +129,7 @@ export type {
   StopRule,
 } from './ruleModules/hooks';
 export { RANK_KILLS, rank } from './rules/rank';
-export { flankBonusFor, flankBonusOnceHit } from './ruleModules/flank';
+export { flankBonusFor } from './ruleModules/flank';
 export { abilitiesOf } from './ruleModules/abilities';
 export { MELEE_COUNTER } from './ruleModules/counterattack';
 export { inAttackRange, canDamage, basePower } from './rules/weapons';

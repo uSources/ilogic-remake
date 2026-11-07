@@ -13,6 +13,8 @@ export interface Fighter {
   readonly unit: Unit;
   readonly at: Pos;
   readonly life: number;
+  /** Ya le han atacado hoy (lo hipotetico: "¿y si otro le hubiera dado antes?"); si no se dice, lo que diga la partida. */
+  readonly hitToday?: boolean;
 }
 
 /** Un combate: `attacker` dispara a `defender` (el contraataque, si lo hay, es el mismo al reves). */

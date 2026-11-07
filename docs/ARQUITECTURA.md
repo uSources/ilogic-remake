@@ -411,7 +411,7 @@ Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo 
   zona de control, rombos de vision y de alcance la dan por hecha. Otra forma (hexagonos) seria
   cambiar `geom.ts` y lo que usa `diamond`, no una lista de los modulos.
 - **Combate como pregunta**: las reglas del combate reciben un `Engagement` (`engagement(atacante,
-  defensor, { from, attackerLife, defenderLife })`; `reversed` es el del contraataque). Asi la
+  defensor, { from, attackerLife, defenderLife, defenderHitToday })`; `reversed` es el del contraataque). Asi la
   prevision desde otra casilla, el valor de un ataque para la IA o el contraataque con la vida que
   le quedaria al defensor se preguntan sin copias de unidades.
 - `falls`: si un equipo ha caido y por que, mirando la partida (`currentDefeat`, para un equipo:
@@ -482,7 +482,8 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   crea uno para el general y la compra y otro para mover el ejercito. Dos turnos, o una prevision en
   medio de uno, no se mezclan.
 - **Pregunta a las reglas**: lo que necesita saber de la partida es una consulta de las reglas
-  (`projectedIncome`, `canRepair`, `visibleFoes`, `isEnemyHq`, `hasFullArmy`, `flankBonusOnceHit`),
+  (`projectedIncome`, `canRepair`, `visibleFoes`, `isEnemyHq`, `hasFullArmy`, `killReward`; el daño de rematar
+  a quien otro ya ha dado, `expectedDamage` de `engagement(..., { defenderHitToday: true })`),
   nunca una copia propia; los numeros con los que decide son pesos de su perfil.
 - **Puntos de extension**:
   - una pieza de reglas que la partida lleva o no (con su ajuste) es un modulo de reglas (ver
