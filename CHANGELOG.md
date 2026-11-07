@@ -7,7 +7,7 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.9.0] - 2026-11-07 — Teclas a tu gusto y edificios que vigilan
 
 ### Novedades
 - **Teclas a tu gusto**: en Opciones → Controles puedes cambiar la tecla de cada orden del mapa (fin de turno, siguiente unidad, atacar, capturar, defender, amenaza, minimapa, zoom, ayuda...). Pulsa «Cambiar» y la tecla nueva; si ya la usa otra orden o es fija (flechas, Enter, números, Ctrl+Z), te lo dice. «Por defecto» vuelve a las de serie. La ayuda y los botones enseñan siempre tus teclas.
