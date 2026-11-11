@@ -71,7 +71,9 @@ return gotCloser ? best.pos : null;
     llamada que cada uno tiene que acordarse de hacer). Quien decide, la sesion, la vista y lo de
     fuera del nucleo no los ven (`APPLY_STEPS` en eslint.config.js; las fachadas no los dan). Quien decide por un equipo (la IA, las
     ordenes) ni siquiera manda: es un plan que propone cada accion (`yield accion`, recibe su
-    resultado) con la vista de su equipo (`PlayerView`), y la manda quien lo cumple.
+    resultado) con la vista de su equipo (`PlayerView`), y la manda quien lo cumple. Lo que llega
+    por la red (`core/net`) tampoco manda a mano: pasa por la sesion (`GameSession.act`), como lo
+    de cualquiera.
 13. **Nada de estado global de partida.** Lo que depende de la partida sale de ella: reglas de
     `s.settings`, tamaño del mapa de `mapGrid(s)`, capas con `createLayer(s, fill)`. Nada de variables de
     modulo que se cambian al empezar una partida. El contenido va con la partida (`unitTypeOf(s, unit)`,
