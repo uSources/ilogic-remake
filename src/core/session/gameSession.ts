@@ -59,14 +59,18 @@ export class GameSession {
   /** El equipo al que se espera (decide alguien de fuera), o null. */
   private awaiting: TeamId | null = null;
 
+  /** Quien juega cada equipo, por su numero (puede cambiar: `replaceController`). */
+  private readonly controllers: Controller[];
+
   /** `controllers`: el de cada equipo, por su numero. */
   constructor(
     readonly state: GameState,
-    private readonly controllers: readonly Controller[],
+    controllers: readonly Controller[],
     private readonly options: SessionOptions = {},
   ) {
     if (controllers.length !== state.teams.length)
       throw new Error(`Hay ${state.teams.length} equipos y ${controllers.length} controladores: uno por equipo`);
+    this.controllers = [...controllers];
   }
 
   /** Como va la partida (igual para todos). */
@@ -133,6 +137,17 @@ export class GameSession {
     if (this.awaiting !== team) throw new Error(`El equipo ${team} no esta decidiendo: no puede dejar su turno a otro`);
     this.awaiting = null;
     this.current = this.turnInPlay(team, controller);
+  }
+
+  /**
+   * Desde ahora juega el equipo otro controlador (por la red, quien no vuelve pasa a la IA): si se le
+   * esperaba o estaba en medio de su turno, el nuevo lo sigue desde aqui (como `handOver`).
+   */
+  replaceController(team: TeamId, controller: Controller): void {
+    this.controllerOf(team);
+    this.controllers[team] = controller;
+    if (this.awaiting === team) this.handOver(team, controller);
+    else if (this.current?.team === team) this.current = this.turnInPlay(team, controller);
   }
 
   /**

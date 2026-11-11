@@ -2,8 +2,18 @@ import { expect } from 'vitest';
 import { aiTurn, defaultAiProfile } from '@core/ai';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
-import type { ActionResult, GameState, MatchResult, TeamId } from '@core/model';
-import { CURRENT_PROTOCOL, loadView, type ClientMessage, type Outgoing, type Room, type SeatId, type ServerMessage } from '@core/net';
+import type { ActionResult, GameEvent, GameState, MatchResult, TeamId } from '@core/model';
+import {
+  CURRENT_PROTOCOL,
+  loadView,
+  mergeView,
+  type ClientMessage,
+  type Outgoing,
+  type Room,
+  type SeatId,
+  type ServerMessage,
+  type ViewSnapshot,
+} from '@core/net';
 import { decisionRngOf, playerView, type PlayerView } from '@core/playerView';
 import { expectFoggedView, expectReferencesKnown } from './viewChecks';
 
@@ -11,20 +21,32 @@ import { expectFoggedView, expectReferencesKnown } from './viewChecks';
  * Un cliente simulado de una partida por la red: solo sabe lo que le llega por mensajes (su vista y
  * los sucesos que ve), construye su partida con `loadView` y juega su turno con la IA del juego sobre
  * esa partida (asi usa toda clase de acciones sin saber nada del servidor). Comprueba en cada mensaje
- * que nunca le llega nada que su equipo no deba saber.
+ * que nunca le llega nada que su equipo no deba saber, que los mensajes llegan seguidos (`step`) y
+ * que cada resultado contesta a lo que mando (`seq`).
  */
 export class NetClient {
   seat: SeatId | null = null;
   team: TeamId | null = null;
+  connection: number | null = null;
   /** Su partida, tal como la sabe (la ultima vista). El mismo objeto toda la partida: se rellena con cada vista. */
   state: GameState | null = null;
+  /** La ultima vista entera que le llego (lo fijo de la partida sale de ella). */
+  private fullView: ViewSnapshot | null = null;
   private view: PlayerView | null = null;
   /** A quien se espera, segun el servidor. */
   turn: { team: TeamId; day: number } | null = null;
   ended: MatchResult | null = null;
   lastResult: ActionResult | null = null;
+  /** Los sucesos del ultimo resultado, por comprobar contra la vista que viene detras. */
+  private resultEvents: GameEvent[] = [];
+  /** Su numero de orden: uno mas por cada mensaje con efecto. */
+  seq = 0;
+  /** El ultimo `step` que le llego (los siguientes tienen que ser el siguiente). */
+  step = 0;
   /** Cuantos mensajes de cada tipo han llegado. */
   readonly received = new Map<ServerMessage['kind'], number>();
+  /** Bytes recibidos (como JSON). */
+  bytes = 0;
 
   constructor(readonly token: string) {}
 
@@ -33,24 +55,44 @@ export class NetClient {
     return { kind: 'hello', token: this.token, ...CURRENT_PROTOCOL };
   }
 
+  /** Un mensaje con efecto, con el siguiente numero de orden. */
+  ordered<Message extends Omit<Extract<ClientMessage, { seq: number }>, 'seq'>>(message: Message): Message & { seq: number } {
+    this.seq += 1;
+    return { ...message, seq: this.seq };
+  }
+
   /** Un mensaje del servidor: lo apunta, comprueba lo que trae y pone al dia su partida. */
   receive(message: ServerMessage): void {
     this.received.set(message.kind, (this.received.get(message.kind) ?? 0) + 1);
+    this.bytes += JSON.stringify(message).length;
+    // Una vista entera es un punto de partida (al entrar, al volver); lo demas tiene que llegar seguido.
+    if ('step' in message && message.kind !== 'view')
+      expect(message.step, `falta un mensaje antes del ${message.kind}`).toBe(this.step + 1);
+    if ('step' in message) this.step = message.step;
     switch (message.kind) {
       case 'welcome':
         this.seat = message.seat;
         this.team = message.team;
+        // Un cliente nuevo en un asiento usado sigue contando desde donde lo dejo el de antes.
+        expect(message.lastSeq).toBeGreaterThanOrEqual(this.seq);
+        this.seq = message.lastSeq;
         return;
       case 'view':
+        this.fullView = message.view;
         this.replaceState(message.view);
         return;
       case 'events': {
         const before = this.state ? cloneState(this.state) : null;
-        this.replaceState(message.view);
-        if (before) expectReferencesKnown(message.events, before, this.state!, this.team!);
+        if (!this.fullView) throw new Error('Sucesos sin una vista entera antes');
+        this.replaceState(mergeView(this.fullView, message.view));
+        if (before) expectReferencesKnown([...this.resultEvents, ...message.events], before, this.state!, this.team!);
+        this.resultEvents = [];
         return;
       }
       case 'result':
+        expect(message.seq, 'un resultado de otro mensaje').toBe(this.seq);
+        // Llega antes que lo que ha cambiado: sus sucesos se comprueban con la vista que viene detras.
+        if (message.result.ok) this.resultEvents = message.result.events;
         this.lastResult = message.result;
         return;
       case 'turn':
@@ -86,11 +128,11 @@ export class NetClient {
     const plan = aiTurn(this.view, defaultAiProfile(defaultContent()), decisionRngOf(this.view));
     for (let step = plan.next(); !step.done;) {
       this.lastResult = null;
-      exchange(this.seat, { kind: 'act', action: step.value });
+      exchange(this.seat, this.ordered({ kind: 'act', action: step.value }));
       if (!this.lastResult) throw new Error('El servidor no ha contestado a una accion');
       step = plan.next(this.lastResult);
     }
-    exchange(this.seat, { kind: 'endTurn' });
+    exchange(this.seat, this.ordered({ kind: 'endTurn' }));
   }
 
   /** Su partida pasa a ser la vista: comprobada como una partida guardada, y sin nada que no deba saber. */
@@ -124,14 +166,18 @@ export class Table {
     for (const client of this.clients) client.receiveAll(outgoing);
   }
 
-  /** Entra cada cliente (con su saludo). */
+  /** Entra un cliente (con su saludo). */
+  join(client: NetClient): void {
+    const result = this.room.join(client.hello());
+    if (!result.ok) throw new Error(`No ha podido entrar: ${result.error}`);
+    client.seat = result.seat;
+    client.connection = result.connection;
+    this.deliver(result.messages);
+  }
+
+  /** Entra cada cliente. */
   joinAll(): void {
-    for (const client of this.clients) {
-      const result = this.room.join(client.hello());
-      if (!result.ok) throw new Error(`No ha podido entrar: ${result.error}`);
-      client.seat = result.seat;
-      this.deliver(result.messages);
-    }
+    for (const client of this.clients) this.join(client);
   }
 
   /** Manda un mensaje de un asiento y reparte lo que sale. */
