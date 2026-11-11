@@ -12,7 +12,7 @@ import type { GameContent } from '../content';
 import { savedPart } from '../gameContent';
 import type { GameState, TeamId } from '../model';
 import { GAME_MODES, type GameModeRegistry } from '../modes';
-import { readSave, type ReadSaveResult } from '../save';
+import { readSaved, type ReadSaveResult } from '../save';
 import { knowledgeOf } from './eventFog';
 import type { ViewSnapshot } from './protocol';
 
@@ -25,6 +25,15 @@ export const viewSnapshotOf = (s: GameState, team: TeamId): ViewSnapshot => save
  * pone quien lee, como al cargar.
  */
 export function loadView(snapshot: unknown, content: GameContent, modes: GameModeRegistry = GAME_MODES): ReadSaveResult {
-  // Por JSON: lo que llega por la red es JSON, y asi la partida del cliente no comparte nada con la vista.
-  return readSave(JSON.stringify(snapshot), content, modes, 'view');
+  // Sobre una copia: leer limpia en sitio, y la partida del cliente no comparte nada con la vista que llego.
+  return readSaved(copyOf(snapshot), content, { modes, origin: 'view' });
+}
+
+/** Una copia de lo que llego (lo que no se puede copiar, como una funcion, no es una vista: null). */
+function copyOf(value: unknown): unknown {
+  try {
+    return structuredClone(value);
+  } catch {
+    return null;
+  }
 }

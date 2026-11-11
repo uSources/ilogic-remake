@@ -198,6 +198,7 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     'core/savedParts.ts#cleanCounters': 'limpia una partida que se esta leyendo',
     'core/savedParts.ts#cleanOptionalParts': 'limpia una partida que se esta leyendo',
     'core/save.ts#readSave': 'carga una partida nueva',
+    'core/save.ts#readSaved': 'carga una partida nueva (ya convertida de JSON)',
     'core/save.ts#deserialize': 'carga una partida nueva',
     'core/defaultGames.ts#createMatch': 'crea una partida nueva',
     'core/defaultGames.ts#loadGame': 'carga una partida nueva',

@@ -10,8 +10,13 @@ import {
   CURRENT_PROTOCOL,
   isCurrentProtocol,
   isValidMessage,
+  isWithinBounds,
   loadView,
+  MAX_LIST,
+  MAX_TEXT,
+  mergeView,
   PROTOCOL_VERSION,
+  viewChangeOf,
   viewSnapshotOf,
   type ClientMessage,
   type ServerMessage,
@@ -38,10 +43,18 @@ describe('el protocolo: version y forma de los mensajes', () => {
 
   it.each<[string, unknown]>([
     ['un saludo', hello()],
-    ['una accion', { kind: 'act', action: { kind: 'move', uid: 3, to: { x: 1, y: 2 } } }],
-    ['rendirse como accion', { kind: 'act', action: { kind: 'surrender' } }],
-    ['fin de turno', { kind: 'endTurn' }],
-    ['rendirse', { kind: 'surrender' }],
+    ['una accion', { kind: 'act', seq: 1, action: { kind: 'move', uid: 3, to: { x: 1, y: 2 } } }],
+    ['rendirse como accion', { kind: 'act', seq: 7, action: { kind: 'surrender' } }],
+    ['fin de turno', { kind: 'endTurn', seq: 2 }],
+    ['rendirse', { kind: 'surrender', seq: 3 }],
+    [
+      'un camino largo pero posible',
+      {
+        kind: 'act',
+        seq: 1,
+        action: { kind: 'move', uid: 1, to: { x: 1, y: 1 }, path: Array.from({ length: MAX_LIST }, () => ({ x: 1, y: 1 })) },
+      },
+    ],
     ['pedir la vista', { kind: 'resync' }],
     ['con campos de mas (se ignoran)', { kind: 'resync', extra: 1 }],
   ])('acepta %s', (_name, message) => expect(isValidMessage(message)).toBe(true));
@@ -60,13 +73,39 @@ describe('el protocolo: version y forma de los mensajes', () => {
     ['un saludo con la ficha como objeto', { kind: 'hello', token: { toString: () => 'x' }, ...CURRENT_PROTOCOL }],
     ['un saludo con la version en texto', { kind: 'hello', token: 'x', protocol: '1', save: SAVE_VERSION }],
     ['un saludo con la version rota', { kind: 'hello', token: 'x', protocol: 1.5, save: SAVE_VERSION }],
-    ['una accion sin accion', { kind: 'act' }],
-    ['una accion que no es una accion', { kind: 'act', action: { kind: 'teleport', uid: 1 } }],
-    ['una accion con un uid que no lo es', { kind: 'act', action: { kind: 'wait', uid: '1' } }],
-    ['una accion con una casilla rota', { kind: 'act', action: { kind: 'move', uid: 1, to: { x: 1 } } }],
-    ['una accion con uids infinitos', { kind: 'act', action: { kind: 'formSquad', uids: [1, Infinity] } }],
-    ['empezar el turno (eso es de la sesion, pero ni siquiera tiene forma de mensaje del cliente)', { kind: 'startTurn' }],
+    ['una accion sin accion', { kind: 'act', seq: 1 }],
+    ['una accion sin numero de orden', { kind: 'act', action: { kind: 'wait', uid: 1 } }],
+    ['una accion con el numero de orden a cero', { kind: 'act', seq: 0, action: { kind: 'wait', uid: 1 } }],
+    ['una accion con el numero de orden roto', { kind: 'act', seq: 1.5, action: { kind: 'wait', uid: 1 } }],
+    ['un fin de turno sin numero de orden', { kind: 'endTurn' }],
+    ['una accion que no es una accion', { kind: 'act', seq: 1, action: { kind: 'teleport', uid: 1 } }],
+    ['una accion con un uid que no lo es', { kind: 'act', seq: 1, action: { kind: 'wait', uid: '1' } }],
+    ['una accion con una casilla rota', { kind: 'act', seq: 1, action: { kind: 'move', uid: 1, to: { x: 1 } } }],
+    ['una accion con uids infinitos', { kind: 'act', seq: 1, action: { kind: 'formSquad', uids: [1, Infinity] } }],
+    [
+      'un camino kilometrico',
+      {
+        kind: 'act',
+        seq: 1,
+        action: { kind: 'move', uid: 1, to: { x: 1, y: 1 }, path: Array.from({ length: MAX_LIST + 1 }, () => ({ x: 1, y: 1 })) },
+      },
+    ],
+    ['miles de uids', { kind: 'act', seq: 1, action: { kind: 'formSquad', uids: Array.from({ length: 5000 }, (_, i) => i + 1) } }],
+    [
+      'un nombre de escuadra kilometrico',
+      { kind: 'act', seq: 1, action: { kind: 'formSquad', uids: [1], name: 'x'.repeat(MAX_TEXT + 1) } },
+    ],
+    ['un tipo de unidad kilometrico', { kind: 'act', seq: 1, action: { kind: 'buy', at: { x: 1, y: 1 }, unitType: 'x'.repeat(10_000) } }],
+    ['una accion con campos hondos', { kind: 'act', seq: 1, action: { kind: 'wait', uid: 1, extra: { a: { b: { c: { d: 1 } } } } } }],
+    ['empezar el turno (eso es de la sesion, pero ni siquiera tiene forma de mensaje del cliente)', { kind: 'startTurn', seq: 1 }],
   ])('rechaza %s', (_name, message) => expect(isValidMessage(message)).toBe(false));
+
+  it('los topes de tamaño valen para lo que lleva dentro una accion, no para una accion normal', () => {
+    expect(isWithinBounds({ kind: 'move', uid: 1, to: { x: 1, y: 2 }, path: [{ x: 1, y: 1 }] })).toBe(true);
+    expect(isWithinBounds(Array.from({ length: MAX_LIST + 1 }, () => 1))).toBe(false);
+    expect(isWithinBounds({ deep: { deeper: { deepest: { too: 'deep' } } } })).toBe(false);
+    expect(isWithinBounds('x'.repeat(MAX_TEXT))).toBe(true);
+  });
 });
 
 describe('todo lo que viaja es JSON', () => {
@@ -77,28 +116,39 @@ describe('todo lo que viaja es JSON', () => {
     { kind: 'move', actor: 1, uid: 7, path: [{ x: 1, y: 1 }] },
   ];
   const samples: readonly ServerMessage[] = [
-    { kind: 'welcome', seat: 0, team: 0, ...CURRENT_PROTOCOL, status: 'waiting' },
-    { kind: 'view', view },
-    { kind: 'events', actor: 1, events, view },
-    { kind: 'result', result: { ok: true, events } },
-    { kind: 'result', result: { ok: false, reason: 'notYourTurn' } },
-    { kind: 'turn', team: 1, day: 2 },
+    { kind: 'welcome', seat: 0, team: 0, ...CURRENT_PROTOCOL, status: 'waiting', lastSeq: 0 },
+    { kind: 'view', step: 1, view },
+    { kind: 'events', step: 2, actor: 1, events, view: viewChangeOf(view) },
+    { kind: 'result', seq: 1, result: { ok: true, events } },
+    { kind: 'result', seq: 2, result: { ok: false, reason: 'notYourTurn' } },
+    { kind: 'turn', step: 3, team: 1, day: 2 },
     { kind: 'ended', result: { status: 'decided', winners: [0], reason: 'hq' } },
-    { kind: 'error', error: 'badToken' },
+    { kind: 'error', error: 'badToken', seq: 3 },
   ];
 
   it.each(samples.map((message) => [message.kind, message] as const))('el mensaje %s del servidor va y vuelve igual', (_kind, message) => {
     expect(JSON.parse(JSON.stringify(message))).toEqual(message);
   });
 
-  it.each<ClientMessage>([hello(), { kind: 'act', action: { kind: 'buy', at: { x: 2, y: 3 }, unitType: 'Tank' } }, { kind: 'endTurn' }])(
-    'el mensaje $kind del cliente va y vuelve igual, y sigue valiendo',
-    (message) => {
-      const back: unknown = JSON.parse(JSON.stringify(message));
-      expect(back).toEqual(message);
-      expect(isValidMessage(back)).toBe(true);
-    },
-  );
+  it.each<ClientMessage>([
+    hello(),
+    { kind: 'act', seq: 1, action: { kind: 'buy', at: { x: 2, y: 3 }, unitType: 'Tank' } },
+    { kind: 'endTurn', seq: 2 },
+  ])('el mensaje $kind del cliente va y vuelve igual, y sigue valiendo', (message) => {
+    const back: unknown = JSON.parse(JSON.stringify(message));
+    expect(back).toEqual(message);
+    expect(isValidMessage(back)).toBe(true);
+  });
+
+  it('lo que cambia de una vista no lleva lo fijo, y con la vista entera de antes vuelve a ser la vista', () => {
+    const change = viewChangeOf(view);
+    expect(change).not.toHaveProperty('map');
+    expect(change).not.toHaveProperty('settings');
+    expect(change).not.toHaveProperty('version');
+    expect(change).toHaveProperty('units');
+    expect(mergeView(view, change)).toEqual(view);
+    expect(JSON.stringify(change).length).toBeLessThan(JSON.stringify(view).length / 2);
+  });
 });
 
 describe('la vista de un equipo como partida del cliente', () => {
