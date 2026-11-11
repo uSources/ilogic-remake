@@ -1,10 +1,14 @@
 import type Phaser from 'phaser';
 import { ATLAS } from '../../atlas';
-import type { Building, GameState, TeamId } from '../../core/model';
+import { samePos } from '../../core/geom';
+import type { Building, GameState, Pos, TeamId } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
+import { TILE } from '../../layout';
 import { buildingKey } from '../sprites';
 import type { MapLayer } from './layer';
-import { fitToTile, tileFoot, tileImage } from './tileImage';
+import { fitToTile, footTile, tileFoot, tileImage } from './tileImage';
+
+const isImage = (child: Phaser.GameObjects.GameObject): child is Phaser.GameObjects.Image => child.type === 'Image';
 
 /**
  * Edificios (un sprite persistente por edificio, que se actualiza) y, en la misma capa, los
@@ -58,5 +62,13 @@ export class BuildingLayer implements MapLayer {
   /** Lo que esta mas abajo en el mapa se dibuja delante (los sprites tienen el origen abajo). */
   sort(): void {
     this.object.sort('y');
+  }
+
+  /** Dibujos visibles de la casilla `tile` que sobresalen hacia la de arriba (ver map/overhangs.ts). */
+  tallAt(tile: Pos): Phaser.GameObjects.Image[] {
+    return this.object.list.filter(
+      (child): child is Phaser.GameObjects.Image =>
+        isImage(child) && child.visible && child.displayHeight > TILE && samePos(footTile(child), tile),
+    );
   }
 }

@@ -8,6 +8,9 @@ import { TILE } from '../../layout';
  * pueden ser algo mas anchos o altos que la casilla y asi se pueden voltear sin desplazarse.
  */
 
+/** Modo de tinte FILL de Phaser 4 (Phaser.TintModes.FILL; aqui Phaser solo se importa como tipo). */
+export const TINT_FILL = 1;
+
 /** Ajusta el tamaño al del fotograma actual, sin estrechar los dibujos mas pequeños que la casilla. */
 export function fitToTile<T extends Phaser.GameObjects.Image>(img: T): T {
   img.setDisplaySize(Math.max(TILE, img.frame.width), img.frame.height);
@@ -16,6 +19,9 @@ export function fitToTile<T extends Phaser.GameObjects.Image>(img: T): T {
 
 /** Pie de una casilla en pixeles de mundo (donde va el origen de sus dibujos). */
 export const tileFoot = (tile: Pos): { x: number; y: number } => ({ x: tile.x * TILE + TILE / 2, y: (tile.y + 1) * TILE });
+
+/** Casilla de un dibujo colocado con `tileFoot` (la inversa). */
+export const footTile = (image: { x: number; y: number }): Pos => ({ x: Math.floor(image.x / TILE), y: Math.round(image.y / TILE) - 1 });
 
 /** Imagen del atlas con el pie en el de la casilla `tile`. */
 export function tileImage(scene: Phaser.Scene, key: string, tile: Pos): Phaser.GameObjects.Image {

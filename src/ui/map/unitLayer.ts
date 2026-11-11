@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
+import { terrainAt, unitTypeOf } from '../../core/gameContent';
 import { rank, unhealable, canStillAct, isOnMap } from '../../core/rules';
 import { turnEndOrderOf, isDetached } from '../../core/squads';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -10,6 +11,7 @@ import { sideOf, type Side } from '../sides';
 import { unitKey } from '../sprites';
 import { frontKey } from '../terrainArt';
 import { stepOf, type AnimatedLayer, type MapClock, type MapLayer } from './layer';
+import { terrainPose, type TerrainPose } from './terrainPose';
 import { fitToTile } from './tileImage';
 import { BADGE_SLOTS, drawUnitMarks, markSignature } from './unitMarks';
 import type { ViewOptions } from './viewOptions';
@@ -27,6 +29,10 @@ const FRONT_TINT = { forest: 0xd8e4d8, rock: 0xe8e8e8 };
 /** Cuadradito de carga (sin las marcas dibujadas): lado y sitio. */
 const CARGO_BOX = 8;
 const CARGO_AT = 2;
+/** Linea del agua de una unidad que la vadea: algo mas estrecha que la casilla, de espuma. */
+const WATERLINE = { width: TILE - 6, alpha: 0.75 };
+/** Dibujo de 2013: las unidades se ponen siempre igual, sin tener en cuenta el terreno. */
+const FLAT_POSE: TerrainPose = { lift: 0, wade: 0, showsFront: false };
 
 /** Sprite persistente de una unidad: imagen + vida + marca de carga. */
 interface UnitSprite {
@@ -34,6 +40,10 @@ interface UnitSprite {
   img: Phaser.GameObjects.Image;
   /** Primer plano del terreno (bosque, rocas) delante de la unidad. */
   front: Phaser.GameObjects.Image;
+  /** Linea del agua cuando la unidad esta en el agua. */
+  waterline: Phaser.GameObjects.Rectangle;
+  /** Como se planta en su casilla segun el terreno (ver map/terrainPose.ts). */
+  pose: TerrainPose;
   life: Phaser.GameObjects.Image;
   cargo: Phaser.GameObjects.Rectangle;
   /** Estrellas de veterania (arriba a la derecha) y señal de "sin cura" (abajo a la izquierda). */
@@ -73,11 +83,27 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     const stars = add.graphics();
     // Primer plano (copas de arbol o rocas) que tapa los pies de la unidad en bosques y montañas.
     const front = add.image(0, TILE, '__DEFAULT').setOrigin(0, 1).setVisible(false);
+    const waterline = add.rectangle(TILE / 2, TILE, WATERLINE.width, 1, PAL.white, WATERLINE.alpha).setVisible(false);
     const order = add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false);
     const badges = Array.from({ length: BADGE_SLOTS }, () => add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false));
-    const root = add.container(0, 0, [img, front, life, cargo, stars, order, ...badges]);
+    const root = add.container(0, 0, [img, waterline, front, life, cargo, stars, order, ...badges]);
     this.object.add(root);
-    return { root, img, front, life, cargo, stars, order, badges, marksDrawn: 0, key, idle: false, side: 'own' };
+    return {
+      root,
+      img,
+      front,
+      waterline,
+      pose: FLAT_POSE,
+      life,
+      cargo,
+      stars,
+      order,
+      badges,
+      marksDrawn: 0,
+      key,
+      idle: false,
+      side: 'own',
+    };
   }
 
   sync(s: GameState, options: ViewOptions, newArt: boolean): void {
@@ -117,11 +143,13 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     sprite.root.setPosition(unit.x * TILE, unit.y * TILE);
     sprite.side = sideOf(s, viewer, unit.team);
     sprite.img.setFlipX(faceFlip(sprite.side, this.facingOf(unit.uid, sprite.side)));
-    this.updateTerrainFront(sprite, newArt ? frontKey(s, unit) : null);
+    sprite.pose = newArt ? terrainPose(terrainAt(s, unit), unitTypeOf(s, unit).motion) : FLAT_POSE;
+    this.updateTerrainFront(sprite, sprite.pose.showsFront ? frontKey(s, unit) : null);
+    updateWading(sprite);
     updateLifeDigit(sprite, unit.life);
     this.updateMarks(sprite, unit, s);
     sprite.idle = sprite.side === 'own' && canStillAct(unit);
-    sprite.img.y = TILE - (sprite.idle ? this.bobPhase : 0);
+    placeFeet(sprite, this.bobPhase);
   }
 
   /** Integrar la unidad en el terreno (dibujo nuevo): bosque y montaña le tapan los pies y la oscurecen un poco. */
@@ -164,7 +192,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     const phase = stepOf(clock, BOB_MS, 2);
     if (phase === this.bobPhase) return;
     this.bobPhase = phase;
-    for (const sprite of this.units.values()) sprite.img.y = TILE - (sprite.idle ? phase : 0);
+    for (const sprite of this.units.values()) placeFeet(sprite, phase);
   }
 
   /** Gira una unidad hacia un lado (y la deja asi). */
@@ -183,11 +211,37 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     return this.units.get(uid)?.root ?? null;
   }
 
+  /** Casillas de las unidades que se ven ahora. */
+  tiles(): Pos[] {
+    return [...this.units.values()].filter(({ root }) => root.visible).map(({ root }) => ({ x: root.x / TILE, y: root.y / TILE }));
+  }
+
+  /** Dibujo de la unidad que se ve en `tile` y su lado (para su silueta, ver map/overhangLayer.ts). */
+  drawnAt(tile: Pos): { image: Phaser.GameObjects.Image; side: Side } | null {
+    for (const { root, img, side } of this.units.values())
+      if (root.visible && root.x === tile.x * TILE && root.y === tile.y * TILE) return { image: img, side };
+    return null;
+  }
+
   /** Imagen de la unidad dibujada en una casilla (antes de volver a pintar), para efectos. */
   keyAt(pos: Pos): string | null {
     for (const { root, key } of this.units.values()) if (root.x === pos.x * TILE && root.y === pos.y * TILE && root.visible) return key;
     return null;
   }
+}
+
+/** Pies de la unidad: abajo de la casilla, mas arriba en un acantilado y 1 pixel arriba al esperar. */
+function placeFeet(sprite: UnitSprite, bobPhase: number): void {
+  sprite.img.y = TILE - sprite.pose.lift - (sprite.idle ? bobPhase : 0);
+}
+
+/** En el agua: se recorta la parte hundida y se pinta la linea del agua. */
+function updateWading(sprite: UnitSprite): void {
+  const { img, waterline, pose } = sprite;
+  const isWading = pose.wade > 0;
+  waterline.setVisible(isWading).setY(TILE - pose.wade);
+  if (isWading) img.setCrop(0, 0, img.frame.width, img.frame.height - pose.wade);
+  else img.setCrop();
 }
 
 /** Cifra de vida (decenas, 1-9) en la esquina; no se enseña con la vida llena. */
