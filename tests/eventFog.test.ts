@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { aiController } from '@core/controllers';
 import { createMatch } from '@core/defaultGames';
-import { skirmishConfig } from '@core/match';
+import { skirmishConfig, type MatchTeam } from '@core/match';
 import { newUnit } from '@core/measure';
 import type { GameEvent, GameState, MatchSettings, TeamId } from '@core/model';
 import { eventsSeenBy, knowledgeOf, type Knowledge } from '@core/net';
 import { GameSession, runMatch } from '@core/session';
-import { teamIds, type TeamSetup } from '@core/teams';
+import { teamIds, teamState, type TeamSetup } from '@core/teams';
+import { appointGeneral } from '@core/generals';
 import { PRIVATE_KINDS } from './sim/eventReferences';
 import { expectReferencesKnown } from './sim/viewChecks';
 import { act, blankState, giveTurn, unitTypeNamed } from './helpers';
@@ -16,6 +17,7 @@ const TANK = unitTypeNamed('Tank');
 const CAR = unitTypeNamed('Car');
 const TRANSPORT = unitTypeNamed('Transport');
 const SUPPLIER = unitTypeNamed('Supplier');
+const ARTILLERY = unitTypeNamed('Artillery');
 
 /** Con niebla: un soldado del equipo 0 en (2, 2) (ve a 4 casillas), un coche enemigo a la vista y un tanque enemigo lejos, escondido. */
 function fogged(settingChanges: Partial<MatchSettings> = { fog: true }) {
@@ -72,7 +74,7 @@ describe('la niebla de los sucesos: lo que ve un equipo de un paso', () => {
     expect(shown.map((event) => event.kind)).toEqual(['move']);
   });
 
-  it('el combate se ve donde cae el disparo, entero; lejos, no', () => {
+  it('el combate se ve donde cae el disparo, entero si conoce a quien dispara; lejos, no', () => {
     const { s, mine, seen, hidden } = fogged();
     const far = newUnit(s, SOLDIER, 1, { x: 24, y: 25 });
     far.life = 1;
@@ -80,29 +82,89 @@ describe('la niebla de los sucesos: lo que ve un equipo de un paso', () => {
     const near = seenBy(s, 0, () => act(s, 1, { kind: 'attack', uid: seen.uid, target: mine.uid }));
     expect(near.events.map((event) => event.kind)).toEqual(['attack']);
     expect(near.seen).toEqual(near.events);
-    // Un combate entre enemigos en la niebla (el tanque remata a un soldado suyo... no: a uno de otro
-    // equipo; aqui, el mas sencillo: lejos de todo lo nuestro no se ve nada, ni que alguien cae).
+    // Un combate entre enemigos en la niebla: nada, ni que alguien cae.
     const away = seenBy(s, 0, () => act(s, 0, { kind: 'wait', uid: mine.uid }));
     expect(away.seen).toEqual(away.events);
-    expect(
-      eventsSeenBy(
-        [
-          {
-            kind: 'attack',
-            actor: 1,
-            attacker: hidden.uid,
-            target: far.uid,
-            at: { x: 24, y: 25 },
-            damage: 1,
-            killed: true,
-            counter: 0,
-            attackerKilled: false,
-            combat: near.events[0]!.kind === 'attack' ? near.events[0].combat : (undefined as never),
-          },
-        ],
-        { before: away.before, after: away.after },
-      ),
-    ).toEqual([]);
+    const combat = near.events[0]!.kind === 'attack' ? near.events[0].combat : (undefined as never);
+    const unseenAttack: GameEvent = {
+      kind: 'attack',
+      actor: 1,
+      attacker: hidden.uid,
+      target: far.uid,
+      at: { x: 24, y: 25 },
+      damage: 1,
+      killed: true,
+      counter: 0,
+      attackerKilled: false,
+      combat: { ...combat, counterHit: 0.5 },
+    };
+    expect(eventsSeenBy([unseenAttack], { before: away.before, after: away.after })).toEqual([]);
+  });
+
+  it('un disparo desde la niebla: se ve donde cae, pero no quien dispara ni si se le pudo contestar', () => {
+    const { s, mine } = fogged();
+    const artillery = newUnit(s, ARTILLERY, 1, { x: 2, y: 7 });
+    giveTurn(s, 1);
+    const { seen: shown, events, before } = seenBy(s, 0, () => act(s, 1, { kind: 'attack', uid: artillery.uid, target: mine.uid }));
+    expect(events.map((event) => event.kind)).toEqual(['attack']);
+    expect(before.state.units.some((unit) => unit.uid === artillery.uid)).toBe(false);
+    expect(shown).toHaveLength(1);
+    const attack = shown[0]!;
+    if (attack.kind !== 'attack') throw new Error('se esperaba un ataque');
+    expect(attack.attacker).toBeNull();
+    expect(attack.combat.counterHit).toBeNull();
+    expect(attack.combat.attackerType).toBe(ARTILLERY.id);
+    expect(attack.target).toBe(mine.uid);
+  });
+
+  it('un poder de area solo nombra a las unidades que el equipo conoce (y la casilla si la ve)', () => {
+    const { s, mine } = fogged();
+    appointGeneral(s, 1, 'Brisa');
+    teamState(s, 1).general!.charge = 6;
+    const target = { x: 25, y: 24 };
+    const ours = newUnit(s, SOLDIER, 0, { x: 25, y: 23 });
+    ours.life = 50;
+    giveTurn(s, 1);
+    const { seen: shown, events } = seenBy(s, 0, () => act(s, 1, { kind: 'usePower', power: 'airstrike', target }));
+    const power = events.find((event) => event.kind === 'power');
+    expect(power?.hits.map((hit) => hit.uid)).toEqual([ours.uid]);
+    // El equipo 0 conoce a su propia unidad tocada: la ve.
+    const shownPower = shown.find((event) => event.kind === 'power');
+    expect(shownPower?.hits).toEqual(power?.hits);
+    expect(shownPower?.target).toEqual(target);
+    expect(mine.life).toBe(100);
+  });
+
+  it('un poder de area sobre unidades que el equipo no conoce: ni a quien toca ni donde', () => {
+    const s = blankState({ fog: true }, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
+    appointGeneral(s, 1, 'Brisa');
+    teamState(s, 1).general!.charge = 6;
+    newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    const victim = newUnit(s, SOLDIER, 2, { x: 25, y: 23 });
+    newUnit(s, SOLDIER, 1, { x: 25, y: 20 });
+    giveTurn(s, 1);
+    const { seen: shown, events } = seenBy(s, 0, () => act(s, 1, { kind: 'usePower', power: 'airstrike', target: { x: 25, y: 24 } }));
+    expect(events.find((event) => event.kind === 'power')?.hits.map((hit) => hit.uid)).toEqual([victim.uid]);
+    const shownPower = shown.find((event) => event.kind === 'power');
+    expect(shownPower).toMatchObject({ kind: 'power', general: 'Brisa', power: 'airstrike', hits: [] });
+    expect(shownPower).not.toHaveProperty('target');
+  });
+
+  it('un punto de control disputado solo lo esta para quien ve a quien lo disputa', () => {
+    const s = blankState({ fog: true, controlPoints: 1, controlRadius: 1 });
+    s.controlPoints = [{ x: 20, y: 20, owner: 1 }];
+    newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
+    newUnit(s, SOLDIER, 0, { x: 20, y: 21 });
+    newUnit(s, SOLDIER, 1, { x: 20, y: 19 });
+    giveTurn(s, 1);
+    const { seen: shown, events } = seenBy(s, 0, () => act(s, 1, { kind: 'endTurn' }));
+    const point = events.find((event) => event.kind === 'controlPoint');
+    expect(point).toMatchObject({ contested: true });
+    // El equipo 0 ve al enemigo de al lado: disputado. Un tercero que no viera nada, no.
+    expect(shown.find((event) => event.kind === 'controlPoint')).toMatchObject({ contested: true });
+    const blind = knowledgeOf(blankState({ fog: true }), 0);
+    const far = { ...blind, state: { ...blind.state, controlPoints: s.controlPoints } };
+    expect(eventsSeenBy([point!], { before: far, after: far })).toMatchObject([{ contested: false }]);
   });
 
   it('las ordenes y las escuadras de los enemigos no se ven; las de los aliados, si', () => {
@@ -196,7 +258,7 @@ function isSubsequence(part: readonly string[], whole: readonly string[]): boole
 }
 
 /** Juega `days` dias IA contra IA de `config` comprobando, en cada paso y para cada equipo, lo que ve. */
-function playChecking(teams: readonly TeamSetup[], settingChanges: Partial<MatchSettings>, seed: number, days: number): number {
+function playChecking(teams: readonly MatchTeam[], settingChanges: Partial<MatchSettings>, seed: number, days: number): number {
   const s = createMatch(skirmishConfig({ seed, size: 16, teams, settingChanges }));
   const session = new GameSession(
     s,
@@ -247,5 +309,19 @@ describe('la niebla de los sucesos en partidas enteras: cada equipo solo ve lo q
 
   it('sin niebla, los sucesos del mapa pasan enteros', () => {
     expect(playChecking([{ controller: 'ai' }, { controller: 'ai' }], { fog: false }, 14, 8)).toBeGreaterThan(50);
+  }, 60_000);
+
+  it('con generales, clima y puntos de control, en dos alianzas', () => {
+    const teams: MatchTeam[] = [
+      { controller: 'ai', alliance: 0, general: 'Brisa' },
+      { controller: 'ai', alliance: 1, general: 'Roca' },
+      { controller: 'ai', alliance: 0, general: 'Ambar' },
+      { controller: 'ai', alliance: 1, general: 'Brisa' },
+    ];
+    expect(playChecking(teams, { fog: true, weather: true, controlPoints: 2 }, 15, 8)).toBeGreaterThan(50);
+  }, 60_000);
+
+  it('con emboscadas y bosques que esconden, tres equipos', () => {
+    expect(playChecking(FREE_FOR_ALL, { fog: true, ambush: true, forestHides: true }, 16, 8)).toBeGreaterThan(50);
   }, 60_000);
 });

@@ -415,7 +415,8 @@ function describeBattle(stage: EventStage, event: AttackEvent): Battle {
   const s = stage.state;
   const isSeen = stage.visible(event.at) && !stage.fastForward;
   const victimKey = stage.view.unitKeyAt(event.at);
-  const attackerSprite = stage.view.unitSprite(event.attacker);
+  // Por la red el atacante puede no conocerse (null): entonces no hay dibujo desde el que disparar.
+  const attackerSprite = event.attacker === null ? null : stage.view.unitSprite(event.attacker);
   const attackerPos = attackerSprite ? { x: Math.round(attackerSprite.x / TILE), y: Math.round(attackerSprite.y / TILE) } : null;
   const attackerKey = attackerPos ? stage.view.unitKeyAt(attackerPos) : null;
   const isAttackerSeen = !!attackerPos && stage.visible(attackerPos);
@@ -481,7 +482,7 @@ async function aimAndFire(stage: EventStage, battle: Battle): Promise<void> {
   const { event, attackerPos, attackerSprite } = battle;
   showCombatPanel(stage.state, stage.viewer, battle, 'start');
   await stage.lookAt(event.at);
-  if (attackerPos) faceTo(stage, event.attacker, attackerPos, event.at);
+  if (attackerPos && event.attacker !== null) faceTo(stage, event.attacker, attackerPos, event.at);
   if (battle.victimUid !== null && attackerPos) faceTo(stage, battle.victimUid, event.at, attackerPos);
   void targetMark(stage.scene, stage.view, event.at, sideColor(battle.attackerSide), stage.combatMs(150));
   const shot = shotOf(battle.attackerType, battle.defenderType);

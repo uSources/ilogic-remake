@@ -88,7 +88,7 @@ const INTENT_RECORDERS: { [K in GameEventKind]?: IntentRecorder<K> } = {
     if (intent) intent.merge = true;
   },
   attack: (intents, event) => {
-    const intent = intents.get(event.attacker);
+    const intent = event.attacker === null ? undefined : intents.get(event.attacker);
     if (intent && !intent.attack) intent.attack = posOf(event.at);
   },
   capture: (intents, event) => {

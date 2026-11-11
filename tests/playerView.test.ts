@@ -74,7 +74,8 @@ describe('PlayerView: lo que sabe un equipo', () => {
     const near: Building = { type: 'City', owner: 0, x: 2, y: 3, capture: { team: 1, uid: 2, left: 10 } };
     s.buildings.push(far, near);
     const shown = playerView(s, 0).state.buildings;
-    expect(shown.find((building) => building.x === 25)?.capture).toBeNull();
+    // Sin el campo, como un edificio que nadie captura (si apareciera, delataria la captura escondida).
+    expect(shown.find((building) => building.x === 25)).not.toHaveProperty('capture');
     expect(shown.find((building) => building.x === 2 && building.y === 3)?.capture).toEqual(near.capture);
     expect(far.capture).not.toBeNull();
   });
@@ -160,7 +161,9 @@ describe('PlayerView: lo que sabe un equipo', () => {
     const view = playerView(s, 0).state;
     expect(view.teams[1]!.stats).toEqual({ built: 0, spent: 0, lost: 0, captured: 0, army: [] });
     expect(view.teams[0]!.stats).toEqual(s.teams[0]!.stats);
-    expect(view.teams[1]!.funds).toBe(s.teams[1]!.funds);
+    // Su dinero y la carga de su general tampoco (dirian lo que compra y lo que pelea sin verlo).
+    expect(view.teams[1]!.funds).toBe(0);
+    expect(s.teams[1]!.funds).toBe(5000);
     // El escondido tiene el uid mas alto: la vista da el siguiente a los que conoce, no el de verdad.
     expect(s.nextUid).toBeGreaterThan(seen.uid + 1);
     expect(view.nextUid).toBe(Math.max(mine.uid, seen.uid) + 1);
@@ -175,7 +178,7 @@ describe('PlayerView: lo que sabe un equipo', () => {
     const { s, mine } = fogged();
     s.undoableMoves = [{ uid: mine.uid, from: { x: 1, y: 2 }, capture: null, revealed: false }];
     expect(playerView(s, 0).state.undoableMoves).toHaveLength(1);
-    expect(playerView(s, 1).state.undoableMoves).toEqual([]);
+    expect(playerView(s, 1).state.undoableMoves).toBeUndefined();
   });
 
   it('knownFoes y sightIn: en la vista, lo que ya ve (sin volver a calcularlo); en otra partida, lo que ve en ella', () => {

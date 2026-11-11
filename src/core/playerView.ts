@@ -6,12 +6,13 @@
  * esquivar ni perseguir lo que no ve (I2).
  *
  * Lo que no sabe un equipo es una lista (`FOG`): cada entrada quita una cosa de la vista. Lo demas
- * es publico: el mapa, los edificios y de quien son, el dinero y el general de cada equipo, el dia
- * y el clima, y las caidas (`TeamState.fell`: la partida las anuncia a todos, «El equipo N queda
+ * es publico: el mapa, los edificios y de quien son, el general de cada equipo (cual es, si ha usado
+ * su poder), el dia y el clima, y las caidas (`TeamState.fell`: la partida las anuncia a todos, «El equipo N queda
  * fuera»). Un enemigo del que no se ve ninguna unidad no ha caido por eso: lo dice lo apuntado,
  * no lo que se ve (y las reglas que cuentan unidades para saber si alguien ha caido miran la
- * partida de verdad, nunca una vista). De los enemigos tampoco se saben sus estadisticas (lo que han
- * comprado, gastado y perdido, y su ejercito cada dia) ni cuantas unidades y escuadras llevan hechas
+ * partida de verdad, nunca una vista). De los enemigos tampoco se saben sus cuentas (sus
+ * estadisticas: lo que han comprado, gastado y perdido, y su ejercito cada dia; su dinero; la carga
+ * de su general) ni cuantas unidades y escuadras llevan hechas
  * (`nextUid`, `nextSquadId`: la vista da el siguiente a lo que conoce); esto, aunque la partida no
  * tenga niebla (sin niebla se ven todas las unidades, pero las cuentas de los demas no son de nadie mas).
  * Que la vista sea de solo lectura hasta el fondo lo hacen las envolturas de util/readOnly.ts. Las semillas (dados, decisiones y la del mapa, `setup`) no se
@@ -20,7 +21,7 @@
  * bits; una partida por la red que tenga que guardarlas en secreto no las manda (lo hace el servidor).
  */
 import { cloneState } from './gameContent';
-import type { ActionPlan, Building, GameState, Rng, TeamId, Unit } from './model';
+import type { ActionPlan, Building, GameState, Rng, TeamId, TeamState, Unit } from './model';
 import { unitById } from './rules/queries';
 import { sightOf, visibleFoes, type Sight } from './rules/visibility';
 import { areAllied, emptyTeamStats, isHostile } from './teams';
@@ -62,8 +63,27 @@ const isKnownTo =
 /** El siguiente numero despues de los que el equipo conoce (el contador de verdad diria cuantos hay que no ve). */
 const nextAfter = (ids: readonly number[]): number => 1 + Math.max(0, ...ids);
 
-/** Un edificio en una casilla que el equipo no ve, como lo sabe: de quien es, pero no quien lo esta capturando. */
-const withoutUnseenCapture = (building: Building): Building => ({ ...building, capture: null });
+/** Lo que un enemigo ve de un equipo: sin sus cuentas (estadisticas, dinero y carga de su general). */
+const withoutBooks = (other: TeamState): TeamState => ({
+  ...other,
+  stats: emptyTeamStats(),
+  funds: HIDDEN_FUNDS,
+  general: other.general && { ...other.general, charge: HIDDEN_CHARGE },
+});
+
+/** Lo que ve un enemigo del dinero y de la carga de un equipo (nada: siempre lo mismo). */
+const HIDDEN_FUNDS = 0;
+const HIDDEN_CHARGE = 0;
+
+/**
+ * Un edificio sin captura que contar: de quien es y nada mas. Sin el campo `capture` (ni a null),
+ * para que un edificio que nadie captura se vea siempre igual: si apareciera el campo al empezar
+ * una captura escondida, delataria donde la hay.
+ */
+const withoutCapture = (building: Building): Building => {
+  const { capture: _capture, ...rest } = building;
+  return rest;
+};
 
 /** Lo que el equipo no sabe de la partida, en orden. */
 const FOG: readonly FogRule[] = [
@@ -76,11 +96,14 @@ const FOG: readonly FogRule[] = [
     }),
   },
   {
-    // Las estadisticas de los enemigos (lo que han comprado, gastado, perdido y capturado, y el valor
-    // de su ejercito cada dia, que cuenta las unidades que no se ven): solo las de su alianza.
-    id: 'foreignStats',
+    // Lo que un enemigo lleva en la caja: sus estadisticas (lo que ha comprado, gastado, perdido y
+    // capturado, y el valor de su ejercito cada dia, que cuenta las unidades que no se ven), su
+    // dinero (diria lo que ha comprado o cobrado sin verlo) y la carga de su general (diria los
+    // combates que ha tenido). De su general se sabe cual es, si ha usado su poder y si ha hecho un
+    // reconocimiento (es publico: cambia lo que se ve). Solo lo de su alianza se sabe entero.
+    id: 'foreignBooks',
     hide: (s, team) => ({
-      teams: s.teams.map((other) => (areAllied(s, other.id, team) ? other : { ...other, stats: emptyTeamStats() })),
+      teams: s.teams.map((other) => (areAllied(s, other.id, team) ? other : withoutBooks(other))),
     }),
   },
   {
@@ -99,19 +122,24 @@ const FOG: readonly FogRule[] = [
   },
   {
     // Quien captura un edificio en una casilla que no ve (si es un enemigo: lo de los aliados se ve).
+    // Un edificio sin captura a la vista se ve siempre igual (sin el campo), lo capture alguien o no.
     id: 'unseenCaptures',
     hide: (s, team, sees) => ({
       buildings: s.buildings.map((building) => {
         const capturer = building.capture?.team;
-        const isHiddenCapture = capturer !== undefined && !areAllied(s, capturer, team) && !sees(building);
-        return isHiddenCapture ? withoutUnseenCapture(building) : building;
+        const isShownCapture = capturer !== undefined && (areAllied(s, capturer, team) || sees(building));
+        return isShownCapture ? building : withoutCapture(building);
       }),
     }),
   },
   {
-    // Lo que puede deshacer otro equipo (de donde venian sus unidades, la captura que perdieron).
+    // Lo que puede deshacer otro equipo (de donde venian sus unidades, la captura que perdieron). Sin
+    // nada que deshacer, sin la lista (como la partida: asi la lista no aparece al moverse un enemigo).
     id: 'othersUndo',
-    hide: (s, team) => (s.undoableMoves ? { undoableMoves: s.undoableMoves.filter((move) => unitById(s, move.uid)?.team === team) } : {}),
+    hide: (s, team) => {
+      const own = (s.undoableMoves ?? []).filter((move) => unitById(s, move.uid)?.team === team);
+      return { undoableMoves: own.length ? own : undefined };
+    },
   },
   {
     // El azar de la partida: los dados (se sabria como va a salir cada combate), la semilla de las

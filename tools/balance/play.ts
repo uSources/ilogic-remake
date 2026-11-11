@@ -116,7 +116,7 @@ interface Tallies {
 
 /** Apunta un ataque: daño, valor y bajas de los dos equipos (con el contraataque, si lo hubo). */
 function tallyAttack(s: GameState, event: GameEventOf<'attack'>, team: TeamId, { known, tallyOf }: Tallies): void {
-  const attacker = known.get(event.attacker);
+  const attacker = event.attacker === null ? undefined : known.get(event.attacker);
   const victimInfo = known.get(event.target);
   if (!attacker) return;
   const tally = tallyOf(team, attacker);

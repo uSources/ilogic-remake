@@ -20,9 +20,10 @@
  * por el tope de dinero y quien va dentro de sus transportes.
  */
 import { foggedCopy } from '../playerView';
+import { inControlZone } from '../rules/control';
 import { unitById } from '../rules/queries';
 import { sightOf, type Sight } from '../rules/visibility';
-import { areAllied } from '../teams';
+import { areAllied, isHostile } from '../teams';
 import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, TeamId } from '../model';
 
 /** Lo que sabe un equipo en un momento: la partida tal como la sabe (`foggedCopy`) y lo que ve. */
@@ -48,10 +49,12 @@ export interface Vantage {
 
 /** Las preguntas con las que cada regla de la niebla mira un suceso: lo que el equipo sabe antes o despues del paso. */
 interface Witness {
-  knows(uid: number): boolean;
+  knows(uid: number | null): boolean;
   sees(pos: Pos): boolean;
   isAlly(team: TeamId | null): boolean;
   knowsSquad(squad: number): boolean;
+  /** Conoce algun enemigo dentro de la zona del punto de control de `center`. */
+  knowsFoeInZone(center: Pos): boolean;
   /** Lo de la lista que es de unidades que conoce. */
   knownOf<Entry extends { uid: number }>(list: readonly Entry[]): Entry[];
 }
@@ -59,12 +62,14 @@ interface Witness {
 function witnessOf({ before, after }: Vantage): Witness {
   if (before.team !== after.team) throw new Error(`El antes es del equipo ${before.team} y el despues del ${after.team}`);
   const states = [before.state, after.state];
-  const knows = (uid: number): boolean => states.some((s) => unitById(s, uid) !== undefined);
+  const knows = (uid: number | null): boolean => uid !== null && states.some((s) => unitById(s, uid) !== undefined);
   return {
     knows,
     sees: (pos) => before.sees(pos) || after.sees(pos),
     isAlly: (team) => team !== null && areAllied(after.state, before.team, team),
     knowsSquad: (squad) => states.some((s) => s.squads?.some((known) => known.id === squad)),
+    knowsFoeInZone: (center) =>
+      states.some((s) => s.units.some((unit) => isHostile(s, before.team, unit.team) && inControlZone(s, center, unit))),
     knownOf: (list) => list.filter((entry) => knows(entry.uid)),
   };
 }
@@ -94,6 +99,22 @@ const alliesOnly =
 const seenPath = (witness: Witness, actor: TeamId, path: Pos[]): Pos[] =>
   witness.isAlly(actor) ? path : path.filter((pos) => witness.sees(pos));
 
+/** Una unidad que va hasta otra (unirse, subir): si conoce a las dos; del camino, lo que ve. */
+function bothKnownWithPath<Event extends GameEventOf<'merge' | 'load'>>(event: Event, witness: Witness): Event | null {
+  return witness.knows(event.uid) && witness.knows(event.into) ? { ...event, path: seenPath(witness, event.actor, event.path) } : null;
+}
+
+/**
+ * El combate se ve donde cae el disparo. Si no conoce a quien dispara, no sabe cual es (uid null) ni
+ * si contraatacaron (counterHit null: diria si estaba al alcance); si sabe que tipo, con que vida y
+ * rango, lo que enseña el panel de combate, como en la pantalla de hoy.
+ */
+const attackSeen: EventFogRule<'attack'> = (event, witness) => {
+  if (!witness.sees(event.at)) return null;
+  if (witness.knows(event.attacker)) return event;
+  return { ...event, attacker: null, combat: { ...event.combat, counterHit: null } };
+};
+
 /** Lo que el equipo ve de cada tipo de suceso (una entrada por tipo: el compilador lo exige). */
 const EVENT_FOG: { readonly [K in GameEventKind]: EventFogRule<K> } = {
   // Una unidad que cruza la vision sin pararse en ella no esta en ninguna vista: no se cuenta.
@@ -103,15 +124,10 @@ const EVENT_FOG: { readonly [K in GameEventKind]: EventFogRule<K> } = {
     const seenCut = interruption && witness.sees(interruption.at) ? { interruption } : {};
     return { ...rest, path: seenPath(witness, event.actor, event.path), ...seenCut };
   },
-  // El combate se ve donde cae el disparo. Quien dispara se delata en el suceso (su tipo, su vida y
-  // su rango salen en el panel de combate, como en la pantalla de hoy), pero no donde esta: su
-  // casilla no va en el suceso, y si no se ve tampoco esta en la vista.
-  attack: (event, witness) => (witness.sees(event.at) ? event : null),
+  attack: attackSeen,
   capture: whenKnown((event) => [event.uid]),
-  merge: (event, witness) =>
-    witness.knows(event.uid) && witness.knows(event.into) ? { ...event, path: seenPath(witness, event.actor, event.path) } : null,
-  load: (event, witness) =>
-    witness.knows(event.uid) && witness.knows(event.into) ? { ...event, path: seenPath(witness, event.actor, event.path) } : null,
+  merge: bothKnownWithPath,
+  load: bothKnownWithPath,
   unload: whenKnown((event) => [event.uid, event.passenger]),
   spawn: whenKnown((event) => [event.uid]),
   wait: whenKnown((event) => [event.uid]),
@@ -144,7 +160,8 @@ const EVENT_FOG: { readonly [K in GameEventKind]: EventFogRule<K> } = {
   turnEnd: isPublic,
   weather: isPublic,
   upkeep: alliesOnly((event) => event.team),
-  controlPoint: isPublic,
+  // De quien es cada punto es publico (esta en el estado); que lo disputa alguien, solo si lo ve.
+  controlPoint: (event, witness) => ({ ...event, contested: event.contested && witness.knowsFoeInZone(event.at) }),
 };
 
 /** Un suceso que no esta en la tabla (el de un modulo de un modo que no se conoce aqui): lo prudente es no mandarlo. */

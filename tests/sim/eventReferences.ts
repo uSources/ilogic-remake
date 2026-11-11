@@ -18,12 +18,12 @@ type ReferencesOf<K extends GameEventKind> = (event: GameEventOf<K>) => Partial<
 const NOTHING: Partial<EventReferences> = {};
 
 /**
- * El atacante no esta: quien dispara se delata en el suceso (su tipo y su vida), no donde esta; lo
- * que hace falta ver es donde cae el disparo (ver EVENT_FOG.attack).
+ * Del ataque hace falta ver donde cae el disparo y conocer a quien lo recibe; a quien dispara, si el
+ * suceso lo nombra (si no lo conoce, la niebla lo deja en null: ver EVENT_FOG.attack).
  */
 const EVENT_REFERENCES: { readonly [K in GameEventKind]: ReferencesOf<K> } = {
   move: (event) => ({ uids: [event.uid], tiles: [...event.path, ...(event.interruption ? [event.interruption.at] : [])] }),
-  attack: (event) => ({ uids: [event.target], tiles: [event.at] }),
+  attack: (event) => ({ uids: [event.target, ...(event.attacker === null ? [] : [event.attacker])], tiles: [event.at] }),
   capture: (event) => ({ uids: [event.uid], tiles: [event.at] }),
   merge: (event) => ({ uids: [event.uid, event.into], tiles: event.path }),
   load: (event) => ({ uids: [event.uid, event.into], tiles: event.path }),
