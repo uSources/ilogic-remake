@@ -12,7 +12,7 @@ Tres piezas, en tres sitios:
 |---|---|---|
 | El nucleo de la red | `src/core/net/` (fachada `src/core/net.ts`) | Una partida por la red **sin red**: el protocolo como datos, la sala (`Room`) que lo habla sobre una `GameSession`, la niebla de los sucesos y la vista de un cliente. TypeScript puro; se prueba sin servidor (`tests/room.test.ts`) |
 | El servidor | `server/src/` | Un Worker de Cloudflare con un Durable Object por sala. Mueve mensajes entre los sockets y la sala, la guarda y lleva los relojes. No sabe de la partida |
-| El cliente | `src/net/`, `src/menu/onlineScreen.ts`, lo de red de `src/scenes/GameScene.ts` y `src/scenes/game/turns.ts` | El navegador: la conexion con la sala, lo que llega convertido en partida y jugadas, la pantalla «Jugar en línea» y lo que la escena hace distinto cuando la partida es por la red |
+| El cliente | `src/net/`, `src/menu/online/`, lo de red de `src/scenes/GameScene.ts` y `src/scenes/game/turns.ts` | El navegador: la conexion con la sala, lo que llega convertido en partida y jugadas, la pantalla «Jugar en línea» y lo que la escena hace distinto cuando la partida es por la red |
 
 ## Que garantiza
 
@@ -171,7 +171,7 @@ a ser la partida. Las ordenes que empiezan ya (`ActionHost.dispatcher`) van igua
 
 ### Crear una sala y entrar
 
-1. Pantalla «Crear sala» (`src/menu/onlineScreen.ts`, `OnlineScreen.create`): las opciones, los asientos (el 0 es
+1. Pantalla «Crear sala» (`src/menu/online/createScreen.ts`): las opciones, los asientos (el 0 es
    quien crea; los demas, persona o IA, con su general) y los relojes. «Empezar» →
    `createRoom(base, { match: SkirmishChoices, turnSeconds?, waitingSeconds? })` (`src/net/roomApi.ts`,
    `POST /rooms`).
@@ -182,8 +182,8 @@ a ser la partida. Las ordenes que empiezan ya (`ActionHost.dispatcher`) van igua
    (`initialTimers`). La respuesta: el codigo y, por asiento de persona, su ficha y su enlace
    (`inviteOf`).
 3. Quien creo se queda con el asiento 0 y guarda los enlaces de los demas (`OnlineRoomEntry.invites`,
-   `rememberRoom`) para repartirlos desde el vestibulo. Y entra: `OnlineScreen.join(code, token)`.
-4. **Entrar** (`OnlineScreen.join`): `new OnlineMatch(base, code, token)` →
+   `rememberRoom`) para repartirlos desde el vestibulo. Y entra: `OnlineScreens.joinRoom(code, token)`.
+4. **Entrar** (`LobbyScreen.join`, `src/menu/online/lobbyScreen.ts`): `new OnlineMatch(base, code, token)` →
    `ServerLink.connect` → `GET /rooms/:code/ws` (`index.ts` → `RoomObject.fetch`: la subida a
    WebSocket) → al abrirse, `hello` con la ficha y las versiones (`CURRENT_PROTOCOL`).
 5. `RoomObject.webSocketMessage` sin `Attachment` → `greet` → `adapter.join(hello)` → `Room.join`:
@@ -393,7 +393,7 @@ entrar, despertar, un `seq` repetido, las alarmas).
 | `src/net/onlineMatch.ts` | `OnlineMatch`: enlace y cliente juntos, con quien los escucha |
 | `src/net/roomApi.ts` | Las rutas HTTP: `createRoom`, `lobbyOf`, `handSeatToAi` |
 | `src/net/onlineRooms.ts` | «Mis partidas en línea» en localStorage; `parseInvite`, `inviteUrl` |
-| `src/menu/onlineScreen.ts` | La pantalla «Jugar en línea» (`OnlineScreen`): el menu (crear, entrar, mis partidas), crear sala, entrar con enlace y el vestibulo (la conexion con la sala y el paso a la escena) |
+| `src/menu/online/` | La pantalla «Jugar en línea»: `onlineScreen.ts` (`OnlineScreen`: enlaza las cuatro pantallas, el foco y las ordenes), `menuScreen.ts` (crear, entrar, mis partidas), `createScreen.ts`, `joinScreen.ts`, `lobbyScreen.ts` (el vestibulo: la conexion con la sala y el paso a la escena) y `shared.ts` (`OnlineHost`, `OnlineScreens`) |
 | `src/hud/menus/Online.tsx` | El HTML de esa pantalla (Preact), a partir de `OnlineVM` |
 | `src/scenes/game/matchSetup.ts` | `startOnlineMatch`, `mirrorSession` |
 | `src/scenes/GameScene.ts`, seccion «Partida por la red» | `listenToRoom`, `sendToRoom`, `performOnline` (lo decide el servidor), `adoptView`, la linea de la conexion (`publishNet`) y el cierre sin arreglo (`roomClosed`) |
