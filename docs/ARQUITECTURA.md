@@ -989,6 +989,59 @@ sesion, ni las reglas, ni la vista la importan (una partida se juega igual con r
 red no cambia la partida a mano (`APPLY_STEPS`) ni manda con `dispatch` (`NO_DIRECT_DISPATCH`): pasa
 por la sesion. `tests/layers.test.ts` y `tests/lintImports.test.ts` lo comprueban.
 
+### Servidor (`server/`)
+
+Un Worker de Cloudflare con un Durable Object por sala (PR 2; el como se publica, `server/README.md`).
+Es un adaptador fino sobre `Room`: no sabe de la partida, solo mueve lo que la sala devuelve para
+cada asiento (`Outgoing`), la guarda y lleva los relojes. Es un paquete aparte (`server/package.json`,
+workspace de npm) que importa el nucleo tal cual (`@core/...` → `src/core`): el mismo codigo que la
+pantalla, sin compilar nada aparte; `npm run check` de la raiz acaba con sus tipos y sus tests.
+
+- **Rutas** (`index.ts`, una lista `ROUTES`). `POST /rooms` crea una sala con una escaramuza
+  (`RoomRequest`: `SkirmishChoices` mas un reloj por turno y una espera a los que faltan, si se
+  quieren; se comprueba campo a campo como un mensaje, `roomRequest.ts`, con los ids contra el
+  contenido) y devuelve su codigo (6 signos sin letras que se confundan, `codes.ts`) y, por asiento
+  de persona, su ficha y su enlace `#/sala/CODIGO/FICHA`. `GET /rooms/:code` es el vestibulo: estado,
+  version y quien esta, nada de la partida. `GET /rooms/:code/ws` sube a WebSocket; el saludo va como
+  primer mensaje, asi la ficha no viaja en la URL (ni en registros de acceso ni en el historial).
+- **El objeto de una sala** (`roomObject.ts`, `idFromName(codigo)`) tiene la sala en memoria por
+  `RoomAdapter` (`roomAdapter.ts`, el unico que toca `Room`) y la guarda entera en su almacen tras
+  cada mensaje atendido (`snapshot`; con los relojes aparte, `meta`). Al despertar la recupera
+  (`restore`) y, como la sala recuperada no conoce a nadie, vuelve a meter a cada conexion que sigue
+  abierta con la ficha que lleva pegada (`Attachment`: asiento, conexion y ficha van en el socket,
+  WebSocket Hibernation API, y sobreviven a que el objeto duerma); esos clientes reciben su vista
+  entera otra vez, que es su punto de partida nuevo. Un cierre de socket es `leave(asiento, conexion)`;
+  otra pestaña con la misma ficha cierra la de antes (4409). Lo que no entra se despide con un codigo
+  de cierre propio (`CLOSE_CODES`), y los bytes se acotan antes de leer el JSON (`MAX_MESSAGE_BYTES`,
+  tambien el cuerpo de `POST /rooms`); a quien la sala le rechaza mas de `MAX_REJECTIONS_PER_WINDOW`
+  mensajes en un minuto (`rejectionsOf`, `rateLimit.ts`) se le corta.
+- **Una alarma, varios relojes** (`timers.ts`, datos puros; el objeto pone la alarma del primero que
+  vence, `nextAlarm`): caducar a los 30 dias sin actividad (`expire`: se borra todo y se cierran las
+  conexiones), el turno de quien se espera (`endTurnOf`; otro dia u otro asiento es otro reloj),
+  la espera a los que no llegan (`replaceWithAi` a cada asiento vacio y la partida empieza) y seguir
+  una partida a medias (`pending()` tras cada paso → alarma ya → `continueMatch()` desde ella: cada
+  llamada tiene su tiempo de CPU, y un turno largo de la IA se reparte en varias). Lo que una alarma
+  hace llega a los que estan dentro como lo de cualquier paso.
+- **CORS** (`cors.ts`): la web del juego y lo que diga `ALLOWED_ORIGINS` (wrangler.toml), mas
+  `localhost`, `127.0.0.1` y `null` (el HTML abierto desde un fichero). Sin origen (otro servidor)
+  pasa: no es un navegador.
+- **Lo que hay que configurar** (una vez, `server/README.md`): una cuenta de Cloudflare (vale el plan
+  gratuito: las salas son Durable Objects con SQLite, `new_sqlite_classes`; los clasicos piden el de
+  pago), los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` en GitHub (con ellos,
+  `.github/workflows/server.yml` publica con cada push a `main` que toque el servidor o el nucleo;
+  sin ellos no hace nada) y la variable `VITE_SERVER_URL` con la URL del Worker (los workflows de
+  la web y de las previews la pasan al `vite build`; en local, `.env` a partir de `.env.example`).
+- **Tests**: `server/test/unit` (las piezas puras con la sala de verdad) y `server/test/workers`
+  (`@cloudflare/vitest-plugin`: el Worker y el objeto de verdad dentro de workerd; dos personas por
+  WebSocket y la IA juegan varios dias con el cliente simulado de `tests/sim/netClient.ts`, que
+  comprueba cada mensaje; volver a entrar, despertar el objeto (`evictDurableObject`), un `seq`
+  repetido, el tope de bytes, y las alarmas adelantando los relojes guardados y sonando con
+  `runDurableObjectAlarm`).
+
+La PR 3 (la pantalla) solo necesita `VITE_SERVER_URL`: `POST /rooms` desde la pantalla de crear
+partida, el enlace de invitacion para entrar y un WebSocket con los mensajes de `net/protocol` por
+encima de una `GameSession` que recibe lo que llega como lo de cualquiera.
+
 ## Graficos
 
 `tools/art/` (dibujos guardados de PixelLab y Retro Diffusion) → `npm run assets` →
