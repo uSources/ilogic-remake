@@ -10,9 +10,10 @@
  * sesion espera sus acciones), cada equipo de la IA juega en el servidor con `aiController` y los
  * dados son los de la partida. Todo lo que manda una persona pasa por `session.act`, con las mismas
  * comprobaciones que lo de cualquiera: la sala solo mira lo suyo (`mayAct`: que la ficha sea de un
- * asiento, que este dentro, que la sala este jugando, que se le espere a el) y que la accion no
- * nombre nada que su equipo no conozca (actionReferences.ts: si no, 'missing', sin preguntar a la
- * partida, que diria que existe).
+ * asiento, que este dentro, que la sala este jugando, que se le espere a el) y, antes de mandarla,
+ * la pregunta a la partida tal como la sabe el equipo (`actionProblem` sobre su vista con niebla):
+ * si ahi no vale, contesta eso y no pregunta a la de verdad, que diria lo que el equipo no ve (que
+ * una unidad escondida existe, 'notTarget'; que no es suya, 'notYours'...).
  *
  * Nadie recibe la partida entera: cada persona recibe su vista (la niebla de FOG) y los sucesos que
  * su equipo ve (eventFog.ts), llevados por el `Courier` (courier.ts: los pasos de los demas van
@@ -21,11 +22,14 @@
  * el (`RoomContext.newToken`: el nucleo no tira de ningun azar).
  *
  * Estados: 'waiting' hasta que han entrado todas las personas (quien abandona antes se rinde y ya no
- * se le espera); 'playing' mientras la partida sigue; 'ended' cuando se decide. Quien se va puede
- * volver con su ficha (su vista al dia); quien abandona (lo decide el servidor) se rinde, o su
- * asiento pasa a la IA (`replaceWithAi`).
+ * se le espera); 'playing' mientras la partida sigue; 'ended' cuando se decide, o cuando ya no juega
+ * ninguna persona (todas rendidas, idas o pasadas a la IA: la partida se queda sin jugar, como en la
+ * pantalla). Quien se va puede volver con su ficha (su vista al dia); quien abandona (lo decide el
+ * servidor) se rinde, o su asiento pasa a la IA (`replaceWithAi`). La sala avanza de `ADVANCE_STEP_BUDGET`
+ * pasos en pasos (un turno de la IA puede ser largo y el servidor tiene su tiempo contado): si se
+ * queda a medias lo dice `pending()`, y `continueMatch()` sigue.
  */
-import { isAnyTime } from '../actions/dispatch';
+import { actionProblem, isAnyTime } from '../actions/dispatch';
 import { aiController } from '../controllers/aiController';
 import { defaultAiProfile } from '../ai/defaultProfile';
 import type { AiProfile } from '../ai/profile';
@@ -34,12 +38,12 @@ import { savedPart } from '../gameContent';
 import { buildMatch, type MatchConfig } from '../match';
 import { GAME_MODES, type GameModeRegistry } from '../modes';
 import type { ActionResult, GameAction, GameEvent, GameState, SavedGameState, TeamId } from '../model';
+import { takesTurn } from '../rules/turnOrder';
 import { readSaved, type SaveError } from '../save';
 import { remoteController, type Controller } from '../session/controller';
 import { GameSession, runMatch, type ActedStep } from '../session/gameSession';
 import { teamIds, teamState } from '../teams';
 import { isInt, isObject } from '../util/validation';
-import { refersOnlyToKnown } from './actionReferences';
 import { Courier, Outbox, type Outgoing } from './courier';
 import { knowledgeOf } from './eventFog';
 import {
@@ -84,6 +88,8 @@ export interface RoomContext {
   sameToken?: TokenCompare;
   /** El perfil de la IA que se llama asi (si no se da, o no lo conoce, el del juego). */
   aiProfile?: (name: string, content: GameContent) => AiProfile | undefined;
+  /** Pasos seguidos como mucho en cada llamada (si no, ADVANCE_STEP_BUDGET). */
+  stepBudget?: number;
 }
 
 /** La version de la sala guardada (sube cuando cambia lo que guarda; aparte del protocolo). */
@@ -103,6 +109,9 @@ export type JoinResult = { ok: true; seat: SeatId; connection: number; messages:
 export type RestoreResult = { ok: true; room: Room } | { ok: false; error: 'badSnapshot' | SaveError };
 
 const ROOM_STATUSES: readonly RoomStatus[] = ['waiting', 'playing', 'ended'];
+
+/** Pasos de la partida que la sala da seguidos como mucho (para que una llamada del servidor no se eternice). */
+export const ADVANCE_STEP_BUDGET = 400;
 const isRoomStatus = (value: unknown): value is RoomStatus => (ROOM_STATUSES as readonly unknown[]).includes(value);
 
 /** Un mensaje del cliente con numero de orden (lo que tiene efecto). */
@@ -197,6 +206,17 @@ export class Room {
   /** Cuantos mensajes se le han rechazado al asiento (para frenar a quien insiste). */
   rejectionsOf(seat: SeatId): number {
     return this.rejections.get(seat) ?? 0;
+  }
+
+  /** La partida sigue sin esperar a nadie (la IA a medias, por el presupuesto de pasos): hay que llamar a `continueMatch`. */
+  pending(): boolean {
+    return this.roomStatus === 'playing' && this.session.awaitingInput === null;
+  }
+
+  /** Sigue con lo pendiente (ver `pending`): lo que hay que mandar. */
+  continueMatch(): Outgoing[] {
+    this.advance();
+    return this.outbox.flush();
   }
 
   /**
@@ -359,12 +379,14 @@ export class Room {
   }
 
   /**
-   * La accion por la sesion, si solo nombra lo que su equipo conoce (si no, 'missing' sin preguntar a
-   * la partida). Si vale, sus sucesos tal como los ve su equipo (los mismos que le llegan en 'events').
+   * La accion por la sesion, si vale en la partida tal como la sabe su equipo (si no, la sala
+   * contesta lo que diria su vista, sin preguntar a la de verdad: un uid escondido es 'missing', como
+   * uno que no existe). Si vale, sus sucesos tal como los ve su equipo (los mismos que le llegan en 'events').
    */
   private dispatchKnown(person: PersonSeat, action: GameAction): ActionResult {
     const known = this.courier.knownOf(person) ?? knowledgeOf(this.state, person.team).state;
-    if (!refersOnlyToKnown(action, known)) return { ok: false, reason: 'missing' };
+    const foreseen = actionProblem(known, person.team, action);
+    if (foreseen) return { ok: false, reason: foreseen };
     this.seenByActor = null;
     const result = this.session.act(person.team, action);
     if (!result.ok) return result;
@@ -379,16 +401,28 @@ export class Room {
   }
 
   /**
-   * Lleva la partida hasta que haya que esperar a una persona (y lo anuncia) o se acabe (y lo
-   * anuncia). Al parar, cada persona recibe lo que le quedaba por ver (todo junto).
+   * Lleva la partida hasta que haya que esperar a una persona (y lo anuncia), se acabe (y lo
+   * anuncia), ya no juegue ninguna persona (la sala acaba) o se agote el presupuesto de pasos
+   * (`pending`). Al parar, cada persona recibe lo que le quedaba por ver (todo junto).
    */
   private advance(): void {
     if (this.roomStatus !== 'playing') return;
-    const step = runMatch(this.session);
-    if (step.kind === 'over') this.roomStatus = 'ended';
+    let steps = 0;
+    const budget = this.context.stepBudget ?? ADVANCE_STEP_BUDGET;
+    const step = this.somebodyPlays() ? runMatch(this.session, { until: () => ++steps >= budget }) : null;
+    const abandoned = !this.somebodyPlays();
+    if (step?.kind === 'over' || abandoned) this.roomStatus = 'ended';
     this.courier.deliverAll(this.joinedPeople());
-    if (step.kind === 'over') for (const seat of this.joinedPeople()) this.outbox.send(seat.id, { kind: 'ended', result: step.result });
-    if (step.kind === 'awaitingInput') this.announceTurn(step.team);
+    if (this.roomStatus === 'ended') {
+      const ended: ServerMessage = { kind: 'ended', result: this.session.result, abandoned };
+      for (const seat of this.joinedPeople()) this.outbox.send(seat.id, ended);
+    }
+    if (step?.kind === 'awaitingInput') this.announceTurn(step.team);
+  }
+
+  /** Queda alguna persona que siga jugando (sin ninguna, la sala no tiene a quien llevar la partida). */
+  private somebodyPlays(): boolean {
+    return this.people().some((seat) => takesTurn(this.state, seat.team));
   }
 
   /** A quien se espera, una vez por turno (con lo pendiente de cada uno antes). */
@@ -410,7 +444,7 @@ export class Room {
   private sendSituation(seat: PersonSeat): void {
     this.courier.sendView(seat);
     const result = this.session.result;
-    if (result.status !== 'playing') this.outbox.send(seat.id, { kind: 'ended', result });
+    if (this.roomStatus === 'ended') this.outbox.send(seat.id, { kind: 'ended', result, abandoned: result.status === 'playing' });
     else if (this.announced && this.roomStatus === 'playing') this.courier.sendTurn(seat, this.announced.team, this.announced.day);
   }
 

@@ -2,8 +2,7 @@
  * Una partida por la red, sin red: el protocolo como datos (`net/protocol`), la sala que lo habla
  * sobre una `GameSession` (`net/room`, con sus asientos en `net/seats` y el correo que lleva a cada
  * persona lo que ve en `net/courier`), la niebla de los sucesos que decide lo que ve cada equipo de
- * cada paso (`net/eventFog`), lo que nombra una accion (`net/actionReferences`) y la partida de un
- * cliente a partir de su vista (`net/clientState`). El servidor (Cloudflare Workers) y la pantalla lo
+ * cada paso (`net/eventFog`) y la partida de un cliente a partir de su vista (`net/clientState`). El servidor (Cloudflare Workers) y la pantalla lo
  * usan desde aqui; ni la IA ni las ordenes lo conocen (ESLint lo vigila: net/ lee la partida y manda
  * por la sesion, nunca la cambia a mano).
  *
@@ -14,7 +13,6 @@
  * | `net/seats` | los asientos (`Seat`): quien los ocupa y lo que se apunta de cada persona |
  * | `net/courier` | `Courier`: lo que se lleva a cada persona, por lotes, con su numero; `Outbox` |
  * | `net/eventFog` | `eventsSeenBy`: los sucesos de un paso tal como los ve un equipo (`Knowledge`, `Vantage`) |
- * | `net/actionReferences` | `refersOnlyToKnown`: la accion solo nombra lo que el equipo conoce |
  * | `net/clientState` | `viewSnapshotOf` (lo que se manda) y `loadView` (lo que lee el cliente) |
  */
 export {
@@ -46,6 +44,7 @@ export {
   type ViewSnapshot,
 } from './net/protocol';
 export {
+  ADVANCE_STEP_BUDGET,
   Room,
   ROOM_SNAPSHOT_VERSION,
   type AiSeat,
@@ -60,5 +59,4 @@ export {
 } from './net/room';
 export { type TokenCompare } from './net/seats';
 export { eventsSeenBy, knowledgeOf, type Knowledge, type Vantage } from './net/eventFog';
-export { referencesOfAction, refersOnlyToKnown } from './net/actionReferences';
 export { loadView, viewSnapshotOf } from './net/clientState';

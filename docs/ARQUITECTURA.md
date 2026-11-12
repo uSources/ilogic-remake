@@ -893,10 +893,13 @@ Workers) y la pantalla (PR 3) solo tienen que mover mensajes. Las decisiones que
 - **Lo que no se ve no ha llegado.** Un cliente solo recibe la vista de su equipo (`PlayerView`, con
   toda la niebla de `FOG`: `viewSnapshotOf`, en la forma de una partida guardada) y, de cada paso, los
   sucesos que su equipo ve (`eventsSeenBy`). Asi mirar a traves de la niebla no es posible ni leyendo
-  la memoria del navegador ni escuchando la red. Lo que la sala le contesta tampoco cuenta nada: una
-  accion que nombra una unidad o una escuadra que su equipo no conoce se rechaza como 'missing' sin
-  preguntar a la partida (`refersOnlyToKnown`, actionReferences.ts; si se le preguntara, 'notTarget' o
-  'notYours' dirian que existe, y probando uids se contaria el ejercito escondido); el resultado de
+  la memoria del navegador ni escuchando la red. Lo que la sala le contesta tampoco cuenta nada: antes
+  de mandar una accion a la partida, la sala se la pregunta a la partida tal como la sabe el equipo
+  (`actionProblem` sobre su vista con niebla) y, si ahi no vale, contesta eso sin preguntar a la de
+  verdad (que diria lo que el equipo no ve: 'notTarget' o 'notYours' de una unidad escondida, o
+  'unreachable' de una casilla ocupada por alguien que no se ve; probando uids o casillas se contaria
+  el ejercito escondido). Un edificio que cambia de dueño si se ve: los dueños son publicos, como en
+  la pantalla compartida. El resultado de
   su propia accion lleva los sucesos tal como el los ve (un ataque aereo no nombra a quien no ve); y
   los pasos de los demas van juntos en un solo `events` (courier.ts), que no sale si no trae nada
   (ni sucesos ni cambio en su vista): asi no se cuenta cuantas cosas han hecho los enemigos donde no
@@ -909,11 +912,10 @@ Workers) y la pantalla (PR 3) solo tienen que mover mensajes. Las decisiones que
 | Modulo | Que va |
 |---|---|
 | `net/protocol` | los mensajes como datos: `ClientMessage` (hello, act, endTurn, surrender, resync) y `ServerMessage` (welcome, view, events, result, turn, ended, error); `PROTOCOL_VERSION` (la forma de los mensajes) con `SAVE_VERSION` (la de la vista) en el saludo: otra version no entra; `isValidMessage` comprueba lo que llega campo a campo (`CLIENT_MESSAGE_SHAPES`, como `ACTION_SHAPES`) y con topes de tamaño (`isWithinBounds`: listas de hasta `MAX_LIST`, textos de hasta `MAX_TEXT`, nada hondo); lo que cambia de una vista (`viewChangeOf`, `mergeView`) |
-| `net/room` | `Room`: `create(config, context)` prepara la partida (`buildMatch`) y sus asientos; `join(hello)` y `handle(asiento, mensaje)` devuelven los mensajes que salen y para quien (`Outgoing`); `snapshot()`/`restore()` la guardan y la recuperan como JSON; `leave`, `abandon` (abandonar es rendirse), `replaceWithAi` (el asiento pasa a la IA), `endTurnOf` (se le acabo el tiempo); estados 'waiting' → 'playing' → 'ended'; `rejectionsOf` (cuantos mensajes se le han rechazado a cada asiento, para que el servidor frene a quien insiste). Sin relojes: los tiempos los lleva el servidor |
+| `net/room` | `Room`: `create(config, context)` prepara la partida (`buildMatch`) y sus asientos; `join(hello)` y `handle(asiento, mensaje)` devuelven los mensajes que salen y para quien (`Outgoing`); `snapshot()`/`restore()` la guardan y la recuperan como JSON; `leave`, `abandon` (abandonar es rendirse), `replaceWithAi` (el asiento pasa a la IA), `endTurnOf` (se le acabo el tiempo); estados 'waiting' → 'playing' → 'ended' (se decide la partida, o ya no juega ninguna persona: `ended.abandoned`); la partida avanza de `ADVANCE_STEP_BUDGET` pasos en pasos (`pending()`, `continueMatch()`: el servidor sigue desde una alarma, su tiempo esta contado); `rejectionsOf` (cuantos mensajes se le han rechazado a cada asiento, para que el servidor frene a quien insiste). Sin relojes: los tiempos los lleva el servidor |
 | `net/seats` | los asientos (`Seat`): una persona con su ficha, su conexion, su ultimo numero de orden y su ultimo mensaje (`PersonSeat`), o la IA con su perfil (`AiSeat`); cada asiento tiene su numero (`SeatId`) y su equipo (hoy uno por equipo; manana, espectadores o dos personas por equipo) |
 | `net/courier` | `Courier`: lo que se lleva a cada persona (su vista entera, los lotes de sucesos, el turno), con lo que sabia tras lo ultimo que se le mando y el numero de cada mensaje; `Outbox`, lo que sale en lo que va de mensaje |
 | `net/eventFog` | la niebla de los sucesos: `eventsSeenBy(sucesos, { before, after })`, con lo que sabe el equipo antes y despues del paso (`Knowledge` = `knowledgeOf(s, equipo)`: su `foggedCopy` y lo que ve) |
-| `net/actionReferences` | lo que nombra cada accion (uids, escuadras) y si el equipo lo conoce todo (`refersOnlyToKnown`) |
 | `net/clientState` | `viewSnapshotOf(s, equipo)` (lo que se manda) y `loadView(vista, contenido)` (la partida del cliente, comprobada con `readSaved` como una guardada) |
 
 **La niebla de los sucesos.** La regla: un suceso se ve si el equipo conoce lo que nombra **antes o
@@ -1053,7 +1055,7 @@ casillas en `map/geometry.ts`; los tipos que pasa la escena (`ViewOptions`, `Hig
 | Contenido resuelto al cargar en tipos con nombre, y guardado por id | `unitType.cost` se lee y se comprueba; añadir o reordenar una unidad no rompe partidas ni reglas | Formato 3 de las partidas, CONTENIDO.md |
 | El turno es de la partida; cada equipo, un controlador | Todos juegan igual (K4); persona, IA o red son controladores | Formato 6 |
 | Equipos con alianza y controlador; ningun numero especial | Partidas de 3 o 4 equipos, con aliados, o IA contra IA, sin tocar las reglas | `isHostile`, la vision compartida, la interfaz por lado |
-| Por la red manda el servidor y cada cliente solo recibe su vista y los sucesos que ve; lo que la sala contesta tampoco cuenta nada | Sin trampas: ni acciones que la partida no deje, ni mirar a traves de la niebla, ni contar lo que pasa donde no se ve | `Room`, `Courier`, `eventsSeenBy`, `refersOnlyToKnown`, la IA en el servidor |
+| Por la red manda el servidor y cada cliente solo recibe su vista y los sucesos que ve; lo que la sala contesta tampoco cuenta nada | Sin trampas: ni acciones que la partida no deje, ni mirar a traves de la niebla, ni contar lo que pasa donde no se ve | `Room`, `Courier`, `eventsSeenBy`, `actionProblem` sobre la vista, la IA en el servidor |
 
 ## La escena de la partida (`src/scenes/game/`)
 
@@ -1198,5 +1200,5 @@ mando puede jugar una partida entera sin raton.
 | Las flechas de lo que haran las ordenes permanentes | `src/core/autopilot/preview.ts` (`previewStandingOrders`) |
 | El azar de cada turno de quien decide | `src/core/turnSeeds.ts` (`turnSeedOf`) y `decisionRngOf` en `src/core/playerView.ts` |
 | Las opciones de una herramienta (`npm run fuzz -- --games 50`) | `tools/cliArgs.ts` (`commandLine`) |
-| La partida por la red (mensajes, sala, lo que ve cada equipo de un paso) | `src/core/net/` (ver "Red"): `protocol.ts`, `room.ts`, `seats.ts`, `courier.ts`, `eventFog.ts`, `actionReferences.ts`, `clientState.ts` |
+| La partida por la red (mensajes, sala, lo que ve cada equipo de un paso) | `src/core/net/` (ver "Red"): `protocol.ts`, `room.ts`, `seats.ts`, `courier.ts`, `eventFog.ts`, `clientState.ts` |
 | Misiones | `src/core/content/missions.json` (contenido, con su esquema); la partida de una, `src/core/missions/build.ts`, y lo que se mira de su mapa, `missions/check.ts` (+ skill `nueva-mision`); un tipo de objetivo nuevo, una entrada en `OBJECTIVES` (`src/core/objectives.ts`, con su `isValid` para las partidas guardadas) y su frase en `OBJECTIVE_TEXT` (`src/campaign.ts`) |

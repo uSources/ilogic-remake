@@ -18,7 +18,8 @@
  * Orden y repeticiones: lo que tiene efecto (`act`, `endTurn`, `surrender`) lleva un numero de
  * orden del cliente (`seq`, creciente; el servidor contesta con el mismo en `result` y no repite lo
  * que ya hizo: 'stale'), asi un mensaje reenviado tras un corte no compra dos veces ni acaba dos
- * turnos. Lo que manda el servidor a cada asiento lleva su `step` (creciente): si al cliente le
+ * turnos. Un mensaje rechazado (un error de la sala o un `result` que no vale) tambien gasta su
+ * numero: se vuelve a intentar con el siguiente, nunca con el mismo. Lo que manda el servidor a cada asiento lleva su `step` (creciente): si al cliente le
  * falta uno, pide su vista (`resync`).
  *
  * Version: `PROTOCOL_VERSION` sube cuando cambia la forma de un mensaje; la de las partidas
@@ -118,8 +119,11 @@ export type ServerMessage =
   | { kind: 'result'; seq: number; result: ActionResult }
   /** A quien se espera ahora (su turno, o el de otra persona), y el dia. */
   | { kind: 'turn'; step: number; team: TeamId; day: number }
-  /** La partida ha acabado. */
-  | { kind: 'ended'; result: MatchResult }
+  /**
+   * La sala ha acabado: la partida se ha decidido (`result`), o ya no juega ninguna persona
+   * (`abandoned`: todas se han rendido o se han ido; la partida, si sigue, se queda sin jugar).
+   */
+  | { kind: 'ended'; result: MatchResult; abandoned: boolean }
   /** `seq`, el del mensaje rechazado si lo llevaba. */
   | { kind: 'error'; error: NetError; seq?: number };
 

@@ -452,6 +452,137 @@ describe('la sala no delata lo que un equipo no conoce al rechazar una accion', 
   });
 });
 
+/** Un bloqueador (ve 0 casillas) del equipo 0 en (8, 8) y, si se pide, un tanque enemigo escondido a dos casillas, en (10, 8). */
+function blindMatch(withFoe: boolean, ambush: boolean): MatchConfig {
+  return {
+    mode: 'sandbox',
+    size: 16,
+    settingChanges: { fog: true, ambush },
+    teams: [{ controller: 'human' }, { controller: 'human' }],
+    seed: 4,
+    buildings: [
+      { type: 'Base', owner: 0, at: { x: 0, y: 0 } },
+      { type: 'Base', owner: 1, at: { x: 15, y: 15 } },
+    ],
+    units: [{ type: 'Blocker', team: 0, at: { x: 8, y: 8 } }, ...(withFoe ? [{ type: 'Tank', team: 1, at: { x: 10, y: 8 } }] : [])],
+  };
+}
+
+describe('la sala contesta lo que diria la vista del equipo, no la partida de verdad', () => {
+  const FOE_TILE = { x: 10, y: 8 };
+  /** La accion de cada tipo que toca la casilla del enemigo escondido o lo nombra (`foe`: su uid; en la sala sin el, uno que no existe). */
+  const touching = (mine: number, foe: number): { readonly [K in GameActionKind]: GameAction | null } => ({
+    move: { kind: 'move', uid: mine, to: FOE_TILE },
+    undoMove: { kind: 'undoMove', uid: foe },
+    attack: { kind: 'attack', uid: mine, target: foe },
+    capture: { kind: 'capture', uid: foe },
+    merge: { kind: 'merge', uid: mine, into: foe },
+    load: { kind: 'load', uid: mine, into: foe },
+    unload: { kind: 'unload', uid: mine, passenger: foe, to: FOE_TILE },
+    supply: { kind: 'supply', uid: foe },
+    wait: { kind: 'wait', uid: foe },
+    deleteUnit: { kind: 'deleteUnit', uid: foe },
+    buy: { kind: 'buy', at: FOE_TILE, unitType: 'Soldier' },
+    usePower: { kind: 'usePower', power: 'airstrike', target: FOE_TILE },
+    gotoStep: { kind: 'gotoStep', uid: mine },
+    giveStandingOrder: { kind: 'giveStandingOrder', uids: [mine], order: { kind: 'goto', at: FOE_TILE } },
+    cancelStandingOrder: { kind: 'cancelStandingOrder', uids: [foe] },
+    finishStandingOrder: { kind: 'finishStandingOrder', uid: foe },
+    formSquad: { kind: 'formSquad', uids: [mine, foe] },
+    setGroup: { kind: 'setGroup', uids: [foe], key: 1 },
+    addToGroup: { kind: 'addToGroup', uids: [foe], key: 1 },
+    leaveSquad: { kind: 'leaveSquad', uids: [foe] },
+    renameSquad: { kind: 'renameSquad', squad: foe, name: 'x' },
+    disbandSquad: { kind: 'disbandSquad', squad: foe },
+    surrender: null,
+    startTurn: null,
+    endTurn: null,
+  });
+
+  /** Lo que contesta la sala al equipo 0 a cada accion de `touching`, por tipo. */
+  function answers(withFoe: boolean, ambush: boolean): Map<GameActionKind, string> {
+    const room = Room.create({ match: blindMatch(withFoe, ambush) }, context());
+    const table = new Table(room, tokensOf(room));
+    table.joinAll();
+    const me = table.clients[0]!;
+    const mine = me.state!.units.find((unit) => unit.team === 0)!.uid;
+    const foe = room.state.units.find((unit) => unit.team === 1)?.uid ?? room.state.nextUid + 7;
+    expect(unitById(me.state!, foe)).toBeUndefined();
+    const result = new Map<GameActionKind, string>();
+    for (const [kind, action] of Object.entries(touching(mine, foe)) as [GameActionKind, GameAction | null][]) {
+      if (!action) continue;
+      // Cada accion en una sala nueva, para que una no cambie lo que contesta la siguiente.
+      const fresh = Room.create({ match: blindMatch(withFoe, ambush) }, context());
+      const freshTable = new Table(fresh, tokensOf(fresh));
+      freshTable.joinAll();
+      const client = freshTable.clients[0]!;
+      client.lastResult = null;
+      freshTable.exchange(0, client.ordered({ kind: 'act', action }));
+      const answer = lastResultOf(client);
+      result.set(kind, !answer ? 'sin respuesta' : answer.ok ? 'ok' : answer.reason);
+    }
+    return result;
+  }
+
+  it('con emboscadas, un enemigo escondido no cambia ninguna respuesta', () => {
+    expect(answers(true, true)).toEqual(answers(false, true));
+  });
+
+  it('sin emboscadas, solo lo descubre lo que las propias reglas descubren al chocar (mover a su casilla)', () => {
+    const withFoe = answers(true, false);
+    const without = answers(false, false);
+    const differing = [...withFoe.keys()].filter((kind) => withFoe.get(kind) !== without.get(kind));
+    // Con la emboscada apagada, un enemigo escondido cierra el paso al planear (rules/passage.ts): es
+    // una regla del juego, la misma que en la pantalla enseña el alcance (ver "Red").
+    expect(differing).toEqual(['move']);
+    expect([withFoe.get('move'), without.get('move')]).toEqual(['unreachable', 'ok']);
+  });
+});
+
+describe('la sala acaba o se para sola', () => {
+  it('sin ninguna persona que juegue, la sala acaba aunque la partida siga (y lo dice)', () => {
+    const room = newRoom([{ controller: 'human' }, { controller: 'human' }, { controller: 'ai' }], 5);
+    const table = new Table(room, tokensOf(room));
+    table.joinAll();
+    room.replaceWithAi(0);
+    expect(room.status).toBe('playing');
+    const out = room.replaceWithAi(1);
+    expect(out).toEqual([]);
+    expect(room.status).toBe('ended');
+    expect(room.state.day).toBeLessThan(3);
+    // Y a quien se rinde el ultimo se le dice que la sala acaba abandonada.
+    const other = newRoom([{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }], 6);
+    const otherTable = new Table(other, tokensOf(other));
+    otherTable.joinAll();
+    const gone = otherTable.exchange(0, otherTable.clients[0]!.ordered({ kind: 'surrender' }));
+    expect(toSeat(gone, 0).at(-1)).toMatchObject({ kind: 'ended', abandoned: true, result: { status: 'playing' } });
+    expect(other.status).toBe('ended');
+  });
+
+  it('con un presupuesto de pasos, la sala se queda a medias (pending) y sigue con continueMatch', () => {
+    const room = Room.create(
+      {
+        match: skirmishConfig({ seed: 9, size: 16, teams: [{ controller: 'human' }, { controller: 'ai' }], settingChanges: { fog: true } }),
+      },
+      { ...context(), stepBudget: 3 },
+    );
+    const table = new Table(room, tokensOf(room));
+    table.joinAll();
+    const client = table.clients[0]!;
+    table.exchange(0, client.ordered({ kind: 'endTurn' }));
+    expect(room.pending()).toBe(true);
+    let calls = 0;
+    while (room.pending()) {
+      table.deliver(room.continueMatch());
+      calls++;
+    }
+    expect(calls).toBeGreaterThan(1);
+    expect(room.awaiting?.team).toBe(0);
+    expect(client.turn).toEqual({ team: 0, day: 2 });
+    expect(room.continueMatch()).toEqual([]);
+  });
+});
+
 describe('el cliente simulado', () => {
   it('se queja si el servidor le manda un error', () => {
     const client = new NetClient('x');

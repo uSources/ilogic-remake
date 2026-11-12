@@ -122,7 +122,7 @@ describe('todo lo que viaja es JSON', () => {
     { kind: 'result', seq: 1, result: { ok: true, events } },
     { kind: 'result', seq: 2, result: { ok: false, reason: 'notYourTurn' } },
     { kind: 'turn', step: 3, team: 1, day: 2 },
-    { kind: 'ended', result: { status: 'decided', winners: [0], reason: 'hq' } },
+    { kind: 'ended', result: { status: 'decided', winners: [0], reason: 'hq' }, abandoned: false },
     { kind: 'error', error: 'badToken', seq: 3 },
   ];
 
