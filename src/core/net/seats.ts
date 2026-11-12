@@ -38,7 +38,7 @@ export type Seat = PersonSeat | AiSeat;
 export const isJoined = (seat: PersonSeat): boolean => seat.connection !== null;
 
 /** Los asientos de personas, en orden. */
-export const people = (seats: readonly Seat[]): PersonSeat[] => seats.filter((seat): seat is PersonSeat => seat.kind === 'person');
+export const personSeats = (seats: readonly Seat[]): PersonSeat[] => seats.filter((seat): seat is PersonSeat => seat.kind === 'person');
 
 /** El asiento de una persona por su numero, o null si no hay tal asiento o no es de una persona. */
 export function personSeat(seats: readonly Seat[], id: SeatId): PersonSeat | null {
@@ -51,7 +51,7 @@ export type TokenCompare = (given: string, stored: string) => boolean;
 
 /** La persona cuya ficha es `token`, o undefined. */
 export const personWithToken = (seats: readonly Seat[], token: string, sameToken: TokenCompare): PersonSeat | undefined =>
-  people(seats).find((seat) => sameToken(token, seat.token));
+  personSeats(seats).find((seat) => sameToken(token, seat.token));
 
 /** Bytes de azar de cada ficha (192 bits: nadie la adivina). */
 export const TOKEN_BYTES = 24;
@@ -73,7 +73,7 @@ export function seatsFor(s: GameState, aiProfiles: Readonly<Partial<Record<TeamI
     if (team.controller === 'ai') return aiSeat(team.id, team.id, aiProfiles[team.id]);
     return { kind: 'person', id: team.id, team: team.id, token: newToken(TOKEN_BYTES), connection: null, lastSeq: 0, step: 0 };
   });
-  const tokens = people(seats).map((seat) => seat.token);
+  const tokens = personSeats(seats).map((seat) => seat.token);
   if (new Set(tokens).size !== tokens.length) throw new Error('Dos asientos con la misma ficha: newToken no da fichas distintas');
   return seats;
 }

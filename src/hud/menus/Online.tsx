@@ -1,3 +1,10 @@
+/**
+ * El HTML de «Jugar en línea» (Preact): dibuja `OnlineVM` tal como lo publica OnlineScreen
+ * (src/menu/online/) y le devuelve lo que se toca por `ui.actions` (onlineHover, onlinePick,
+ * onlineSet, onlineText). Cuatro vistas, una por modo: el menu con «Mis partidas», crear sala,
+ * entrar con enlace y el vestibulo. Sin logica: lo que se puede pulsar y lo que dice cada fila ya
+ * viene decidido en el VM.
+ */
 import { t } from '../../settings';
 import { Btn } from '../common/buttons';
 import { Seg } from '../common/Seg';

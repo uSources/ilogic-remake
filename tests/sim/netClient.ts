@@ -22,7 +22,8 @@ import { expectFoggedView, expectReferencesKnown } from './viewChecks';
  * los sucesos que ve), construye su partida con `loadView` y juega su turno con la IA del juego sobre
  * esa partida (asi usa toda clase de acciones sin saber nada del servidor). Comprueba en cada mensaje
  * que nunca le llega nada que su equipo no deba saber, que los mensajes llegan seguidos (`step`) y
- * que cada resultado contesta a lo que mando (`seq`).
+ * que cada resultado contesta a lo que mando (`seq`). Lo usan tests/room.test.ts (con `Table`, una
+ * sala con sus clientes sin red) y el servidor de verdad en server/test/workers (por WebSocket).
  */
 export class NetClient {
   seat: SeatId | null = null;

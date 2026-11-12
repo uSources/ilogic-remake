@@ -18,7 +18,7 @@ import { CampaignScreen, type CampaignHost } from '../menu/campaignScreen';
 import { HomeScreen, type HomeHost } from '../menu/homeScreen';
 import { LiveBackground } from '../menu/liveBackground';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { isTypingInvite, OnlineScreen, type OnlineHost } from '../menu/onlineScreen';
+import { isTypingInvite, OnlineScreen, type OnlineHost } from '../menu/online/onlineScreen';
 import { isTypingCode, SetupScreen, type SetupHost } from '../menu/setupScreen';
 import { parseInvite } from '../net/onlineRooms';
 import type { OnlineMatch } from '../net/onlineMatch';

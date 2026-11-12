@@ -8,10 +8,10 @@
  */
 import type { SeatId } from '@core/net';
 import { ROOM_EXPIRY_MS } from './limits';
-import type { Awaited } from './roomAdapter';
+import type { AwaitedSeat } from './roomAdapter';
 
 /** El reloj del turno de alguien: su asiento y su dia (otro dia es otro turno, con reloj nuevo) y cuando vence. */
-export interface TurnTimer extends Awaited {
+export interface TurnTimer extends AwaitedSeat {
   at: number;
 }
 
@@ -49,7 +49,7 @@ export const doneWaiting = (timers: Timers): Timers => ({ ...timers, waitingUnti
  * El reloj del turno segun a quien se espera ahora: el mismo turno conserva su reloj; otro turno (u
  * otro asiento) lo empieza; si no se espera a nadie, o no hay reloj, ninguno.
  */
-export function withTurnOf(timers: Timers, awaited: Awaited | null, settings: TimerSettings, now: number): Timers {
+export function withTurnOf(timers: Timers, awaited: AwaitedSeat | null, settings: TimerSettings, now: number): Timers {
   if (!awaited || settings.turnSeconds === undefined) return { ...timers, turn: null };
   const sameTurn = timers.turn?.seat === awaited.seat && timers.turn.day === awaited.day;
   return sameTurn ? timers : { ...timers, turn: { ...awaited, at: now + settings.turnSeconds * 1000 } };

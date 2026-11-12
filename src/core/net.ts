@@ -9,7 +9,7 @@
  * | Modulo | Que va |
  * |---|---|
  * | `net/protocol` | `ClientMessage`, `ServerMessage`, `PROTOCOL_VERSION`, `isValidMessage`, lo que cambia de una vista (`viewChangeOf`, `mergeView`) |
- * | `net/room` | `Room`: asientos con ficha, `join`, `handle`, `snapshot`/`restore`, `abandon`, `replaceWithAi`, `endTurnOf` |
+ * | `net/room` | `Room`: asientos con ficha, `join`, `handle`, `snapshot`/`restore`, `abandon`, `replaceWithAi`, `endTurnOf`, `isMidway`/`continueMatch` |
  * | `net/seats` | los asientos (`Seat`): quien los ocupa y lo que se apunta de cada persona |
  * | `net/courier` | `Courier`: lo que se lleva a cada persona, por lotes, con su numero; `Outbox` |
  * | `net/eventFog` | `eventsSeenBy`: los sucesos de un paso tal como los ve un equipo (`Knowledge`, `Vantage`) |

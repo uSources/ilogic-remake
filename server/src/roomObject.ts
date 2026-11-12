@@ -5,7 +5,7 @@
  * WebSocket Hibernation API (el objeto puede dormirse con las conexiones abiertas: lo que hay que
  * saber de cada una va pegado a ella, `Attachment`) y pone una sola alarma para sus relojes
  * (timers.ts: caducar, el reloj del turno, dar a la IA los asientos que no llegan, seguir una
- * partida que la IA dejo a medias por el presupuesto de pasos: `pending`, `continueMatch`).
+ * partida que la IA dejo a medias por el presupuesto de pasos: `isMidway`, `continueMatch`).
  *
  * Por los sockets solo pasa lo que la sala devuelve para cada asiento (`Outgoing`): el servidor no
  * mira la partida ni la manda nunca.
@@ -231,7 +231,7 @@ export class RoomObject extends DurableObject<Env> {
     if (!this.meta) return;
     let timers = withTurnOf(this.meta.timers, adapter.awaiting(), this.meta.settings, now);
     if (adapter.status !== 'waiting') timers = doneWaiting(timers);
-    this.meta.timers = withContinuation(timers, adapter.pending(), now);
+    this.meta.timers = withContinuation(timers, adapter.isMidway(), now);
     await this.save(adapter, this.meta);
     this.deliver(outgoing);
   }

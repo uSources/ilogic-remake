@@ -80,7 +80,7 @@ describe('el adaptador de la sala', () => {
     for (const seat of adapter.invitations()) expect(adapter.join(hello(seat.token)).ok).toBe(true);
     const finish = (): Outgoing[] => {
       const outgoing: Outgoing[] = [];
-      while (adapter.pending()) outgoing.push(...adapter.continueMatch());
+      while (adapter.isMidway()) outgoing.push(...adapter.continueMatch());
       return outgoing;
     };
     finish();
@@ -88,7 +88,7 @@ describe('el adaptador de la sala', () => {
     adapter.timeOut(0);
     finish();
     adapter.timeOut(1);
-    expect(adapter.pending()).toBe(true);
+    expect(adapter.isMidway()).toBe(true);
     expect(adapter.awaiting()).toBeNull();
     const outgoing = finish();
     expect(adapter.awaiting()).toEqual({ seat: 0, day: 2 });
