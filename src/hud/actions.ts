@@ -22,6 +22,11 @@ export interface UIActions {
   campaignHover(index: number): void;
   campaignPick(index: number): void;
   campaignBack(): void;
+  /** Jugar en línea: pasar o pulsar un boton, cambiar una opcion de crear sala, escribir el enlace. */
+  onlineHover(id: string): void;
+  onlinePick(id: string): void;
+  onlineSet(id: string, index: number): void;
+  onlineText(text: string): void;
   optionsHover(index: number): void;
   optionsSet(row: number, index: number): void;
   /** Pulsar el boton de una fila de tecla («Cambiar») o de accion («Por defecto»). */

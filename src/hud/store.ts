@@ -26,6 +26,10 @@ export type {
   MarkVM,
   MenuItemVM,
   MenuVM,
+  NetVM,
+  OnlineRoomVM,
+  OnlineSeatVM,
+  OnlineVM,
   OptionRowVM,
   OptionsRowVM,
   OptionsTabVM,
@@ -87,6 +91,10 @@ const DEFAULT_ACTIONS: UIActions = {
   campaignHover: noop,
   campaignPick: noop,
   campaignBack: noop,
+  onlineHover: noop,
+  onlinePick: noop,
+  onlineSet: noop,
+  onlineText: noop,
   surrender: noop,
 };
 

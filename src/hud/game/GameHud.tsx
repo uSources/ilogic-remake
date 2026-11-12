@@ -1,6 +1,8 @@
 import { Fragment, type ComponentChild } from 'preact';
 import { Pause } from '../menus/Pause';
+import { t } from '../../settings';
 import type { UIState } from '../state';
+import type { NetVM } from '../vm/menus';
 import { Cards } from './Cards';
 import { CombatPanel } from './Combat';
 import { Forecast } from './Forecast';
@@ -24,6 +26,17 @@ interface GamePanel {
   render: (s: UIState) => ComponentChild;
 }
 
+/** Por la red: como va la conexion y a quien se espera. */
+function NetLine({ net }: { net: NetVM }) {
+  const status = t(net.status === 'online' ? 'onlineOnline' : net.status === 'reconnecting' ? 'onlineReconnecting' : 'onlineOffline');
+  return (
+    <div class={`netline ${net.status}`} role="status">
+      <i aria-hidden="true" />
+      <span>{net.waiting ?? status}</span>
+    </div>
+  );
+}
+
 /** Con dos o mas unidades elegidas, su panel sustituye a las fichas de la casilla. */
 const showsSelection = (s: UIState) => !!s.selection && !s.busy;
 
@@ -42,6 +55,7 @@ const SIDE_PANELS: GamePanel[] = [
 /** En el orden en que van en la pagina, que es el de apilado. Un panel nuevo es una entrada mas. */
 const GAME_PANELS: GamePanel[] = [
   { id: 'topBar', render: (s) => <TopBar s={s} /> },
+  { id: 'net', render: (s) => s.net && <NetLine net={s.net} /> },
   { id: 'general', render: (s) => s.general && <GeneralPanel general={s.general} mine={isOwnTurn(s)} /> },
   { id: 'enemyGeneral', render: (s) => s.enemyGeneral && <EnemyGeneral general={s.enemyGeneral} /> },
   { id: 'mission', render: (s) => s.mission && isOwnTurn(s) && <MissionPanel mission={s.mission} /> },
