@@ -1,0 +1,25 @@
+# El servidor de las partidas por la red: un Worker con las rutas y un Durable Object por sala
+# (`RoomObject`, src/roomObject.ts). Ver README.md y docs/ARQUITECTURA.md, "Red" → "Servidor".
+name = "ilogic-servidor"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+# La URL publica es https://ilogic-servidor.<cuenta>.workers.dev (el cliente la lee de VITE_SERVER_URL).
+workers_dev = true
+
+[observability]
+enabled = true
+
+[vars]
+# Desde donde puede hablar un navegador con el servidor (separados por comas): la web del juego en
+# GitHub Pages y "null", que es lo que manda un navegador desde un fichero abierto por file://
+# (el juego se reparte como un solo HTML). Localhost y 127.0.0.1 valen siempre (src/cors.ts).
+ALLOWED_ORIGINS = "https://usources.github.io,null"
+
+[durable_objects]
+bindings = [{ name = "ROOMS", class_name = "RoomObject" }]
+
+# Con SQLite: es lo que admite el plan gratuito de Workers (los Durable Objects "clasicos", con
+# almacen clave-valor, piden el plan de pago).
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RoomObject"]

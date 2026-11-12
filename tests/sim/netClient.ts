@@ -122,17 +122,38 @@ export class NetClient {
    * lo que el servidor responde (ya repartido a todos los clientes, este incluido).
    */
   playTurn(exchange: (seat: SeatId, message: ClientMessage) => Outgoing[]): void {
-    if (this.seat === null || !this.state) throw new Error('El cliente no ha entrado');
-    // Una vista por turno, como hace la sesion (su azar es el del turno).
-    this.view = playerView(this.state, this.team!);
-    const plan = aiTurn(this.view, defaultAiProfile(defaultContent()), decisionRngOf(this.view));
+    const plan = this.turnPlan();
     for (let step = plan.next(); !step.done;) {
-      this.lastResult = null;
-      exchange(this.seat, this.ordered({ kind: 'act', action: step.value }));
-      if (!this.lastResult) throw new Error('El servidor no ha contestado a una accion');
-      step = plan.next(this.lastResult);
+      exchange(this.seat!, this.ordered({ kind: 'act', action: step.value }));
+      step = plan.next(this.answer());
     }
-    exchange(this.seat, this.ordered({ kind: 'endTurn' }));
+    exchange(this.seat!, this.ordered({ kind: 'endTurn' }));
+  }
+
+  /** Como `playTurn`, por un transporte que contesta mas tarde (una red de verdad): `exchange` manda y espera la respuesta. */
+  async playTurnAsync(exchange: (seat: SeatId, message: ClientMessage) => Promise<void>): Promise<void> {
+    const plan = this.turnPlan();
+    for (let step = plan.next(); !step.done;) {
+      await exchange(this.seat!, this.ordered({ kind: 'act', action: step.value }));
+      step = plan.next(this.answer());
+    }
+    await exchange(this.seat!, this.ordered({ kind: 'endTurn' }));
+  }
+
+  /** El plan de la IA del juego para su turno, sobre su partida (una vista por turno, como hace la sesion: su azar es el del turno). */
+  private turnPlan(): ReturnType<typeof aiTurn> {
+    if (this.seat === null || !this.state) throw new Error('El cliente no ha entrado');
+    this.view = playerView(this.state, this.team!);
+    this.lastResult = null;
+    return aiTurn(this.view, defaultAiProfile(defaultContent()), decisionRngOf(this.view));
+  }
+
+  /** Lo que ha contestado el servidor a la ultima accion (y se olvida, para la siguiente). */
+  private answer(): ActionResult {
+    const result = this.lastResult;
+    if (!result) throw new Error('El servidor no ha contestado a una accion');
+    this.lastResult = null;
+    return result;
   }
 
   /** Su partida pasa a ser la vista: comprobada como una partida guardada, y sin nada que no deba saber. */
