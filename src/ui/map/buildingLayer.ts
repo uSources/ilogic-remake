@@ -1,7 +1,9 @@
 import type Phaser from 'phaser';
 import { ATLAS } from '../../atlas';
-import type { Building, GameState, TeamId } from '../../core/model';
+import { posOf, samePos } from '../../core/geom';
+import type { Building, GameState, Pos, TeamId } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
+import { TILE } from '../../layout';
 import { buildingKey } from '../sprites';
 import type { MapLayer } from './layer';
 import { fitToTile, tileFoot, tileImage } from './tileImage';
@@ -13,14 +15,16 @@ import { fitToTile, tileFoot, tileImage } from './tileImage';
 export class BuildingLayer implements MapLayer {
   readonly object: Phaser.GameObjects.Container;
   private readonly buildings: Phaser.GameObjects.Image[] = [];
+  /** Casilla de cada dibujo, apuntada al ponerlo (los que se destruyen salen solos). */
+  private readonly tileOf = new WeakMap<Phaser.GameObjects.Image, Pos>();
 
   constructor(private readonly scene: Phaser.Scene) {
     this.object = scene.add.container(0, 0);
   }
 
-  /** Añade un sprite de terreno (montaña, bosque); hay que llamar a `sort` al acabar. */
-  addProp(image: Phaser.GameObjects.Image): void {
-    this.object.add(image);
+  /** Añade un sprite de terreno (montaña, bosque) puesto en `tile`; hay que llamar a `sort` al acabar. */
+  addProp(image: Phaser.GameObjects.Image, tile: Pos): void {
+    this.place(image, posOf(tile));
   }
 
   sync(s: GameState, vis: Grid<boolean>, viewer: TeamId): void {
@@ -39,7 +43,7 @@ export class BuildingLayer implements MapLayer {
     if (!existing) {
       const image = tileImage(this.scene, key, building);
       this.buildings[index] = image;
-      this.object.add(image);
+      this.place(image, posOf(building));
       image.setVisible(true);
       return;
     }
@@ -59,4 +63,23 @@ export class BuildingLayer implements MapLayer {
   sort(): void {
     this.object.sort('y');
   }
+
+  /** Dibujos que se ven en `tile` y son mas altos que la casilla: sobresalen por detras (ver map/overhangLayer.ts). */
+  tallAt(tile: Pos): Phaser.GameObjects.Image[] {
+    return this.object.list.filter(isImage).filter((image) => isTall(image) && this.isPlacedOn(image, tile));
+  }
+
+  private place(image: Phaser.GameObjects.Image, tile: Pos): void {
+    this.tileOf.set(image, tile);
+    this.object.add(image);
+  }
+
+  private isPlacedOn(image: Phaser.GameObjects.Image, tile: Pos): boolean {
+    const placedOn = this.tileOf.get(image);
+    return !!placedOn && samePos(placedOn, tile);
+  }
 }
+
+const isImage = (child: Phaser.GameObjects.GameObject): child is Phaser.GameObjects.Image => child.type === 'Image';
+
+const isTall = (image: Phaser.GameObjects.Image): boolean => image.visible && image.displayHeight > TILE;

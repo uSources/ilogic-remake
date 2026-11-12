@@ -11,6 +11,9 @@ export const PAL = {
   white: 0xffffff,
 } as const;
 
+/** Modo de tinte FILL de Phaser 4 (Phaser.TintModes.FILL; aqui Phaser solo se importa como tipo): pinta el dibujo entero de un color. */
+export const TINT_FILL = 1;
+
 /** Los mismos, como texto CSS (para Phaser.Text y lienzos). */
 export const PAL_CSS = {
   ink: '#0b1220',

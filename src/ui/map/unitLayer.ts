@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { ATLAS, hasImage } from '../../atlas';
+import { posOf } from '../../core/geom';
 import { rank, unhealable, canStillAct, isOnMap } from '../../core/rules';
 import { turnEndOrderOf, isDetached } from '../../core/squads';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -28,8 +29,17 @@ const FRONT_TINT = { forest: 0xd8e4d8, rock: 0xe8e8e8 };
 const CARGO_BOX = 8;
 const CARGO_AT = 2;
 
+/** Unidad que se ve ahora: su casilla, su dibujo y su lado (para dibujar encima, ver map/overhangLayer.ts). */
+export interface VisibleUnit {
+  tile: Pos;
+  image: Phaser.GameObjects.Image;
+  side: Side;
+}
+
 /** Sprite persistente de una unidad: imagen + vida + marca de carga. */
 interface UnitSprite {
+  /** Casilla en la que se ha puesto en el ultimo `sync`. */
+  tile: Pos;
   root: Phaser.GameObjects.Container;
   img: Phaser.GameObjects.Image;
   /** Primer plano del terreno (bosque, rocas) delante de la unidad. */
@@ -62,7 +72,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     this.object = scene.add.container(0, 0);
   }
 
-  private newSprite(key: string): UnitSprite {
+  private newSprite(key: string, tile: Pos): UnitSprite {
     const add = this.scene.add;
     // Origen abajo en el centro: las unidades nuevas pueden ser algo mas anchas que la casilla.
     const img = fitToTile(add.image(TILE / 2, TILE, ATLAS, key).setOrigin(0.5, 1));
@@ -77,7 +87,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
     const badges = Array.from({ length: BADGE_SLOTS }, () => add.image(0, 0, '__DEFAULT').setOrigin(0).setVisible(false));
     const root = add.container(0, 0, [img, front, life, cargo, stars, order, ...badges]);
     this.object.add(root);
-    return { root, img, front, life, cargo, stars, order, badges, marksDrawn: 0, key, idle: false, side: 'own' };
+    return { tile, root, img, front, life, cargo, stars, order, badges, marksDrawn: 0, key, idle: false, side: 'own' };
   }
 
   sync(s: GameState, options: ViewOptions, newArt: boolean): void {
@@ -87,7 +97,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
       const key = unitKey(this.scene.textures, s, unit, options.viewer);
       if (!key) continue;
       seen.add(unit.uid);
-      this.update(this.spriteFor(unit.uid, key), unit, s, newArt, options.viewer);
+      this.update(this.spriteFor(unit, key), unit, s, newArt, options.viewer);
     }
     for (const [uid, sprite] of this.units) {
       if (seen.has(uid)) continue;
@@ -99,11 +109,11 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   }
 
   /** El sprite de una unidad con el dibujo `key`: lo crea la primera vez y le cambia el dibujo si hace falta. */
-  private spriteFor(uid: number, key: string): UnitSprite {
-    const existing = this.units.get(uid);
+  private spriteFor(unit: Unit, key: string): UnitSprite {
+    const existing = this.units.get(unit.uid);
     if (!existing) {
-      const created = this.newSprite(key);
-      this.units.set(uid, created);
+      const created = this.newSprite(key, posOf(unit));
+      this.units.set(unit.uid, created);
       return created;
     }
     if (existing.key !== key) {
@@ -114,6 +124,7 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   }
 
   private update(sprite: UnitSprite, unit: Unit, s: GameState, newArt: boolean, viewer: TeamId): void {
+    sprite.tile = posOf(unit);
     sprite.root.setPosition(unit.x * TILE, unit.y * TILE);
     sprite.side = sideOf(s, viewer, unit.team);
     sprite.img.setFlipX(faceFlip(sprite.side, this.facingOf(unit.uid, sprite.side)));
@@ -181,6 +192,10 @@ export class UnitLayer implements MapLayer, AnimatedLayer {
   /** Sprite (contenedor) de una unidad tal como esta dibujada ahora, si se ve. */
   sprite(uid: number): Phaser.GameObjects.Container | null {
     return this.units.get(uid)?.root ?? null;
+  }
+
+  visibleUnits(): VisibleUnit[] {
+    return [...this.units.values()].filter(({ root }) => root.visible).map(({ tile, img, side }) => ({ tile, image: img, side }));
   }
 
   /** Imagen de la unidad dibujada en una casilla (antes de volver a pintar), para efectos. */

@@ -63,7 +63,7 @@ export class TerrainLayer implements MapLayer, AnimatedLayer {
     for (const prop of terrainObjects(textures, s)) {
       const img = tileImage(this.scene, prop.key, prop);
       this.props.push(img);
-      this.buildings.addProp(img);
+      this.buildings.addProp(img, prop);
     }
     this.buildings.sort();
   }
