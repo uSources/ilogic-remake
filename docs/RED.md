@@ -12,7 +12,7 @@ Tres piezas, en tres sitios:
 |---|---|---|
 | El nucleo de la red | `src/core/net/` (fachada `src/core/net.ts`) | Una partida por la red **sin red**: el protocolo como datos, la sala (`Room`) que lo habla sobre una `GameSession`, la niebla de los sucesos y la vista de un cliente. TypeScript puro; se prueba sin servidor (`tests/room.test.ts`) |
 | El servidor | `server/src/` | Un Worker de Cloudflare con un Durable Object por sala. Mueve mensajes entre los sockets y la sala, la guarda y lleva los relojes. No sabe de la partida |
-| El cliente | `src/net/`, `src/menu/online/`, lo de red de `src/scenes/GameScene.ts` y `src/scenes/game/turns.ts` | El navegador: la conexion con la sala, lo que llega convertido en partida y jugadas, la pantalla «Jugar en línea» y lo que la escena hace distinto cuando la partida es por la red |
+| El cliente | `src/net/`, `src/menu/online/`, `src/scenes/game/onlinePlay.ts` | El navegador: la conexion con la sala, lo que llega convertido en partida y jugadas, la pantalla «Jugar en línea» y lo que la escena hace distinto cuando la partida es por la red |
 
 ## Que garantiza
 
@@ -78,9 +78,9 @@ La persona de la pantalla ataca con una unidad. Lo que pasa, en orden, nombrando
 
 1. **La escena** (`src/scenes/GameScene.ts`, fase `attack` en `src/scenes/game/phases/`) llama a
    `perform({ kind: 'attack', uid, target })` (`ActionHost.perform`). En una partida por la red,
-   `perform` delega en `GameScene.performOnline`: atacar lo decide el servidor (los dados y lo
-   escondido estan alli), asi que no se hace en la sesion espejo.
-2. **`performOnline`** pide el eco por adelantado (`client.nextEcho()`) y manda la accion:
+   `perform` delega en `OnlinePlay.perform` (`src/scenes/game/onlinePlay.ts`): atacar lo decide el
+   servidor (los dados y lo escondido estan alli), asi que no se hace en la sesion espejo.
+2. **`OnlinePlay.perform`** pide el eco por adelantado (`client.nextEcho()`) y manda la accion:
    `online.client.act(action)`.
 3. **`RoomClient.act`** (`src/net/roomClient.ts`) la envuelve en un mensaje `act` y lo manda por
    `ServerLink.send`, que le pone el siguiente `seq`, lo guarda en localStorage (`seqStorageKey`), lo
@@ -119,13 +119,13 @@ La persona de la pantalla ataca con una unidad. Lo que pasa, en orden, nombrando
     pasa a `RoomClient.receive`.
 13. **Quien ataco**: el `result` resuelve la promesa de `act` (`resultArrived`, que apunta que viene
     un eco: `echoDue`); el `events` que sigue es el eco (`eventsArrived`): pone `state` al dia con
-    `mergeView` + `loadView` y lo da a `nextEcho`. `performOnline` recibe el `result` (si no
+    `mergeView` + `loadView` y lo da a `nextEcho`. `OnlinePlay.perform` recibe el `result` (si no
     vale: aviso «La sala no lo ha aceptado» y `resync`), espera el eco, adopta esa vista como partida
     (`adoptView`: sesion espejo nueva, `refresh`) y anima los sucesos del `result` como siempre
     (`playEvents`; `attacker: null` si no se ve a quien dispara ya lo dibuja la escena).
 14. **Un aliado** recibe su `events` al momento (es de su alianza): `eventsArrived` lo pone en la cola
     como jugada `'events'` (con `before` y `after`). Su escena esta mirando la cola
-    (`TurnFlow.playRemote` → `showBatch`): lo anima contra `animationView(before, after)` y adopta `after`.
+    (`OnlinePlay.watchUntilMyTurn` → `showBatch`): lo anima contra `animationView(before, after)` y adopta `after`.
 15. **Un enemigo** no recibe nada todavia: su lote sigue juntandose (`Courier.pending`) hasta que la
     sala pare (se espera a alguien, o acaba): entonces `deliverAll` le manda un solo `events` con todo
     lo que vio, si vio algo.
@@ -133,7 +133,7 @@ La persona de la pantalla ataca con una unidad. Lo que pasa, en orden, nombrando
 ```mermaid
 sequenceDiagram
   participant P as Persona (pantalla)
-  participant S as GameScene / TurnFlow
+  participant S as GameScene / OnlinePlay
   participant C as RoomClient + ServerLink
   participant O as RoomObject (Durable Object)
   participant A as RoomAdapter
@@ -165,7 +165,7 @@ Una accion que no se anima (mover, esperar, dar una orden) va por otro camino, m
 la hace en la sesion espejo (`GameScene.act`: `session.act`, con lo que sabe el equipo, como la
 comprobaria la sala) y, si vale, la manda a la sala (`sendToRoom`) sin esperar; la respuesta solo se
 mira si es un rechazo (algo escondido lo impedia): aviso y `resync`, y la vista del servidor vuelve
-a ser la partida. Las ordenes que empiezan ya (`ActionHost.dispatcher`) van igual.
+a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.dispatcher`) van igual.
 
 ## Otros viajes, mas cortos
 
@@ -216,8 +216,9 @@ a ser la partida. Las ordenes que empiezan ya (`ActionHost.dispatcher`) van igua
   tambien el cliente cuando no puede leer una vista (`RoomClient.stateOf`), cuando le llega un
   `events` sin vista entera, y la escena cuando la sala rechaza una accion que la sesion espejo
   habia dado por buena.
-- **La vista que llega en la escena**: si esta mirando la cola (`TurnFlow.playRemote` → `showRemote`),
-  la adopta (`adoptView`); si es su turno, `TurnFlow.remotePlayDuringOwnTurn` la adopta igual (lo que estuviera a
+- **La vista que llega en la escena**: si esta mirando la cola (`OnlinePlay.watchUntilMyTurn`), la
+  adopta (`adoptView`: sesion espejo nueva, `GameScene.replaceMatch`); si es su turno,
+  `OnlinePlay.playDuringOwnTurn` la adopta igual (lo que estuviera a
   medio decidir se abandona).
 - **El servidor despierta.** Un Durable Object puede dormirse con los sockets abiertos
   (Hibernation API). `RoomObject.load` recupera la sala del almacen (`RoomAdapter.restore` →
@@ -228,9 +229,9 @@ a ser la partida. Las ordenes que empiezan ya (`ActionHost.dispatcher`) van igua
 
 ### El turno de la IA en el servidor
 
-1. La persona pulsa «Fin de turno»: `TurnFlow.endOwnTurn` → `endRemoteTurn` → `client.endTurn()`
+1. La persona pulsa «Fin de turno»: `TurnFlow.endOwnTurn` → `OnlinePlay.endTurn` → `client.endTurn()`
    (mensaje `endTurn`, con `seq`; sin `result`: lo que sigue llega como jugadas) y la escena se pone a
-   mirar la cola (`playRemote`).
+   mirar la cola (`watchUntilMyTurn`).
 2. `Room.attend` 'endTurn' → `mayAct` → `finishTurn`: `session.finishInput(team)` y `advance()`.
 3. `advance` lleva la sesion con `runMatch(session, { until: ++steps >= budget })`: el `endTurn` de
    la persona (sus ordenes permanentes, sus capturas), el `startTurn` del siguiente, y si es de la
@@ -268,15 +269,15 @@ a ser la partida. Las ordenes que empiezan ya (`ActionHost.dispatcher`) van igua
   asiento. Esta para cuando se quiera dar por ido a alguien.
 - **Se acaba el tiempo** (`turnSeconds`): `RoomObject.alarm` ('turn') → `adapter.timeOut(seat)` →
   `Room.endTurnOf`: su turno acaba como si hubiera pulsado «Fin de turno», este dentro o no. En su
-  pantalla llega un `turn` de otro equipo en pleno turno propio: `TurnFlow.remotePlayDuringOwnTurn`
-  lo atiende poniendose a esperar.
+  pantalla llega un `turn` de otro equipo en pleno turno propio: `OnlinePlay.playDuringOwnTurn` lo
+  atiende poniendose a esperar.
 
 ### Fin de partida
 
 - La partida se decide en el servidor (`session.result` deja de ser 'playing') o se queda sin
   personas: `Room.advance` pone 'ended' y manda a cada persona dentro su lote y un `ended` (`result`,
   `abandoned`). Quien entre despues recibe la vista y el `ended` (`sendSituation`).
-- En el cliente, `RoomClient` apunta `ended` y lo pone en la cola. La escena (`TurnFlow.endedByServer`)
+- En el cliente, `RoomClient` apunta `ended` y lo pone en la cola. La escena (`OnlinePlay.endedByRoom`)
   adopta la ultima vista y deja que la pantalla decida el final como siempre (`checkEnd` →
   `screenEnd`: ganada, perdida, rendicion). Por la red el final solo ofrece volver al menu (la
   revancha seria otra sala).
@@ -396,8 +397,7 @@ entrar, despertar, un `seq` repetido, las alarmas).
 | `src/menu/online/` | La pantalla «Jugar en línea»: `onlineScreen.ts` (`OnlineScreen`: enlaza las cuatro pantallas, el foco y las ordenes), `menuScreen.ts` (crear, entrar, mis partidas), `createScreen.ts`, `joinScreen.ts`, `lobbyScreen.ts` (el vestibulo: la conexion con la sala y el paso a la escena) y `shared.ts` (`OnlineHost`, `OnlineScreens`) |
 | `src/hud/menus/Online.tsx` | El HTML de esa pantalla (Preact), a partir de `OnlineVM` |
 | `src/scenes/game/matchSetup.ts` | `startOnlineMatch`, `mirrorSession` |
-| `src/scenes/GameScene.ts`, seccion «Partida por la red» | `listenToRoom`, `sendToRoom`, `performOnline` (lo decide el servidor), `adoptView`, la linea de la conexion (`publishNet`) y el cierre sin arreglo (`roomClosed`) |
-| `src/scenes/game/turns.ts`, lo de la red | `playRemote` y `showRemote` (la cola de jugadas hasta el turno propio), `showBatch` (animar un lote), `waitFor` («Esperando al equipo N…»), `remotePlayDuringOwnTurn`, `endedByServer` |
+| `src/scenes/game/onlinePlay.ts` | `OnlinePlay`: lo que la escena hace distinto por la red. `send` (lo que valio en la sesion espejo) y `perform` (lo decide el servidor), `endTurn`, la cola de jugadas hasta el turno propio (`watchUntilMyTurn`, `showBatch` anima un lote, `waitFor` pone «Esperando al equipo N…»), lo que llega en el turno propio (`playDuringOwnTurn`), `adoptView`, la linea de la conexion (`publishLink`), el cierre sin arreglo (`roomClosed`) y el final (`endedByRoom`). Lo que toca de los turnos de la pantalla lo pide a `TurnFlow` por `TurnHooks` |
 | `src/scenes/game/turnNotice.ts` | El aviso de «Tu turno» cuando no se mira la pestaña (titulo y toque) |
 
 Pruebas: `tests/onlineClient.test.ts` (enlace y cliente con un socket falso), `tests/visual/online.mjs`

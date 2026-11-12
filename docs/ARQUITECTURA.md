@@ -1148,7 +1148,8 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 | `orders.ts`, `actionRunners.ts` | elegir y cumplir las acciones del registro (`ACTION_RUNNERS`: una entrada por accion) y las ordenes con destino; puntero del raton | solo tipos |
 | `powers.ts`, `labMode.ts` | poderes del general (apuntar y usar); laboratorio de animaciones | poco |
 | `playback.ts` | animar los `GameEvent` (mover, combate, captura, compra, poder del general) | si |
-| `turns.ts` | fin de turno y lo que juega la sesion hasta la persona (`playMatch`), cambio de persona, repetir los turnos ajenos | si |
+| `turns.ts`, `turnSummary.ts` | fin de turno y lo que juega la sesion hasta la persona (`playMatch`), cambio de persona, repetir los turnos ajenos; lo que se cuenta al volver (`TurnSummary`) | si |
+| `onlinePlay.ts`, `turnNotice.ts` | la partida por la red: lo que la escena hace distinto cuando la partida vive en el servidor (`OnlinePlay`; ver "Cliente" y `docs/RED.md`); el aviso de «Tu turno» en el titulo de la pestaña | poco |
 | `endOfMatch.ts` | final de la partida y su pantalla | si |
 
 - **La partida cambia con acciones**: los modulos que hacen algo en ella piden `ActionHost`
