@@ -64,10 +64,15 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
 
 14. **Dos jugadores en el mismo dispositivo** (pasarse el móvil): casi gratis de hacer, y sirve para
     probar el equilibrio de los generales entre personas.
-15. **Partidas con amigos por enlace o código**, asíncronas, con aviso cuando te toca. Necesita un
-    servidor pequeño que guarde la partida y mande a cada uno solo lo que ve (si no, se puede mirar a
-    través de la niebla): eso ya lo calcula el núcleo (`playerView`, lo que sabe cada equipo), y la IA
-    decide de la partida (`decisionSeed`), así que un rival IA da lo mismo en el servidor y en casa.
+15. **Partidas con amigos por enlace o código**, asíncronas, con aviso cuando te toca. **En marcha**,
+    en tres PR: (1) el núcleo habla por la red, sin servidor (hecho: `src/core/net`, ver
+    `docs/ARQUITECTURA.md`, "Red": el protocolo como datos, la sala `Room` sobre una `GameSession`,
+    la niebla de los sucesos y la vista del cliente); (2) el servidor, en Cloudflare Workers con un
+    Durable Object por sala, que guarda la sala (`snapshot`/`restore`), lleva los tiempos y manda a
+    cada uno solo lo que ve; (3) la pantalla: crear una sala, el enlace de invitación y jugar desde
+    la vista y los sucesos que llegan. Decidido: el servidor manda (las acciones pasan por la sesión
+    como las de cualquiera, la IA rival y los dados juegan allí) y un cliente nunca recibe más que la
+    vista de su equipo (si no, se puede mirar a través de la niebla). Las clasificatorias, después.
 16. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
 
 Para competir hará falta: equilibrio estricto de generales, mapas simétricos o probados (los de azar

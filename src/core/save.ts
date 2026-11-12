@@ -65,21 +65,43 @@ export type SaveError =
 /** Lo que da leer una partida guardada: la partida, o por que no se ha podido. */
 export type ReadSaveResult = { ok: true; state: GameState } | { ok: false; error: SaveError };
 
+/**
+ * De donde viene lo que se lee: una partida guardada entera ('save'), o lo que sabe un equipo (una
+ * vista con niebla que manda el servidor, 'view': core/net). Las caidas son publicas (la partida las
+ * anuncia): en una vista van apuntadas y se leen tal cual, nunca se deducen de lo que se ve.
+ */
+export type SaveOrigin = 'save' | 'view';
+
 export function serialize(s: GameState): string {
   return JSON.stringify(savedPart(s));
 }
 
-/** Lee una partida guardada. El contenido con el que se juega no se guarda: lo da quien lee (`content`). */
+/** Como leer una partida: los modos que se conocen (si no, los del juego) y de donde viene. */
+export interface ReadOptions {
+  modes?: GameModeRegistry;
+  origin?: SaveOrigin;
+}
+
+/** Lee una partida guardada (su JSON). El contenido con el que se juega no se guarda: lo da quien lee (`content`). */
 export function readSave(json: string, content: GameContent, modes: GameModeRegistry = GAME_MODES): ReadSaveResult {
-  const saved = parseObject(json);
-  if (!saved) return { ok: false, error: 'notJson' };
+  return readSaved(parseJson(json), content, { modes });
+}
+
+/**
+ * Lee una partida guardada ya convertida de JSON (`value`: cualquier cosa; lo que no sea un objeto
+ * es 'notJson'). La limpia en sitio: quien quiera conservar lo que tenia, que pase una copia.
+ */
+export function readSaved(value: unknown, content: GameContent, { modes = GAME_MODES, origin = 'save' }: ReadOptions = {}): ReadSaveResult {
+  if (!isObject(value) || Array.isArray(value)) return { ok: false, error: 'notJson' };
+  const saved: SavedGame = value;
   if (saved.version !== SAVE_VERSION) return { ok: false, error: 'badVersion' };
   const check = checkGame(saved, content, modes);
   if (!check.ok) return check;
   const game = cleanGame(saved, check);
   const state: GameState = { ...game, content, ruleset: rulesetFor(modeIn(modes, game.mode), game.settings) };
-  // Las caidas apuntadas tienen que cuadrar con la partida: quien ha caido tiene la suya, y solo el.
-  if (!fallsMatch(state)) return { ok: false, error: 'badTeams' };
+  // Las caidas apuntadas tienen que cuadrar con la partida: quien ha caido tiene la suya, y solo el
+  // (en una vista no se puede saber: lo que no se ve no esta).
+  if (origin === 'save' && !fallsMatch(state)) return { ok: false, error: 'badTeams' };
   return { ok: true, state };
 }
 
@@ -89,11 +111,10 @@ export function deserialize(json: string, content: GameContent, modes: GameModeR
   return result.ok ? result.state : null;
 }
 
-/** El JSON, si es un objeto (sin comprobar nada mas). */
-function parseObject(json: string): SavedGame | null {
+/** Lo que hay en el JSON, o null si no es JSON (readSaved dice el resto). */
+function parseJson(json: string): unknown {
   try {
-    const raw: unknown = JSON.parse(json);
-    return isObject(raw) && !Array.isArray(raw) ? raw : null;
+    return JSON.parse(json) as unknown;
   } catch {
     return null;
   }

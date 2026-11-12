@@ -6,6 +6,8 @@ import {
   APPLY_STEPS_BY_MODULE,
   APPLY_STEP_NAMES,
   DECIDERS_ONLY_PROPOSE,
+  NO_DIRECT_DISPATCH,
+  NO_NET,
   NO_PLUGGED_PIECES_EXCEPT_POWERS,
   ONLY_THROUGH_RULE_MODULES,
 } from '../eslint.config.js';
@@ -196,9 +198,11 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     'core/savedParts.ts#cleanCounters': 'limpia una partida que se esta leyendo',
     'core/savedParts.ts#cleanOptionalParts': 'limpia una partida que se esta leyendo',
     'core/save.ts#readSave': 'carga una partida nueva',
+    'core/save.ts#readSaved': 'carga una partida nueva (ya convertida de JSON)',
     'core/save.ts#deserialize': 'carga una partida nueva',
     'core/defaultGames.ts#createMatch': 'crea una partida nueva',
     'core/defaultGames.ts#loadGame': 'carga una partida nueva',
+    'core/net/clientState.ts#loadView': 'carga la partida de un cliente (su vista, con readSave)',
     'core/match.ts#buildMatch': 'crea una partida nueva',
     'core/missions/build.ts#buildMission': 'crea una partida nueva',
     'core/mapgen/buildings.ts#placeStartingUnits': 'el generador de mapas, en la partida que crea',
@@ -267,5 +271,72 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
   it('las fachadas del nucleo no dan ninguno: fuera del nucleo la partida solo cambia con acciones', () => {
     const exported = [...Object.keys(rulesFacade), ...Object.keys(squadsFacade), ...Object.keys(actionsFacade)];
     expect(exported.filter((name) => APPLY_STEP_NAMES.includes(name))).toEqual([]);
+  });
+});
+
+/** La red (core/net) esta encima del nucleo: nada de debajo la importa, y ella manda por la sesion, no con dispatch. */
+describe('la red esta encima del nucleo (NO_NET, NO_DIRECT_DISPATCH, eslint.config.js)', () => {
+  const forbidsWith = (patterns: object[], filename: string, code: string): boolean =>
+    linter
+      .verify(`${code}\nexport const used = 1;\n`, [{ rules: { 'no-restricted-imports': ['error', { patterns }] } }] as Linter.Config[], {
+        filename,
+      })
+      .some((message) => message.ruleId === 'no-restricted-imports');
+
+  it.each([
+    "import { Room } from '../net';",
+    "import { Room } from '../net/room';",
+    "import { eventsSeenBy } from '@core/net';",
+    "import { isValidMessage } from '@core/net/protocol';",
+    "import { Room } from './net/room';",
+    "import { Room } from '../net.ts';",
+  ])('la IA, las ordenes, la sesion y las reglas no pueden %s', (code) =>
+    expect(forbidsWith([NO_NET], 'src/core/ai/example.js', code)).toBe(true),
+  );
+
+  it.each([
+    "import { newGameState } from '../gameState';",
+    "import { playerView } from '../playerView';",
+    "import { x } from '../util/network';",
+  ])('NO_NET deja %s', (code) => expect(forbidsWith([NO_NET], 'src/core/ai/example.js', code)).toBe(false));
+
+  it.each([
+    "import { dispatch } from '../actions/dispatch';",
+    "import { dispatch } from '../actions';",
+    "import { dispatch } from '@core/actions';",
+  ])('la red no puede %s', (code) => expect(forbidsWith([NO_DIRECT_DISPATCH], 'src/core/net/example.js', code)).toBe(true));
+
+  it.each([
+    "import { isAnyTime } from '../actions/dispatch';",
+    "import { isGameAction } from '../actions/shape';",
+    "import { GameSession } from '../session/gameSession';",
+  ])('la red si puede %s', (code) => expect(forbidsWith([NO_DIRECT_DISPATCH], 'src/core/net/example.js', code)).toBe(false));
+
+  it('la configuracion de verdad: la red sin dispatch ni pasos, y todo lo demas del nucleo sin la red', async () => {
+    const eslint = new ESLint({ overrideConfigFile: 'eslint.config.js' });
+    const patternsFor = async (file: string) => {
+      const config = (await eslint.calculateConfigForFile(file)) as { rules?: Record<string, unknown[]> };
+      const options = config.rules?.['no-restricted-imports']?.[1] as { patterns?: object[] } | undefined;
+      return options?.patterns ?? [];
+    };
+    for (const file of ['src/core/net/room.ts', 'src/core/net.ts']) {
+      const patterns = await patternsFor(file);
+      expect(patterns, file).toContainEqual(NO_DIRECT_DISPATCH);
+      for (const pattern of APPLY_STEPS) expect(patterns, file).toContainEqual(pattern);
+      expect(patterns, file).not.toContainEqual(NO_NET);
+    }
+    const below = [
+      'src/core/ai/tactics.ts',
+      'src/core/ai.ts',
+      'src/core/autopilot/tactics.ts',
+      'src/core/session/gameSession.ts',
+      'src/core/controllers/aiController.ts',
+      'src/core/playerView.ts',
+      'src/core/rules/combat.ts',
+      'src/core/actions/movement.ts',
+      'src/core/save.ts',
+      'src/core/gameState.ts',
+    ];
+    for (const file of below) expect(await patternsFor(file), file).toContainEqual(NO_NET);
   });
 });

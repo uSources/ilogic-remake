@@ -78,7 +78,8 @@ export type GameEvent = CoreGameEvent | ModuleEvent;
 export interface AttackEventBase {
   kind: 'attack';
   actor: TeamId;
-  attacker: number;
+  /** Quien dispara; null si quien recibe el suceso no lo conoce (solo por la red: la niebla de los sucesos lo quita). */
+  attacker: number | null;
   /** La unidad atacada (puede ya no existir) y su casilla. */
   target: number;
   at: Pos;

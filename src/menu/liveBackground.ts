@@ -201,7 +201,7 @@ export class LiveBackground {
   private async animateAttack(event: Extract<AnimatedEvent, { kind: 'attack' }>): Promise<void> {
     const view = this.view!;
     await this.follow(event.at);
-    const sprite = view.unitSprite(event.attacker);
+    const sprite = event.attacker === null ? null : view.unitSprite(event.attacker);
     const attacker = this.game!.units.find((unit) => unit.uid === event.attacker);
     if (sprite && attacker)
       await lunge(this.scene, sprite, { dx: Math.sign(event.at.x - attacker.x), dy: Math.sign(event.at.y - attacker.y) });

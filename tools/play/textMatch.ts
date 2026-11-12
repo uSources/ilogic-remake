@@ -443,8 +443,9 @@ const DEFEAT_TEXT: Record<DefeatReason, string> = { hq: 'sin Base', wipeout: 'si
 /** Que ha cortado un camino, en una palabra (los que no estan aqui, por su nombre en el codigo). */
 const INTERRUPTION_NAMES: Partial<Record<InterruptionKind, string>> = { ambush: 'emboscada' };
 
-/** Como se nombra una unidad en el texto: su uid y su tipo (si ya no esta, solo el uid). */
-function unitName(s: GameState, uid: number): string {
+/** Como se nombra una unidad en el texto: su uid y su tipo (si ya no esta, solo el uid; si no se conoce, «alguien»). */
+function unitName(s: GameState, uid: number | null): string {
+  if (uid === null) return 'alguien';
   const unit = unitById(s, uid);
   return unit ? `${uid} ${unitTypeOf(s, unit).id}` : `${uid}`;
 }
