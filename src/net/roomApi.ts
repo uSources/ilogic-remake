@@ -2,7 +2,8 @@
  * Las rutas del servidor que no son la partida (server/README.md, "Rutas"): crear una sala
  * (`POST /rooms`), el vestibulo (`GET /rooms/:code`: quien esta, sin nada de la partida) y dar un
  * asiento vacio a la IA (`POST /rooms/:code/ai`, solo quien creo la sala). Todo JSON; lo que llega se
- * comprueba por encima (que tenga la forma), porque viene de fuera.
+ * comprueba por encima (que tenga la forma), porque viene de fuera. Lo usan las pantallas de
+ * «Jugar en línea» (src/menu/online/); la partida va aparte, por el WebSocket (serverLink.ts).
  */
 import type { SkirmishChoices } from '../core/match';
 import type { RoomStatus, SeatId } from '../core/net';
