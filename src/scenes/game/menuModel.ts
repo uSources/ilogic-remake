@@ -32,6 +32,8 @@ export interface MenuInput {
   orderMenu: { at: Pos; uids: readonly number[]; ids: readonly ActionId[] } | null;
   /** Hay un turno enemigo que repetir. */
   canReplay: boolean;
+  /** Es una partida por la red. */
+  isOnline: boolean;
 }
 
 /** El menu sin colocar: `at` es la casilla junto a la que va el bocadillo. */
