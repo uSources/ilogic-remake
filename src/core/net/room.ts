@@ -21,13 +21,23 @@
  * el unico secreto: el servidor las pone en los enlaces de invitacion (una por persona) y las genera
  * el (`RoomContext.newToken`: el nucleo no tira de ningun azar).
  *
- * Estados: 'waiting' hasta que han entrado todas las personas (quien abandona antes se rinde y ya no
- * se le espera); 'playing' mientras la partida sigue; 'ended' cuando se decide, o cuando ya no juega
- * ninguna persona (todas rendidas, idas o pasadas a la IA: la partida se queda sin jugar, como en la
- * pantalla). Quien se va puede volver con su ficha (su vista al dia); quien abandona (lo decide el
- * servidor) se rinde, o su asiento pasa a la IA (`replaceWithAi`). La sala avanza de `ADVANCE_STEP_BUDGET`
- * pasos en pasos (un turno de la IA puede ser largo y el servidor tiene su tiempo contado): si se
- * queda a medias lo dice `pending()`, y `continueMatch()` sigue.
+ * La maquina de estados (`RoomStatus`):
+ *
+ *   'waiting'  esperando a que entren todas las personas. Quien abandona antes se rinde y ya no se
+ *              le espera; un asiento vacio puede pasar a la IA (`replaceWithAi`).
+ *      │  entran todas (`join` → `startIfComplete`)
+ *      ▼
+ *   'playing'  la partida sigue: `advance` la lleva hasta que hay que esperar a una persona (`turn`),
+ *              de `ADVANCE_STEP_BUDGET` pasos en pasos (`pending()`, `continueMatch()`: una llamada
+ *              del servidor tiene su tiempo contado). Quien se va puede volver con su ficha.
+ *      │  se decide, o ya no juega ninguna persona (todas rendidas, idas o pasadas a la IA)
+ *      ▼
+ *   'ended'    la partida se queda como esta; quien entra recibe su vista y el `ended`.
+ *
+ * Que hace cada suceso (entrar, salir, cada mensaje, lo que decide el servidor) en cada estado, en
+ * una tabla: docs/RED.md, «Los estados de la sala». El orden de lectura de esta clase es el de sus
+ * apartados: crear y guardar, lo que el servidor consulta, entrar y salir, un mensaje de una persona,
+ * lo que decide el servidor, y llevar la partida y repartir lo que pasa.
  */
 import { actionProblem, isAnyTime } from '../actions/dispatch';
 import { aiController } from '../controllers/aiController';
@@ -129,6 +139,8 @@ export class Room {
   private readonly rejections = new Map<SeatId, number>();
   private readonly sameToken: TokenCompare;
 
+  // --- Crear, guardar y recuperar ----------------------------------------------------------------
+
   private constructor(
     state: GameState,
     private readonly roomSeats: Seat[],
@@ -179,6 +191,23 @@ export class Room {
     return structuredClone(snapshot);
   }
 
+  /** Una sala recuperada en juego vuelve al punto en que se espera a alguien (sin mandar nada: nadie esta dentro). */
+  private resume(): void {
+    for (const person of this.people()) person.connection = null;
+    if (this.roomStatus !== 'playing') return;
+    this.advance();
+    this.outbox.flush();
+  }
+
+  /** Quien juega cada asiento en la sesion: una persona, remota (se la espera); la IA, con su perfil. */
+  private controllerFor(seat: Seat): Controller {
+    if (seat.kind === 'person') return remoteController();
+    const named = seat.profile === undefined ? undefined : this.context.aiProfile?.(seat.profile, this.context.content);
+    return aiController(named ?? defaultAiProfile(this.context.content));
+  }
+
+  // --- Lo que el servidor consulta ----------------------------------------------------------------
+
   /** La partida de verdad (solo para el servidor: a los clientes va su vista). */
   get state(): GameState {
     return this.session.state;
@@ -203,21 +232,17 @@ export class Room {
     return this.people().find((seat) => seat.team === team) ?? null;
   }
 
-  /** Cuantos mensajes se le han rechazado al asiento (para frenar a quien insiste). */
-  rejectionsOf(seat: SeatId): number {
-    return this.rejections.get(seat) ?? 0;
-  }
-
   /** La partida sigue sin esperar a nadie (la IA a medias, por el presupuesto de pasos): hay que llamar a `continueMatch`. */
   pending(): boolean {
     return this.roomStatus === 'playing' && this.session.awaitingInput === null;
   }
 
-  /** Sigue con lo pendiente (ver `pending`): lo que hay que mandar. */
-  continueMatch(): Outgoing[] {
-    this.advance();
-    return this.outbox.flush();
+  /** Cuantos mensajes se le han rechazado al asiento (para frenar a quien insiste). */
+  rejectionsOf(seat: SeatId): number {
+    return this.rejections.get(seat) ?? 0;
   }
+
+  // --- Entrar y salir -----------------------------------------------------------------------------
 
   /**
    * Alguien entra con su ficha (un saludo: `hello`, con su version). Si la ficha es de un asiento,
@@ -233,18 +258,22 @@ export class Room {
     if (!seat) return { ok: false, error: 'badToken' };
     const connection = this.nextConnection++;
     seat.connection = connection;
-    const greeting: ServerMessage = {
-      kind: 'welcome',
-      seat: seat.id,
-      team: seat.team,
-      ...CURRENT_PROTOCOL,
-      status: this.roomStatus,
-      lastSeq: seat.lastSeq,
-    };
-    this.outbox.send(seat.id, greeting);
+    this.outbox.send(seat.id, this.welcome(seat));
     this.sendSituation(seat);
     if (this.roomStatus === 'waiting') this.startIfComplete();
     return { ok: true, seat: seat.id, connection, messages: this.outbox.flush() };
+  }
+
+  /** El saludo de vuelta: su asiento, su equipo, la version del servidor, como esta la sala y su ultimo `seq` atendido. */
+  private welcome(seat: PersonSeat): ServerMessage {
+    return { kind: 'welcome', seat: seat.id, team: seat.team, ...CURRENT_PROTOCOL, status: this.roomStatus, lastSeq: seat.lastSeq };
+  }
+
+  /** Un saludo de quien ya tiene asiento: vale si la ficha es la suya (vuelve a entrar). */
+  private rejoin(person: PersonSeat, hello: ClientMessageOf<'hello'>): Outgoing[] {
+    if (!this.sameToken(hello.token, person.token)) return this.refuse(person.id, 'badToken');
+    const result = this.join(hello);
+    return result.ok ? result.messages : this.refuse(person.id, result.error);
   }
 
   /** La persona de ese asiento se ha ido por esa conexion (si entro por otra despues, no pasa nada). Puede volver con su ficha. */
@@ -254,6 +283,16 @@ export class Room {
     person.connection = null;
     this.courier.forget(person);
   }
+
+  /** Si ya estan todas las personas que hacen falta (dentro, o rendidas), la partida empieza. */
+  private startIfComplete(): void {
+    const isIn = (seat: PersonSeat) => isJoined(seat) || teamState(this.state, seat.team).resigned;
+    if (!this.people().every(isIn)) return;
+    this.roomStatus = 'playing';
+    this.advance();
+  }
+
+  // --- Un mensaje de una persona --------------------------------------------------------------------
 
   /**
    * Un mensaje de un asiento: lo que hay que mandar por el (a el y a los demas). Un saludo es volver
@@ -287,76 +326,6 @@ export class Room {
         return this.finishTurn(person);
       }
     }
-  }
-
-  /**
-   * El servidor da por ido a quien no vuelve: su equipo se rinde (tambien si la sala aun espera:
-   * entonces ya no se le espera) y su asiento queda libre. Lo que hay que mandar a los demas.
-   */
-  abandon(seat: SeatId): Outgoing[] {
-    const person = personSeat(this.roomSeats, seat);
-    if (!person) return this.refuse(seat, 'noSeat');
-    if (this.roomStatus !== 'ended') this.session.act(person.team, { kind: 'surrender' });
-    person.connection = null;
-    this.courier.forget(person);
-    if (this.roomStatus === 'waiting') this.startIfComplete();
-    else this.advance();
-    return this.outbox.flush().filter((outgoing) => outgoing.seat !== seat);
-  }
-
-  /**
-   * El asiento pasa a jugarlo la IA (quien no vuelve, si los demas prefieren seguir contra la IA a
-   * ganar por abandono): desde su turno en curso, si es el suyo. Lo que hay que mandar a los demas.
-   */
-  replaceWithAi(seat: SeatId, profile?: string): Outgoing[] {
-    const person = personSeat(this.roomSeats, seat);
-    if (!person) return this.refuse(seat, 'noSeat');
-    this.courier.forget(person);
-    const replacement = aiSeat(person.id, person.team, profile);
-    this.roomSeats[person.id] = replacement;
-    this.session.replaceController(person.team, this.controllerFor(replacement));
-    if (this.roomStatus === 'waiting') this.startIfComplete();
-    else this.advance();
-    return this.outbox.flush().filter((outgoing) => outgoing.seat !== seat);
-  }
-
-  /**
-   * Se le acaba el tiempo a quien se espera (el reloj del turno lo lleva el servidor): su turno acaba
-   * como si hubiera pulsado «Fin de turno», este dentro o no. Si no se le esperaba, nada.
-   */
-  endTurnOf(seat: SeatId): Outgoing[] {
-    const person = personSeat(this.roomSeats, seat);
-    if (!person || this.roomStatus !== 'playing' || this.session.awaitingInput !== person.team) return [];
-    return this.finishTurn(person);
-  }
-
-  private controllerFor(seat: Seat): Controller {
-    if (seat.kind === 'person') return remoteController();
-    const named = seat.profile === undefined ? undefined : this.context.aiProfile?.(seat.profile, this.context.content);
-    return aiController(named ?? defaultAiProfile(this.context.content));
-  }
-
-  /** Un saludo de quien ya tiene asiento: vale si la ficha es la suya (vuelve a entrar). */
-  private rejoin(person: PersonSeat, hello: ClientMessageOf<'hello'>): Outgoing[] {
-    if (!this.sameToken(hello.token, person.token)) return this.refuse(person.id, 'badToken');
-    const result = this.join(hello);
-    return result.ok ? result.messages : this.refuse(person.id, result.error);
-  }
-
-  /** Una sala recuperada en juego vuelve al punto en que se espera a alguien (sin mandar nada: nadie esta dentro). */
-  private resume(): void {
-    for (const person of this.people()) person.connection = null;
-    if (this.roomStatus !== 'playing') return;
-    this.advance();
-    this.outbox.flush();
-  }
-
-  /** Si ya estan todas las personas que hacen falta (dentro, o rendidas), la partida empieza. */
-  private startIfComplete(): void {
-    const isIn = (seat: PersonSeat) => isJoined(seat) || teamState(this.state, seat.team).resigned;
-    if (!this.people().every(isIn)) return;
-    this.roomStatus = 'playing';
-    this.advance();
   }
 
   /** Por que la sala no atiende ahora una accion de esta persona (null: la atiende). */
@@ -399,6 +368,57 @@ export class Room {
     this.advance();
     return this.outbox.flush();
   }
+
+  // --- Lo que decide el servidor (relojes, quien no vuelve) --------------------------------------
+
+  /**
+   * El servidor da por ido a quien no vuelve: su equipo se rinde (tambien si la sala aun espera:
+   * entonces ya no se le espera) y su asiento queda libre. Lo que hay que mandar a los demas.
+   */
+  abandon(seat: SeatId): Outgoing[] {
+    const person = personSeat(this.roomSeats, seat);
+    if (!person) return this.refuse(seat, 'noSeat');
+    if (this.roomStatus !== 'ended') this.session.act(person.team, { kind: 'surrender' });
+    person.connection = null;
+    this.courier.forget(person);
+    if (this.roomStatus === 'waiting') this.startIfComplete();
+    else this.advance();
+    return this.outbox.flush().filter((outgoing) => outgoing.seat !== seat);
+  }
+
+  /**
+   * El asiento pasa a jugarlo la IA (quien no vuelve, si los demas prefieren seguir contra la IA a
+   * ganar por abandono): desde su turno en curso, si es el suyo. Lo que hay que mandar a los demas.
+   */
+  replaceWithAi(seat: SeatId, profile?: string): Outgoing[] {
+    const person = personSeat(this.roomSeats, seat);
+    if (!person) return this.refuse(seat, 'noSeat');
+    this.courier.forget(person);
+    const replacement = aiSeat(person.id, person.team, profile);
+    this.roomSeats[person.id] = replacement;
+    this.session.replaceController(person.team, this.controllerFor(replacement));
+    if (this.roomStatus === 'waiting') this.startIfComplete();
+    else this.advance();
+    return this.outbox.flush().filter((outgoing) => outgoing.seat !== seat);
+  }
+
+  /**
+   * Se le acaba el tiempo a quien se espera (el reloj del turno lo lleva el servidor): su turno acaba
+   * como si hubiera pulsado «Fin de turno», este dentro o no. Si no se le esperaba, nada.
+   */
+  endTurnOf(seat: SeatId): Outgoing[] {
+    const person = personSeat(this.roomSeats, seat);
+    if (!person || this.roomStatus !== 'playing' || this.session.awaitingInput !== person.team) return [];
+    return this.finishTurn(person);
+  }
+
+  /** Sigue con lo pendiente (ver `pending`): lo que hay que mandar. */
+  continueMatch(): Outgoing[] {
+    this.advance();
+    return this.outbox.flush();
+  }
+
+  // --- Llevar la partida y repartir lo que pasa ---------------------------------------------------
 
   /**
    * Lleva la partida hasta que haya que esperar a una persona (y lo anuncia), se acabe (y lo
@@ -451,6 +471,8 @@ export class Room {
   private joinedPeople(): PersonSeat[] {
     return this.people().filter(isJoined);
   }
+
+  // --- Rechazos -----------------------------------------------------------------------------------
 
   private refuse(seat: SeatId, error: NetError, seq?: number): Outgoing[] {
     this.countRejection(seat);
