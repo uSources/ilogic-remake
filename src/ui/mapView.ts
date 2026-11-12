@@ -11,6 +11,7 @@ import { FlagLayer } from './map/flagLayer';
 import { FogLayer } from './map/fogLayer';
 import type { AnimatedLayer, MapLayer } from './map/layer';
 import { MarkLayer } from './map/markLayer';
+import { OverhangLayer } from './map/overhangLayer';
 import { OverlayLayer } from './map/overlayLayer';
 import { SelectionBox } from './map/selectionBox';
 import { TerrainLayer } from './map/terrainLayer';
@@ -56,6 +57,8 @@ export class MapView {
   /** [CAMBIO] Banderines de los puntos de control y de las ordenes, encima de la zona y debajo de las unidades. */
   private readonly flags: FlagLayer;
   private readonly units: UnitLayer;
+  /** Copas de arbol y tejados que tapan a la unidad de detras, encima de las unidades. */
+  private readonly overhangs: OverhangLayer;
   /** Marcas de mision y aros de seleccion, por encima de las unidades. */
   private readonly marks: MarkLayer;
   /** Objetos temporales de las animaciones (ui/fx.ts, ui/combatFx.ts) y recuadro de seleccion. */
@@ -76,6 +79,7 @@ export class MapView {
     this.buildings = new BuildingLayer(scene);
     this.terrain = new TerrainLayer(scene, `terrainBake${MapView.count}`, this.buildings);
     this.units = new UnitLayer(scene);
+    this.overhangs = new OverhangLayer(scene, this.buildings);
     this.overlay = new OverlayLayer(scene);
     this.fx = scene.add.container(0, 0);
     this.fog = new FogLayer(scene, `fogBake${MapView.count}`);
@@ -84,7 +88,7 @@ export class MapView {
     this.decals = new DecalLayer(scene);
     this.flags = new FlagLayer(scene);
     this.box = new SelectionBox(scene, this.camera, this.fx);
-    // Orden: terreno, edificios, niebla y resaltados, unidades, efectos, cursor.
+    // Orden: terreno, edificios, niebla y resaltados, unidades, lo que las tapa, efectos, cursor.
     const stack: (MapLayer | Phaser.GameObjects.GameObject)[] = [
       this.terrain,
       this.decals,
@@ -93,6 +97,7 @@ export class MapView {
       this.overlay,
       this.flags,
       this.units,
+      this.overhangs,
       this.marks,
       this.fx,
       this.cursorView,
@@ -180,6 +185,7 @@ export class MapView {
     const newArt = this.newArt();
     this.buildings.sync(s, options.vis, options.viewer);
     this.units.sync(s, options, newArt);
+    this.overhangs.sync(this.units.visibleUnits(), options.vis, this.cursor);
     this.fog.sync(options.vis, newArt);
     this.flags.sync(options);
     this.overlay.draw(options, { textures: this.scene.textures, newArt });
@@ -200,6 +206,7 @@ export class MapView {
 
   placeCursor(visible = true): void {
     this.cursorView.place(this.cursor, visible);
+    this.overhangs.peek(visible ? this.cursor : null);
   }
 
   /** Animaciones por pasos (estilo pixel): agua, parpadeo del cursor, marcas y unidades en espera. */

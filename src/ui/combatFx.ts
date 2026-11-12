@@ -16,7 +16,7 @@ import { TILE } from '../layout';
 import { animFrameCount, burst, center, COLORS, playAnim, reducedMotion } from './fx';
 import { fxRect as rect, fxText, FX_TEXT, sleep, type FxHost, type FxTimeline } from './fxKit';
 import type { Facing } from './mapView';
-import { PAL, PAL_MAP } from './palette';
+import { PAL, PAL_MAP, TINT_FILL } from './palette';
 import { sideColor, type Side } from './sides';
 
 /** Lado al que tiene que mirar quien esta en `from` para disparar a `to` (null si estan en la misma columna). */
@@ -209,9 +209,6 @@ export async function projectile(timeline: FxTimeline, view: FxHost, kind: ShotK
       return kind satisfies never;
   }
 }
-
-/** Modo de tinte FILL de Phaser 4 (Phaser.TintModes.FILL; aqui Phaser solo se importa como tipo). */
-const TINT_FILL = 1;
 
 /** Destello blanco de una unidad al recibir el golpe (su dibujo principal). */
 export async function hitFlash(
