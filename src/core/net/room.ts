@@ -28,7 +28,7 @@
  *      │  entran todas (`join` → `startIfComplete`)
  *      ▼
  *   'playing'  la partida sigue: `advance` la lleva hasta que hay que esperar a una persona (`turn`),
- *              de `ADVANCE_STEP_BUDGET` pasos en pasos (`pending()`, `continueMatch()`: una llamada
+ *              de `ADVANCE_STEP_BUDGET` pasos en pasos (`isMidway()`, `continueMatch()`: una llamada
  *              del servidor tiene su tiempo contado). Quien se va puede volver con su ficha.
  *      │  se decide, o ya no juega ninguna persona (todas rendidas, idas o pasadas a la IA)
  *      ▼
@@ -70,8 +70,8 @@ import {
   aiSeat,
   isJoined,
   isSeatOf,
-  people,
   personSeat,
+  personSeats,
   personWithToken,
   seatsFor,
   type PersonSeat,
@@ -193,7 +193,7 @@ export class Room {
 
   /** Una sala recuperada en juego vuelve al punto en que se espera a alguien (sin mandar nada: nadie esta dentro). */
   private resume(): void {
-    for (const person of this.people()) person.connection = null;
+    for (const person of this.personSeats()) person.connection = null;
     if (this.roomStatus !== 'playing') return;
     this.advance();
     this.outbox.flush();
@@ -222,18 +222,18 @@ export class Room {
   }
 
   /** Las personas de la sala (sus asientos). */
-  people(): PersonSeat[] {
-    return people(this.roomSeats);
+  personSeats(): PersonSeat[] {
+    return personSeats(this.roomSeats);
   }
 
   /** A quien se espera ahora (una persona), o null. */
   get awaiting(): PersonSeat | null {
     const team = this.session.awaitingInput;
-    return this.people().find((seat) => seat.team === team) ?? null;
+    return this.personSeats().find((seat) => seat.team === team) ?? null;
   }
 
-  /** La partida sigue sin esperar a nadie (la IA a medias, por el presupuesto de pasos): hay que llamar a `continueMatch`. */
-  pending(): boolean {
+  /** La partida se ha quedado a medias (la IA, por el presupuesto de pasos) sin esperar a nadie: hay que llamar a `continueMatch`. */
+  isMidway(): boolean {
     return this.roomStatus === 'playing' && this.session.awaitingInput === null;
   }
 
@@ -287,7 +287,7 @@ export class Room {
   /** Si ya estan todas las personas que hacen falta (dentro, o rendidas), la partida empieza. */
   private startIfComplete(): void {
     const isIn = (seat: PersonSeat) => isJoined(seat) || teamState(this.state, seat.team).resigned;
-    if (!this.people().every(isIn)) return;
+    if (!this.personSeats().every(isIn)) return;
     this.roomStatus = 'playing';
     this.advance();
   }
@@ -412,7 +412,7 @@ export class Room {
     return this.finishTurn(person);
   }
 
-  /** Sigue con lo pendiente (ver `pending`): lo que hay que mandar. */
+  /** Sigue con lo que se quedo a medias (ver `isMidway`): lo que hay que mandar. */
   continueMatch(): Outgoing[] {
     this.advance();
     return this.outbox.flush();
@@ -423,7 +423,7 @@ export class Room {
   /**
    * Lleva la partida hasta que haya que esperar a una persona (y lo anuncia), se acabe (y lo
    * anuncia), ya no juegue ninguna persona (la sala acaba) o se agote el presupuesto de pasos
-   * (`pending`). Al parar, cada persona recibe lo que le quedaba por ver (todo junto).
+   * (`isMidway`). Al parar, cada persona recibe lo que le quedaba por ver (todo junto).
    */
   private advance(): void {
     if (this.roomStatus !== 'playing') return;
@@ -442,7 +442,7 @@ export class Room {
 
   /** Queda alguna persona que siga jugando (sin ninguna, la sala no tiene a quien llevar la partida). */
   private somebodyPlays(): boolean {
-    return this.people().some((seat) => takesTurn(this.state, seat.team));
+    return this.personSeats().some((seat) => takesTurn(this.state, seat.team));
   }
 
   /** A quien se espera, una vez por turno (con lo pendiente de cada uno antes). */
@@ -456,7 +456,7 @@ export class Room {
   /** Un paso de la sesion: a cada persona, lo que ve (el correo lo lleva); lo de quien actuo, para su resultado. */
   private carry(step: ActedStep): void {
     const seenBy = this.courier.carry(step, this.joinedPeople());
-    const actor = this.people().find((seat) => seat.team === step.team);
+    const actor = this.personSeats().find((seat) => seat.team === step.team);
     if (actor) this.seenByActor = seenBy.get(actor.id) ?? null;
   }
 
@@ -469,7 +469,7 @@ export class Room {
   }
 
   private joinedPeople(): PersonSeat[] {
-    return this.people().filter(isJoined);
+    return this.personSeats().filter(isJoined);
   }
 
   // --- Rechazos -----------------------------------------------------------------------------------

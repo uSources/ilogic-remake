@@ -70,7 +70,7 @@ Tres piezas, en tres sitios:
 | `OnlineMatch` | `onlineMatch.ts` | Enlace y cliente juntos, con quien los escucha ahora (primero la pantalla del vestibulo, luego la escena) |
 | Sesion espejo | `mirrorSession` (`matchSetup.ts`) | La `GameSession` de la pantalla sobre la vista del servidor: la persona juega su equipo (`humanController`), los demas son `remoteController` (la sesion los espera y no juega nada por ellos) |
 | Eco | `RoomClient.nextEcho`, `echoDue` | El `events` que sigue a un `result` que valio: es la vista al dia tras la accion propia. No se anima (ya se animo con el `result`); se da a quien la espera |
-| Presupuesto de pasos | `ADVANCE_STEP_BUDGET`, `Room.pending`, `Room.continueMatch` | Cuantos pasos seguidos da la sala en una llamada (un turno de la IA puede ser largo y una llamada del servidor tiene su tiempo contado). Si se queda a medias, el servidor sigue desde una alarma |
+| Presupuesto de pasos | `ADVANCE_STEP_BUDGET`, `Room.isMidway`, `Room.continueMatch` | Cuantos pasos seguidos da la sala en una llamada (un turno de la IA puede ser largo y una llamada del servidor tiene su tiempo contado). Si se queda a medias, el servidor sigue desde una alarma |
 
 ## El viaje de una jugada
 
@@ -195,7 +195,7 @@ a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.d
    ficha (`replaceSockets`, 4409) y apunta el `Attachment` en el socket.
 6. El vestibulo pregunta cada 3 s quien esta (`lobbyOf`, `GET /rooms/:code` → `RoomAdapter.lobby`,
    nada de la partida) mientras la sala espera. Quien creo puede dar un asiento vacio a la IA
-   (`handSeatToAi`, `POST /rooms/:code/ai` → `RoomAdapter.handToAi` → `Room.replaceWithAi`).
+   (`handToAi`, `POST /rooms/:code/ai` → `RoomAdapter.handToAi` → `Room.replaceWithAi`).
 7. Cuando el cliente tiene vista y ademas un `turn` o un `ended` (`RoomClient.turn`/`ended`), la
    pantalla pasa la conexion a la escena (`OnlineHost.startOnline` → `MenuScene.startOnline` →
    `GameStartData` 'online' → `startMatch` → `mirrorSession`). Un enlace `#/sala/...` al cargar el
@@ -241,7 +241,7 @@ a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.d
      un solo `events`, si ve algo) y `announceTurn` (`turn` a todos, una vez por turno y dia);
    - **la partida se decide** (`over`) o ya no juega ninguna persona (`somebodyPlays`): 'ended';
    - **se agota el presupuesto** (`ADVANCE_STEP_BUDGET`, 400 pasos; `RoomContext.stepBudget` en
-     los tests): `pending()` es true. El servidor lo ve en `sync` (`withContinuation` pone
+     los tests): `isMidway()` es true. El servidor lo ve en `sync` (`withContinuation` pone
      `continueAt: now`), pone la alarma y, en `RoomObject.alarm` ('continue'), llama a
      `adapter.continueMatch()` → `Room.continueMatch` → `advance` otra vez, con su propio tiempo de
      CPU. Lo que sale de una alarma llega a los que estan dentro como lo de cualquier paso.
@@ -337,7 +337,7 @@ es la maquina de estados de `Room` (`src/core/net/room.ts` remite aqui).
 | `act` / `surrender` con `seq` repetido | 'stale' | 'stale' | 'stale' |
 | `act` | 'notPlaying' | si se le espera: la accion por la sesion, `result` y lo que ven los demas; si no, 'notYourTurn' | 'notPlaying' |
 | `surrender` | 'notPlaying' (pero ver `abandon`) | se rinde (vale fuera de turno); si ya no juega ninguna persona → **'ended'** (`abandoned`) | 'notPlaying' |
-| `endTurn` | 'notPlaying' | si se le espera: `finishInput` y `advance` hasta la siguiente persona (`turn`), el final (**'ended'**) o el presupuesto (`pending`); si no, 'notYourTurn' | 'notPlaying' |
+| `endTurn` | 'notPlaying' | si se le espera: `finishInput` y `advance` hasta la siguiente persona (`turn`), el final (**'ended'**) o el presupuesto (`isMidway`); si no, 'notYourTurn' | 'notPlaying' |
 | `resync` | `view` | `view` + `turn` | `view` + `ended` |
 | `replaceWithAi(seat)` (alarma de espera, o quien creo) | el asiento pasa a la IA; si ya estan todos → **'playing'** | el asiento pasa a la IA y la partida sigue (desde su turno, si era el suyo) | nada (el asiento cambia, pero no se juega) |
 | `endTurnOf(seat)` (reloj del turno) | nada | si se le esperaba: como `endTurn` | nada |
@@ -392,7 +392,7 @@ entrar, despertar, un `seq` repetido, las alarmas).
 | `src/net/serverLink.ts` | `ServerLink`: el WebSocket con el protocolo encima: saludo, `seq`, reconexion, reenvio, `step` |
 | `src/net/roomClient.ts` | `RoomClient`: los mensajes como partida (`state`) y jugadas (`RoomPlay`, `next`), `act` con su promesa, el eco; `animationView` y `splitByTurn` para animar un lote |
 | `src/net/onlineMatch.ts` | `OnlineMatch`: enlace y cliente juntos, con quien los escucha |
-| `src/net/roomApi.ts` | Las rutas HTTP: `createRoom`, `lobbyOf`, `handSeatToAi` |
+| `src/net/roomApi.ts` | Las rutas HTTP: `createRoom`, `lobbyOf`, `handToAi` |
 | `src/net/onlineRooms.ts` | «Mis partidas en línea» en localStorage; `parseInvite`, `inviteUrl` |
 | `src/menu/online/` | La pantalla «Jugar en línea»: `onlineScreen.ts` (`OnlineScreen`: enlaza las cuatro pantallas, el foco y las ordenes), `menuScreen.ts` (crear, entrar, mis partidas), `createScreen.ts`, `joinScreen.ts`, `lobbyScreen.ts` (el vestibulo: la conexion con la sala y el paso a la escena) y `shared.ts` (`OnlineHost`, `OnlineScreens`) |
 | `src/hud/menus/Online.tsx` | El HTML de esa pantalla (Preact), a partir de `OnlineVM` |

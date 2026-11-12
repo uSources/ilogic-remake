@@ -113,5 +113,5 @@ export const lobbyOf = (base: string, code: string): Promise<ApiResult<LobbyInfo
 const isOk = (value: unknown): value is { ok: true } => isObject(value) && value.ok === true;
 
 /** Quien creo la sala (su ficha) da un asiento de persona que no ha entrado a la IA. */
-export const handSeatToAi = (base: string, code: string, token: string, seat: SeatId): Promise<ApiResult<{ ok: true }>> =>
+export const handToAi = (base: string, code: string, token: string, seat: SeatId): Promise<ApiResult<{ ok: true }>> =>
   request(`${base}/rooms/${code}/ai`, jsonPost({ token, seat }), isOk);

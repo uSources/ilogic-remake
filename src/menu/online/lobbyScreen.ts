@@ -11,7 +11,7 @@ import { shownTeamNumber } from '../../core/teams';
 import { ui, type OnlineSeatVM, type OnlineVM } from '../../hud/store';
 import { OnlineMatch } from '../../net/onlineMatch';
 import { forgetRoom, inviteUrl, readOnlineRooms, rememberRoom, type OnlineRoomEntry } from '../../net/onlineRooms';
-import { handSeatToAi, lobbyOf, type CreatedSeat, type LobbyInfo } from '../../net/roomApi';
+import { handToAi, lobbyOf, type CreatedSeat, type LobbyInfo } from '../../net/roomApi';
 import type { RoomPlay } from '../../net/roomClient';
 import type { FatalClose, LinkStatus } from '../../net/serverLink';
 import { serverUrl } from '../../net/serverUrl';
@@ -227,7 +227,7 @@ export class LobbyScreen {
     if (!base || !this.entry || screens.busy) return;
     screens.busy = true;
     screens.publish();
-    const handed = await handSeatToAi(base, this.entry.code, this.entry.token, seat);
+    const handed = await handToAi(base, this.entry.code, this.entry.token, seat);
     screens.busy = false;
     if (!handed.ok) screens.error = t('onlineFailed');
     this.stopPolling();

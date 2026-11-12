@@ -924,7 +924,7 @@ deshacer y el porque:
   esta dentro: cada cliente vuelve a saludar y recibe su vista entera.
 - **Sin relojes ni azar en el nucleo.** Los tiempos (caducar, el turno, la espera a los que faltan)
   los lleva el servidor y le dice a la sala que hacer (`endTurnOf`, `replaceWithAi`, `abandon`). La
-  partida avanza de `ADVANCE_STEP_BUDGET` pasos en pasos (`pending()`, `continueMatch()`): una
+  partida avanza de `ADVANCE_STEP_BUDGET` pasos en pasos (`isMidway()`, `continueMatch()`): una
   llamada del servidor tiene su tiempo contado, y un turno largo de la IA se reparte en varias.
 
 **La niebla de los sucesos.** La regla: un suceso se ve si el equipo conoce lo que nombra **antes o
@@ -992,7 +992,7 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
   vence, `nextAlarm`): caducar a los 30 dias sin actividad (se borra todo y se cierran las
   conexiones), el turno de quien se espera (`endTurnOf`; otro dia u otro asiento es otro reloj),
   la espera a los que no llegan (`replaceWithAi` a cada asiento vacio y la partida empieza) y seguir
-  una partida a medias (`pending()` tras cada paso → alarma ya → `continueMatch()` desde ella: cada
+  una partida a medias (`isMidway()` tras cada paso → alarma ya → `continueMatch()` desde ella: cada
   llamada tiene su tiempo de CPU, y un turno largo de la IA se reparte en varias).
 - **Topes antes de leer.** Los bytes de cada mensaje y del cuerpo de `POST /rooms` se acotan antes
   de leer el JSON (`MAX_MESSAGE_BYTES`; los topes de la forma los pone `isValidMessage`); a quien la
