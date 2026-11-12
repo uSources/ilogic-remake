@@ -15,7 +15,7 @@ import type { JoinResult, NetError, Outgoing, SeatId } from '@core/net';
 import { isObject } from '@core/util/validation';
 import { MAX_MESSAGE_BYTES } from './limits';
 import { watchRejections, type RejectionWindow } from './rateLimit';
-import { RoomAdapter, type Invitation, type LobbyInfo } from './roomAdapter';
+import { RoomAdapter, type HandToAiError, type Invitation, type LobbyInfo } from './roomAdapter';
 import type { RoomRequest } from './roomRequest';
 import {
   doneWaiting,
@@ -111,6 +111,16 @@ export class RoomObject extends DurableObject<Env> {
   async info(): Promise<LobbyInfo | null> {
     const adapter = await this.load();
     return adapter?.lobby() ?? null;
+  }
+
+  /** Quien creo la sala da un asiento vacio a la IA (si con el ya estan todos, la partida empieza). */
+  async handToAi(token: string, seat: SeatId): Promise<{ ok: true } | { ok: false; error: HandToAiError | 'noSuchRoom' }> {
+    const adapter = await this.load();
+    if (!adapter) return { ok: false, error: 'noSuchRoom' };
+    const handed = adapter.handToAi(token, seat);
+    if (!handed.ok) return handed;
+    await this.afterActivity(adapter, handed.outgoing);
+    return { ok: true };
   }
 
   /** La subida a WebSocket (lo unico que llega por fetch: lo demas va por RPC). El saludo viene despues, como primer mensaje. */

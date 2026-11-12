@@ -116,3 +116,29 @@ describe('el adaptador de la sala', () => {
     expect(RoomAdapter.restore('nada')).toBeNull();
   });
 });
+
+describe('dar un asiento vacio a la IA (quien creo la sala)', () => {
+  it('solo con la ficha del creador, solo mientras espera y solo un asiento de otra persona que no ha entrado', () => {
+    const adapter = RoomAdapter.create(request());
+    const [creator, other] = adapter.invitations().map((seat) => seat.token) as [string, string];
+    expect(adapter.handToAi(other, 0)).toEqual({ ok: false, error: 'badToken' });
+    expect(adapter.handToAi('otra-ficha', 1)).toEqual({ ok: false, error: 'badToken' });
+    expect(adapter.handToAi(creator, 0)).toEqual({ ok: false, error: 'noSeat' });
+    expect(adapter.handToAi(creator, 2)).toEqual({ ok: false, error: 'noSeat' });
+    expect(adapter.join(hello(creator)).ok).toBe(true);
+    const handed = adapter.handToAi(creator, 1);
+    expect(handed.ok).toBe(true);
+    // Con el asiento 1 en la IA ya estan todos: la partida empieza y el creador recibe su turno.
+    expect(adapter.status).toBe('playing');
+    expect(adapter.lobby().seats[1]).toEqual({ seat: 1, team: 1, kind: 'ai', joined: false });
+    if (handed.ok) expect(kindsTo(handed.outgoing, 0)).toContain('turn');
+    expect(adapter.handToAi(creator, 1)).toEqual({ ok: false, error: 'notWaiting' });
+  });
+
+  it('un asiento cuya persona ya esta dentro no se toca', () => {
+    const adapter = RoomAdapter.create(request());
+    const [creator, other] = adapter.invitations().map((seat) => seat.token) as [string, string];
+    expect(adapter.join(hello(other)).ok).toBe(true);
+    expect(adapter.handToAi(creator, 1)).toEqual({ ok: false, error: 'seatTaken' });
+  });
+});

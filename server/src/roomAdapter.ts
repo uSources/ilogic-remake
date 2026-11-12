@@ -44,6 +44,9 @@ export interface Invitation {
   token: string;
 }
 
+/** Por que no se da un asiento a la IA: la ficha no es de quien creo la sala, la sala ya juega, el asiento no es de otra persona, o ya esta dentro. */
+export type HandToAiError = 'badToken' | 'notWaiting' | 'noSeat' | 'seatTaken';
+
 /** A quien se espera ahora: su asiento y el dia (otro dia del mismo asiento es otro turno). */
 export interface Awaited {
   seat: SeatId;
@@ -125,6 +128,20 @@ export class RoomAdapter {
   /** Quien no ha llegado (o no vuelve) pasa a la IA. */
   replaceWithAi(seat: SeatId): Outgoing[] {
     return this.room.replaceWithAi(seat);
+  }
+
+  /**
+   * Quien creo la sala (la ficha del primer asiento de persona) da a la IA un asiento de persona
+   * que no ha entrado, mientras la sala espera: lo que hay que mandar, o por que no.
+   */
+  handToAi(token: string, seat: SeatId): { ok: true; outgoing: Outgoing[] } | { ok: false; error: HandToAiError } {
+    const creator = this.room.people()[0];
+    if (!creator || !sameToken(token, creator.token)) return { ok: false, error: 'badToken' };
+    if (this.room.status !== 'waiting') return { ok: false, error: 'notWaiting' };
+    const target = this.room.people().find((person) => person.id === seat);
+    if (!target || target.id === creator.id) return { ok: false, error: 'noSeat' };
+    if (target.connection !== null) return { ok: false, error: 'seatTaken' };
+    return { ok: true, outgoing: this.room.replaceWithAi(seat) };
   }
 
   /** Se le ha acabado el tiempo de su turno. */
