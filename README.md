@@ -39,6 +39,33 @@ guarda el juego al instalarse; `vite build` le pone la version y la lista de fic
 publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en `npm run dev` ni en
 `dist-single/ilogic.html`.
 
+## Jugar en línea
+
+Contra amigos por internet, cada uno en su navegador, por turnos y sin prisa (se puede cerrar y
+volver: la partida vive en el servidor). Hace falta un servidor de partidas (`server/`, un Worker
+de Cloudflare: como publicarlo, en `server/README.md`) y que el juego sepa donde esta:
+`VITE_SERVER_URL` al compilar (en GitHub, la variable del repositorio; en local, `.env` a partir de
+`.env.example`) o, por encima, la clave `ilogic.server` en el localStorage del navegador (para
+jugar con un servidor propio sin recompilar). Sin servidor, Inicio no ofrece «Jugar en línea».
+
+- **Crear sala**: Inicio → «Jugar en línea» → «Crear sala». Las opciones de una partida nueva, de 2 a
+  4 equipos, quien juega cada asiento (una persona o la IA) y con que general, y si se quiere un
+  reloj por turno (al acabarse, el turno pasa solo) y cuanto esperar a los que no entran (pasado, su
+  asiento lo juega la IA). La sala da un codigo y un enlace de invitacion por asiento de persona:
+  copialos (o compartelos desde el movil) y reparte uno a cada amigo. La partida empieza cuando han
+  entrado todos; mientras, quien creo la sala puede dar a la IA un asiento que sigue vacio.
+- **Entrar**: con el enlace (abre el juego directamente en la sala) o pegandolo en «Entrar con
+  enlace». «Mis partidas en línea» recuerda las salas de este navegador para volver a entrar.
+- **En la partida**: tu turno se juega como siempre; en los demas sale «Esperando al equipo N…» y
+  lo que hacen llega animado cuando acaban. Si cambias de pestaña, el titulo (y un toque, con la
+  musica activada) avisan de que te toca. La linea de arriba dice como va la conexion: si se
+  corta, el juego vuelve a conectar solo. Guardar y repetir el turno enemigo no estan: la partida
+  sigue desde el servidor. Rendirse o salir, desde el menu de pausa (al salir, tu asiento sigue
+  siendo tuyo: vuelve con el enlace).
+
+`npm run online` lo prueba de punta a punta con un servidor local (`wrangler dev`) y dos
+navegadores.
+
 ## Como se juega
 
 | Accion | Teclado | Raton |
@@ -185,6 +212,8 @@ src/
     hudModels.ts Datos que enseña la interfaz (ficha de casilla, prevision de combate, minimapa), por panel en models/
     palette.ts   Colores de Phaser (los mismos que hud.css)
   menu/        Pantallas del menu y fondo vivo (liveBackground: partida IA contra IA)
+  net/         Partidas por la red desde el navegador: la conexion con la sala (serverLink), lo que llega
+               como partida y jugadas (roomClient), las rutas (roomApi) y «Mis partidas en línea»
   patchNotes/  Novedades: notas de parche de GitHub y del CHANGELOG
   atlas.ts     Atlas de imagenes del juego (una textura 'atlas' de varias paginas)
   hud/         Interfaz en HTML con Preact encima del lienzo: Hud.tsx (raiz), game/ menus/ overlays/

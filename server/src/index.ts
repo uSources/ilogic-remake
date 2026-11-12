@@ -7,9 +7,14 @@
  * una ruta nueva es una entrada mas.
  */
 import { defaultContent } from '@core/content/default';
+import { isToken } from '@core/net';
+import { isInt, isObject } from '@core/util/validation';
 import { isRoomCode, newRoomCode } from './codes';
 import { corsHeaders, isOriginAllowed } from './cors';
-import { MAX_CODE_TRIES, MAX_MESSAGE_BYTES } from './limits';
+import { MAX_CODE_TRIES, MAX_MESSAGE_BYTES, MAX_ROOM_TEAMS } from './limits';
+
+/** Un asiento es como mucho uno por equipo. */
+const MAX_SEATS = MAX_ROOM_TEAMS;
 import type { Env, RoomObject } from './roomObject';
 import { isRoomRequest } from './roomRequest';
 
@@ -25,7 +30,18 @@ interface Route {
 }
 
 /** Por que no se atiende una peticion (el cuerpo de la respuesta: `{ error }`). */
-type RequestError = 'badOrigin' | 'badRequest' | 'badCode' | 'noSuchRoom' | 'notFound' | 'tooBig' | 'noFreeCode';
+type RequestError =
+  | 'badOrigin'
+  | 'badRequest'
+  | 'badCode'
+  | 'noSuchRoom'
+  | 'notFound'
+  | 'tooBig'
+  | 'noFreeCode'
+  | 'badToken'
+  | 'notWaiting'
+  | 'noSeat'
+  | 'seatTaken';
 
 const STATUS_OF_ERROR: Record<RequestError, number> = {
   badOrigin: 403,
@@ -35,6 +51,10 @@ const STATUS_OF_ERROR: Record<RequestError, number> = {
   notFound: 404,
   tooBig: 413,
   noFreeCode: 503,
+  badToken: 403,
+  notWaiting: 409,
+  noSeat: 404,
+  seatTaken: 409,
 };
 
 const json = (body: unknown, status = 200): Response =>
@@ -84,6 +104,19 @@ async function lobbyOf(_request: Request, env: Env, code: string): Promise<Respo
   return info ? json(info) : refuse('noSuchRoom');
 }
 
+/** Lo que se pide para dar un asiento a la IA: la ficha de quien creo la sala y el asiento. */
+const isHandToAiRequest = (value: unknown): value is { token: string; seat: number } =>
+  isObject(value) && isToken(value.token) && isInt(value.seat, 0, MAX_SEATS);
+
+/** Quien creo la sala da un asiento vacio a la IA (`POST /rooms/:code/ai`, cuerpo `{ token, seat }`). */
+async function handSeatToAi(request: Request, env: Env, code: string): Promise<Response> {
+  const read = await bodyOf(request);
+  if (!read.ok) return refuse(read.error);
+  if (!isHandToAiRequest(read.body)) return refuse('badRequest');
+  const handed = await roomOf(env, code).handToAi(read.body.token, read.body.seat);
+  return handed.ok ? json({ ok: true }) : refuse(handed.error);
+}
+
 /** La subida a WebSocket la hace el objeto de la sala (es quien tiene las conexiones). */
 async function connect(request: Request, env: Env, code: string): Promise<Response> {
   if (request.headers.get('Upgrade') !== 'websocket') return refuse('badRequest');
@@ -93,6 +126,7 @@ async function connect(request: Request, env: Env, code: string): Promise<Respon
 const ROUTES: readonly Route[] = [
   { method: 'POST', pattern: /^\/rooms$/, run: createRoom },
   { method: 'GET', pattern: /^\/rooms\/([^/]+)$/, run: lobbyOf },
+  { method: 'POST', pattern: /^\/rooms\/([^/]+)\/ai$/, run: handSeatToAi },
   { method: 'GET', pattern: /^\/rooms\/([^/]+)\/ws$/, run: connect },
 ];
 

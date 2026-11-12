@@ -18,7 +18,10 @@ import { CampaignScreen, type CampaignHost } from '../menu/campaignScreen';
 import { HomeScreen, type HomeHost } from '../menu/homeScreen';
 import { LiveBackground } from '../menu/liveBackground';
 import { OptionsPanel } from '../menu/optionsPanel';
+import { isTypingInvite, OnlineScreen, type OnlineHost } from '../menu/onlineScreen';
 import { isTypingCode, SetupScreen, type SetupHost } from '../menu/setupScreen';
+import { parseInvite } from '../net/onlineRooms';
+import type { OnlineMatch } from '../net/onlineMatch';
 import { playMusic } from '../music';
 import { checkNotes, closeNotes, notesCommand, notesOpen } from '../patchNotes';
 import { matchConfigFor, randomSeed } from '../setup';
@@ -28,7 +31,7 @@ import { terrainPalette, type TerrainPalette } from '../ui/terrainColors';
 import { live } from './game/host';
 import type { GameStartData } from './game/types';
 
-type Mode = 'home' | 'setup' | 'campaign';
+type Mode = 'home' | 'setup' | 'campaign' | 'online';
 
 /** Ajustes que cambian el fondo del menu: hay que volver a crear la escena. */
 const isBackgroundSetting = (key: string) => key === 'menuBg' || key === 'terrainArt';
@@ -54,7 +57,16 @@ export class MenuScene extends Phaser.Scene {
       startNew: (seed: number) => this.startNew(seed),
       openSetup: () => this.openSetup(),
       openCampaign: () => this.openCampaign(),
+      openOnline: () => this.openOnline(),
       openOptions: () => this.optionsPanel.open(),
+    }),
+  );
+
+  private readonly online: OnlineScreen = new OnlineScreen(
+    live<OnlineHost>({
+      palette: { get: () => this.palette },
+      toHome: () => this.toHome(),
+      startOnline: (match: OnlineMatch) => this.startOnline(match),
     }),
   );
 
@@ -80,7 +92,7 @@ export class MenuScene extends Phaser.Scene {
     super('Menu');
   }
 
-  create(data?: { open?: 'setup' }): void {
+  create(data?: { open?: 'setup' | 'online' }): void {
     this.leaving = false;
     this.mode = 'home';
     this.palette = terrainPalette(this.textures);
@@ -101,7 +113,7 @@ export class MenuScene extends Phaser.Scene {
       () => this.publishAll(),
     );
 
-    Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions());
+    Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions(), this.online.actions());
     // La ayuda del menu cuenta las reglas de una partida nueva de las de siempre.
     ui.set({
       screen: 'menu',
@@ -114,6 +126,8 @@ export class MenuScene extends Phaser.Scene {
     });
     this.home.publish();
     if (data?.open === 'setup') this.openSetup();
+    if (data?.open === 'online') this.openOnline();
+    this.openInviteFromHash();
 
     this.listenToKeyboard();
     playMusic(this, 'menu');
@@ -132,6 +146,7 @@ export class MenuScene extends Phaser.Scene {
     if (this.optionsPanel.isOpen) return this.optionsPanel.context();
     if (this.mode === 'setup') return isTypingCode() ? 'typing' : 'setup';
     if (this.mode === 'campaign') return 'campaign';
+    if (this.mode === 'online') return isTypingInvite() ? 'typing' : 'online';
     return 'home';
   }
 
@@ -143,6 +158,7 @@ export class MenuScene extends Phaser.Scene {
     if (this.optionsPanel.isOpen) return this.optionsPanel.command(command);
     if (this.mode === 'setup') return isTypingCode() ? this.setup.typingCommand(command) : this.setup.command(command);
     if (this.mode === 'campaign') return this.campaign.command(command);
+    if (this.mode === 'online') return isTypingInvite() ? this.online.typingCommand(command) : this.online.command(command);
     this.home.command(command);
   }
 
@@ -174,6 +190,7 @@ export class MenuScene extends Phaser.Scene {
   private publishAll(): void {
     if (this.mode === 'home') this.home.publish();
     else if (this.mode === 'setup') this.setup.publish();
+    else if (this.mode === 'online') this.online.publish();
     else this.campaign.publish();
   }
 
@@ -194,6 +211,28 @@ export class MenuScene extends Phaser.Scene {
   private openCampaign(): void {
     this.mode = 'campaign';
     this.campaign.open();
+  }
+
+  private openOnline(): void {
+    this.mode = 'online';
+    this.online.open();
+  }
+
+  /** Un enlace de invitacion en la direccion (`#/sala/CODIGO/FICHA`): directo a esa sala. */
+  private openInviteFromHash(): void {
+    const invite = parseInvite(location.hash);
+    if (!invite) return;
+    history.replaceState(null, '', location.pathname + location.search);
+    this.mode = 'online';
+    this.online.openRoom(invite.code, invite.token);
+  }
+
+  /** La sala ya juega: la escena sigue la partida con su conexion. */
+  private startOnline(match: OnlineMatch): void {
+    if (this.leaving) return match.close();
+    this.leaving = true;
+    blurFocusedElement();
+    this.scene.start('Game', { start: 'online', online: match } satisfies GameStartData);
   }
 
   private continueGame(): void {
@@ -236,6 +275,7 @@ export class MenuScene extends Phaser.Scene {
       this.liveBackground = null;
       resetActions();
       closeNotes();
+      this.online.destroy();
     });
   }
 

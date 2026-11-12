@@ -28,7 +28,7 @@ export type MenuCommand =
  * Donde esta el foco de los mandos. 'map': el mapa (ordenes InputCommand); el resto son menus
  * (MenuCommand) y cada uno tiene sus teclas. Las escenas lo dicen con `controlContext()`.
  */
-export type MenuContext = 'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'end';
+export type MenuContext = 'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'online' | 'end';
 export type ControlContext = 'map' | MenuContext;
 
 export interface MenuBinding {
@@ -79,6 +79,8 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
     { codes: ['ArrowDown'], command: move(0, 1) },
   ],
   campaign: MENU_KEYS,
+  // Jugar en línea: R cambia el mapa al crear una sala.
+  online: [...MENU_KEYS, { codes: ['KeyR'], command: { kind: 'reroll' } }],
   // Fin de partida: una fila de botones; Tab pasa al siguiente y Esc vuelve al menu.
   end: [
     { codes: ['ArrowLeft', 'KeyA'], command: move(-1, 0) },

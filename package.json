@@ -23,6 +23,7 @@
     "shots:update": "npm run build:single && node tests/visual/shots.mjs --update",
     "touch": "npm run build:single && node tests/visual/touch.mjs",
     "keys": "npm run build:single && node tests/visual/keys.mjs",
+    "online": "npm run build:single && node tests/visual/online.mjs",
     "play": "tsx tools/play/cli.ts",
     "fuzz": "tsx tools/improve/fuzz.ts",
     "metrics": "tsx tools/improve/metrics.ts",

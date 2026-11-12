@@ -4,8 +4,10 @@
  * y su modo en `state.mode`. Sin Phaser.
  */
 import { duel, playerTeam, teamIds } from '../../core/teams';
-import { screenControllers } from '../../core/controllers';
-import { GameSession, isPerson, passiveController, type Controller } from '../../core/session';
+import { controllersFor, screenControllers } from '../../core/controllers';
+import { takesTurn } from '../../core/rules';
+import { GameSession, humanController, isPerson, passiveController, remoteController, type Controller } from '../../core/session';
+import type { OnlineMatch } from '../../net/onlineMatch';
 import { createMatch, loadGame } from '../../core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '../../core/match';
 import type { GameState, TeamId } from '../../core/model';
@@ -25,6 +27,8 @@ export interface MatchStart {
   fromSave: boolean;
   /** Se pidio una partida guardada o preparada que no se ha podido leer (y se ha borrado). */
   corruptSave: boolean;
+  /** La conexion con la sala, en una partida por la red (null en una de esta pantalla). */
+  online: OnlineMatch | null;
 }
 
 /** Una escaramuza nueva al azar, una persona contra la IA (sin datos, o si no se ha podido abrir la pedida). */
@@ -32,6 +36,7 @@ const randomSkirmish = (): MatchConfig => skirmishConfig({ seed: randomSeed(), t
 
 /** La partida con la que empieza la escena, en juego (la IA decide con el azar de la partida). */
 export function startMatch(data: GameStartData = { start: 'new', match: randomSkirmish() }): MatchStart {
+  if (data.start === 'online') return startOnlineMatch(data.online);
   const lab = data.start === 'lab' ? (data.lab ?? defaultLab()) : null;
   const saved = data.start === 'load' ? readSavedGame() : null;
   const given = data.start === 'state' ? loadGame(data.state) : null;
@@ -41,7 +46,27 @@ export function startMatch(data: GameStartData = { start: 'new', match: randomSk
   if (corruptSave && data.start === 'load') deleteSave();
   const state = lab ? createMatch(labMatch(lab, lab.play)) : (loaded ?? createMatch(newMatchConfig(data)));
   const session = new GameSession(state, screenControllers(state, labControllers(state, !!lab)));
-  return { session, viewer: viewerOf(session), lab, fromSave: !!saved, corruptSave };
+  return { session, viewer: viewerOf(session), lab, fromSave: !!saved, corruptSave, online: null };
+}
+
+/** Una partida por la red: la vista de este equipo, que juega la persona de esta pantalla; los demas son remotos. */
+function startOnlineMatch(online: OnlineMatch): MatchStart {
+  const { state, team } = online.client;
+  if (!state || team === null) throw new Error('La sala no ha mandado la vista todavia (la pantalla de la sala espera a tenerla)');
+  return { session: mirrorSession(state, team), viewer: team, lab: null, fromSave: false, corruptSave: false, online };
+}
+
+/**
+ * La sesion de la pantalla sobre la vista que manda el servidor: la persona juega su equipo (sus
+ * acciones valen o no segun lo que sabe, como las comprueba la sala) y los demas son remotos (la
+ * sesion los espera: lo que hacen llega en lotes, no por ella). Si la vista esta en un turno ya
+ * empezado, la sesion se pone a esperar a quien le toca sin cambiar nada.
+ */
+export function mirrorSession(state: GameState, viewer: TeamId): GameSession {
+  const seats = new Map(teamIds(state).map((team) => [team, team === viewer ? humanController() : remoteController()] as const));
+  const session = new GameSession(state, controllersFor(state, seats));
+  if (state.turnStarted && takesTurn(state, state.turn)) session.step();
+  return session;
 }
 
 /**
