@@ -989,6 +989,112 @@ sesion, ni las reglas, ni la vista la importan (una partida se juega igual con r
 red no cambia la partida a mano (`APPLY_STEPS`) ni manda con `dispatch` (`NO_DIRECT_DISPATCH`): pasa
 por la sesion. `tests/layers.test.ts` y `tests/lintImports.test.ts` lo comprueban.
 
+### Servidor (`server/`)
+
+Un Worker de Cloudflare con un Durable Object por sala (PR 2; el como se publica, `server/README.md`).
+Es un adaptador fino sobre `Room`: no sabe de la partida, solo mueve lo que la sala devuelve para
+cada asiento (`Outgoing`), la guarda y lleva los relojes. Es un paquete aparte (`server/package.json`,
+workspace de npm) que importa el nucleo tal cual (`@core/...` → `src/core`): el mismo codigo que la
+pantalla, sin compilar nada aparte; `npm run check` de la raiz acaba con sus tipos y sus tests.
+
+- **Rutas** (`index.ts`, una lista `ROUTES`). `POST /rooms` crea una sala con una escaramuza
+  (`RoomRequest`: `SkirmishChoices` mas un reloj por turno y una espera a los que faltan, si se
+  quieren; se comprueba campo a campo como un mensaje, `roomRequest.ts`, con los ids contra el
+  contenido) y devuelve su codigo (6 signos sin letras que se confundan, `codes.ts`) y, por asiento
+  de persona, su ficha y su enlace `#/sala/CODIGO/FICHA`. `GET /rooms/:code` es el vestibulo: estado,
+  version y quien esta, nada de la partida. `GET /rooms/:code/ws` sube a WebSocket; el saludo va como
+  primer mensaje, asi la ficha no viaja en la URL (ni en registros de acceso ni en el historial).
+- **El objeto de una sala** (`roomObject.ts`, `idFromName(codigo)`) tiene la sala en memoria por
+  `RoomAdapter` (`roomAdapter.ts`, el unico que toca `Room`) y la guarda entera en su almacen tras
+  cada mensaje atendido (`snapshot`; con los relojes aparte, `meta`). Al despertar la recupera
+  (`restore`) y, como la sala recuperada no conoce a nadie, vuelve a meter a cada conexion que sigue
+  abierta con la ficha que lleva pegada (`Attachment`: asiento, conexion y ficha van en el socket,
+  WebSocket Hibernation API, y sobreviven a que el objeto duerma); esos clientes reciben su vista
+  entera otra vez, que es su punto de partida nuevo. Un cierre de socket es `leave(asiento, conexion)`;
+  otra pestaña con la misma ficha cierra la de antes (4409). Lo que no entra se despide con un codigo
+  de cierre propio (`CLOSE_CODES`), y los bytes se acotan antes de leer el JSON (`MAX_MESSAGE_BYTES`,
+  tambien el cuerpo de `POST /rooms`); a quien la sala le rechaza mas de `MAX_REJECTIONS_PER_WINDOW`
+  mensajes en un minuto (`rejectionsOf`, `rateLimit.ts`) se le corta.
+- **Una alarma, varios relojes** (`timers.ts`, datos puros; el objeto pone la alarma del primero que
+  vence, `nextAlarm`): caducar a los 30 dias sin actividad (`expire`: se borra todo y se cierran las
+  conexiones), el turno de quien se espera (`endTurnOf`; otro dia u otro asiento es otro reloj),
+  la espera a los que no llegan (`replaceWithAi` a cada asiento vacio y la partida empieza) y seguir
+  una partida a medias (`pending()` tras cada paso → alarma ya → `continueMatch()` desde ella: cada
+  llamada tiene su tiempo de CPU, y un turno largo de la IA se reparte en varias). Lo que una alarma
+  hace llega a los que estan dentro como lo de cualquier paso.
+- **CORS** (`cors.ts`): la web del juego y lo que diga `ALLOWED_ORIGINS` (wrangler.toml), mas
+  `localhost`, `127.0.0.1` y `null` (el HTML abierto desde un fichero). Sin origen (otro servidor)
+  pasa: no es un navegador.
+- **Lo que hay que configurar** (una vez, `server/README.md`): una cuenta de Cloudflare (vale el plan
+  gratuito: las salas son Durable Objects con SQLite, `new_sqlite_classes`; los clasicos piden el de
+  pago), los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` en GitHub (con ellos,
+  `.github/workflows/server.yml` publica con cada push a `main` que toque el servidor o el nucleo;
+  sin ellos no hace nada) y la variable `VITE_SERVER_URL` con la URL del Worker (los workflows de
+  la web y de las previews la pasan al `vite build`; en local, `.env` a partir de `.env.example`).
+- **Tests**: `server/test/unit` (las piezas puras con la sala de verdad) y `server/test/workers`
+  (`@cloudflare/vitest-plugin`: el Worker y el objeto de verdad dentro de workerd; dos personas por
+  WebSocket y la IA juegan varios dias con el cliente simulado de `tests/sim/netClient.ts`, que
+  comprueba cada mensaje; volver a entrar, despertar el objeto (`evictDurableObject`), un `seq`
+  repetido, el tope de bytes, y las alarmas adelantando los relojes guardados y sonando con
+  `runDurableObjectAlarm`).
+
+La pantalla (PR 3) solo necesita `VITE_SERVER_URL`: ver "Cliente". `POST /rooms/:code/ai` deja a
+quien creo la sala (la ficha del primer asiento) dar a la IA un asiento de persona que no ha
+entrado, mientras la sala espera (`RoomAdapter.handToAi`).
+
+### Cliente (`src/net/`, el menu y la escena)
+
+La pantalla de una partida por la red (PR 3). Lo de fuera del nucleo que habla con el servidor esta
+en `src/net/` (sin Phaser: se prueba con un socket falso, `tests/onlineClient.test.ts`); el menu y
+la escena solo lo enchufan.
+
+| Modulo | Que va |
+|---|---|
+| `net/serverUrl` | donde esta el servidor: `VITE_SERVER_URL` al compilar o, por encima, `ilogic.server` en localStorage (el propio servidor de quien juega, o uno local en los tests); sin ninguna, el juego no ofrece «Jugar en línea» |
+| `net/serverLink` | `ServerLink`: el WebSocket con los mensajes de `net/protocol` encima. Saluda (`hello`) al abrirse; numera lo que tiene efecto (`seq`, guardado en localStorage por sala y asiento: otra pestaña o una recarga siguen contando, y el `welcome` dice hasta donde atendio el servidor); si se corta, vuelve sola con esperas crecientes (`RECONNECT_MS`), saluda otra vez (el servidor manda la vista entera: punto de partida nuevo) y reenvia lo mandado sin contestar que el servidor no atendio (el `seq` evita repetir); si falta un `step`, pide la vista (`resync`) y no entrega el mensaje con hueco; un cierre sin arreglo (ficha mala, otra version, otra pestaña con la misma ficha, la sala ya no existe) no se reintenta |
+| `net/roomClient` | `RoomClient`: los `ServerMessage` como lo que entiende la pantalla. Su partida es la vista del equipo (`loadView` de la entera; `mergeView` con cada `events`). Lo que pasa mientras juegan los demas sale en una cola de jugadas (`RoomPlay`: un lote `events` con la vista de antes y la de despues, una `view` entera, a quien se espera `turn`, o `ended`; `next()` espera si no hay). Una accion propia (`act`) devuelve una promesa con el `result` del servidor, y el `events` que viene detras es su eco: pone la vista al dia (`nextEcho`) y no se anima otra vez |
+| `net/roomApi` | las rutas que no son la partida: crear una sala, el vestibulo, dar un asiento vacio a la IA |
+| `net/onlineRooms` | «Mis partidas en línea» en localStorage (codigo, ficha, asiento, lo ultimo que se supo; quien creo la sala guarda tambien los enlaces de los demas) y `parseInvite` (un enlace, su parte tras el `#` o `CODIGO/FICHA`) |
+| `net/onlineMatch` | `OnlineMatch`: enlace y cliente juntos, con quien escucha ahora (primero la pantalla de la sala, luego la escena) |
+| `menu/onlineScreen` | la pantalla «Jugar en línea»: crear sala (las opciones de una partida nueva, quien juega cada asiento y con que general, reloj por turno y espera a los que faltan), entrar con un enlace, la lista de salas y el vestibulo (quien esta, por `GET /rooms/:code` cada pocos segundos; los enlaces para repartir, con copiar y compartir; «Sustituir por IA» de quien creo la sala). Un enlace `#/sala/CODIGO/FICHA` al cargar entra directo (`MenuScene.openInviteFromHash`). Cuando la sala juega (o acabo), la escena sigue con la conexion (`GameStartData` 'online') |
+
+**Como juega la escena.** La partida de la pantalla es la vista que manda el servidor, en una
+sesion espejo (`mirrorSession`, matchSetup.ts): la persona juega su equipo (`humanController`) y los
+demas son remotos (`remoteController`: la sesion los espera y no juega nada por ellos). Asi todo lo
+de la escena funciona igual que en una partida de esta pantalla:
+
+- **El turno propio** se juega como en la hotseat: cada accion pasa por la sesion espejo (`act`, que
+  la comprueba con lo que el equipo sabe, igual que la sala antes de preguntar a la partida de
+  verdad) y, si vale, se manda a la sala (`sendToRoom`). Si la sala la rechaza (algo escondido lo
+  impedia), se avisa y se pide la vista (`resync`), que vuelve a ser la partida. Lo que se anima
+  (`perform`: atacar, capturar, comprar, unirse, subir, poderes) lo decide el servidor —los dados y lo
+  escondido estan alli—: se espera su `result` y su eco (la vista al dia), la vista pasa a ser la
+  partida (`adoptView`: sesion espejo nueva) y sus sucesos, tal como los ve el equipo, se animan como
+  siempre (con `attacker: null` si no se ve al que dispara). Las ordenes que empiezan ya
+  (`dispatcher`) se mandan igual.
+- **Los demas** llegan por lotes (`TurnFlow.playRemote`): cada lote se anima por turnos (el aviso de
+  cada uno, `splitByTurn` por los `turnStart`) contra `animationView(antes, despues)`: la vista de
+  despues (las unidades que siguen estan donde acaban, como en la pantalla de siempre) mas las que
+  solo estan en la de antes (cayeron o se metieron en la niebla por el camino: sin ellas no habria
+  dibujo que animar). Al acabar el lote, la de despues es la partida. Un `turn` de otro equipo pone
+  «Esperando al equipo N…» (la linea de la conexion, `UIState.net`); el propio devuelve el mando (y
+  si no se mira la pestaña, el titulo y un toque lo avisan: `turnNotice.ts`). Un `ended` deja la
+  ultima vista y el final lo decide la pantalla como siempre (`checkEnd`). Lo que llega en el turno
+  propio sin ser eco (una `view` tras un corte, el servidor que acaba el turno por tiempo) lo
+  atiende `remotePlayDuringOwnTurn`.
+- **Lo que no vale por la red**: guardar y repetir el turno enemigo no estan en el menu de pausa
+  (`gameMenuOf(s, isOnline)`; la partida sigue desde el servidor: «Mis partidas en línea» o el
+  enlace), el final solo ofrece volver al menu (la revancha seria otra sala), la barra del general
+  enemigo enseña «?» (su carga no llega: `GeneralVM.chargeKnown`) y no hay autoguardado.
+- **Limites de esta PR**: el general de cada asiento lo elige quien crea la sala; los enemigos que
+  se rinden en el turno propio no se anuncian hasta que llega su lote; el reloj por turno corre en el
+  servidor sin cuenta atras en la pantalla.
+
+`tests/visual/online.mjs` (`npm run online`) lo prueba de punta a punta: arranca `wrangler dev` en
+un puerto libre, dos navegadores por `file://` con el servidor en `ilogic.server`, A crea la sala, B
+entra por el enlace, juegan dos turnos cada uno, B pierde la conexion y vuelve sola, recarga por el
+enlace, y los dos ven lo mismo. Esta en el workflow de capturas (informativo).
+
 ## Graficos
 
 `tools/art/` (dibujos guardados de PixelLab y Retro Diffusion) → `npm run assets` →

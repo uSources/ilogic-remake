@@ -414,9 +414,18 @@ export default tseslint.config(
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
   },
   {
-    // Lo que va dentro de page.evaluate() se ejecuta en el navegador.
+    // Lo que va dentro de page.evaluate() se ejecuta en el navegador; el resto, en Node (que tambien tiene fetch y temporizadores).
     files: ['tests/visual/**/*.mjs', 'scripts/**/*.mjs'],
-    languageOptions: { globals: { window: 'readonly', localStorage: 'readonly', document: 'readonly' } },
+    languageOptions: {
+      globals: {
+        window: 'readonly',
+        localStorage: 'readonly',
+        document: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        AbortSignal: 'readonly',
+      },
+    },
   },
   {
     // El service worker de la PWA se ejecuta en el navegador, fuera de la pagina.

@@ -6,6 +6,7 @@ import type { ActionDispatcher, UnitMenuOption } from '../../core/actions';
 import type { MatchConfig } from '../../core/match';
 import type { GameAction, GameEvent, Pos, Unit } from '../../core/model';
 import type { LabOptions } from '../../lab';
+import type { OnlineMatch } from '../../net/onlineMatch';
 import type { TextKey } from '../../settings';
 
 /**
@@ -76,7 +77,12 @@ export const CONFIRM_MS = 2500;
  * Como empieza una partida (scene.start('Game', data)): una nueva, con su configuracion (cualquier
  * modo de juego: `MatchConfig`, core/match.ts); la guardada; una preparada desde fuera (`state`, el
  * JSON de una partida: depuracion y pruebas), o el laboratorio de animaciones (src/lab.ts, que
- * prepara la suya). Sin datos, una escaramuza nueva al azar.
+ * prepara la suya), o una por la red (`online`: la conexion con su sala, que ya tiene la vista de
+ * este equipo). Sin datos, una escaramuza nueva al azar.
  */
 export type GameStartData =
-  { start: 'new'; match: MatchConfig } | { start: 'load' } | { start: 'state'; state: string } | { start: 'lab'; lab?: LabOptions };
+  | { start: 'new'; match: MatchConfig }
+  | { start: 'load' }
+  | { start: 'state'; state: string }
+  | { start: 'lab'; lab?: LabOptions }
+  | { start: 'online'; online: OnlineMatch };
