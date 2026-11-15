@@ -76,6 +76,8 @@ interface BuildingPiece {
   readonly glb: GlbUnit | null;
   /** Su tipo (id de buildings.json): de el sale si tiene chimenea. */
   readonly type: string;
+  /** Segundos que lleva apareciendo con sus colores nuevos, al cambiar de dueño (null: ya esta). */
+  popping: number | null;
 }
 
 export class BoardView {
@@ -147,7 +149,10 @@ export class BoardView {
       piece.glb?.update(seconds);
       if (piece.popping !== null) growIn(piece, seconds);
     }
-    for (const piece of this.buildings.values()) piece.glb?.update(seconds);
+    for (const piece of this.buildings.values()) {
+      piece.glb?.update(seconds);
+      if (piece.popping !== null) growIn(piece, seconds);
+    }
   }
 
   private syncBuildings(): void {
@@ -167,8 +172,11 @@ export class BoardView {
     const side = this.shownOwner(building);
     let piece = this.buildings.get(key);
     if (piece?.side !== side) {
+      const wasThere = !!piece;
       if (piece) this.removeBuilding(key, piece);
       piece = this.addBuilding(building, side);
+      // Al cambiar de dueño (una captura) el edificio vuelve a crecer con sus colores nuevos.
+      if (wasThere) startPopping(piece);
     }
     this.showCapture(piece, building);
   }
@@ -179,7 +187,7 @@ export class BoardView {
     object.position.copy(this.groundOf(building));
     const captureBar = newBadge(BUILDING_BADGE_HEIGHT);
     object.add(captureBar);
-    const piece = { object, captureBar, side, glb, type: building.type };
+    const piece: BuildingPiece = { object, captureBar, side, glb, type: building.type, popping: null };
     this.buildings.set(buildingKey(building), piece);
     this.object.add(object);
     return piece;
@@ -230,7 +238,6 @@ export class BoardView {
     const { object, body, badgeHeight, glb } = this.unitModel(unit);
     const lifeBar = newBadge(badgeHeight);
     object.add(lifeBar);
-    object.scale.setScalar(0.01);
     const piece: UnitPiece = {
       uid: unit.uid,
       object,
@@ -240,8 +247,9 @@ export class BoardView {
       lifeBar,
       glb,
       motion: unitTypeOf(this.s, unit).motion,
-      popping: 0,
+      popping: null,
     };
+    startPopping(piece);
     this.units.set(unit.uid, piece);
     this.object.add(object);
     return piece;
@@ -260,8 +268,20 @@ function isInside(object: THREE.Object3D, ancestor: THREE.Object3D): boolean {
   return false;
 }
 
-/** Una unidad nueva crece hasta su tamaño con un pequeño rebote. */
-function growIn(piece: UnitPiece, seconds: number): void {
+/** Una pieza que aparece: su objeto y los segundos que lleva creciendo (null: ya esta). */
+interface Popping {
+  readonly object: THREE.Object3D;
+  popping: number | null;
+}
+
+/** Empieza a aparecer: desde casi nada. */
+function startPopping(piece: Popping): void {
+  piece.object.scale.setScalar(0.01);
+  piece.popping = 0;
+}
+
+/** Una pieza nueva (una unidad, un edificio con dueño nuevo) crece hasta su tamaño con un pequeño rebote. */
+function growIn(piece: Popping, seconds: number): void {
   const elapsed = (piece.popping ?? 0) + seconds;
   const progress = Math.min(elapsed / POP_SECONDS, 1);
   piece.object.scale.setScalar(THREE.MathUtils.lerp(0.01, 1, progress) + Math.sin(progress * Math.PI) * 0.15);
@@ -274,9 +294,11 @@ function baseColorOf(mesh: THREE.Object3D, material: THREE.MeshToonMaterial): TH
   return mesh.userData.baseColor as THREE.Color;
 }
 
-/** Oscurece (o devuelve a su color) las piezas de una unidad, con los materiales compartidos de toon.ts. */
-function tintSpent(object: THREE.Object3D, isSpent: boolean): void {
-  const scale = isSpent ? SPENT_TINT : 1;
+/** Oscurece (o devuelve a su color) las piezas de una unidad que ya ha hecho todo. */
+const tintSpent = (object: THREE.Object3D, isSpent: boolean): void => tint(object, isSpent ? SPENT_TINT : 1);
+
+/** Pone las piezas de una unidad a ese tanto de su color (1: el suyo), con los materiales compartidos de toon.ts. */
+export function tint(object: THREE.Object3D, scale: number): void {
   object.traverse((node) => {
     if (!(node instanceof THREE.Mesh)) return;
     const mesh = node as THREE.Mesh;

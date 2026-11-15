@@ -64,29 +64,40 @@ export async function sparks(host: FxHost, at: THREE.Vector3, power = 1): Promis
   for (const { spark } of pieces) host.layer.remove(spark);
 }
 
+const TEXT_FONT = "bold 36px 'Silkscreen', monospace";
+const TEXT_HEIGHT = 48;
+const TEXT_PADDING = 12;
+/** Alto del texto en el mundo (casillas); el ancho, el que pida el texto. */
+const TEXT_WORLD_HEIGHT = 0.3;
+
+/** El texto dibujado con su borde oscuro, en un lienzo tan ancho como pida. */
 function textTexture(text: string, color: string): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 48;
+  const measure = canvas.getContext('2d')!;
+  measure.font = TEXT_FONT;
+  canvas.width = Math.ceil(measure.measureText(text).width) + TEXT_PADDING * 2;
+  canvas.height = TEXT_HEIGHT;
   const draw = canvas.getContext('2d')!;
-  draw.font = "bold 36px 'Silkscreen', monospace";
+  draw.font = TEXT_FONT;
   draw.textAlign = 'center';
   draw.textBaseline = 'middle';
   draw.lineWidth = 8;
   draw.strokeStyle = '#0b1220';
-  draw.strokeText(text, 64, 26);
+  draw.strokeText(text, canvas.width / 2, 26);
   draw.fillStyle = color;
-  draw.fillText(text, 64, 26);
+  draw.fillText(text, canvas.width / 2, 26);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
-/** Un texto (el daño) que sube desde `at` y se desvanece. */
+/** Un texto (el daño, lo que queda de una captura) que sube desde `at` y se desvanece. */
 export async function floatingText(host: FxHost, at: THREE.Vector3, text: string, color: string): Promise<void> {
-  const material = new THREE.SpriteMaterial({ map: textTexture(text, color), depthTest: false, transparent: true });
+  const map = textTexture(text, color);
+  const material = new THREE.SpriteMaterial({ map, depthTest: false, transparent: true });
   const label = new THREE.Sprite(material);
-  label.scale.set(0.8, 0.3, 1);
+  const { width, height } = map.image;
+  label.scale.set((TEXT_WORLD_HEIGHT * width) / height, TEXT_WORLD_HEIGHT, 1);
   label.renderOrder = 20;
   host.layer.add(label);
   await host.animate(TEXT_SECONDS, (progress) => {

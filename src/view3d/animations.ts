@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import type { MovementMotion } from '../core/content';
 import type { GameEvent, Pos } from '../core/model';
-import type { BoardView, UnitPiece } from './board';
+import { t } from '../settings';
+import { tint, type BoardView, type UnitPiece } from './board';
 import { floatingText, projectile, sparks, type FxHost } from './fx';
 import type { PuffKind } from './particles';
 import { facingAngle } from './space';
@@ -25,13 +26,27 @@ const ARC_FROM = 1.5;
 /** Altura (sobre la pieza) de donde sale y a donde llega un disparo. */
 const MUZZLE_HEIGHT = 0.3;
 const DAMAGE_COLOR = '#ff7a73';
+/** Lo que deja cada forma de moverse al caer: la infanteria se va (queda la mancha); vehiculos y aviones, sus restos. */
+const LEAVES_WRECK: Readonly<Record<MovementMotion, boolean>> = { march: false, drive: true, fly: true };
+/** Lo que se ladean y lo oscuros que quedan los restos (tanto por uno de su color). */
+const WRECK_TILT = 0.3;
+const CHARRED = 0.22;
+const CAPTURE_PARTIAL_COLOR = '#fff1a8';
+const CAPTURE_DONE_COLOR = '#ffd447';
+/** Por encima del suelo del edificio salen las chispas y el texto de la captura. */
+const CAPTURE_LIFT = new THREE.Vector3(0, 0.5, 0);
+const HOP_SECONDS = 0.4;
+const HOP = 0.12;
 
 /** Lo que necesita una animacion: las piezas, la capa de efectos y el reloj del mundo. */
 export interface AnimationHost extends FxHost {
   board: BoardView;
-  /** Humo, polvo y fuego (particles.ts) y las huellas en el suelo (groundMarks.ts). */
+  /** Humo, polvo y fuego (particles.ts) y las huellas y manchas en el suelo (groundMarks.ts). */
   puff(kind: PuffKind, at: THREE.Vector3, count?: number): void;
   mark(at: THREE.Vector3, heading: number, motion: MovementMotion): void;
+  scorch(at: THREE.Vector3): void;
+  /** Deja los restos de ese modelo donde esta (wrecks.ts). */
+  wreck(model: THREE.Object3D): void;
 }
 
 type EventOf<K extends GameEvent['kind']> = Extract<GameEvent, { kind: K }>;
@@ -127,16 +142,35 @@ async function takeHit(piece: UnitPiece, damage: number, host: AnimationHost): P
   await Promise.all([sparks(host, at), shake, floatingText(host, at, `-${damage}`, DAMAGE_COLOR)]);
 }
 
-/** Una unidad destruida vuelca, se encoge y desaparece (despues `sync` quita su pieza). */
+/** Una unidad destruida estalla y deja una mancha quemada; despues, sus restos o nada (`sync` quita su pieza). */
 async function fall(piece: UnitPiece, host: AnimationHost): Promise<void> {
-  void sparks(host, muzzleOf(piece), 1.6);
-  host.puff('blast', muzzleOf(piece), 14);
-  host.puff('darkSmoke', muzzleOf(piece), 8);
+  const at = muzzleOf(piece);
+  void sparks(host, at, 1.6);
+  host.puff('blast', at, 14);
+  host.puff('darkSmoke', at, 8);
+  host.scorch(piece.object.position);
+  await (LEAVES_WRECK[piece.motion] ? burnDown(piece, host) : vanish(piece, host));
+  piece.object.visible = false;
+}
+
+/** Vuelca, se encoge y desaparece. */
+async function vanish(piece: UnitPiece, host: AnimationHost): Promise<void> {
   await host.animate(FALL_SECONDS, (progress) => {
     piece.body.rotation.z = progress * 1.4;
     piece.object.scale.setScalar(1 - progress * 0.9);
   });
-  piece.object.visible = false;
+}
+
+/** Se ladea, se quema y cae al suelo (un avion, desde su altura); ahi quedan sus restos. */
+async function burnDown(piece: UnitPiece, host: AnimationHost): Promise<void> {
+  const ground = piece.object.position.y;
+  const height = new THREE.Box3().setFromObject(piece.object).min.y - ground;
+  await host.animate(FALL_SECONDS, (progress) => {
+    piece.body.rotation.z = progress * WRECK_TILT;
+    piece.object.position.y = ground - height * progress * progress;
+    tint(piece.object, 1 - progress * (1 - CHARRED));
+  });
+  host.wreck(piece.object);
 }
 
 /** Un golpe de un lado al otro (si se ve alguno de los dos) y, si cae el que lo recibe, su caida. */
@@ -161,12 +195,25 @@ async function animateAttack(event: EventOf<'attack'>, host: AnimationHost): Pro
   await exchange(target, attacker, { damage: event.counter, killed: event.attackerKilled }, host);
 }
 
-/** Capturar: la unidad da dos saltitos en el edificio (la barra la pone `sync`). */
+/**
+ * Capturar: la unidad da dos saltitos y del edificio salen chispas doradas con lo que le queda (o, si
+ * ya es suyo, «¡CAPTURADO!»; el edificio con sus colores nuevos lo pone `sync`, creciendo).
+ */
 async function animateCapture(event: EventOf<'capture'>, host: AnimationHost): Promise<void> {
   const piece = host.board.pieceOf(event.uid);
   if (!piece?.object.visible) return;
+  const isDone = event.left <= 0;
+  const label = isDone ? t(event.owner === null ? 'fxNeutral' : 'fxCaptured') : `${event.left}/${event.total}`;
+  const at = host.board.groundOf(event.at).add(CAPTURE_LIFT);
+  const color = isDone ? CAPTURE_DONE_COLOR : CAPTURE_PARTIAL_COLOR;
+  await Promise.all([hop(piece, host), sparks(host, at, isDone ? 1.3 : 0.7), floatingText(host, at, label, color)]);
+}
+
+/** Dos saltitos de la pieza en su sitio. */
+async function hop(piece: UnitPiece, host: AnimationHost): Promise<void> {
   const rest = piece.body.position.y;
-  await host.animate(0.4, (progress) => (piece.body.position.y = rest + Math.abs(Math.sin(progress * Math.PI * 2)) * 0.12));
+  await host.animate(HOP_SECONDS, (progress) => (piece.body.position.y = rest + Math.abs(Math.sin(progress * Math.PI * 2)) * HOP));
+  piece.body.position.y = rest;
 }
 
 const EVENT_ANIMATIONS: EventAnimations = { move: animateMove, attack: animateAttack, capture: animateCapture };
