@@ -32,7 +32,7 @@
   color: var(--text);
   font-family: var(--body);
   text-align: left;
-  cursor: var(--cursor-button, pointer);
+  cursor: pointer;
   scroll-snap-align: start;
   box-shadow:
     inset 2px 2px 0 var(--hi),

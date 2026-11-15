@@ -29,7 +29,7 @@
   color: var(--text);
   font-family: var(--body);
   font-size: 13px;
-  cursor: var(--cursor-button, pointer);
+  cursor: pointer;
   max-width: 100%;
   text-align: left;
 }

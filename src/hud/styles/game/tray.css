@@ -15,7 +15,7 @@
   padding: 0;
   border: 3px solid var(--ink);
   background: var(--slot);
-  cursor: var(--cursor-button, pointer);
+  cursor: pointer;
 }
 .tray .slots button:hover {
   background: var(--sel);

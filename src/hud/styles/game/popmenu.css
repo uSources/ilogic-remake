@@ -33,7 +33,7 @@
   text-align: left;
   font-family: var(--display);
   font-size: 17px;
-  cursor: var(--cursor-button, pointer);
+  cursor: pointer;
 }
 .item.icon {
   padding-left: 28px;

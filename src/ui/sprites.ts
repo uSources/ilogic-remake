@@ -1,6 +1,5 @@
 import type { TerrainType, UnitType } from '../core/content';
-import { buildingTypeOf, terrainAt, themeOf, unitTypeOf } from '../core/gameContent';
-import { isOnBoard } from '../core/mapGrid';
+import { buildingTypeOf, terrainAt, unitTypeOf } from '../core/gameContent';
 import type { Building, GameState, Pos, TeamId, Unit } from '../core/model';
 import { hasImage, type GameImages } from '../atlas';
 import { settings } from '../settings';
@@ -14,7 +13,6 @@ import { canStillAct } from '../core/rules';
  */
 
 /** Orillas de 2013 de cada tema (id de themes.json): c_<numero>_<mascara>. */
-const CLASSIC_COAST: Readonly<Record<string, number>> = { Plains: 0, Desert: 1, Forest: 2, Swamp: 3, Snowy: 4 };
 
 const warned = new Set<string>();
 
@@ -81,22 +79,3 @@ export function terrainKey(terrain: TerrainType): string {
 }
 
 /** La casilla a (dx, dy) de `tile` es tierra. Fuera del mapa cuenta como agua: no hay orilla en los bordes. */
-function isLandBeside(s: GameState, tile: Pos, dx: number, dy: number): boolean {
-  const pos = { x: tile.x + dx, y: tile.y + dy };
-  return isOnBoard(s, pos) && !terrainAt(s, pos).isWater;
-}
-
-/** Orillas de una casilla de agua: c_<tema>_<mascara> y esquinas 16..19. */
-export function shoreKeys(s: GameState, tile: Pos): string[] {
-  if (!terrainAt(s, tile).isWater) return [];
-  const isLand = (dx: number, dy: number) => isLandBeside(s, tile, dx, dy);
-  const mask = (isLand(0, 1) ? 8 : 0) | (isLand(-1, 0) ? 4 : 0) | (isLand(0, -1) ? 2 : 0) | (isLand(1, 0) ? 1 : 0);
-  const theme = CLASSIC_COAST[themeOf(s).id] ?? 0;
-  const keys: string[] = [];
-  if (mask) keys.push(`c_${theme}_${mask}`);
-  if (isLand(-1, -1) && (mask & 6) === 0) keys.push(`c_${theme}_16`);
-  if (isLand(1, -1) && (mask & 3) === 0) keys.push(`c_${theme}_17`);
-  if (isLand(1, 1) && (mask & 9) === 0) keys.push(`c_${theme}_18`);
-  if (isLand(-1, 1) && (mask & 12) === 0) keys.push(`c_${theme}_19`);
-  return keys;
-}

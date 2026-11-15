@@ -76,7 +76,7 @@
   color: var(--text);
   border: 3px solid var(--ink);
   font-family: var(--body);
-  cursor: var(--cursor-button, pointer);
+  cursor: pointer;
   box-shadow:
     inset 2px 2px 0 var(--hi),
     inset -2px -2px 0 var(--lo);

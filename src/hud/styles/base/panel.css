@@ -23,7 +23,7 @@
   font-family: var(--display);
   font-size: 18px;
   line-height: 1;
-  cursor: var(--cursor-button, pointer);
+  cursor: pointer;
   pointer-events: auto;
 }
 .px-btn:hover {

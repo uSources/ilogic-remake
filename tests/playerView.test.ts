@@ -294,7 +294,7 @@ describe('las ordenes que cumple la partida deciden con lo que sabe el equipo', 
   });
 
   it('la escena empieza una orden recien dada con lo que sabe el equipo (decidingAs), como al cumplirse sola', () => {
-    // Lo que hace scenes/game/orders.ts al dar una orden a una unidad que aun puede moverse.
+    // Lo que hace la partida al dar una orden a una unidad que aun puede moverse.
     const startNow = (s: GameState, uid: number) =>
       carryOut(
         decidingAs(s, 0, (known) => startStandingOrder(known, uid, 0)),
