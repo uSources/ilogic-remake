@@ -1,7 +1,8 @@
 /**
  * El raton (y el dedo) sobre el mundo 3D: con el boton izquierdo, arrastrar desplaza la camara y
- * soltar sin arrastrar toca la casilla; con el derecho, arrastrar gira la camara alrededor del punto
- * mirado; la rueda acerca y aleja. Que hacer con la casilla tocada lo dice quien lo instala.
+ * soltar sin arrastrar toca la casilla; con el central, arrastrar desplaza (como en los juegos de
+ * estrategia y los programas 3D); con el derecho, gira la camara alrededor del punto mirado; la rueda
+ * acerca y aleja. Que hacer con la casilla tocada lo dice quien lo instala.
  */
 import type { Pos } from '../core/model';
 import type { CameraRig } from './cameraRig';
@@ -10,8 +11,6 @@ import type { CameraRig } from './cameraRig';
 const DRAG_THRESHOLD = 6;
 /** Radianes que gira la camara por pixel arrastrado con el boton derecho. */
 const ORBIT_PER_PIXEL = 0.008;
-const LEFT_BUTTON = 0;
-const RIGHT_BUTTON = 2;
 
 export interface PointerHost {
   rig: CameraRig;
@@ -23,20 +22,26 @@ export interface PointerHost {
 
 type DragKind = 'pan' | 'orbit';
 
-interface Press {
-  kind: DragKind;
+/** Que hace cada boton del raton (por `PointerEvent.button`): como arrastra y si soltarlo sin arrastrar toca la casilla. */
+interface ButtonRole {
+  drag: DragKind;
+  taps: boolean;
+}
+
+const BUTTON_ROLES: Readonly<Record<number, ButtonRole>> = {
+  0: { drag: 'pan', taps: true },
+  1: { drag: 'pan', taps: false },
+  2: { drag: 'orbit', taps: false },
+};
+
+interface Press extends ButtonRole {
   x: number;
   y: number;
   isDrag: boolean;
 }
 
-const dragKindOf = (button: number): DragKind | null => {
-  if (button === LEFT_BUTTON) return 'pan';
-  return button === RIGHT_BUTTON ? 'orbit' : null;
-};
-
 function drag(press: Press, event: PointerEvent, canvas: HTMLCanvasElement, rig: CameraRig): void {
-  if (press.kind === 'orbit') return rig.orbit(-event.movementX * ORBIT_PER_PIXEL, event.movementY * ORBIT_PER_PIXEL);
+  if (press.drag === 'orbit') return rig.orbit(-event.movementX * ORBIT_PER_PIXEL, event.movementY * ORBIT_PER_PIXEL);
   const scale = rig.tilesPerPixel(canvas.clientHeight);
   rig.pan(-event.movementX * scale, event.movementY * scale);
 }
@@ -45,10 +50,12 @@ export function installPointer(canvas: HTMLCanvasElement, host: PointerHost): vo
   let press: Press | null = null;
   canvas.addEventListener('contextmenu', (event) => event.preventDefault());
   canvas.addEventListener('pointerdown', (event) => {
-    const kind = dragKindOf(event.button);
-    if (!kind) return;
+    const role = BUTTON_ROLES[event.button];
+    if (!role) return;
+    // Sin esto, el boton central abre el desplazamiento automatico del navegador.
+    event.preventDefault();
     canvas.setPointerCapture(event.pointerId);
-    press = { kind, x: event.clientX, y: event.clientY, isDrag: false };
+    press = { ...role, x: event.clientX, y: event.clientY, isDrag: false };
   });
   canvas.addEventListener('pointermove', (event) => {
     if (!press) return host.hover(host.tileAt(event.clientX, event.clientY));
@@ -56,7 +63,7 @@ export function installPointer(canvas: HTMLCanvasElement, host: PointerHost): vo
     if (press.isDrag) drag(press, event, canvas, host.rig);
   });
   canvas.addEventListener('pointerup', (event) => {
-    const isTap = press?.kind === 'pan' && !press.isDrag;
+    const isTap = !!press?.taps && !press.isDrag;
     press = null;
     const pos = isTap ? host.tileAt(event.clientX, event.clientY) : null;
     if (pos) host.tap(pos);

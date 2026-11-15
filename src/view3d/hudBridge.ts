@@ -30,7 +30,7 @@ export interface HudActions {
 }
 
 /** Linea de ayuda de abajo: los mandos del 3D (los del juego en 2D son otros). */
-const HINT_3D = 'Clic: elegir y mover · Arrastrar o WASD: desplazar · Botón derecho: girar · Rueda: acercar';
+const HINT_3D = 'Clic: elegir y mover · Arrastrar, botón central o WASD: desplazar · Botón derecho: girar · Rueda: acercar';
 const NOTHING_HIDDEN: ReadonlySet<number> = new Set();
 
 const idleUnits = (s: GameState, viewer: TeamId) => s.units.filter((unit) => unit.team === viewer && canActNow(unit));
