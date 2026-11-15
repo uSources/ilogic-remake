@@ -15,7 +15,8 @@
  * - Lo que manda el servidor a este asiento lleva su `step`: si falta uno, se pide la vista otra vez
  *   (`resync`) y el mensaje con hueco no se entrega.
  *
- * Sin Phaser ni DOM: el socket y el reloj se le dan (`LinkDeps`), asi se prueba con un socket falso.
+ * Sin Phaser ni DOM: el socket y el reloj se le dan (`LinkDeps`), asi se prueba con un socket falso
+ * (tests/onlineClient.test.ts). Lo crea `OnlineMatch` (onlineMatch.ts) y lo escucha `RoomClient`.
  */
 import { CURRENT_PROTOCOL, type ClientMessage, type ServerMessage } from '../core/net';
 

@@ -2,7 +2,8 @@
  * Donde esta el servidor de partidas por la red: la URL que puso Vite al compilar (`VITE_SERVER_URL`,
  * ver .env.example y server/README.md) o la que el jugador (o un test) deja en localStorage para
  * hablar con otro servidor (`ilogic.server`: la suya propia, o uno en local). Sin ninguna, el juego no
- * ofrece partidas por la red.
+ * ofrece partidas por la red. Lo preguntan el menu (si ofrece «Jugar en línea» y donde pedir la
+ * sala) y `OnlineMatch` (la URL del WebSocket, `roomSocketUrl`).
  */
 
 const OVERRIDE_KEY = 'ilogic.server';

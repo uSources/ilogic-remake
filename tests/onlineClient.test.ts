@@ -244,7 +244,7 @@ const context = (): RoomContext => ({ content: defaultContent(), newToken: token
 /** Una sala con un cliente de verdad sentado en el asiento 0 (los mensajes van directos, sin red). */
 function seated(teams = TWO_PEOPLE_AND_AI) {
   const room = Room.create({ match: skirmishConfig({ seed: 21, size: 16, teams, settingChanges: { fog: true } }) }, context());
-  const tokens = room.people().map((seat) => seat.token);
+  const tokens = room.personSeats().map((seat) => seat.token);
   const plays: RoomPlay[] = [];
   let seq = 0;
   const resyncs: number[] = [];

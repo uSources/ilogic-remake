@@ -2,7 +2,8 @@
  * La partida: raiz de composicion. Tiene el ciclo de Phaser (init, create, update, SHUTDOWN), el estado
  * de la partida y la entrada de los mandos, y lo reparte a los modulos de src/scenes/game: que hace
  * cada fase del turno (phases/), mover (unitMoves), acciones y ordenes (orders), seleccion, arrastrar,
- * animar, turno enemigo, final... Cada modulo ve solo lo que pide su `...Host` (al final del fichero).
+ * animar, turno enemigo, final, la partida por la red (onlinePlay)... Cada modulo ve solo lo que pide su
+ * `...Host` (al final del fichero).
  */
 import Phaser from 'phaser';
 import { turnEndOrderOf } from '../core/squads';
@@ -33,7 +34,7 @@ import {
 import { TILE } from '../layout';
 import { playMusic } from '../music';
 import { OptionsPanel } from '../menu/optionsPanel';
-import { settings, t, nameOf, type TextKey } from '../settings';
+import { settings, t, nameOf } from '../settings';
 import { deleteSave, writeSave } from '../storage';
 import { MapView, type HighlightKind, type ViewOptions } from '../ui/mapView';
 import { WeatherFx } from '../ui/weatherFx';
@@ -52,10 +53,8 @@ import { computeHighlights } from './game/highlights';
 import { menuModel, stepMenuRow } from './game/menuModel';
 import { forecastFor, hintText, labPanel, moveTipFor, selectionPanel, teamIncome } from './game/hudParts';
 import { captureBars, controlPointMarks, escortMarks, intentLines, orderMarks } from './game/mapOverlays';
-import { mirrorSession, startMatch } from './game/matchSetup';
-import type { OnlineMatch } from '../net/onlineMatch';
-import type { RoomPlay } from '../net/roomClient';
-import type { FatalClose, LinkStatus } from '../net/serverLink';
+import { startMatch } from './game/matchSetup';
+import { OnlinePlay, type OnlinePlayHost } from './game/onlinePlay';
 import { notifyTurn, restoreTitle } from './game/turnNotice';
 import { TutorialTracker } from './game/tutorial';
 import { StandingOrderPreview } from './game/standingOrderPreview';
@@ -89,8 +88,6 @@ export type { GameStartData } from './game/types';
 const NO_TILES: ReadonlyMap<string, number> = new Map();
 /** Casillas de margen al llevar la camara a una unidad. */
 const FOLLOW_MARGIN = 3;
-/** Lo que se deja leer el aviso de que la sala ha cerrado antes de volver al menu. */
-const ROOM_CLOSED_QUIT_MS = 2500;
 /** Antes de empezar la partida no se ve nada (la vision de verdad la pone `refresh`). */
 const NOTHING_SEEN: Grid<boolean> = Grid.filled({ width: 0, height: 0 }, false);
 /** Fases con el panel de lo elegido (varias unidades) a la vista. */
@@ -123,8 +120,8 @@ export class GameScene extends Phaser.Scene {
   private fastForward = false;
   /** Ultima casilla con un combate o una captura (para enfocar el final). */
   private lastAt: Pos | null = null;
-  /** La conexion con la sala en una partida por la red (null en una de esta pantalla). */
-  private online: OnlineMatch | null = null;
+  /** La partida por la red (game/onlinePlay.ts; null en una de esta pantalla). */
+  private online: OnlinePlay | null = null;
 
   // --- Lo que se ve -----------------------------------------------------------
   private vis: Grid<boolean> = NOTHING_SEEN;
@@ -252,88 +249,8 @@ export class GameScene extends Phaser.Scene {
     this.lab = start.lab;
     this.fromSave = start.fromSave;
     this.corruptSave = start.corruptSave;
-    this.online = start.online;
-    if (this.online) this.listenToRoom(this.online);
-  }
-
-  // =========================================================================
-  // Partida por la red
-  // =========================================================================
-
-  /** Lo que llega de la sala: las jugadas las lleva TurnFlow; la conexion se enseña; un cierre sin arreglo saca al menu. */
-  private listenToRoom(online: OnlineMatch): void {
-    online.listener = {
-      onStatus: (status) => this.publishNet(status),
-      onClosed: (reason) => this.roomClosed(reason),
-      onPlay: () => void this.remotePlay(online),
-    };
-    this.publishNet(online.link.status);
-  }
-
-  /** Una jugada que llega fuera de la espera (en el turno propio): la saca de la cola y la atiende TurnFlow. */
-  private async remotePlay(online: OnlineMatch): Promise<void> {
-    if (this.turns.isWatchingRemote) return;
-    const play: RoomPlay = await online.client.next();
-    if (online !== this.online) return;
-    await this.turns.remotePlayDuringOwnTurn(play);
-  }
-
-  private publishNet(status: LinkStatus): void {
-    const waiting = ui.get().net?.waiting ?? null;
-    ui.set({ net: { status: status === 'online' ? 'online' : status === 'closed' ? 'offline' : 'reconnecting', waiting } });
-  }
-
-  /** La sala no deja seguir (otra pestaña, otra version, la sala ya no existe): se avisa y se sale al menu. */
-  private roomClosed(reason: FatalClose): void {
-    const text: Record<FatalClose, TextKey> = {
-      badToken: 'onlineBadToken',
-      replaced: 'onlineReplaced',
-      gone: 'onlineGone',
-      badVersion: 'onlineBadVersion',
-      other: 'onlineFailed',
-    };
-    showToast(t(text[reason]));
-    this.publishNet('closed');
-    if (!this.ended) this.time.delayedCall(ROOM_CLOSED_QUIT_MS, () => this.quitToMenu());
-  }
-
-  /** La vista que manda el servidor pasa a ser la partida que se ve, con su sesion (la de antes ya no vale). */
-  private adoptView(state: GameState): void {
-    if (this.phase !== 'map' && this.phase !== 'busy') this.abandonSelection();
-    this.s = state;
-    this.session = mirrorSession(state, this.viewer);
-    this.session.subscribe((step) => this.record(step));
-    this.standingOrderPreview.reset();
-    this.refresh();
-  }
-
-  /** Manda a la sala lo que la persona acaba de hacer aqui; si la sala no lo acepta, su vista es la que vale. */
-  private async sendToRoom(online: OnlineMatch, action: GameAction): Promise<void> {
-    const reply = await online.client.act(action);
-    if (reply.ok || online !== this.online) return;
-    showToast(t('onlineRejected'));
-    online.client.resync();
-  }
-
-  /**
-   * Por la red, una accion que se anima: la decide el servidor (los dados y lo escondido estan alli),
-   * su eco pone la partida al dia y sus sucesos, tal como los ve este equipo, se animan como siempre.
-   */
-  private async performOnline(online: OnlineMatch, action: GameAction, ghostKey?: string | null): Promise<boolean> {
-    const match = this.match;
-    const echo = online.client.nextEcho();
-    const reply = await online.client.act(action);
-    if (match !== this.match) return false;
-    if (!reply.ok) {
-      showToast(t('onlineRejected'));
-      online.client.resync();
-      return false;
-    }
-    const after = await echo;
-    if (match !== this.match) return false;
-    this.adoptView(after);
-    await this.playEvents(reply.events, ghostKey);
-    return true;
+    this.online = start.online ? new OnlinePlay(start.online, this.onlinePlayHost()) : null;
+    this.online?.listen();
   }
 
   create(): void {
@@ -908,13 +825,13 @@ export class GameScene extends Phaser.Scene {
    */
   private act(action: GameAction): GameEvent[] | null {
     const result = this.session.act(this.viewer, action);
-    if (result.ok && this.online) void this.sendToRoom(this.online, action);
+    if (result.ok && this.online) this.online.send(action);
     return result.ok ? result.events : null;
   }
 
   /** La hace y anima sus sucesos (ver ActionHost). */
   private async perform(action: GameAction, ghostKey?: string | null): Promise<boolean> {
-    if (this.online) return this.performOnline(this.online, action, ghostKey);
+    if (this.online) return this.online.perform(action, ghostKey);
     const events = this.act(action);
     if (events) await this.playEvents(events, ghostKey);
     return !!events;
@@ -925,6 +842,16 @@ export class GameScene extends Phaser.Scene {
     for (const event of step.events) this.noteEvent(event, step.team === this.viewer);
     // Una rendicion no se deshace al cargar: el guardado de esta partida, si lo hay, la recoge ya.
     if (step.action.kind === 'surrender') this.refreshSave();
+  }
+
+  /** La partida que se ve pasa a ser esta, con su sesion (por la red: la vista que manda el servidor); la de antes ya no vale. */
+  private replaceMatch(state: GameState, session: GameSession): void {
+    if (this.phase !== 'map' && this.phase !== 'busy') this.abandonSelection();
+    this.s = state;
+    this.session = session;
+    this.session.subscribe((step) => this.record(step));
+    this.standingOrderPreview.reset();
+    this.refresh();
   }
 
   /** Vuelve a guardar la partida si ya tenia guardado (no crea uno que no habia). */
@@ -1201,7 +1128,7 @@ export class GameScene extends Phaser.Scene {
       // La sesion cambia con cada partida: se pide la suya al mandar.
       dispatcher: (s, team, action) => {
         const result = this.session.dispatcher(s, team, action);
-        if (result.ok && this.online) void this.sendToRoom(this.online, action);
+        if (result.ok && this.online) this.online.send(action);
         return result;
       },
     };
@@ -1499,9 +1426,31 @@ export class GameScene extends Phaser.Scene {
       handOver: (team) => this.handOver(team),
       centerOnHq: () => this.centerOnHq(),
       online: { get: () => this.online },
-      adoptView: (state) => this.adoptView(state),
-      notifyTurn: () => notifyTurn(this),
       ...this.actionHost(),
+    });
+  }
+
+  private onlinePlayHost(): OnlinePlayHost {
+    return live<OnlinePlayHost>({
+      scene: { get: () => this },
+      state: rw(
+        () => this.s,
+        (state) => (this.s = state),
+      ),
+      viewer: { get: () => this.viewer },
+      match: { get: () => this.match },
+      ended: { get: () => this.ended },
+      fastForward: rw(
+        () => this.fastForward,
+        (flag) => (this.fastForward = flag),
+      ),
+      turns: { get: () => this.turns },
+      replaceMatch: (state, session) => this.replaceMatch(state, session),
+      play: (events, ghostKey) => this.playEvents(events, ghostKey),
+      refresh: () => this.refresh(),
+      checkEnd: () => this.checkEnd(),
+      notifyTurn: () => notifyTurn(this),
+      quitToMenu: () => this.quitToMenu(),
     });
   }
 

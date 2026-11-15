@@ -9,7 +9,7 @@ import { startsTurn } from '../../core/actions';
 import { cloneState, unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { posOf } from '../../core/geom';
-import { autoCapturers, fallenSince, lastFallOrder, roundReport, unitById, isOnMap, type RoundReport } from '../../core/rules';
+import { autoCapturers, fallenSince, lastFallOrder, unitById, isOnMap, type RoundReport } from '../../core/rules';
 import { serialize } from '../../core/save';
 import {
   isAutosaveMoment,
@@ -21,17 +21,17 @@ import {
   type SessionStep,
 } from '../../core/session';
 import { squadById } from '../../core/squads';
-import { isHostile, shownTeamNumber, teamState } from '../../core/teams';
+import { isHostile, shownTeamNumber } from '../../core/teams';
 import type { GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
-import { showBanner, showReport, showToast, ui, type ReportLineVM } from '../../hud/store';
-import type { OnlineMatch } from '../../net/onlineMatch';
-import { animationView, splitByTurn, type RoomPlay } from '../../net/roomClient';
+import { showBanner, showReport, showToast, type ReportLineVM } from '../../hud/store';
 import { fmtNum, settings, t, nameOf } from '../../settings';
 import { writeSave } from '../../storage';
 import { center, floatText } from '../../ui/fx';
 import { weatherEffectsText } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
 import { PAL_CSS } from '../../ui/palette';
+import type { OnlinePlay, TurnHooks } from './onlinePlay';
+import { addToSummary, newTurnSummary, type TurnSummary } from './turnSummary';
 import { CONFIRM_MS, INPUT_LOCK_MS, type ActionHost, type Phase } from './types';
 
 /** Donde estaba mirando el jugador antes del turno enemigo. */
@@ -79,22 +79,8 @@ export interface TurnHost extends ActionHost {
   handOver(team: TeamId): Promise<void>;
   /** Camara y cursor sobre la Base del equipo que mira (la primera vez que mira). */
   centerOnHq(): void;
-  /** La conexion con la sala en una partida por la red (null en una de esta pantalla). */
-  readonly online: OnlineMatch | null;
-  /** Por la red: la vista que manda el servidor pasa a ser la partida que se ve (y su sesion). */
-  adoptView(state: GameState): void;
-  /** Por la red: ha vuelto a tocar a la persona mientras no miraba la pestaña (titulo, aviso). */
-  notifyTurn(): void;
-}
-
-/** Lo que se cuenta al volver el turno al jugador: lo que ha pasado mientras jugaban los demas. */
-interface TurnSummary {
-  /** El fin de ronda (si ha acabado una por medio). */
-  report: RoundReport | null;
-  /** Unidades propias que han cumplido su orden al acabar el turno (ahora esperan otra). */
-  ordersDone: number[];
-  /** Unidades propias de viaje que ya llegan este turno (el ultimo trozo lo hace el jugador). */
-  arrived: number[];
+  /** La partida por la red (null en una de esta pantalla): los turnos de los demas llegan por ella (onlinePlay.ts). */
+  readonly online: OnlinePlay | null;
 }
 
 /** Instante de "sin armar" del boton de fin de turno (muy atras: nunca cuenta como reciente). */
@@ -109,18 +95,6 @@ const ARRIVED_MARGIN = 3;
 /** "+vida" de las unidades curadas: empieza cuando ya se ha leido el resumen, uno detras de otro. */
 const HEAL_TEXT_DELAY_MS = 1100;
 const HEAL_TEXT_STAGGER_MS = 90;
-
-/** Lo que es de un equipo en lo que pasa mientras juegan los demas (para el resumen al volver). */
-function addToSummary(summary: TurnSummary, s: GameState, team: TeamId, events: readonly GameEvent[]): void {
-  if (events.some((event) => event.kind === 'newDay')) summary.report = roundReport(s, events);
-  for (const event of events) {
-    if (event.actor !== team) continue;
-    if (event.kind !== 'standingOrderDone') continue;
-    // La de ir alli que ya llega: la acaba quien juega (se le avisa); las demas, cumplidas.
-    if (event.end === 'withinReach') summary.arrived.push(event.uid);
-    else if (event.end === 'fulfilled') summary.ordersDone.push(event.uid);
-  }
-}
 
 /** Nombre de una unidad para el resumen, con su escuadra si la tiene: "Tanque (Alfa)". */
 function unitWithSquad(s: GameState, unit: Unit): string {
@@ -139,7 +113,7 @@ export function fallsNoticeFor(s: GameState, viewer: TeamId, seen: number): { ke
   return { key: fallen.length === 1 ? 'teamOut' : 'teamsOut', numbers };
 }
 
-export class TurnFlow {
+export class TurnFlow implements TurnHooks {
   /** Esta jugando (o repitiendose) el turno de otro equipo. */
   othersPlaying = false;
   /** Se estan repitiendo los ultimos turnos ajenos (no cuentan en el tutorial). */
@@ -159,8 +133,6 @@ export class TurnFlow {
   private endArmedAt = NOT_ARMED;
   /** El equipo al que le toca ahora si no es el que mira (null: el turno es suyo). */
   private otherTeam: TeamId | null = null;
-  /** Por la red: se esta sacando de la cola lo que manda la sala (playRemote). */
-  isWatchingRemote = false;
 
   constructor(private readonly host: TurnHost) {}
 
@@ -173,7 +145,6 @@ export class TurnFlow {
     this.seenFalls = new Map();
     this.endArmedAt = NOT_ARMED;
     this.otherTeam = null;
-    this.isWatchingRemote = false;
   }
 
   /** El equipo que esta jugando ahora (el que hace lo que se anima). */
@@ -224,7 +195,7 @@ export class TurnFlow {
     const host = this.host;
     const match = host.match;
     host.phase = 'busy';
-    const summary = host.online ? await this.playRemote(match) : await this.playUntilInput(match);
+    const summary = host.online ? await host.online.watchUntilMyTurn(match) : await this.playUntilInput(match);
     if (!summary) return;
     host.phase = 'map';
     if (!host.lab) showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
@@ -245,7 +216,7 @@ export class TurnFlow {
     this.cameras.set(host.viewer, this.saveCamera());
     this.markFallsSeen(host.viewer);
     host.phase = 'busy';
-    const summary = host.online ? await this.endRemoteTurn(match) : await this.endLocalTurn(match);
+    const summary = host.online ? await host.online.endTurn(match) : await this.endLocalTurn(match);
     if (!summary) return;
     this.backToPlayer(this.cameras.get(host.viewer));
     showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
@@ -261,119 +232,6 @@ export class TurnFlow {
     return this.playUntilInput(match);
   }
 
-  /** Por la red: se le dice a la sala que el turno acabo (si no se acaba de rendir: entonces ya lo sabe) y se mira lo que llega. */
-  private endRemoteTurn(match: number): Promise<TurnSummary | null> {
-    const host = this.host;
-    if (!teamState(host.state, host.viewer).resigned) host.online?.client.endTurn();
-    return this.playRemote(match);
-  }
-
-  /**
-   * Por la red, mientras no es el turno propio: la sala manda lo que pasa por lotes (`RoomPlay`) y aqui
-   * se anima cada uno, hasta que vuelve a tocar a la persona (`turn` suyo). Devuelve lo que contar al
-   * volver, o null si la partida ha cambiado o ha terminado.
-   */
-  private async playRemote(match: number): Promise<TurnSummary | null> {
-    const host = this.host;
-    const online = host.online;
-    if (!online) return null;
-    const summary: TurnSummary = { report: null, ordersDone: [], arrived: [] };
-    this.isWatchingRemote = true;
-    try {
-      for (;;) {
-        const play = await online.client.next();
-        if (match !== host.match) return null;
-        const isMyTurn = await this.showRemote(play, summary);
-        if (match !== host.match || host.ended) return null;
-        if (isMyTurn) break;
-      }
-    } finally {
-      this.isWatchingRemote = false;
-    }
-    this.otherTeam = null;
-    this.othersPlaying = false;
-    this.setWaiting(null);
-    host.notifyTurn();
-    return summary;
-  }
-
-  /** Atiende una jugada de la sala mientras se espera: true si ya vuelve a tocar a la persona. */
-  private async showRemote(play: RoomPlay, summary: TurnSummary): Promise<boolean> {
-    const host = this.host;
-    switch (play.kind) {
-      case 'view':
-        host.adoptView(play.state);
-        return false;
-      case 'events':
-        await this.showBatch(play, summary);
-        return false;
-      case 'turn':
-        if (play.team === host.viewer) return true;
-        this.waitFor(play.team);
-        return false;
-      case 'ended':
-        this.endedByServer();
-        return true;
-    }
-  }
-
-  /** La sala ha acabado: con la ultima vista, el final de la partida (lo decide la pantalla como siempre). */
-  private endedByServer(): void {
-    const host = this.host;
-    const last = host.online?.client.state;
-    if (last) host.adoptView(last);
-    host.checkEnd();
-  }
-
-  /**
-   * Un lote de pasos de los demas, animado por turnos (el aviso de cada uno) contra la vista con la
-   * que se puede dibujar (`animationView`); al acabar, la vista de despues es la partida.
-   */
-  private async showBatch(play: Extract<RoomPlay, { kind: 'events' }>, summary: TurnSummary): Promise<void> {
-    const host = this.host;
-    const match = host.match;
-    addToSummary(summary, play.after, host.viewer, play.events);
-    host.state = animationView(play.before, play.after);
-    host.refresh();
-    for (const chunk of splitByTurn(play.events)) {
-      if (chunk.team !== null) await this.turnStarts(chunk.team);
-      if (match !== host.match) return;
-      await host.play(chunk.events);
-      if (match !== host.match) return;
-      if (chunk.events.some((event) => event.kind === 'teamDefeated')) this.markFallsSeen(host.viewer);
-    }
-    host.adoptView(play.after);
-  }
-
-  /** Se espera a otra persona (o la IA juega en el servidor): el cartel y la linea de la conexion lo dicen. */
-  private waitFor(team: TeamId): void {
-    const host = this.host;
-    this.otherTeam = team;
-    this.othersPlaying = true;
-    host.fastForward = false;
-    this.setWaiting(t('onlineWaitingFor').replace('{n}', String(shownTeamNumber(team))));
-    host.refresh();
-  }
-
-  private setWaiting(waiting: string | null): void {
-    const net = ui.get().net;
-    if (net) ui.set({ net: { ...net, waiting } });
-  }
-
-  /** Por la red, una jugada que llega en el turno propio (no se esta mirando la cola): se atiende aqui. */
-  async remotePlayDuringOwnTurn(play: RoomPlay): Promise<void> {
-    const host = this.host;
-    if (this.isWatchingRemote || host.ended) return;
-    if (play.kind === 'view') return host.adoptView(play.state);
-    if (play.kind === 'events') return host.adoptView(play.after);
-    if (play.kind === 'ended') return this.endedByServer();
-    // La sala ha pasado el turno sin que lo acabara la persona (se le acabo el tiempo): se mira a los demas.
-    if (play.team !== host.viewer) {
-      this.waitFor(play.team);
-      await this.endOwnTurn();
-    }
-  }
-
   /** La partida sigue: no se ha cambiado por otra ni acaba de terminar (si termina, empieza el final). */
   private continues(match: number): boolean {
     return match === this.host.match && !this.host.checkEnd();
@@ -385,7 +243,7 @@ export class TurnFlow {
    */
   private async playUntilInput(match: number): Promise<TurnSummary | null> {
     const host = this.host;
-    const summary: TurnSummary = { report: null, ordersDone: [], arrived: [] };
+    const summary = newTurnSummary();
     const last: SessionStep = await playMatch(host.session, async (step) => {
       if (this.startsTurnOfAnotherPerson(step)) await this.switchPerson(step.team, summary);
       if (match !== host.match) return false;
@@ -433,7 +291,7 @@ export class TurnFlow {
   }
 
   /** `viewer` ha visto las caidas hasta la ultima apuntada. */
-  private markFallsSeen(viewer: TeamId): void {
+  markFallsSeen(viewer: TeamId): void {
     this.seenFalls.set(viewer, lastFallOrder(this.host.session.state));
   }
 
@@ -454,10 +312,15 @@ export class TurnFlow {
   }
 
   /** Empieza el turno de un equipo: el propio (ya no juegan otros) o el de otro, con su aviso. */
-  private async turnStarts(team: TeamId): Promise<void> {
+  async turnStarts(team: TeamId): Promise<void> {
     if (team !== this.host.viewer) return this.announceTurnOf(team);
-    this.otherTeam = null;
-    this.othersPlaying = false;
+    this.othersPlay(null);
+  }
+
+  /** Por la red: se espera a otro equipo (o la IA juega en el servidor), o ya no (null: vuelve a tocar a la persona). */
+  othersPlay(team: TeamId | null): void {
+    this.otherTeam = team;
+    this.othersPlaying = team !== null;
   }
 
   /** El turno de otro equipo empieza: su aviso (rojo si es enemigo, azul si es aliado). */

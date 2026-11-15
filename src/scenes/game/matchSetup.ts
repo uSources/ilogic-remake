@@ -1,7 +1,8 @@
 /**
  * Con que partida empieza la escena (GameStartData): una nueva (de su configuracion: createMatch),
- * la guardada, una preparada desde fuera o el laboratorio. Cada una trae sus reglas en `state.settings`
- * y su modo en `state.mode`. Sin Phaser.
+ * la guardada, una preparada desde fuera, el laboratorio o una por la red (la vista que manda el
+ * servidor, en una sesion espejo: `mirrorSession`, que tambien usa OnlinePlay con cada vista nueva).
+ * Cada una trae sus reglas en `state.settings` y su modo en `state.mode`. Sin Phaser.
  */
 import { duel, playerTeam, teamIds } from '../../core/teams';
 import { controllersFor, screenControllers } from '../../core/controllers';

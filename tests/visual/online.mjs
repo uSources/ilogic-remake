@@ -198,7 +198,7 @@ try {
 
   // B pierde la conexion a mitad de la partida (un corte seco: el navegador no llega a despedirse) y vuelve sola.
   await b.evaluate(() => {
-    const link = window.ilogic.scene.getScene('Game').online.link;
+    const link = window.ilogic.scene.getScene('Game').online.room.link;
     const socket = link.socket;
     socket.close();
     socket.onclose({ code: 1006 });
