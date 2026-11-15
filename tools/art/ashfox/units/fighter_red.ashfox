@@ -1,0 +1,102 @@
+ashfox-model 1
+asset fighter_red {
+  rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 10u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  motion idle for ModelRig {
+    duration = 2s; fps = 20; loop = loop; rest-relative = true;
+    track body.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.5s = (3deg, 0deg, 5deg) catmullrom;
+      key 1s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.5s = (-3deg, 0deg, -5deg) catmullrom;
+      key 2s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+  motion drive for ModelRig {
+    duration = 1s; fps = 20; loop = loop; rest-relative = true;
+    track body.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.25s = (-4deg, 0deg, 6deg) catmullrom;
+      key 0.5s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.75s = (4deg, 0deg, -6deg) catmullrom;
+      key 1s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+  motion fire for ModelRig {
+    duration = 0.4s; fps = 30; loop = once; rest-relative = true;
+    track body.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (-5deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 32px; }
+    chart fuselage box { width = 38px; height = 18px; coverage = opaque; }
+    chart canopy box { width = 16px; height = 7px; coverage = opaque; }
+    chart wing box { width = 44px; height = 7px; coverage = opaque; }
+    chart fin box { width = 8px; height = 6px; coverage = opaque; }
+    chart nozzle box { width = 8px; height = 3px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = team_red; background-alpha = 255;
+      palette {
+        team_red = (#8a1a1a, #c8302a, #f0605a);
+        glass = (#4f9fc8, #9fe3ff, #e6f8ff);
+        dark_red = (#601212, #962220, #c84038);
+        gun = (#20242e, #3a404e, #5c6474);
+      }
+
+      chart fuselage box {
+        origin = (0px, 0px); fill = team_red;
+      }
+      chart canopy box {
+        origin = (39px, 0px); fill = glass;
+      }
+      chart wing box {
+        origin = (0px, 19px); fill = dark_red;
+      }
+      chart fin box {
+        origin = (45px, 19px); fill = dark_red;
+      }
+      chart nozzle box {
+        origin = (54px, 19px); fill = gun;
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: ModelRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube fuselage { origin = (-2.5u, 10u, -8u); size = (5u, 4u, 14u); surface = skin.fuselage; }
+        cube canopy { origin = (-1.5u, 14u, -5u); size = (3u, 2u, 5u); surface = skin.canopy; }
+        cube wing { origin = (-8u, 11u, -2u); size = (16u, 1u, 6u); surface = skin.wing; }
+        cube fin { origin = (-0.5u, 14u, 3u); size = (1u, 3u, 3u); surface = skin.fin; }
+        cube nozzle { origin = (-1.5u, 11u, 6u); size = (3u, 2u, 1u); surface = skin.nozzle; }
+      }
+    }
+  }
+  export asset fighter_red {
+    settings { density = 16; forward = north; }
+    skeleton = ModelSkeleton;
+    motion = idle;
+    motion = drive;
+    motion = fire;
+    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
+  }
+}

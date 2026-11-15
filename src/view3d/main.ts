@@ -33,9 +33,14 @@ const START_YAW = Math.PI / 4;
 
 render(h(Hud, {}), document.getElementById('hud')!);
 applySettings();
-const [textures, glbModels] = await Promise.all([loadGameAtlas(), GlbLibrary.load(TERRAIN_MODEL_FILES)]);
-
 const { session, viewer } = startPrototype();
+/** Los tipos de unidad y de edificio de la partida: de cada uno se busca su modelo de Ashfox. */
+const MODEL_TYPES = {
+  units: session.state.content.units.list.map((unitType) => unitType.id),
+  buildings: session.state.content.buildings.list.map((buildingType) => buildingType.id),
+};
+const [textures, glbModels] = await Promise.all([loadGameAtlas(), GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES)]);
+
 const state = session.state;
 const world = new World(document.getElementById('game')!);
 const terrain = buildTerrain(state, glbModels);

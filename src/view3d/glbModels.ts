@@ -1,8 +1,9 @@
 /**
- * Modelos GLB hechos con Ashfox (fuentes en tools/art/ashfox, salida en public/assets/models): los
- * de las unidades que ya tienen uno, animados ('idle', 'drive', 'fire'; cada unidad lleva su copia),
- * y los fijos del terreno (casillas y decorado), que se dibujan instanciados (`staticParts`). Un tipo
- * de unidad sin GLB sigue con su modelo de bloques (models/), asi se pueden ir pasando una a una.
+ * Modelos GLB hechos con Ashfox (fuentes en tools/art/ashfox, salida en public/assets/models): las
+ * unidades, animadas ('idle', 'drive', 'fire'; cada una lleva su copia), los edificios y los fijos
+ * del terreno (casillas y decorado), que se dibujan instanciados (`staticParts`). Se busca el de cada
+ * tipo de unidad y de edificio del contenido de la partida (`units/<tipo>_<equipo>`,
+ * `buildings/<tipo>_<lado>`): uno sin GLB sigue con su modelo de bloques (models/).
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -13,13 +14,11 @@ import { toonTextured } from './toon';
 /** Las animaciones que sabe pedir el juego; un modelo puede no tener alguna. */
 export type UnitClip = 'idle' | 'drive' | 'fire';
 
-/** El fichero de cada tipo de unidad (id de units.json), en azul (lo propio y aliado) y en rojo (lo enemigo). */
-const GLB_UNITS: Readonly<Record<string, { friendly: string; enemy: string }>> = {
-  Tank: { friendly: 'tank_blue', enemy: 'tank_red' },
-};
+/** El modelo de cada tipo de unidad: azul lo propio y aliado, rojo lo enemigo (id de units.json en minusculas). */
+const UNIT_SIDES = { friendly: 'blue', enemy: 'red' } as const;
+const unitFile = (unitType: string, side: keyof typeof UNIT_SIDES): string => `units/${unitType.toLowerCase()}_${UNIT_SIDES[side]}`;
 
-/** Los edificios con modelo de Ashfox (id de buildings.json): uno por lado en assets/models/buildings. */
-const GLB_BUILDINGS: readonly string[] = ['Base', 'City', 'Factory', 'Oil', 'Stronghold', 'Airport'];
+/** El modelo de cada edificio: turquesa lo propio, rojo lo enemigo y gris lo de nadie (como en 2D). */
 const BUILDING_SIDES = { friendly: 'blue', enemy: 'red', neutral: 'neutral' } as const;
 const buildingSideOf = (side: OwnerSide): keyof typeof BUILDING_SIDES =>
   side === 'neutral' ? 'neutral' : isFriendly(side) ? 'friendly' : 'enemy';
@@ -70,26 +69,40 @@ function ownMaterials(object: THREE.Object3D): void {
   });
 }
 
+/** Los tipos de unidad y de edificio (ids del contenido) cuyo modelo se busca. */
+export interface GlbTypes {
+  units: readonly string[];
+  buildings: readonly string[];
+}
+
+/** Un modelo cargado y pasado a la luz toon, o null si no hay (ese tipo sigue con bloques). */
+async function loadModel(loader: GLTFLoader, file: string): Promise<[string, LoadedModel] | null> {
+  try {
+    const gltf = await loader.loadAsync(modelUrl(file));
+    toToon(gltf.scene);
+    return [file, { scene: gltf.scene, clips: gltf.animations }];
+  } catch {
+    return null;
+  }
+}
+
 /** Los modelos GLB cargados, por fichero. */
 export class GlbLibrary {
   private constructor(private readonly models: ReadonlyMap<string, LoadedModel>) {}
 
-  /** Carga los de las unidades y los fijos que se piden (`staticFiles`, rutas dentro de assets/models). */
-  static async load(staticFiles: readonly string[] = []): Promise<GlbLibrary> {
+  /**
+   * Carga los modelos de esos tipos de unidad y de edificio (los que tengan: el que falta se salta) y
+   * los fijos que se piden (`staticFiles`, rutas dentro de assets/models).
+   */
+  static async load(types: GlbTypes, staticFiles: readonly string[] = []): Promise<GlbLibrary> {
     const loader = new GLTFLoader();
-    const unitFiles = Object.values(GLB_UNITS).flatMap((sides) => [sides.friendly, sides.enemy]);
-    const buildingFiles = GLB_BUILDINGS.flatMap((type) =>
+    const unitFiles = types.units.flatMap((type) => Object.keys(UNIT_SIDES).map((side) => unitFile(type, side as keyof typeof UNIT_SIDES)));
+    const buildingFiles = types.buildings.flatMap((type) =>
       Object.keys(BUILDING_SIDES).map((side) => buildingFile(type, side as keyof typeof BUILDING_SIDES)),
     );
     const files = [...unitFiles, ...buildingFiles, ...staticFiles];
-    const loaded = await Promise.all(
-      files.map(async (file) => {
-        const gltf = await loader.loadAsync(modelUrl(file));
-        toToon(gltf.scene);
-        return [file, { scene: gltf.scene, clips: gltf.animations }] as const;
-      }),
-    );
-    return new GlbLibrary(new Map(loaded));
+    const loaded = await Promise.all(files.map((file) => loadModel(loader, file)));
+    return new GlbLibrary(new Map(loaded.filter((entry): entry is [string, LoadedModel] => entry !== null)));
   }
 
   /** Una copia del edificio de ese tipo para ese lado, mirando hacia +z (null si el tipo no tiene GLB). */
@@ -119,8 +132,7 @@ export class GlbLibrary {
 
   /** Una copia animada del modelo de ese tipo para ese lado (null si el tipo no tiene GLB). */
   unit(unitType: string, side: OwnerSide): GlbUnit | null {
-    const files = GLB_UNITS[unitType];
-    const model = files && this.models.get(isFriendly(side) ? files.friendly : files.enemy);
+    const model = this.models.get(unitFile(unitType, isFriendly(side) ? 'friendly' : 'enemy'));
     return model ? animatedCopy(model) : null;
   }
 }

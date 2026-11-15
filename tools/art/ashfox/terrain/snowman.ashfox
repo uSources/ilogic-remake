@@ -1,15 +1,16 @@
 ashfox-model 1
 asset snowman {
-  rig contract StaticRig {
+  rig contract ModelRig {
     handedness = right;
     frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
-    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
   }
-  skeleton StaticSkeleton implements StaticRig {
+  skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
+
   surface contract Skin {
     atlas { width = 64px; height = 32px; }
     chart body box { width = 24px; height = 11px; coverage = opaque; }
@@ -27,7 +28,7 @@ asset snowman {
       palette {
         snowcap = (#d6e6f6, #f0f6ff, #ffffff);
         eyes_k = #141824;
-        scarf = (#9a1c22, #d8323a, #ff6a62);
+        scarf = (#c8a010, #f2c81e, #ffe866);
         carrot = (#c85a10, #ee7a20, #ff9a40);
         hat = (#141824, #262c3c, #3c4458);
       }
@@ -56,7 +57,7 @@ asset snowman {
     }
   }
   component Body {
-    requires rig skeleton: StaticRig;
+    requires rig skeleton: ModelRig;
     requires surface skin: Skin;
     bind bone body to skeleton.body;
     geometry {
@@ -72,7 +73,8 @@ asset snowman {
   }
   export asset snowman {
     settings { density = 16; forward = north; }
-    skeleton = StaticSkeleton;
-    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+    skeleton = ModelSkeleton;
+
+    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
   }
 }

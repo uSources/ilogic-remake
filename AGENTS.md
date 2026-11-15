@@ -52,6 +52,7 @@ npm run huella              # huella del comportamiento: igual antes y despues d
 - `docs/AGENTES.md`: como comprobar el trabajo (API `window.ilogicDebug`, partida por texto, capturas).
 - `improve/DIARIO.md`: experimentos de mejora (leer antes de proponer cambios de equilibrio o IA).
 - `.claude/agents/*.md`: subagentes (equilibrador, entrenador-ia, cazador-fallos, revisor).
-- `.claude/skills/*/SKILL.md`: guias por tarea (codigo, Phaser 4, graficos con Retro Diffusion, nueva
-  unidad, nueva mision, sacar version, equilibrar). Sirven para cualquier agente, no solo Claude.
+- `.claude/skills/*/SKILL.md`: guias por tarea (codigo, Phaser 4, graficos con Retro Diffusion,
+  modelos 3D con Ashfox, nueva unidad, nueva mision, sacar version, equilibrar). Sirven para
+  cualquier agente, no solo Claude.
 - Skills oficiales de Phaser 4: `node_modules/phaser/skills/<tema>/SKILL.md`.
