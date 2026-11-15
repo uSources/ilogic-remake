@@ -8,8 +8,10 @@ En la rama `3d` ya no hay 2D: de aquel juego solo quedan las imagenes (iconos de
   piezas comunes en vez de bucles a mano. Al reescribir, `npm run huella` igual antes y despues.
 - La partida solo cambia con acciones (`dispatch`, `src/core/actions.ts`): ver `docs/ARQUITECTURA.md`, "Acciones".
 - Ideas pendientes y descartadas (con el porque): `docs/IDEAS.md`; quitar de ahi lo que se haga.
+- Estetica del juego (como se ven los modelos 3D, decidida con el usuario): `docs/ESTETICA.md` y skill
+  `estetica`; obligatoria al hacer o revisar un modelo, y lo nuevo que se decida se apunta ahi.
 - Comprobar el trabajo sin ayuda (`npm run play`, `window.ilogic3d`, playground `units3d.html`): `docs/AGENTES.md`.
-- Tareas: skills `arte-retro-diffusion`, `nueva-unidad`, `nueva-mision`, `sacar-version`, `equilibrar`, `ashfox` (modelos 3D).
+- Tareas: skills `estetica`, `arte-retro-diffusion`, `nueva-unidad`, `nueva-mision`, `sacar-version`, `equilibrar`, `ashfox` (modelos 3D).
 - Automejora (solo si el usuario lo pide): skill `automejora` + subagentes de `.claude/agents/`; diario en `improve/DIARIO.md`.
 - Otras IAs: `AGENTS.md` (mismo contenido).
 - Graficos: `npm run assets` (README, "Graficos"). Versiones y notas: README, "Notas de parche".

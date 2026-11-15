@@ -39,6 +39,7 @@ npm run huella              # huella del comportamiento: igual antes y despues d
 - Unidades, edificios, terreno, reglas e IA en `src/core/content/*.json` (`docs/CONTENIDO.md`); generador de mapas en `src/core/mapgen/` (fachada `mapgen.ts`: terreno, salidas, edificios, puntos de control y los pasos en orden), con sus numeros en `mapgen.json` y `themes.json` (el contenido se lee de cada partida, ya resuelto: `s.content`, `unitTypeOf(s, unit)`, `terrainAt(s, pos)`); textos en `src/i18n/es/` y `src/i18n/en/`, un fichero por tema (`t('clave')`, `src/settings.ts`); colores del HUD en `src/hud/hud.css` y `src/ui/sides.ts`.
 - No editar a mano lo generado: `public/assets/atlas/`, `src/assetList.ts`, `src/atlasPages.ts` → `npm run assets`;
   modelos 3D (`tools/art/ashfox/{units,buildings,terrain}/`, `public/assets/models/`) → skill `ashfox`.
+- Modelos 3D: como tienen que verse, `docs/ESTETICA.md` (skill `estetica`).
 - Probar en el navegador con `npm run dev` (ver `docs/AGENTES.md`); nunca `vite preview`.
 - Retro Diffusion y cualquier servicio de pago: nunca sin permiso explicito; claves nunca en el repo.
 - Cambios de reglas/IA: revisar `tests/aiGolden.test.ts`; cambios visuales: mirarlos en el navegador.
@@ -50,9 +51,11 @@ npm run huella              # huella del comportamiento: igual antes y despues d
 - `docs/ARQUITECTURA.md`: capas, flujo de un turno, decisiones.
 - `docs/ESTILO.md`: como escribir codigo que se lea a la primera (con ejemplo de antes y despues).
 - `docs/IDEAS.md`: ideas pendientes y descartadas (con el porque); quitar de ahi lo que se haga.
+- `docs/ESTETICA.md`: la estetica del juego (como se ven los modelos 3D, decidida con el usuario):
+  obligatoria al hacer o revisar un modelo; lo nuevo que se decida se apunta ahi.
 - `docs/AGENTES.md`: como comprobar el trabajo (partida por texto, `window.ilogic3d`, playground de modelos).
 - `improve/DIARIO.md`: experimentos de mejora (leer antes de proponer cambios de equilibrio o IA).
 - `.claude/agents/*.md`: subagentes (equilibrador, entrenador-ia, cazador-fallos, revisor).
-- `.claude/skills/*/SKILL.md`: guias por tarea (codigo, graficos con Retro Diffusion,
+- `.claude/skills/*/SKILL.md`: guias por tarea (codigo, estetica, graficos con Retro Diffusion,
   modelos 3D con Ashfox, nueva unidad, nueva mision, sacar version, equilibrar). Sirven para
   cualquier agente, no solo Claude.
