@@ -532,7 +532,7 @@ const bazooka = (side) =>
 
 /** Donde coge cada mano: la izquierda, el asa por detras del escudo; la derecha, la pistola, al frente y abajo. */
 const SHIELD_GRIP = [-3.5, 12.5, -7.5];
-const PISTOL_GRIP = [6.5, 11, -6.5];
+const PISTOL_GRIP = [6.5, 11.5, -8];
 
 /**
  * El escudo antidisturbios, alto (hasta los ojos) y delante a la izquierda: gris con el borde claro,
@@ -554,18 +554,27 @@ function riotShield(side) {
   };
 }
 
-/** La pistola pequeña, al frente en la mano derecha: culata bajo la mano, corredera con su raya clara y la boca. */
+/** La pistola pequeña, en la mano derecha: la corredera clara (con miras y boca) justo encima de la mano, el guardamonte delante y la culata, inclinada, dentro del puño. */
+const pistolPart = (name, offset, size, paint, extra = {}) => ({
+  name,
+  bone: 'arm_right',
+  origin: plus(PISTOL_GRIP, offset),
+  size,
+  paint,
+  ...extra,
+});
 const PISTOL = [
-  { name: 'pistol_grip', origin: [PISTOL_GRIP[0] - 1, PISTOL_GRIP[1] - 3.5, PISTOL_GRIP[2] - 1], size: [2, 3, 2], paint: 'gun' },
-  {
-    name: 'pistol_slide',
-    origin: [PISTOL_GRIP[0] - 1, PISTOL_GRIP[1] + 0.5, PISTOL_GRIP[2] - 6],
-    size: [2, 2, 5],
-    paint: 'gun',
-    stamps: ['east', 'west'].map((face) => mark('slide_line', face, 'sssss', { s: '#6a7282' }, [0, 0])),
-  },
-  { name: 'pistol_muzzle', origin: [PISTOL_GRIP[0] - 0.5, PISTOL_GRIP[1] + 1, PISTOL_GRIP[2] - 7], size: [1, 1, 1], paint: 'steel' },
-].map((part) => ({ ...part, bone: 'arm_right' }));
+  pistolPart('pistol_slide', [-1, 1.5, -5.5], [2, 2, 7], 'steel', {
+    stamps: [
+      mark('slide_hole', 'north', 'k', { k: SLOT }, [0, 1]),
+      ...['east', 'west'].map((face) => mark('slide_cuts', face, 'k.k', { k: '#4a505c' }, [4, 0])),
+    ],
+  }),
+  pistolPart('pistol_front_sight', [-0.5, 3.5, -5], [1, 1, 1], 'gun'),
+  pistolPart('pistol_rear_sight', [-0.5, 3.5, 0.5], [1, 1, 1], 'gun'),
+  pistolPart('pistol_frame', [-1, 0.5, -4.5], [2, 1, 3], 'gun'),
+  pistolPart('pistol_grip', [-1, -2.5, -1], [2, 4, 2], 'gun', { rotation: [-15, 0, 0], pivot: plus(PISTOL_GRIP, [0, 1.5, 0]) }),
+];
 
 /** La proteccion: peto gris en el pecho y en la espalda, y hombreras. */
 const RIOT_ARMOR = [
@@ -591,7 +600,7 @@ const riotTrooper = (side) => ({
   bones: TROOPER_BONES,
   cubes: [
     ...trooper(side, { mask: true }),
-    ...trooperArm(side, 'arm_right', { shoulder: [20, 0, 10], grip: PISTOL_GRIP }),
+    ...trooperArm(side, 'arm_right', { shoulder: [30, 0, 10], grip: PISTOL_GRIP }),
     ...trooperArm(side, 'arm_left', { shoulder: [40, 0, 20], grip: SHIELD_GRIP }),
     ...RIOT_ARMOR,
     riotShield(side),
@@ -651,23 +660,143 @@ const tracks = (width, length) =>
     };
   });
 
-function tank(side) {
-  const team = `team_${side}`;
-  return {
-    bones: VEHICLE_BONES([0, 6, 0.5], [0, 7.5, -3]),
-    motions: VEHICLE_MOTIONS,
-    cubes: [
-      ...tracks(14, 14),
-      { name: 'hull', bone: 'hull', origin: [-6, 3, -6.5], size: [12, 3, 13], paint: team },
-      { name: 'turret', bone: 'turret', origin: [-4, 6, -3], size: [8, 3, 7], paint: team },
-      { name: 'turret_top', bone: 'turret', origin: [-3, 9, -2], size: [6, 1, 5], paint: team },
-      { name: 'hatch', bone: 'turret', origin: [-2, 10, 0], size: [2, 1, 2], paint: `dark_${side}` },
-      { name: 'mantlet', bone: 'turret', origin: [-2.5, 6.5, -4], size: [5, 2, 1], paint: `dark_${side}` },
-      { name: 'barrel_left', bone: 'barrel', origin: [-2, 7, -11], size: [1, 1, 8], paint: 'steel' },
-      { name: 'barrel_right', bone: 'barrel', origin: [1, 7, -11], size: [1, 1, 8], paint: 'steel' },
-    ],
-  };
+// ---- El tanque con detalle (32 unidades por casilla) ----
+
+const TRACK_LINK = '#3a4050';
+const TRACK_GAP = '#141824';
+const ROAD_WHEEL = '#4a5262';
+const WHEEL_HUB = '#8a93a6';
+
+/** Una fila de `count` piezas iguales (`unit`) separadas por `gap` huecos, con `margin` huecos a cada lado. */
+const repeatRow = (unit, count, gap, margin) => '.'.repeat(margin) + Array(count).fill(unit).join('.'.repeat(gap)) + '.'.repeat(margin);
+
+/** De lado, una oruga de ese largo: eslabones arriba y abajo y cinco ruedas con su buje entre medias. */
+function bigTrackSide(length) {
+  const links = 'lt'.repeat(length / 2);
+  const wheels = (unit) => repeatRow(unit, 5, 1, (length - 24) / 2);
+  const rows = [links, '.'.repeat(length), wheels('.ww.'), wheels('wwww'), wheels('whhw'), wheels('whhw'), wheels('wwww'), links];
+  return { pixels: rows.join('/'), colors: { l: TRACK_LINK, t: TRACK_GAP, w: ROAD_WHEEL, h: WHEEL_HUB } };
 }
+
+/** Las dos orugas, de ese largo: por fuera las ruedas; delante y detras, solo eslabones (oscuros, como toda la oruga). */
+const bigTracks = (length = 28) =>
+  [-1, 1].map((sideSign, index) => {
+    const outer = sideSign < 0 ? 'west' : 'east';
+    const side = bigTrackSide(length);
+    const links = mark('track_end_links', 'north', Array(4).fill('lllllll/ttttttt').join('/'), { l: TRACK_LINK, t: TRACK_GAP }, [0, 0]);
+    return {
+      name: `track${index}`,
+      bone: 'chassis',
+      origin: [sideSign < 0 ? -15 : 8, 0, -length / 2],
+      size: [7, 8, length],
+      paint: 'tread',
+      stamps: [mark('big_wheels', outer, side.pixels, side.colors, [0, 0]), links, { ...links, face: 'south' }],
+    };
+  });
+
+/** El casco: guardabarros sobre las orugas con su borde claro y su junta, el bajo oscuro, la placa de delante con los faros, la rejilla del motor y la caja de herramientas. */
+function bigTankHull(side) {
+  const { teamRim, dark } = SIDES[side];
+  const edge = ['east', 'west', 'north', 'south'].map((face) => {
+    const width = face === 'north' || face === 'south' ? 30 : 28;
+    return mark(
+      `fender_edge${width}`,
+      face,
+      `${'r'.repeat(width)}/${'.'.repeat(width)}/${'d'.repeat(width)}`,
+      { r: teamRim, d: dark[0] },
+      [0, 0],
+    );
+  });
+  const grille = Array(5)
+    .fill(0)
+    .map((_, row) => (row % 2 ? '.'.repeat(16) : 'g'.repeat(16)))
+    .join('/');
+  return [
+    { name: 'lower_hull', bone: 'hull', origin: [-7, 2, -12], size: [14, 6, 24], paint: `dark_${side}` },
+    { name: 'hull', bone: 'hull', origin: [-15, 8, -14], size: [30, 4, 28], paint: `team_${side}`, stamps: edge },
+    { name: 'front_plate', bone: 'hull', origin: [-14, 9, -15], size: [28, 3, 1], paint: `dark_${side}` },
+    { name: 'headlight_left', bone: 'hull', origin: [-13, 10, -16], size: [3, 2, 1], paint: 'lamp' },
+    { name: 'headlight_right', bone: 'hull', origin: [10, 10, -16], size: [3, 2, 1], paint: 'lamp' },
+    {
+      name: 'engine_deck',
+      bone: 'hull',
+      origin: [-8, 12, 9],
+      size: [16, 1, 5],
+      paint: `dark_${side}`,
+      stamps: [mark('grille', 'up', grille, { g: TRACK_GAP }, [0, 0])],
+    },
+    {
+      name: 'toolbox',
+      bone: 'hull',
+      origin: [9, 12, -12],
+      size: [5, 3, 7],
+      paint: 'pack',
+      stamps: [mark('toolbox_latch', 'east', 'yy', { y: '#e8c040' }, [2, 1])],
+    },
+  ];
+}
+
+/** La torreta: grande y cuadrada, con juntas y remaches, el mantelete, la cupula con su escotilla y periscopio, la caja de detras y la antena. */
+function bigTankTurret(side) {
+  const team = `team_${side}`;
+  const dark = `dark_${side}`;
+  const seams = ['east', 'west'].map((face) =>
+    mark(
+      'turret_seams',
+      face,
+      ['.r..r..r..r..r.', ...Array(6).fill('....d.....d....')].join('/'),
+      { d: SIDES[side].dark[0], r: SIDES[side].dark[0] },
+      [0, 1],
+    ),
+  );
+  return [
+    { name: 'turret', bone: 'turret', origin: [-8, 12, -6], size: [16, 8, 15], paint: team, stamps: seams },
+    {
+      name: 'mantlet',
+      bone: 'turret',
+      origin: [-6, 13, -8],
+      size: [12, 6, 2],
+      paint: dark,
+      stamps: [
+        mark(
+          'mantlet_rivets',
+          'north',
+          'r..........r/............/............/............/............/r..........r',
+          { r: WHEEL_HUB },
+          [0, 0],
+        ),
+      ],
+    },
+    { name: 'cupola', bone: 'turret', origin: [-6, 20, 1], size: [6, 2, 6], paint: team },
+    { name: 'hatch', bone: 'turret', origin: [-5, 22, 2], size: [4, 1, 4], paint: dark },
+    { name: 'periscope', bone: 'turret', origin: [-4, 20, 0], size: [2, 2, 1], paint: 'glass' },
+    {
+      name: 'bustle',
+      bone: 'turret',
+      origin: [-7, 13, 9],
+      size: [14, 6, 3],
+      paint: dark,
+      stamps: [mark('bustle_straps', 'south', Array(6).fill('...b......b...').join('/'), { b: BROWN }, [0, 0])],
+    },
+    { name: 'antenna', bone: 'turret', origin: [5.5, 20, 7], size: [1, 10, 1], paint: 'gun' },
+  ];
+}
+
+/** Los dos cañones gordos con su freno de boca. */
+const BIG_TANK_GUNS = [-5, 2].flatMap((x, index) => [
+  { name: `barrel${index}`, bone: 'barrel', origin: [x, 14.5, -19], size: [3, 3, 11], paint: 'steel' },
+  { name: `muzzle${index}`, bone: 'barrel', origin: [x - 0.5, 14, -21], size: [4, 4, 2], paint: 'gun' },
+]);
+
+/** El tanque: orugas con sus ruedas, casco con faros y rejilla, torreta grande con dos cañones. */
+const tank = (side) => ({
+  detail: DETAIL,
+  bones: VEHICLE_BONES([0, 12, 1], [0, 16, -8]).map(
+    (bone) => ({ chassis: { ...bone, pivot: [0, 4, 0] }, hull: { ...bone, pivot: [0, 6, 0] } })[bone.name] ?? bone,
+  ),
+  motions: VEHICLE_MOTIONS,
+  cubes: [...bigTracks(), ...bigTankHull(side), ...bigTankTurret(side), ...BIG_TANK_GUNS],
+});
 
 function heavyTank(side) {
   const team = `team_${side}`;
@@ -730,33 +859,92 @@ function amphibiousTank(side) {
   };
 }
 
-/** La artilleria: cañon gordo del color del equipo, alzado, y su artillero (casco y gafas) detras. */
-function artillery(side) {
-  const team = `team_${side}`;
-  const raisedGun = { rotation: [40, 0, 0], pivot: [0, 7.5, 0] };
-  const gunnerHelmet = [5, 2, 5];
-  return {
-    bones: VEHICLE_BONES([0, 5, 2], [0, 7.5, 0]),
-    motions: VEHICLE_MOTIONS,
-    cubes: [
-      ...tracks(12, 13),
-      { name: 'hull', bone: 'hull', origin: [-5, 3, -6], size: [10, 2, 12], paint: team },
-      { name: 'mount', bone: 'turret', origin: [-3, 5, -1], size: [6, 3, 6], paint: team },
-      { name: 'barrel', bone: 'barrel', origin: [-1.5, 6, -10], size: [3, 3, 11], paint: team, ...raisedGun },
-      { name: 'muzzle', bone: 'barrel', origin: [-2, 5.5, -11], size: [4, 4, 1], paint: 'gun', ...raisedGun },
-      { name: 'gunner', bone: 'turret', origin: [-2, 8, 2], size: [4, 3, 3], paint: team },
-      { name: 'gunner_head', bone: 'turret', origin: [-2, 11, 1.5], size: [4, 4, 4], paint: 'skin', stamps: [eyes(4)] },
-      {
-        name: 'gunner_helmet',
-        bone: 'turret',
-        origin: [-2.5, 14, 1],
-        size: gunnerHelmet,
-        paint: team,
-        stamps: goggles(gunnerHelmet, 1),
-      },
-    ],
-  };
+/** La artilleria: orugas, casco bajo, la cureña con el cañon gordo del color del equipo, alzado, y el artillero detras con su macuto. */
+const ARTILLERY_GUN_LIFT = [40, 0, 0];
+const ARTILLERY_TRUNNION = [0, 18, -1];
+
+function artilleryHull(side) {
+  const { teamRim, dark } = SIDES[side];
+  const edge = ['east', 'west'].map((face) =>
+    mark('artillery_edge', face, `${'r'.repeat(26)}/${'.'.repeat(26)}/${'d'.repeat(26)}`, { r: teamRim, d: dark[0] }, [0, 0]),
+  );
+  return [
+    { name: 'lower_hull', bone: 'hull', origin: [-7, 2, -11], size: [14, 6, 22], paint: `dark_${side}` },
+    { name: 'hull', bone: 'hull', origin: [-15, 8, -13], size: [30, 4, 26], paint: `team_${side}`, stamps: edge },
+    { name: 'front_plate', bone: 'hull', origin: [-14, 9, -14], size: [28, 3, 1], paint: `dark_${side}` },
+    { name: 'headlight_left', bone: 'hull', origin: [-13, 10, -15], size: [3, 2, 1], paint: 'lamp' },
+    { name: 'headlight_right', bone: 'hull', origin: [10, 10, -15], size: [3, 2, 1], paint: 'lamp' },
+    {
+      name: 'ammo_box',
+      bone: 'hull',
+      origin: [8, 12, 5],
+      size: [5, 3, 6],
+      paint: 'canteen',
+      stamps: [mark('ammo_latch', 'east', 'yy', { y: '#e8c040' }, [2, 1])],
+    },
+  ];
 }
+
+/** La cureña: la base que gira (con juntas), los muñones con remaches y el cañon alzado con su faja y la boca. */
+function artilleryGun(side) {
+  const team = `team_${side}`;
+  const dark = `dark_${side}`;
+  const lifted = { rotation: ARTILLERY_GUN_LIFT, pivot: ARTILLERY_TRUNNION };
+  return [
+    {
+      name: 'mount',
+      bone: 'turret',
+      origin: [-7, 12, -5],
+      size: [14, 4, 12],
+      paint: team,
+      stamps: ['east', 'west'].map((face) => mark('mount_seams', face, '..d...d...d./..d...d...d.', { d: SIDES[side].dark[0] }, [0, 1])),
+    },
+    {
+      name: 'trunnion',
+      bone: 'turret',
+      origin: [-5, 16, -4],
+      size: [10, 4, 6],
+      paint: dark,
+      stamps: ['east', 'west'].map((face) => mark('trunnion_bolt', face, '.hh./.hh.', { h: WHEEL_HUB }, [1, 1])),
+    },
+    { name: 'gun_barrel', bone: 'barrel', origin: [-2.5, 15.5, -21], size: [5, 5, 20], paint: team, ...lifted },
+    { name: 'gun_band', bone: 'barrel', origin: [-3, 15, -9], size: [6, 6, 2], paint: dark, ...lifted },
+    {
+      name: 'gun_muzzle',
+      bone: 'barrel',
+      origin: [-3, 15, -23],
+      size: [6, 6, 2],
+      paint: 'gun',
+      stamps: [mark('gun_bore', 'north', '.kk./kkkk/kkkk/.kk.', { k: SLOT }, [1, 1])],
+      ...lifted,
+    },
+  ];
+}
+
+/** El artillero, detras de la cureña (gira con ella), con su macuto a la espalda. */
+const artilleryGunner = (side) => [
+  ...crewman(side, 'gunner', [-3, 12, 6], 'turret'),
+  {
+    name: 'gunner_bag',
+    bone: 'turret',
+    origin: [-2.5, 12.5, 10],
+    size: [5, 5, 2],
+    paint: 'pack',
+    stamps: [mark('bag_flap', 'south', 'ddddd', { d: BROWN }, [0, 0])],
+  },
+];
+
+const artillery = (side) => ({
+  detail: DETAIL,
+  bones: [
+    { name: 'chassis', parent: 'root', pivot: [0, 4, 0] },
+    { name: 'hull', parent: 'root', pivot: [0, 6, 0] },
+    { name: 'turret', parent: 'hull', pivot: [0, 12, 1] },
+    { name: 'barrel', parent: 'turret', pivot: ARTILLERY_TRUNNION },
+  ],
+  motions: VEHICLE_MOTIONS,
+  cubes: [...bigTracks(26), ...artilleryHull(side), ...artilleryGun(side), ...artilleryGunner(side)],
+});
 
 /** El antiaereo: torreta baja y ancha con dos cañones largos y finos, alzados. */
 function antiair(side) {
@@ -776,30 +964,77 @@ function antiair(side) {
   };
 }
 
-/** El bloqueador: un cajon blindado mas alto que sus orugas, con remaches, junta y mirilla. */
-function blocker(side) {
+/** Remaches en fila: uno cada `step` en una cara de ese ancho. */
+const rivetRow = (width, step) => [...Array(width)].map((_, x) => (x % step === step / 2 ? 'r' : '.')).join('');
+
+/**
+ * El bloqueador: un cajon blindado alto sobre orugas, con el frente redondeado (una placa que
+ * sobresale y el borde de arriba), la junta del medio con remaches, la mirilla oscura en 3D, la
+ * escotilla y el periscopio arriba y la puerta detras.
+ */
+function blockerArmor(side) {
+  const team = `team_${side}`;
   const darkColor = SIDES[side].dark[0];
-  return {
-    bones: VEHICLE_BONES([0, 4, 0], [0, 5, 0]),
-    motions: { idle: VEHICLE_MOTIONS.idle, drive: VEHICLE_MOTIONS.drive },
-    cubes: [
-      ...tracks(14, 13),
-      {
-        name: 'box',
-        bone: 'hull',
-        origin: [-6, 3, -6],
-        size: [12, 10, 12],
-        paint: `team_${side}`,
-        stamps: [
-          mark('slot', 'north', 'kkkkk', { k: SLOT }, [5, 2]),
-          mark('seam', 'north', 'd/d/d/d/d/d/d/d', { d: darkColor }, [3, 1]),
-          ...['east', 'west', 'south'].map((face) => mark('rivets', face, '.r..r..r..r.', { r: darkColor }, [0, 2])),
-        ],
-      },
-      { name: 'roof', bone: 'hull', origin: [-5, 13, -5], size: [10, 1, 10], paint: `dark_${side}` },
-    ],
-  };
+  const seamAndRivets = (width, height) =>
+    [rivetRow(width, 4), ...Array(height - 2).fill(`${'.'.repeat(width / 2 - 1)}d${'.'.repeat(width / 2)}`), rivetRow(width, 4)].join('/');
+  return [
+    {
+      name: 'box',
+      bone: 'hull',
+      origin: [-13, 8, -12],
+      size: [26, 16, 26],
+      paint: team,
+      stamps: ['east', 'west', 'south'].map((face) =>
+        mark('box_seams', face, seamAndRivets(26, 16), { d: darkColor, r: darkColor }, [0, 0]),
+      ),
+    },
+    {
+      name: 'front_plate',
+      bone: 'hull',
+      origin: [-12, 9, -14],
+      size: [24, 13, 2],
+      paint: team,
+      stamps: [mark('front_seam', 'north', seamAndRivets(24, 13), { d: darkColor, r: darkColor }, [0, 0])],
+    },
+    { name: 'brow', bone: 'hull', origin: [-12, 22, -13], size: [24, 2, 1], paint: `dark_${side}` },
+    { name: 'vision_slit', bone: 'hull', origin: [-5, 18, -15], size: [10, 2, 1], paint: 'tread' },
+    { name: 'roof', bone: 'hull', origin: [-11, 24, -10], size: [22, 1, 21], paint: `dark_${side}` },
+    {
+      name: 'hatch',
+      bone: 'hull',
+      origin: [-4, 25, -2],
+      size: [8, 1, 8],
+      paint: team,
+      stamps: [mark('hatch_handle', 'up', 'hhhh', { h: WHEEL_HUB }, [2, 3])],
+    },
+    {
+      name: 'periscope',
+      bone: 'hull',
+      origin: [5, 25, -8],
+      size: [3, 2, 2],
+      paint: 'gun',
+      stamps: [mark('periscope_glass', 'north', 'ggg', { g: WINDOW_GLASS }, [0, 0])],
+    },
+    {
+      name: 'back_door',
+      bone: 'hull',
+      origin: [-5, 9, 14],
+      size: [10, 11, 1],
+      paint: `dark_${side}`,
+      stamps: [mark('door_handle', 'south', 'hh', { h: WHEEL_HUB }, [7, 5])],
+    },
+  ];
 }
+
+const blocker = (side) => ({
+  detail: DETAIL,
+  bones: [
+    { name: 'chassis', parent: 'root', pivot: [0, 4, 0] },
+    { name: 'hull', parent: 'root', pivot: [0, 6, 0] },
+  ],
+  motions: { idle: VEHICLE_MOTIONS.idle, drive: VEHICLE_MOTIONS.drive },
+  cubes: [...bigTracks(28), ...blockerArmor(side)],
+});
 
 // ---- Ruedas: jeep, camiones y moto ----
 
@@ -865,18 +1100,104 @@ const truckCab = (side) => [
 const truck = (side, cargo) => ({ bones: WHEEL_BONES, motions: WHEEL_MOTIONS, cubes: [...axles(13), ...truckCab(side), ...cargo] });
 
 /** El de transporte: lona rosada con sus costillas. */
-const transport = (side) =>
-  truck(side, [
+// ---- El transporte con detalle: camion con lona ----
+
+const TRUCK_AXLES = { front: -10, back: 9 };
+
+/** Las ruedas del camion (las del jeep: redondas, con tapacubos). */
+const truckWheels = () =>
+  Object.entries(TRUCK_AXLES).flatMap(([axle, z]) =>
+    [-1, 1].flatMap((outward) =>
+      jeepWheel(
+        `wheel_${axle}_${outward < 0 ? 'left' : 'right'}`,
+        `wheels_${axle}`,
+        [outward < 0 ? -JEEP_BODY_HALF_WIDTH - 4 : JEEP_BODY_HALF_WIDTH, z],
+        outward,
+      ),
+    ),
+  );
+
+/** La cabina, delante: parabrisas grande en 3D con su marco, ventanillas, rejilla, faros, parachoques y el techo. */
+function truckCabin(side) {
+  const team = `team_${side}`;
+  const darkColor = SIDES[side].dark[0];
+  return [
     {
-      name: 'cover',
+      name: 'cabin',
       bone: 'hull',
-      origin: [-5, 5, -2.5],
-      size: [10, 5, 10],
-      paint: 'canvas',
-      stamps: ['east', 'west'].map((face) => mark('ribs', face, 'd..d..d/d..d..d/d..d..d', { d: '#a8968c' }, [1, 1])),
+      origin: [-10, 5, -16],
+      size: [20, 14, 9],
+      paint: team,
+      stamps: [
+        mark('cabin_grille', 'north', Array(3).fill('.k.k.k.k.k.k.k.k.k.k'.slice(0, 12)).join('/'), { k: darkColor }, [4, 9]),
+        ...['east', 'west'].map((face) => mark('cabin_window', face, Array(4).fill('ggggg').join('/'), { g: WINDOW_GLASS }, [2, 1])),
+        ...['east', 'west'].map((face) => mark('door_line', face, 'd/d/d/d/d/d/d/d/d', { d: darkColor }, [8, 1])),
+      ],
     },
-    { name: 'cover_top', bone: 'hull', origin: [-4, 10, -2.5], size: [8, 1, 10], paint: 'canvas' },
-  ]);
+    { name: 'cabin_roof', bone: 'hull', origin: [-9, 19, -15], size: [18, 1, 8], paint: `dark_${side}` },
+    {
+      name: 'windshield',
+      bone: 'hull',
+      origin: [-8, 12, -17],
+      size: [16, 6, 1],
+      paint: 'glass',
+      stamps: [mark('truck_shine', 'north', 'w..../.w.../..w..', { w: SHINE }, [2, 1])],
+    },
+    { name: 'windshield_bar', bone: 'hull', origin: [-0.5, 12, -17.5], size: [1, 6, 1], paint: 'gun' },
+    { name: 'headlight_left', bone: 'hull', origin: [-10, 7, -17], size: [3, 2, 1], paint: 'lamp' },
+    { name: 'headlight_right', bone: 'hull', origin: [7, 7, -17], size: [3, 2, 1], paint: 'lamp' },
+    { name: 'bumper', bone: 'hull', origin: [-11, 4, -18], size: [22, 2, 1], paint: 'gun' },
+    ...[-1, 1].map((sideSign) => ({
+      name: `mirror_${sideSign < 0 ? 'left' : 'right'}`,
+      bone: 'hull',
+      origin: [sideSign < 0 ? -12 : 10, 14, -14],
+      size: [2, 3, 1],
+      paint: 'gun',
+    })),
+  ];
+}
+
+/** La caja de atras: plataforma, laterales del equipo y la lona con sus costillas, cuerdas y la abertura de detras. */
+function truckBed(side) {
+  const ribs = Array(10).fill('..d..d..d..d..d..d..').join('/');
+  return [
+    { name: 'bed', bone: 'hull', origin: [-11, 5, -7], size: [22, 3, 22], paint: `dark_${side}` },
+    ...[-1, 1].map((sideSign) => ({
+      name: `bed_side_${sideSign < 0 ? 'left' : 'right'}`,
+      bone: 'hull',
+      origin: [sideSign < 0 ? -11 : 10, 8, -7],
+      size: [1, 4, 22],
+      paint: `team_${side}`,
+    })),
+    {
+      name: 'tarp',
+      bone: 'hull',
+      origin: [-10, 8, -6],
+      size: [20, 12, 20],
+      paint: 'canvas',
+      stamps: [
+        ...['east', 'west'].map((face) => mark('tarp_ribs', face, ribs, { d: '#a8968c' }, [0, 1])),
+        mark('tarp_opening', 'south', Array(8).fill('kkkkkkkkkkkkkk').join('/'), { k: '#2a2622' }, [3, 3]),
+        mark('tarp_rolled', 'south', 'rrrrrrrrrrrrrrrr', { r: '#a8968c' }, [2, 2]),
+      ],
+    },
+    { name: 'tarp_top', bone: 'hull', origin: [-9, 20, -5], size: [18, 1, 18], paint: 'canvas' },
+    { name: 'tail_light_left', bone: 'hull', origin: [-10, 6, 15], size: [2, 1, 1], paint: 'warhead' },
+    { name: 'tail_light_right', bone: 'hull', origin: [8, 6, 15], size: [2, 1, 1], paint: 'warhead' },
+  ];
+}
+
+/** El transporte: camion con cabina del equipo y la caja cubierta con lona. */
+const transport = (side) => ({
+  detail: DETAIL,
+  bones: [
+    { name: 'hull', parent: 'root', pivot: [0, 6, 0] },
+    { name: 'wheels_front', parent: 'root', pivot: [0, JEEP_WHEEL_RADIUS, TRUCK_AXLES.front] },
+    { name: 'wheels_back', parent: 'root', pivot: [0, JEEP_WHEEL_RADIUS, TRUCK_AXLES.back] },
+  ],
+  motions: WHEEL_MOTIONS,
+  cubes: [...truckWheels(), ...truckCabin(side), ...truckBed(side)],
+});
 
 /** Una caja de madera con su marco mas oscuro (de lado `size`). */
 const crate = (name, origin, size) => {
@@ -914,29 +1235,211 @@ const missileTruck = (side) => {
   ]);
 };
 
-/** El jeep: conductor con casco y gafas tras el parabrisas, y la ametralladora en su poste, detras. */
-function jeep(side) {
-  const helmet = [5, 2, 5];
-  return {
-    bones: [
-      ...WHEEL_BONES.filter((bone) => bone.name !== 'turret' && bone.name !== 'barrel'),
-      { name: 'turret', parent: 'hull', pivot: [2, 6, 3.5] },
-      { name: 'barrel', parent: 'turret', pivot: [2, 10.5, 1.5] },
-    ],
-    motions: { ...WHEEL_MOTIONS, fire: onceMotion(0.4, [kick('turret', 10), kick('hull', 3)]) },
-    cubes: [
-      ...axles(12),
-      { name: 'body', bone: 'hull', origin: [-4.5, 3, -7], size: [9, 3, 13], paint: `team_${side}` },
-      { name: 'windshield', bone: 'hull', origin: [-4, 6, -3], size: [8, 2, 1], paint: 'glass' },
-      { name: 'windshield_frame', bone: 'hull', origin: [-4.5, 8, -3], size: [9, 1, 1], paint: 'gun' },
-      { name: 'driver_head', bone: 'hull', origin: [-3.5, 6, -1], size: [4, 4, 4], paint: 'skin', stamps: [eyes(4)] },
-      { name: 'driver_helmet', bone: 'hull', origin: [-4, 9, -1.5], size: helmet, paint: `team_${side}`, stamps: goggles(helmet, 1) },
-      { name: 'gun_post', bone: 'turret', origin: [1.5, 6, 3], size: [1, 4, 1], paint: 'gun' },
-      { name: 'gun_body', bone: 'barrel', origin: [1, 9.5, 0], size: [2, 2, 3], paint: 'gun' },
-      { name: 'gun', bone: 'barrel', origin: [1.5, 10, -5], size: [1, 1, 5], paint: 'gun' },
-    ],
-  };
+// ---- El jeep con detalle (32 unidades por casilla) ----
+
+/** Las ruedas del jeep: delante y detras (en z) y a cada lado (en x, por fuera de la carroceria). */
+const JEEP_AXLES = { front: -9, back: 9 };
+const JEEP_WHEEL_RADIUS = 5;
+const JEEP_BODY_HALF_WIDTH = 9;
+
+/**
+ * Una rueda grande que se ve redonda: dos piezas de goma en cruz (una alta y otra larga, algo mas
+ * fina, para que sus caras no peleen) y, por fuera, el tapacubos gris con su tuerca.
+ */
+function jeepWheel(name, bone, [x, z], outward) {
+  const radius = JEEP_WHEEL_RADIUS;
+  const capX = outward > 0 ? x + 4 : x - 1;
+  return [
+    { name, bone, origin: [x, 0, z - 3], size: [4, 2 * radius, 6], paint: 'tire' },
+    { name: `${name}_round`, bone, origin: [x + 0.5, 2, z - radius], size: [3, 6, 2 * radius], paint: 'tire' },
+    {
+      name: `${name}_cap`,
+      bone,
+      origin: [capX, radius - 2, z - 2],
+      size: [1, 4, 4],
+      paint: 'steel',
+      stamps: [mark('wheel_cap', outward > 0 ? 'east' : 'west', 'k..k/..../..../k..k', { k: '#1c2029' }, [0, 0])],
+    },
+  ];
 }
+
+const jeepWheels = () =>
+  Object.entries(JEEP_AXLES).flatMap(([axle, z]) =>
+    [-1, 1].flatMap((outward) =>
+      jeepWheel(
+        `wheel_${axle}_${outward < 0 ? 'left' : 'right'}`,
+        `wheels_${axle}`,
+        [outward < 0 ? -JEEP_BODY_HALF_WIDTH - 4 : JEEP_BODY_HALF_WIDTH, z],
+        outward,
+      ),
+    ),
+  );
+
+/** La estrella blanca del capo (vista desde arriba). */
+const STAR = '..w../.www./wwwww/.www./.w.w.';
+
+/**
+ * La carroceria: la bañera con su junta y la pala en el costado, el capo con la estrella y la
+ * rejilla de delante, los guardabarros, los faros, el parachoques y la rueda de repuesto detras.
+ */
+function jeepBody(side) {
+  const team = `team_${side}`;
+  const dark = `dark_${side}`;
+  const darkColor = SIDES[side].dark[0];
+  const shovel = mark('shovel', 'west', '..bbbbbbbbbbbss', { b: '#7e5432', s: '#9aa3b6' }, [6, 3]);
+  const grille = mark('grille', 'north', Array(4).fill('.k.k.k.k.k.k.k.k').join('/'), { k: darkColor }, [0, 2]);
+  return [
+    {
+      name: 'tub',
+      bone: 'hull',
+      origin: [-9, 4, -14],
+      size: [18, 7, 26],
+      paint: team,
+      stamps: [...band('tub_seam', [18, 7, 26], 4, darkColor), shovel, grille],
+    },
+    {
+      name: 'hood',
+      bone: 'hull',
+      origin: [-8, 11, -14],
+      size: [16, 2, 9],
+      paint: team,
+      stamps: [mark('hood_star', 'up', STAR, { w: '#f2f2ea' }, [5, 2])],
+    },
+    ...[-1, 1].map((sideSign) => ({
+      name: `fender_${sideSign < 0 ? 'left' : 'right'}`,
+      bone: 'hull',
+      origin: [sideSign < 0 ? -13 : 9, 10, -15],
+      size: [4, 1, 12],
+      paint: dark,
+    })),
+    ...[-1, 1].map((sideSign) => ({
+      name: `rear_fender_${sideSign < 0 ? 'left' : 'right'}`,
+      bone: 'hull',
+      origin: [sideSign < 0 ? -13 : 9, 10, 3],
+      size: [4, 1, 12],
+      paint: dark,
+    })),
+    { name: 'headlight_left', bone: 'hull', origin: [-8, 9, -15], size: [3, 2, 1], paint: 'lamp' },
+    { name: 'headlight_right', bone: 'hull', origin: [5, 9, -15], size: [3, 2, 1], paint: 'lamp' },
+    { name: 'bumper', bone: 'hull', origin: [-10, 4, -16], size: [20, 2, 1], paint: 'gun' },
+    {
+      name: 'spare_wheel',
+      bone: 'hull',
+      origin: [-4, 4, 12],
+      size: [8, 8, 2],
+      paint: 'tire',
+      stamps: [mark('spare_cap', 'south', '.ss./ssss/ssss/.ss.', { s: HUB }, [2, 2])],
+    },
+    { name: 'jerrycan', bone: 'hull', origin: [5, 11, 9], size: [3, 4, 2], paint: 'canteen' },
+  ];
+}
+
+/** El parabrisas levantado: los dos postes, la barra de arriba y el cristal. */
+const JEEP_WINDSHIELD = [
+  { name: 'windshield_post_left', origin: [-8.5, 13, -5.5], size: [1, 6, 1], paint: 'gun' },
+  { name: 'windshield_post_right', origin: [7.5, 13, -5.5], size: [1, 6, 1], paint: 'gun' },
+  { name: 'windshield_top', origin: [-8.5, 19, -5.5], size: [17, 1, 1], paint: 'gun' },
+  {
+    name: 'windshield',
+    origin: [-7.5, 13, -5],
+    size: [15, 6, 1],
+    paint: 'glass',
+    stamps: [mark('windshield_shine', 'north', 'w.../.w..', { w: SHINE }, [1, 1])],
+  },
+].map((part) => ({ ...part, bone: 'hull' }));
+
+/** Los asientos (respaldos de cuero) y el volante delante del conductor. */
+const JEEP_SEATS = [
+  { name: 'seat_driver', origin: [-8, 11, 3], size: [7, 5, 2], paint: 'leather' },
+  { name: 'seat_passenger', origin: [1, 11, 3], size: [7, 5, 2], paint: 'leather' },
+  {
+    name: 'steering_wheel',
+    origin: [-6, 13, -4.5],
+    size: [4, 4, 1],
+    paint: 'gun',
+    stamps: [mark('steering_ring', 'south', '.ss./s..s/s..s/.ss.', { s: '#6a7282' }, [0, 0])],
+  },
+].map((part) => ({ ...part, bone: 'hull' }));
+
+/** El conductor, pequeño: cuerpo, cara seria, casco con gafas en 3D y las manos en el volante. */
+/**
+ * Un tripulante pequeño (conductor, artillero), desde la esquina de su cuerpo (`at`): cuerpo, cara
+ * seria y casco con gafas en 3D. Sus piezas se llaman `<prefix>_...`.
+ */
+const crewman = (side, prefix, at, bone) =>
+  [
+    { name: `${prefix}_torso`, offset: [0, 0, 0], size: [6, 6, 4], paint: `team_${side}` },
+    {
+      name: `${prefix}_head`,
+      offset: [-1, 6, 0],
+      size: [8, 7, 7],
+      paint: 'skin',
+      stamps: [mark('driver_face', 'north', '.kk..kk./.kk..kk./......../...mm...', { k: EYE, m: MOUTH }, [0, 2])],
+    },
+    { name: `${prefix}_helmet`, offset: [-2, 11, -1], size: [10, 4, 9], paint: `team_${side}` },
+    { name: `${prefix}_goggles`, offset: [-1, 11.5, -2], size: [8, 2, 1], paint: 'leather' },
+    { name: `${prefix}_lens_left`, offset: [-0.5, 12, -3], size: [3, 1, 1], paint: 'glass' },
+    { name: `${prefix}_lens_right`, offset: [3.5, 12, -3], size: [3, 1, 1], paint: 'glass' },
+  ].map(({ offset, ...part }) => ({ ...part, bone, origin: plus(at, offset) }));
+
+/** El conductor del jeep, con las manos en el volante. */
+function jeepDriver(side) {
+  const team = `team_${side}`;
+  return [
+    ...crewman(side, 'driver', [-7, 11, -1], 'hull'),
+    { name: 'driver_arm_left', origin: [-9, 13, -4], size: [2, 2, 4], paint: team },
+    { name: 'driver_arm_right', origin: [-3, 13, -4], size: [2, 2, 4], paint: team },
+    { name: 'driver_hand_left', origin: [-8.5, 13.5, -5.5], size: [2, 2, 1], paint: 'skin' },
+    { name: 'driver_hand_right', origin: [-3.5, 13.5, -5.5], size: [2, 2, 1], paint: 'skin' },
+  ].map((part) => ({ bone: 'hull', ...part }));
+}
+
+/** Donde va la ametralladora: en el lado del acompañante, para que no la tape el conductor. */
+const JEEP_GUN_X = 3.5;
+
+/** El arco de detras de los asientos y la ametralladora en su poste: cajon, camisa con agujeros, cañon, boca, caja de balas y asas. */
+const JEEP_GUN = [
+  { name: 'rollbar_left', bone: 'hull', origin: [-9, 11, 6], size: [1, 9, 1], paint: 'gun' },
+  { name: 'rollbar_right', bone: 'hull', origin: [8, 11, 6], size: [1, 9, 1], paint: 'gun' },
+  { name: 'rollbar_top', bone: 'hull', origin: [-9, 20, 6], size: [18, 1, 1], paint: 'gun' },
+  { name: 'gun_post', bone: 'turret', origin: [JEEP_GUN_X - 0.5, 11, 9], size: [1, 11, 1], paint: 'gun' },
+  ...[
+    {
+      name: 'gun_receiver',
+      origin: [-1.5, 22, 5],
+      size: [3, 3, 6],
+      paint: 'gun',
+      stamps: ['east', 'west'].map((face) => mark('mg_side', face, '.ss..k', { s: '#6a7282', k: SLOT }, [0, 1])),
+    },
+    {
+      name: 'gun_jacket',
+      origin: [-1, 22.5, -2],
+      size: [2, 2, 7],
+      paint: 'steel',
+      stamps: ['east', 'west', 'up'].map((face) =>
+        mark(`mg_holes_${face}`, face, face === 'up' ? 'k./../k./../k./../k.' : '.k.k.k.', { k: SLOT }, [0, face === 'up' ? 0 : 1]),
+      ),
+    },
+    { name: 'gun_barrel', origin: [-0.5, 23, -7], size: [1, 1, 5], paint: 'gun' },
+    { name: 'gun_muzzle', origin: [-1, 22.5, -9], size: [2, 2, 2], paint: 'gun' },
+    { name: 'gun_ammo', origin: [1.5, 21, 6], size: [2, 3, 3], paint: 'canteen' },
+    { name: 'gun_handles', origin: [-1, 22.5, 11], size: [2, 2, 1], paint: 'steel' },
+  ].map((part) => ({ ...part, bone: 'barrel', origin: plus(part.origin, [JEEP_GUN_X, 0, 0]) })),
+];
+
+/** El jeep: ruedas grandes, conductor con casco y gafas, estrella en el capo y la ametralladora en su poste. */
+const jeep = (side) => ({
+  detail: DETAIL,
+  bones: [
+    { name: 'hull', parent: 'root', pivot: [0, 6, 0] },
+    { name: 'wheels_front', parent: 'root', pivot: [0, JEEP_WHEEL_RADIUS, JEEP_AXLES.front] },
+    { name: 'wheels_back', parent: 'root', pivot: [0, JEEP_WHEEL_RADIUS, JEEP_AXLES.back] },
+    { name: 'turret', parent: 'hull', pivot: [JEEP_GUN_X, 11, 9.5] },
+    { name: 'barrel', parent: 'turret', pivot: [JEEP_GUN_X, 23, 9] },
+  ],
+  motions: { ...WHEEL_MOTIONS, fire: onceMotion(0.4, [recoil('barrel'), kick('turret', 6), kick('hull', 3)]) },
+  cubes: [...jeepWheels(), ...jeepBody(side), ...JEEP_WINDSHIELD, ...JEEP_SEATS, ...jeepDriver(side), ...JEEP_GUN],
+});
 
 /** La moto: ruedas grandes, deposito del equipo, sillin, faro amarillo; el motorista con su bufanda al viento. */
 function biker(side) {

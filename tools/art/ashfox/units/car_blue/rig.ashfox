@@ -12,11 +12,11 @@ module rig {
   }
   export skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind wheels_front { parent-origin = (0u, 3u, -5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind wheels_back { parent-origin = (0u, 3u, 5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind turret { parent-origin = (2u, 3u, 3.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind barrel { parent-origin = (0u, 4.5u, -2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind hull { parent-origin = (0u, 6u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_front { parent-origin = (0u, 5u, -9u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_back { parent-origin = (0u, 5u, 9u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind turret { parent-origin = (3.5u, 5u, 9.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind barrel { parent-origin = (0u, 12u, -0.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   export motion idle for ModelRig {
     duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
@@ -54,9 +54,14 @@ module rig {
   }
   export motion fire for ModelRig {
     duration = 0.4s; fps = 30; loop = once; rest-relative = true;
+    track barrel.scale {
+      key 0s = (1, 1, 1) linear;
+      key 0.05s = (1.15, 1.15, 0.6) linear;
+      key 0.4s = (1, 1, 1) linear;
+    }
     track turret.rotation {
       key 0s = (0deg, 0deg, 0deg) linear;
-      key 0.06s = (10deg, 0deg, 0deg) linear;
+      key 0.06s = (6deg, 0deg, 0deg) linear;
       key 0.4s = (0deg, 0deg, 0deg) linear;
     }
     track hull.rotation {

@@ -59,7 +59,7 @@ Lo que vale para todo muñeco; la referencia es el soldado.
 - **Variantes:** todos salen del mismo muñeco (`trooper(side, look)`: gafas, pasamontañas, tirantes
   de mochila) y cambian lo que llevan. El antidisturbios: pasamontañas del color oscuro del equipo
   (solo asoma la franja de los ojos), casco con visera oscura y sin gafas, peto, espaldar y
-  hombreras grises, escudo alto hasta los ojos (mirilla oscura, franja del equipo, remaches) y una pistola pequeña en la otra mano (no porra).
+  hombreras grises, escudo alto hasta los ojos (mirilla oscura, franja del equipo, remaches) y una pistola pequeña en la otra mano (no porra): la mano coge la culata justo bajo la corredera clara, que lleva sus miras.
 
 ### La pose
 
@@ -72,6 +72,37 @@ Lo que vale para todo muñeco; la referencia es el soldado.
 - **Las animaciones no sueltan el arma:** al andar se mueven las piernas y el cuerpo (no los brazos);
   al disparar, el cuerpo se echa atrás y el arma con él.
 
+## Vehículos
+
+La referencia es el tanque (`tank` en `units.mjs`). Lo mismo que en los muñecos: 32 unidades por
+casilla, el color del equipo en la carrocería y el detalle dibujado.
+
+- **Orugas con sus ruedas:** de lado, eslabones arriba y abajo y cinco ruedas con buje claro; delante
+  y detrás, solo eslabones oscuros (nada gris: la oruga es negra entera). Ocupan casi toda la
+  casilla de largo.
+- **Casco:** guardabarros sobre las orugas con el borde de arriba claro y una junta oscura debajo, el
+  bajo oscuro entre las orugas, faros amarillos en 3D delante, rejilla del motor detrás y alguna caja
+  (herramientas) encima.
+- **Torreta grande y cuadrada,** como en el 2D: juntas y remaches en los lados, mantelete oscuro,
+  cúpula con escotilla y periscopio, caja detrás y antena. Lo que se ve desde arriba (cúpula,
+  escotilla, antena, cajas) es lo que más cuenta.
+- **Cañones gordos y algo exagerados**, con su freno de boca; al disparar, retroceden.
+- **Ruedas que se vean redondas:** dos piezas de goma en cruz y, por fuera, el tapacubos gris con la
+  cruz del 2D. La rueda de repuesto, detrás.
+- **El jeep** (`jeep`): bañera del equipo con la estrella blanca en el capó, rejilla y faros delante,
+  guardabarros, parabrisas levantado, asientos de cuero, el conductor pequeño (cara seria, casco con
+  gafas en 3D, manos al volante), arco antivuelco y la ametralladora en su poste, en el lado del
+  acompañante para que no la tape el conductor (camisa con agujeros, caja de balas y asas).
+- **La artillería** (`artillery`): las orugas y el casco bajo del tanque, la cureña que gira con sus
+  muñones, el cañón gordo **del color del equipo** alzado (faja oscura y boca con el ánima), y el
+  artillero (el tripulante pequeño, `crewman`) detrás con su macuto.
+- **El bloqueador** (`blocker`): un cajón blindado alto sobre orugas; el frente, una placa que
+  sobresale (se ve redondeado), juntas con remaches, la mirilla oscura en 3D, escotilla y
+  periscopio arriba y la puerta detrás.
+- **El transporte** (`transport`): camión con la cabina del equipo delante (parabrisas en 3D con su
+  barra, ventanillas, rejilla, faros, retrovisores) y la caja con la lona (costillas, la abertura
+  oscura de detrás con la lona enrollada) y pilotos rojos.
+
 ## Materiales (pinturas compartidas)
 
 | Pintura | Para | Tono |
@@ -83,6 +114,7 @@ Lo que vale para todo muñeco; la referencia es el soldado.
 | `brass` | hebillas | dorado |
 | `gun`, `steel` | cuerpo del arma; cañón y mira | gris muy oscuro; gris metal |
 | `glass` | cristales | azul claro |
+| `tread`, `lamp` | orugas; faros | casi negro; amarillo |
 | `canteen`, `bedroll` | cantimplora; manta | oliva |
 | `boot_grey` | botas (suela oscura pintada) | gris |
 

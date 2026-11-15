@@ -16,7 +16,7 @@ module skin {
     chart neck_guard box { width = 32px; height = 5px; coverage = opaque; }
     chart brim box { width = 32px; height = 3px; coverage = opaque; }
     chart upper_arm_right box { width = 12px; height = 8px; coverage = opaque; }
-    chart fore_arm_right box { width = 14px; height = 7px; coverage = opaque; }
+    chart fore_arm_right box { width = 16px; height = 8px; coverage = opaque; }
     chart hand_arm_right box { width = 12px; height = 6px; coverage = opaque; }
     chart upper_arm_left box { width = 12px; height = 8px; coverage = opaque; }
     chart fore_arm_left box { width = 16px; height = 8px; coverage = opaque; }
@@ -26,9 +26,11 @@ module skin {
     chart pad_left box { width = 18px; height = 7px; coverage = opaque; }
     chart pad_right box { width = 18px; height = 7px; coverage = opaque; }
     chart shield box { width = 24px; height = 20px; coverage = opaque; }
-    chart pistol_grip box { width = 8px; height = 5px; coverage = opaque; }
-    chart pistol_slide box { width = 14px; height = 7px; coverage = opaque; }
-    chart pistol_muzzle box { width = 4px; height = 2px; coverage = opaque; }
+    chart pistol_slide box { width = 18px; height = 9px; coverage = opaque; }
+    chart pistol_front_sight box { width = 4px; height = 2px; coverage = opaque; }
+    chart pistol_rear_sight box { width = 4px; height = 2px; coverage = opaque; }
+    chart pistol_frame box { width = 10px; height = 4px; coverage = opaque; }
+    chart pistol_grip box { width = 8px; height = 6px; coverage = opaque; }
     material = opaque;
   }
 }

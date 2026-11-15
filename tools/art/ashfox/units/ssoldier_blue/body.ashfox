@@ -43,12 +43,14 @@ module body {
           cube shield { origin = (-9u, 2u, -10u); size = (11u, 19u, 1u); surface = skin.shield; }
         }
         bone arm_right {
-          cube upper_arm_right { origin = (5.5u, 12u, -1.5u); size = (3u, 5u, 3u); rotation = (20deg, 0deg, 10deg); pivot = (7u, 16u, 0u); surface = skin.upper_arm_right; }
-          cube fore_arm_right { origin = (6u, 11.5u, -5u); size = (3u, 3u, 4u); rotation = (-20deg, 9.5deg, 0deg); pivot = (7.5u, 13u, -1u); surface = skin.fore_arm_right; }
-          cube hand_arm_right { origin = (6u, 11.5u, -8u); size = (3u, 3u, 3u); rotation = (-20deg, 9.5deg, 0deg); pivot = (7.5u, 13u, -1u); surface = skin.hand_arm_right; }
-          cube pistol_grip { origin = (5.5u, 7.5u, -7.5u); size = (2u, 3u, 2u); surface = skin.pistol_grip; }
-          cube pistol_slide { origin = (5.5u, 11.5u, -12.5u); size = (2u, 2u, 5u); surface = skin.pistol_slide; }
-          cube pistol_muzzle { origin = (6u, 12u, -13.5u); size = (1u, 1u, 1u); surface = skin.pistol_muzzle; }
+          cube upper_arm_right { origin = (5.5u, 12u, -1.5u); size = (3u, 5u, 3u); rotation = (30deg, 0deg, 10deg); pivot = (7u, 16u, 0u); surface = skin.upper_arm_right; }
+          cube fore_arm_right { origin = (6u, 11.5u, -6.5u); size = (3u, 3u, 5u); rotation = (-13deg, 8.5deg, 0deg); pivot = (7.5u, 13u, -1.5u); surface = skin.fore_arm_right; }
+          cube hand_arm_right { origin = (6u, 11.5u, -9.5u); size = (3u, 3u, 3u); rotation = (-13deg, 8.5deg, 0deg); pivot = (7.5u, 13u, -1.5u); surface = skin.hand_arm_right; }
+          cube pistol_slide { origin = (5.5u, 13u, -13.5u); size = (2u, 2u, 7u); surface = skin.pistol_slide; }
+          cube pistol_front_sight { origin = (6u, 15u, -13u); size = (1u, 1u, 1u); surface = skin.pistol_front_sight; }
+          cube pistol_rear_sight { origin = (6u, 15u, -7.5u); size = (1u, 1u, 1u); surface = skin.pistol_rear_sight; }
+          cube pistol_frame { origin = (5.5u, 12u, -12.5u); size = (2u, 1u, 3u); surface = skin.pistol_frame; }
+          cube pistol_grip { origin = (5.5u, 9u, -9u); size = (2u, 4u, 2u); rotation = (-15deg, 0deg, 0deg); pivot = (6.5u, 13u, -8u); surface = skin.pistol_grip; }
         }
       }
     }

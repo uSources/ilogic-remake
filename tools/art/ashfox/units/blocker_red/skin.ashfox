@@ -1,11 +1,17 @@
 ashfox-model 1
 module skin {
   export surface contract Skin {
-    atlas { width = 64px; height = 128px; }
-    chart track0 box { width = 34px; height = 17px; coverage = opaque; }
-    chart track1 box { width = 34px; height = 17px; coverage = opaque; }
-    chart box box { width = 48px; height = 22px; coverage = opaque; }
-    chart roof box { width = 40px; height = 11px; coverage = opaque; }
+    atlas { width = 128px; height = 256px; }
+    chart track0 box { width = 70px; height = 36px; coverage = opaque; }
+    chart track1 box { width = 70px; height = 36px; coverage = opaque; }
+    chart box box { width = 104px; height = 42px; coverage = opaque; }
+    chart front_plate box { width = 52px; height = 15px; coverage = opaque; }
+    chart brow box { width = 50px; height = 3px; coverage = opaque; }
+    chart vision_slit box { width = 22px; height = 3px; coverage = opaque; }
+    chart roof box { width = 86px; height = 22px; coverage = opaque; }
+    chart hatch box { width = 32px; height = 9px; coverage = opaque; }
+    chart periscope box { width = 10px; height = 4px; coverage = opaque; }
+    chart back_door box { width = 22px; height = 12px; coverage = opaque; }
     material = opaque;
   }
 }

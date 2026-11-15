@@ -7,20 +7,20 @@ module body {
     requires surface skin: surfaces.Skin;
     bind bone chassis to skeleton.chassis;
     bind bone hull to skeleton.hull;
-    bind bone turret to skeleton.turret;
-    bind bone barrel to skeleton.barrel;
     geometry {
       bone chassis {
-        cube track0 { origin = (-7u, 0u, -6.5u); size = (4u, 4u, 13u); surface = skin.track0; }
-        cube track1 { origin = (3u, 0u, -6.5u); size = (4u, 4u, 13u); surface = skin.track1; }
+        cube track0 { origin = (-15u, 0u, -14u); size = (7u, 8u, 28u); surface = skin.track0; }
+        cube track1 { origin = (8u, 0u, -14u); size = (7u, 8u, 28u); surface = skin.track1; }
       }
       bone hull {
-        cube box { origin = (-6u, 3u, -6u); size = (12u, 10u, 12u); surface = skin.box; }
-        cube roof { origin = (-5u, 13u, -5u); size = (10u, 1u, 10u); surface = skin.roof; }
-        bone turret {
-          bone barrel {
-          }
-        }
+        cube box { origin = (-13u, 8u, -12u); size = (26u, 16u, 26u); surface = skin.box; }
+        cube front_plate { origin = (-12u, 9u, -14u); size = (24u, 13u, 2u); surface = skin.front_plate; }
+        cube brow { origin = (-12u, 22u, -13u); size = (24u, 2u, 1u); surface = skin.brow; }
+        cube vision_slit { origin = (-5u, 18u, -15u); size = (10u, 2u, 1u); surface = skin.vision_slit; }
+        cube roof { origin = (-11u, 24u, -10u); size = (22u, 1u, 21u); surface = skin.roof; }
+        cube hatch { origin = (-4u, 25u, -2u); size = (8u, 1u, 8u); surface = skin.hatch; }
+        cube periscope { origin = (5u, 25u, -8u); size = (3u, 2u, 2u); surface = skin.periscope; }
+        cube back_door { origin = (-5u, 9u, 14u); size = (10u, 11u, 1u); surface = skin.back_door; }
       }
     }
   }

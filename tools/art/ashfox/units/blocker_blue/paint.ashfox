@@ -4,29 +4,53 @@ module paint {
   export surface look: skin.Skin {
     material = opaque;
     texture atlas {
-      atlas = (64px, 128px); background = tread; background-alpha = 255;
+      atlas = (128px, 256px); background = tread; background-alpha = 255;
       palette {
         tread = (#1a1e28, #232836, #2c3242);
-        wheels13_s = #5a6272;
-        wheels13_t = #363d4c;
-        sprocket_s = #6a7282;
+        big_wheels_l = #3a4050;
+        big_wheels_t = #141824;
+        big_wheels_w = #4a5262;
+        big_wheels_h = #8a93a6;
+        track_end_links_l = #3a4050;
+        track_end_links_t = #141824;
         team_blue = (#2766c4, #2f74d6, #3d84e2);
-        rim_team_blue_12_r = #6fb0f2;
-        slot_k = #141824;
-        seam_d = #1a468e;
-        rivets_r = #1a468e;
+        rim_team_blue_26_r = #6fb0f2;
+        box_seams_d = #1a468e;
+        box_seams_r = #1a468e;
+        rim_team_blue_24_r = #6fb0f2;
+        rim_team_blue_2_r = #6fb0f2;
+        front_seam_d = #1a468e;
+        front_seam_r = #1a468e;
         dark_blue = (#1a468e, #1f56a8, #2a64b8);
+        hatch_handle_h = #8a93a6;
+        gun = (#2a2e38, #343a46, #3e4554);
+        periscope_glass_g = #9fe3ff;
+        rim_dark_blue_10_r = #3f7ccc;
+        rim_dark_blue_1_r = #3f7ccc;
+        door_handle_h = #8a93a6;
       }
-      stamp wheels13 { pixels = "ttttttttttttt/.ss.ss.ss.ss./.ss.ss.ss.ss./ttttttttttttt"; s = wheels13_s; t = wheels13_t; }
-      stamp sprocket { pixels = "ss/ss"; s = sprocket_s; }
-      stamp rim_team_blue_12 { pixels = "rrrrrrrrrrrr"; r = rim_team_blue_12_r; }
-      stamp slot { pixels = "kkkkk"; k = slot_k; }
-      stamp seam { pixels = "d/d/d/d/d/d/d/d"; d = seam_d; }
-      stamp rivets { pixels = ".r..r..r..r."; r = rivets_r; }
-      chart track0 box { origin = (0px, 23px); fill = tread; face west { stamp wheels13 { at = (0px, 0px); } } face north { stamp sprocket { at = (1px, 1px); } } face south { stamp sprocket { at = (1px, 1px); } } }
-      chart track1 box { origin = (0px, 41px); fill = tread; face east { stamp wheels13 { at = (0px, 0px); } } face north { stamp sprocket { at = (1px, 1px); } } face south { stamp sprocket { at = (1px, 1px); } } }
-      chart box box { origin = (0px, 0px); fill = team_blue; face north { stamp rim_team_blue_12 { at = (0px, 0px); } stamp slot { at = (5px, 2px); } stamp seam { at = (3px, 1px); } } face south { stamp rim_team_blue_12 { at = (0px, 0px); } stamp rivets { at = (0px, 2px); } } face east { stamp rim_team_blue_12 { at = (0px, 0px); } stamp rivets { at = (0px, 2px); } } face west { stamp rim_team_blue_12 { at = (0px, 0px); } stamp rivets { at = (0px, 2px); } } }
-      chart roof box { origin = (0px, 59px); fill = dark_blue; }
+      stamp big_wheels { pixels = "ltltltltltltltltltltltltltlt/............................/...ww...ww...ww...ww...ww.../..wwww.wwww.wwww.wwww.wwww../..whhw.whhw.whhw.whhw.whhw../..whhw.whhw.whhw.whhw.whhw../..wwww.wwww.wwww.wwww.wwww../ltltltltltltltltltltltltltlt"; l = big_wheels_l; t = big_wheels_t; w = big_wheels_w; h = big_wheels_h; }
+      stamp track_end_links { pixels = "lllllll/ttttttt/lllllll/ttttttt/lllllll/ttttttt/lllllll/ttttttt"; l = track_end_links_l; t = track_end_links_t; }
+      stamp rim_team_blue_26 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrrrr"; r = rim_team_blue_26_r; }
+      stamp box_seams { pixels = "..r...r...r...r...r...r.../............d............./............d............./............d............./............d............./............d............./............d............./............d............./............d............./............d............./............d............./............d............./............d............./............d............./............d............./..r...r...r...r...r...r..."; d = box_seams_d; r = box_seams_r; }
+      stamp rim_team_blue_24 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrr"; r = rim_team_blue_24_r; }
+      stamp rim_team_blue_2 { pixels = "rr"; r = rim_team_blue_2_r; }
+      stamp front_seam { pixels = "..r...r...r...r...r...r./...........d............/...........d............/...........d............/...........d............/...........d............/...........d............/...........d............/...........d............/...........d............/...........d............/...........d............/..r...r...r...r...r...r."; d = front_seam_d; r = front_seam_r; }
+      stamp hatch_handle { pixels = "hhhh"; h = hatch_handle_h; }
+      stamp periscope_glass { pixels = "ggg"; g = periscope_glass_g; }
+      stamp rim_dark_blue_10 { pixels = "rrrrrrrrrr"; r = rim_dark_blue_10_r; }
+      stamp rim_dark_blue_1 { pixels = "r"; r = rim_dark_blue_1_r; }
+      stamp door_handle { pixels = "hh"; h = door_handle_h; }
+      chart track0 box { origin = (0px, 43px); fill = tread; face west { stamp big_wheels { at = (0px, 0px); } } face north { stamp track_end_links { at = (0px, 0px); } } face south { stamp track_end_links { at = (0px, 0px); } } }
+      chart track1 box { origin = (0px, 80px); fill = tread; face east { stamp big_wheels { at = (0px, 0px); } } face north { stamp track_end_links { at = (0px, 0px); } } face south { stamp track_end_links { at = (0px, 0px); } } }
+      chart box box { origin = (0px, 0px); fill = team_blue; face north { stamp rim_team_blue_26 { at = (0px, 0px); } } face south { stamp rim_team_blue_26 { at = (0px, 0px); } stamp box_seams { at = (0px, 0px); } } face east { stamp rim_team_blue_26 { at = (0px, 0px); } stamp box_seams { at = (0px, 0px); } } face west { stamp rim_team_blue_26 { at = (0px, 0px); } stamp box_seams { at = (0px, 0px); } } }
+      chart front_plate box { origin = (0px, 140px); fill = team_blue; face north { stamp rim_team_blue_24 { at = (0px, 0px); } stamp front_seam { at = (0px, 0px); } } face south { stamp rim_team_blue_24 { at = (0px, 0px); } } face east { stamp rim_team_blue_2 { at = (0px, 0px); } } face west { stamp rim_team_blue_2 { at = (0px, 0px); } } }
+      chart brow box { origin = (0px, 156px); fill = dark_blue; }
+      chart vision_slit box { origin = (51px, 156px); fill = tread; }
+      chart roof box { origin = (0px, 117px); fill = dark_blue; }
+      chart hatch box { origin = (76px, 140px); fill = team_blue; face up { stamp hatch_handle { at = (2px, 3px); } } }
+      chart periscope box { origin = (109px, 140px); fill = gun; face north { stamp periscope_glass { at = (0px, 0px); } } }
+      chart back_door box { origin = (53px, 140px); fill = dark_blue; face north { stamp rim_dark_blue_10 { at = (0px, 0px); } } face south { stamp rim_dark_blue_10 { at = (0px, 0px); } stamp door_handle { at = (7px, 5px); } } face east { stamp rim_dark_blue_1 { at = (0px, 0px); } } face west { stamp rim_dark_blue_1 { at = (0px, 0px); } } }
       grain clustered { seed = 2013; }
       tone voxel;
     }
