@@ -1,0 +1,189 @@
+ashfox-model 1
+
+// Generado por tools/art/ashfox/sounds.mjs desde models/sounds.mjs. No editar a mano.
+sound shot_artillery {
+  duration = 0.77;
+  sampleRate = 48000;
+  seed = 1;
+  voices = [{
+    id = "blast";
+    highpass = 60;
+    lowpass = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 3000;
+      }, {
+        at = 1;
+        value = 400;
+      }];
+    };
+    source = {
+      kind = "noise";
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.02;
+        value = 1;
+      }, {
+        at = 0.1;
+        value = 0.4;
+      }, {
+        at = 0.4;
+        value = 0.1;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }, {
+    id = "boom";
+    highpass = 20;
+    lowpass = 500;
+    source = {
+      kind = "fm";
+      pitch = {
+        domain = "linear";
+        interpolation = "smooth";
+        points = [{
+          at = 0;
+          value = 90;
+        }, {
+          at = 1;
+          value = 46;
+        }];
+      };
+      ratio = 1.1;
+      index = 0.8;
+      vibratoHz = 0;
+      vibratoCents = 0;
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.02;
+        value = 1;
+      }, {
+        at = 0.5;
+        value = 0.3;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }, {
+    id = "whistle";
+    highpass = 400;
+    lowpass = 16000;
+    source = {
+      kind = "fm";
+      pitch = {
+        domain = "linear";
+        interpolation = "smooth";
+        points = [{
+          at = 0;
+          value = 1500;
+        }, {
+          at = 1;
+          value = 700;
+        }];
+      };
+      ratio = 1;
+      index = 0.05;
+      vibratoHz = 0;
+      vibratoCents = 0;
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.3;
+        value = 0.12;
+      }, {
+        at = 0.8;
+        value = 0.1;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }];
+  sequences = [{
+    id = "phrase";
+    start = 0;
+    repeat = {
+      count = 1;
+      period = 0;
+    };
+    steps = [{
+      id = "note_0";
+      voice = "blast";
+      at = 0.01;
+      duration = 0.55;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [0.9, 1.05];
+        duration = [0.95, 1.05];
+      };
+    }, {
+      id = "note_1";
+      voice = "boom";
+      at = 0.01;
+      duration = 0.55;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [-40, 40];
+        gain = [0.9, 1.05];
+        duration = [0.95, 1.05];
+      };
+    }, {
+      id = "note_2";
+      voice = "whistle";
+      at = 0.11;
+      duration = 0.6;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [-40, 40];
+        gain = [0.9, 1.05];
+        duration = [0.95, 1.05];
+      };
+    }];
+  }];
+  variants = [{
+    id = "v1";
+    seed = 1;
+  }, {
+    id = "v2";
+    seed = 2;
+  }, {
+    id = "v3";
+    seed = 3;
+  }];
+  playback = {
+    kind = "oneshot";
+  };
+  output = {
+    gainDb = -11;
+    peakDb = -1;
+  };
+}

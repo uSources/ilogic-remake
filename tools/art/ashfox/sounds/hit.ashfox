@@ -1,0 +1,128 @@
+ashfox-model 1
+
+// Generado por tools/art/ashfox/sounds.mjs desde models/sounds.mjs. No editar a mano.
+sound hit {
+  duration = 0.25;
+  sampleRate = 48000;
+  seed = 1;
+  voices = [{
+    id = "thud";
+    highpass = 80;
+    lowpass = 3000;
+    source = {
+      kind = "noise";
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.02;
+        value = 1;
+      }, {
+        at = 0.35;
+        value = 0.35;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }, {
+    id = "clank";
+    highpass = 150;
+    lowpass = 16000;
+    source = {
+      kind = "resonator";
+      excitation = {
+        kind = "impulse";
+      };
+      modes = [{
+        id = "mode_0";
+        hz = 430;
+        decay = 0.12;
+        gain = 1;
+      }, {
+        id = "mode_1";
+        hz = 1170;
+        decay = 0.08;
+        gain = 0.5;
+      }, {
+        id = "mode_2";
+        hz = 2650;
+        decay = 0.05;
+        gain = 0.3;
+      }];
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.02;
+        value = 0.7;
+      }, {
+        at = 0.35;
+        value = 0.245;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }];
+  sequences = [{
+    id = "phrase";
+    start = 0;
+    repeat = {
+      count = 1;
+      period = 0;
+    };
+    steps = [{
+      id = "note_0";
+      voice = "thud";
+      at = 0.01;
+      duration = 0.2;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [0.9, 1.05];
+        duration = [0.95, 1.05];
+      };
+    }, {
+      id = "note_1";
+      voice = "clank";
+      at = 0.01;
+      duration = 0.2;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [-40, 40];
+        gain = [0.9, 1.05];
+        duration = [0.95, 1.05];
+      };
+    }];
+  }];
+  variants = [{
+    id = "v1";
+    seed = 1;
+  }, {
+    id = "v2";
+    seed = 2;
+  }, {
+    id = "v3";
+    seed = 3;
+  }];
+  playback = {
+    kind = "oneshot";
+  };
+  output = {
+    gainDb = -3;
+    peakDb = -1;
+  };
+}

@@ -4,9 +4,11 @@
  * diga la partida con el siguiente `sync`). Lo que la niebla tapa no se anima: no se delata.
  */
 import * as THREE from 'three';
+import type { SoundPort } from '../audio/sounds';
 import type { MovementMotion } from '../core/content';
 import type { GameEvent, Pos } from '../core/model';
 import { t } from '../settings';
+import { captureSound, shotSound, STEP_SOUNDS } from './soundCues';
 import { tint, type BoardView, type UnitPiece } from './board';
 import { floatingText, projectile, sparks, type FxHost } from './fx';
 import type { PuffKind } from './particles';
@@ -41,6 +43,8 @@ const HOP = 0.12;
 /** Lo que necesita una animacion: las piezas, la capa de efectos y el reloj del mundo. */
 export interface AnimationHost extends FxHost {
   board: BoardView;
+  /** Lo que suena con cada paso, disparo, golpe o captura (soundCues.ts dice cual). */
+  sounds: SoundPort;
   /** Humo, polvo y fuego (particles.ts) y las huellas y manchas en el suelo (groundMarks.ts). */
   puff(kind: PuffKind, at: THREE.Vector3, count?: number): void;
   mark(at: THREE.Vector3, heading: number, motion: MovementMotion): void;
@@ -64,6 +68,7 @@ async function stepTo(piece: UnitPiece, from: Pos, to: Pos, host: AnimationHost)
   const end = host.board.groundOf(to);
   const startAngle = object.rotation.y;
   const turn = shortestTurn(startAngle, facingAngle(from, to));
+  host.sounds.play(STEP_SOUNDS[piece.motion]);
   let marked = 0;
   await host.animate(STEP_SECONDS, (progress) => {
     object.position.lerpVectors(start, end, progress);
@@ -127,13 +132,16 @@ async function shoot(shooter: UnitPiece, target: UnitPiece, host: AnimationHost)
   await aimAt(shooter, target.object.position, host);
   const from = muzzleOf(shooter);
   const to = muzzleOf(target);
+  const isArc = from.distanceTo(to) > ARC_FROM;
+  host.sounds.play(shotSound(shooter.motion, isArc));
   host.puff('gunSmoke', from, 4);
-  await Promise.all([recoil(shooter, host), projectile(host, from, to, from.distanceTo(to) > ARC_FROM)]);
+  await Promise.all([recoil(shooter, host), projectile(host, from, to, isArc)]);
 }
 
 /** Lo que pasa al que recibe: chispas, una sacudida y el daño que sube. */
 async function takeHit(piece: UnitPiece, damage: number, host: AnimationHost): Promise<void> {
   const at = muzzleOf(piece);
+  host.sounds.play('hit');
   const rest = piece.body.position.clone();
   const shake = host.animate(SHAKE_SECONDS, (progress) => {
     piece.body.position.copy(rest);
@@ -145,6 +153,7 @@ async function takeHit(piece: UnitPiece, damage: number, host: AnimationHost): P
 /** Una unidad destruida estalla y deja una mancha quemada; despues, sus restos o nada (`sync` quita su pieza). */
 async function fall(piece: UnitPiece, host: AnimationHost): Promise<void> {
   const at = muzzleOf(piece);
+  host.sounds.play('explosion');
   void sparks(host, at, 1.6);
   host.puff('blast', at, 14);
   host.puff('darkSmoke', at, 8);
@@ -206,6 +215,7 @@ async function animateCapture(event: EventOf<'capture'>, host: AnimationHost): P
   const label = isDone ? t(event.owner === null ? 'fxNeutral' : 'fxCaptured') : `${event.left}/${event.total}`;
   const at = host.board.groundOf(event.at).add(CAPTURE_LIFT);
   const color = isDone ? CAPTURE_DONE_COLOR : CAPTURE_PARTIAL_COLOR;
+  host.sounds.play(captureSound(isDone));
   await Promise.all([hop(piece, host), sparks(host, at, isDone ? 1.3 : 0.7), floatingText(host, at, label, color)]);
 }
 

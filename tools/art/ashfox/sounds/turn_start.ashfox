@@ -1,0 +1,93 @@
+ashfox-model 1
+
+// Generado por tools/art/ashfox/sounds.mjs desde models/sounds.mjs. No editar a mano.
+sound turn_start {
+  duration = 0.82;
+  sampleRate = 48000;
+  seed = 1;
+  voices = [{
+    id = "bell";
+    highpass = 150;
+    lowpass = 16000;
+    source = {
+      kind = "resonator";
+      excitation = {
+        kind = "impulse";
+      };
+      modes = [{
+        id = "mode_0";
+        hz = 660;
+        decay = 0.35;
+        gain = 1;
+      }, {
+        id = "mode_1";
+        hz = 1650;
+        decay = 0.18;
+        gain = 0.25;
+      }];
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.03;
+        value = 0.8;
+      }, {
+        at = 0.35;
+        value = 0.28;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }];
+  sequences = [{
+    id = "phrase";
+    start = 0;
+    repeat = {
+      count = 1;
+      period = 0;
+    };
+    steps = [{
+      id = "note_0";
+      voice = "bell";
+      at = 0.01;
+      duration = 0.6;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }, {
+      id = "note_1";
+      voice = "bell";
+      at = 0.19;
+      duration = 0.6;
+      gain = 1;
+      pitchCents = 700;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }];
+  }];
+  variants = [{
+    id = "v1";
+    seed = 1;
+  }];
+  playback = {
+    kind = "oneshot";
+  };
+  output = {
+    gainDb = -10;
+    peakDb = -1;
+  };
+}

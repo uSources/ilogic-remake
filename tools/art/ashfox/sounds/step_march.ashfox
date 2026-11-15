@@ -1,0 +1,90 @@
+ashfox-model 1
+
+// Generado por tools/art/ashfox/sounds.mjs desde models/sounds.mjs. No editar a mano.
+sound step_march {
+  duration = 0.187;
+  sampleRate = 48000;
+  seed = 1;
+  voices = [{
+    id = "foot";
+    highpass = 40;
+    lowpass = 4000;
+    source = {
+      kind = "resonator";
+      excitation = {
+        kind = "noise";
+        duration = 0.012;
+      };
+      modes = [{
+        id = "mode_0";
+        hz = 170;
+        decay = 0.05;
+        gain = 1;
+      }, {
+        id = "mode_1";
+        hz = 900;
+        decay = 0.03;
+        gain = 0.35;
+      }];
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.04;
+        value = 0.9;
+      }, {
+        at = 0.35;
+        value = 0.315;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }];
+  sequences = [{
+    id = "phrase";
+    start = 0;
+    repeat = {
+      count = 1;
+      period = 0;
+    };
+    steps = [{
+      id = "note_0";
+      voice = "foot";
+      at = 0.01;
+      duration = 0.14;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [-40, 40];
+        gain = [0.9, 1.05];
+        duration = [0.95, 1.05];
+      };
+    }];
+  }];
+  variants = [{
+    id = "v1";
+    seed = 1;
+  }, {
+    id = "v2";
+    seed = 2;
+  }, {
+    id = "v3";
+    seed = 3;
+  }, {
+    id = "v4";
+    seed = 4;
+  }];
+  playback = {
+    kind = "oneshot";
+  };
+  output = {
+    gainDb = 3;
+    peakDb = -1;
+  };
+}

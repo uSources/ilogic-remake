@@ -162,7 +162,11 @@ ASHFOX=<ejecutable> node tools/art/ashfox/sounds.mjs --export      # y los WAV (
 - Volumen: se iguala con `gainDb` de cada sonido. Medir peak y RMS de los WAV (Python, `wave`):
   menus y pasos rondan -30 dB RMS, disparos -20, la explosion -17. Los pasos suenan en cada casilla:
   bajos, que cansan.
-- Ashfox no oye: que compile no basta; el usuario tiene que escucharlos. En el juego suenan en
-  `view3d/animations.ts` (pasos, disparos, golpes, caidas, captura), `turnControls.ts` (elegir
-  unidad, comprar, tu turno, final) y `menuFlow.ts` (menus); los botones, con cualquier clic.
+- Ashfox no oye: que compile no basta; el usuario tiene que escucharlos.
+- En el juego, sin depender de Web Audio: quien decide pide por el puerto `SoundPort`
+  (`src/audio/sounds.ts`) y `src/audio/sfx.ts` es el que suena (lo junta `view3d/main.ts`). Que suena
+  con que cosa esta en tablas en `view3d/soundCues.ts`; lo piden `animations.ts` (pasos, disparos,
+  golpes, caidas, captura), `turnControls.ts` (elegir unidad, comprar, tu turno, final) y
+  `menuFlow.ts` (menus); los botones, con cualquier clic. Un sonido nuevo: en `models/sounds.mjs` y
+  en `soundCues.ts`.
 - Opcion «Efectos de sonido» en ajustes (`settings.sfx`, encendida de serie).

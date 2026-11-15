@@ -10,6 +10,7 @@ import type { Mission } from '../core/missions';
 import type { GameState } from '../core/model';
 import { imgUrl } from '../assets';
 import { playMusic } from '../audio/music';
+import type { SoundPort } from '../audio/sounds';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
 import { helpRulesForSettingsOnly } from '../hud/helpText';
 import { ui } from '../hud/store';
@@ -23,6 +24,7 @@ import { readSave } from '../storage';
 import { terrainPalette, type TerrainPalette } from '../ui/terrainColors';
 import type { GameImages } from '../atlas';
 import { startGame } from './gameStart';
+import { menuSound } from './soundCues';
 
 type Mode = 'home' | 'setup' | 'campaign';
 
@@ -39,7 +41,10 @@ export class MenuFlow {
   private readonly setup: SetupScreen;
   private readonly campaign: CampaignScreen;
 
-  constructor(images: GameImages) {
+  constructor(
+    images: GameImages,
+    private readonly sounds: SoundPort,
+  ) {
     const raw = readSave();
     this.save = raw ? loadGame(raw) : null;
     this.palette = terrainPalette(images);
@@ -117,6 +122,8 @@ export class MenuFlow {
   /** Cumplir una orden de menu, venga del mando que venga. */
   private command(command: MenuCommand): void {
     if (this.exit.leaving) return;
+    const sound = menuSound(command);
+    if (sound) this.sounds.play(sound);
     if (ui.get().help) return this.helpCommand(command);
     if (notesOpen()) return notesCommand(command);
     if (this.options.isOpen) return this.options.command(command);

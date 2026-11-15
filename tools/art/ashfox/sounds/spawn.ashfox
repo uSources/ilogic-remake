@@ -1,0 +1,132 @@
+ashfox-model 1
+
+// Generado por tools/art/ashfox/sounds.mjs desde models/sounds.mjs. No editar a mano.
+sound spawn {
+  duration = 0.39;
+  sampleRate = 48000;
+  seed = 1;
+  voices = [{
+    id = "clunk";
+    highpass = 60;
+    lowpass = 5000;
+    source = {
+      kind = "resonator";
+      excitation = {
+        kind = "impulse";
+      };
+      modes = [{
+        id = "mode_0";
+        hz = 210;
+        decay = 0.15;
+        gain = 1;
+      }, {
+        id = "mode_1";
+        hz = 620;
+        decay = 0.1;
+        gain = 0.5;
+      }];
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.02;
+        value = 1;
+      }, {
+        at = 0.35;
+        value = 0.35;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }, {
+    id = "rise";
+    highpass = 20;
+    lowpass = 4000;
+    source = {
+      kind = "fm";
+      pitch = {
+        domain = "linear";
+        interpolation = "smooth";
+        points = [{
+          at = 0;
+          value = 300;
+        }, {
+          at = 1;
+          value = 900;
+        }];
+      };
+      ratio = 2;
+      index = 0.3;
+      vibratoHz = 0;
+      vibratoCents = 0;
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.3;
+        value = 0.3;
+      }, {
+        at = 0.6;
+        value = 0.24;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }];
+  sequences = [{
+    id = "phrase";
+    start = 0;
+    repeat = {
+      count = 1;
+      period = 0;
+    };
+    steps = [{
+      id = "note_0";
+      voice = "clunk";
+      at = 0.01;
+      duration = 0.3;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }, {
+      id = "note_1";
+      voice = "rise";
+      at = 0.06;
+      duration = 0.3;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }];
+  }];
+  variants = [{
+    id = "v1";
+    seed = 1;
+  }];
+  playback = {
+    kind = "oneshot";
+  };
+  output = {
+    gainDb = -9;
+    peakDb = -1;
+  };
+}

@@ -6,6 +6,7 @@
  * mandan acciones por la sesion (`session.act`) y se animan sus sucesos. Tambien lleva los turnos
  * de los demas (la IA), animando cada cosa que hacen.
  */
+import type { SoundPort } from '../audio/sounds';
 import { availableActions } from '../core/actions';
 import { samePos } from '../core/geom';
 import type { Building, GameAction, Pos, TeamId, Unit } from '../core/model';
@@ -33,6 +34,7 @@ import { buyBlockedText } from '../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../core/gameContent';
 import { teamState } from '../core/teams';
 import { playEvents, type AnimationHost } from './animations';
+import { endSound } from './soundCues';
 import { attackPlan, type AttackPlan } from './attackPlan';
 import type { Highlights } from './highlights';
 
@@ -66,6 +68,8 @@ export interface TurnHost {
   viewer: TeamId;
   highlights: Highlights;
   animations: AnimationHost;
+  /** Elegir unidad, comprar, tu turno y el final. */
+  sounds: SoundPort;
   /** La partida o lo elegido ha cambiado: volver a pintar piezas e interfaz. */
   refresh(): void;
   /** La partida se ha acabado (tras el cartel de victoria o derrota). */
@@ -106,6 +110,7 @@ export class TurnControls {
     }
     this.isBusy = false;
     showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
+    this.host.sounds.play('turn_start');
     this.host.refresh();
   }
 
@@ -119,6 +124,7 @@ export class TurnControls {
   private finish(won: boolean): void {
     this.isBusy = true;
     showBanner(`${t('day')} ${this.s.day}`, t(won ? 'victory' : 'defeat'), won ? 'blue' : 'red');
+    this.host.sounds.play(endSound(won));
     this.host.refresh();
     this.host.onOver();
   }
@@ -150,6 +156,7 @@ export class TurnControls {
   }
 
   private chooseOwnUnit(unit: Unit): void {
+    this.host.sounds.play('unit_select');
     if (canMoveNow(unit)) return this.setMode({ kind: 'move', unit, range: moveRange(this.s, unit) });
     if (canStillAct(unit)) return this.openUnitMenu(unit);
     this.setMode({ kind: 'idle' });
@@ -280,7 +287,8 @@ export class TurnControls {
     if (!option) return this.setMode({ kind: 'idle' });
     if (option.blocked) return showToast(buyBlockedText(this.s, option.blocked));
     this.setMode({ kind: 'idle' });
-    await this.perform({ kind: 'buy', at: { x: building.x, y: building.y }, unitType: option.unitType.id });
+    const bought = await this.perform({ kind: 'buy', at: { x: building.x, y: building.y }, unitType: option.unitType.id });
+    if (bought) this.host.sounds.play('spawn');
   }
 
   /** «Atras»: deshace el movimiento (la accion 'undoMove' del nucleo) y vuelve a elegir a donde ir. */

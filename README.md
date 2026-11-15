@@ -194,7 +194,7 @@ src/
                minimapa, por panel en models/), sprites.ts (claves de imagen), sides.ts, palette.ts (PAL_CSS)
   menu/        Pantallas del menu (inicio, partida nueva, campaña, opciones), sin dibujo propio
   controls/    Teclado, menus, gestos y seleccion: funciones puras que traducen lo pulsado a ordenes
-  audio/       Musica (music.ts, con <audio>)
+  audio/       Musica (music.ts, con <audio>) y efectos de sonido (sfx.ts, con Web Audio; WAV de Ashfox)
   net/         Partidas por la red desde el navegador: la conexion con la sala (serverLink), lo que llega
                como partida y jugadas (roomClient), las rutas (roomApi) y «Mis partidas en línea»
   patchNotes/  Novedades: notas de parche de GitHub y del CHANGELOG

@@ -1,0 +1,166 @@
+ashfox-model 1
+
+// Generado por tools/art/ashfox/sounds.mjs desde models/sounds.mjs. No editar a mano.
+sound victory {
+  duration = 1.44;
+  sampleRate = 48000;
+  seed = 1;
+  voices = [{
+    id = "bell";
+    highpass = 150;
+    lowpass = 16000;
+    source = {
+      kind = "resonator";
+      excitation = {
+        kind = "impulse";
+      };
+      modes = [{
+        id = "mode_0";
+        hz = 880;
+        decay = 0.5;
+        gain = 1;
+      }, {
+        id = "mode_1";
+        hz = 2210;
+        decay = 0.25;
+        gain = 0.3;
+      }, {
+        id = "mode_2";
+        hz = 3520;
+        decay = 0.12;
+        gain = 0.15;
+      }];
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.03;
+        value = 0.8;
+      }, {
+        at = 0.35;
+        value = 0.28;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }, {
+    id = "horn";
+    highpass = 20;
+    lowpass = 3000;
+    source = {
+      kind = "fm";
+      pitch = 523;
+      ratio = 1;
+      index = 0.8;
+      vibratoHz = 5;
+      vibratoCents = 8;
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.1;
+        value = 0.35;
+      }, {
+        at = 0.75;
+        value = 0.28;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }];
+  sequences = [{
+    id = "phrase";
+    start = 0;
+    repeat = {
+      count = 1;
+      period = 0;
+    };
+    steps = [{
+      id = "note_0";
+      voice = "bell";
+      at = 0.01;
+      duration = 0.7;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }, {
+      id = "note_1";
+      voice = "bell";
+      at = 0.16;
+      duration = 0.7;
+      gain = 1;
+      pitchCents = 400;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }, {
+      id = "note_2";
+      voice = "bell";
+      at = 0.31;
+      duration = 0.7;
+      gain = 1;
+      pitchCents = 700;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }, {
+      id = "note_3";
+      voice = "bell";
+      at = 0.51;
+      duration = 0.7;
+      gain = 1;
+      pitchCents = 1200;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }, {
+      id = "note_4";
+      voice = "horn";
+      at = 0.51;
+      duration = 0.9;
+      gain = 1;
+      pitchCents = -1200;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }];
+  }];
+  variants = [{
+    id = "v1";
+    seed = 1;
+  }];
+  playback = {
+    kind = "oneshot";
+  };
+  output = {
+    gainDb = -12;
+    peakDb = -1;
+  };
+}
