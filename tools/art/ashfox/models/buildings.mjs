@@ -1,8 +1,11 @@
 // Los edificios para Ashfox, a semejanza de los del 2D (public/assets/img/flat/bld_*): enteros del
 // color de su dueño (turquesa lo propio y aliado, rojo lo enemigo, gris lo de nadie), con su rejilla
-// de ventanas. Un modelo por edificio y lado: `<edificio en minusculas>_<lado>` (lado: blue, red o neutral). Miran
+// de ventanas. Algunos se mueven (su animacion 'idle', en bucle): la bomba del pozo cabecea, los
+// radares giran y las banderas ondean. El humo de la fabrica lo pone el juego (particulas). Un modelo por edificio y lado: `<edificio en minusculas>_<lado>` (lado: blue, red o neutral). Miran
 // al norte (-z: ahi van puertas y ventanas) y se apoyan en y = 0 sobre su casilla (de -8 a 8). Lo
 // escribe generate.mjs.
+
+import { loopMotion, spin, sway } from './motions.mjs';
 
 /** Los colores de cada lado: el del edificio, el de sus remates y el de las ventanas encendidas. */
 const SIDES = {
@@ -57,8 +60,15 @@ function city(side) {
   ];
 }
 
+/** El hueso fijo del edificio y los que se mueven, colgados de el. */
+const withBones = (moving) => [{ name: 'body', parent: 'root', pivot: [0, 0, 0] }, ...moving.map((bone) => ({ parent: 'body', ...bone }))];
+/** Un radar: una barra que gira a saltos sobre su eje vertical (se ve igual cada media vuelta). */
+const radarSpin = (bone) => spin(bone, 2.4, { axis: 1, symmetry: 180, sign: 1, steps: 8 });
+/** Una bandera: ondea a un lado y al otro (en lo que dura el bucle de su edificio: todas sus pistas lo cubren entero). */
+const flagWave = (bone, duration) => sway(bone, [0, 22, 4], duration);
+
 function base(side) {
-  return [
+  const cubes = [
     { name: 'platform', origin: [-7, 0, -7], size: [14, 3, 14], paint: `trim_${side}` },
     {
       name: 'tall',
@@ -75,8 +85,19 @@ function base(side) {
       stamps: [windowGrid('short_windows', 'north', ['w.w.', '....', 'l.w.', '....', 'w.l.'], [[1, 2]])],
     },
     { name: 'antenna', origin: [-4, 16, -1], size: [1, 3, 1], paint: 'metal' },
+    { name: 'flag', bone: 'flag', origin: [-3, 17, -0.5], size: [3, 2, 1], paint: `body_${side}` },
     { name: 'gate', origin: [-1.5, 3, -6], size: [3, 2, 1], paint: 'asphalt' },
+    { name: 'radar_post', origin: [3, 12, 1], size: [1, 1, 1], paint: 'metal' },
+    { name: 'radar_dish', bone: 'radar', origin: [1.5, 13, 1], size: [4, 2, 1], paint: 'metal' },
   ];
+  return {
+    cubes,
+    bones: withBones([
+      { name: 'flag', pivot: [-3, 18, 0] },
+      { name: 'radar', pivot: [3.5, 13, 1.5] },
+    ]),
+    motions: { idle: loopMotion(2.4, [flagWave('flag', 2.4), radarSpin('radar')]) },
+  };
 }
 
 function factory(side) {
@@ -100,13 +121,13 @@ function factory(side) {
 }
 
 function oil(side) {
-  return [
+  const cubes = [
     PLINTH,
     { name: 'deck', origin: [-6, 1, -4], size: [12, 2, 8], paint: `trim_${side}` },
     { name: 'leg_left', origin: [-5, 3, -1], size: [2, 8, 2], paint: `body_${side}` },
     { name: 'leg_right', origin: [3, 3, -1], size: [2, 8, 2], paint: `body_${side}` },
-    { name: 'beam', origin: [-6, 11, -2], size: [12, 2, 4], paint: `body_${side}` },
-    { name: 'cap', origin: [-1.5, 13, -1.5], size: [3, 2, 3], paint: `trim_${side}` },
+    { name: 'beam', bone: 'pump', origin: [-6, 11, -2], size: [12, 2, 4], paint: `body_${side}` },
+    { name: 'cap', bone: 'pump', origin: [-1.5, 13, -1.5], size: [3, 2, 3], paint: `trim_${side}` },
     {
       name: 'drill',
       origin: [-1, 3, -0.5],
@@ -115,11 +136,13 @@ function oil(side) {
       stamps: [{ name: 'brace', face: 'north', pixels: 'k./.k/k./.k/k./.k/k./.k', colors: { k: WINDOW }, at: [[0, 0]] }],
     },
   ];
+  // La bomba cabecea sobre lo alto de las patas.
+  return { cubes, bones: withBones([{ name: 'pump', pivot: [0, 12, 0] }]), motions: { idle: loopMotion(2, [sway('pump', [0, 0, 9], 2)]) } };
 }
 
 function stronghold(side) {
   const ribbed = `ribbed_${side}`;
-  return [
+  const cubes = [
     PLINTH,
     {
       name: 'dome0',
@@ -132,11 +155,14 @@ function stronghold(side) {
     { name: 'dome2', origin: [-4, 8, -4], size: [8, 2, 8], paint: ribbed },
     { name: 'dome3', origin: [-2.5, 10, -2.5], size: [5, 1, 5], paint: `body_${side}` },
     { name: 'entrance', origin: [-1.5, 1, -7], size: [3, 3, 1], paint: `trim_${side}` },
+    { name: 'pole', origin: [-0.5, 11, -0.5], size: [1, 4, 1], paint: 'metal' },
+    { name: 'flag', bone: 'flag', origin: [0.5, 13, -0.5], size: [3, 2, 1], paint: `body_${side}` },
   ];
+  return { cubes, bones: withBones([{ name: 'flag', pivot: [0.5, 14, 0] }]), motions: { idle: loopMotion(1.4, [flagWave('flag', 1.4)]) } };
 }
 
 function airport(side) {
-  return [
+  const cubes = [
     {
       name: 'runway',
       origin: [-7, 0, -7],
@@ -155,13 +181,23 @@ function airport(side) {
       stamps: [{ name: 'hangar_door', face: 'north', pixels: '.kkkkk./.kkkkk./.kkkkk.', colors: { k: WINDOW }, at: [[0, 2]] }],
     },
     { name: 'hangar_roof', origin: [0, 6, -6], size: [5, 1, 7], paint: `trim_${side}` },
+    { name: 'radar_dish', bone: 'radar', origin: [-6.5, 14, -5], size: [4, 1, 1], paint: 'metal' },
   ];
+  return {
+    cubes,
+    bones: withBones([{ name: 'radar', pivot: [-4.5, 14, -4.5] }]),
+    motions: { idle: loopMotion(2.4, [radarSpin('radar')]) },
+  };
 }
 
 const BUILDINGS = { City: city, Base: base, Factory: factory, Oil: oil, Stronghold: stronghold, Airport: airport };
 
 export const MODELS = Object.fromEntries(
   Object.entries(BUILDINGS).flatMap(([building, cubesOf]) =>
-    Object.keys(SIDES).map((side) => [`${building.toLowerCase()}_${side}`, { cubes: cubesOf(side) }]),
+    Object.keys(SIDES).map((side) => {
+      // Los que no se mueven solo dan sus cubos; los que si, tambien sus huesos y su animacion.
+      const built = cubesOf(side);
+      return [`${building.toLowerCase()}_${side}`, Array.isArray(built) ? { cubes: built } : built];
+    }),
   ),
 );

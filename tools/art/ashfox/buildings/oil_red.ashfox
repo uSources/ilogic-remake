@@ -5,12 +5,23 @@ asset oil_red {
     frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
     joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
     joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint pump { parent = body; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
   }
   skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind pump { parent-origin = (0u, 12u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
-
+  motion idle for ModelRig {
+    duration = 2s; fps = 20; loop = loop; rest-relative = true;
+    track pump.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.5s = (0deg, 0deg, 9deg) catmullrom;
+      key 1s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.5s = (0deg, 0deg, -9deg) catmullrom;
+      key 2s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
   surface contract Skin {
     atlas { width = 64px; height = 64px; }
     chart plinth box { width = 56px; height = 15px; coverage = opaque; }
@@ -66,22 +77,25 @@ asset oil_red {
     requires rig skeleton: ModelRig;
     requires surface skin: Skin;
     bind bone body to skeleton.body;
+    bind bone pump to skeleton.pump;
     geometry {
       bone body {
         cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
         cube deck { origin = (-6u, 1u, -4u); size = (12u, 2u, 8u); surface = skin.deck; }
         cube leg_left { origin = (-5u, 3u, -1u); size = (2u, 8u, 2u); surface = skin.leg_left; }
         cube leg_right { origin = (3u, 3u, -1u); size = (2u, 8u, 2u); surface = skin.leg_right; }
-        cube beam { origin = (-6u, 11u, -2u); size = (12u, 2u, 4u); surface = skin.beam; }
-        cube cap { origin = (-1.5u, 13u, -1.5u); size = (3u, 2u, 3u); surface = skin.cap; }
         cube drill { origin = (-1u, 3u, -0.5u); size = (2u, 8u, 1u); surface = skin.drill; }
+        bone pump {
+          cube beam { origin = (-6u, 11u, -2u); size = (12u, 2u, 4u); surface = skin.beam; }
+          cube cap { origin = (-1.5u, 13u, -1.5u); size = (3u, 2u, 3u); surface = skin.cap; }
+        }
       }
     }
   }
   export asset oil_red {
     settings { density = 16; forward = north; }
     skeleton = ModelSkeleton;
-
+    motion = idle;
     use Body as model { bind skeleton = ModelRig; bind skin = paint; };
   }
 }

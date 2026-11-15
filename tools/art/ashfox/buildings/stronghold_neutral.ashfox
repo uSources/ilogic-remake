@@ -5,12 +5,23 @@ asset stronghold_neutral {
     frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
     joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
     joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint flag { parent = body; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
   }
   skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind flag { parent-origin = (0.5u, 14u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
-
+  motion idle for ModelRig {
+    duration = 1.4s; fps = 20; loop = loop; rest-relative = true;
+    track flag.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.35s = (0deg, 22deg, 4deg) catmullrom;
+      key 0.7s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.05s = (0deg, -22deg, -4deg) catmullrom;
+      key 1.4s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
   surface contract Skin {
     atlas { width = 64px; height = 64px; }
     chart plinth box { width = 56px; height = 15px; coverage = opaque; }
@@ -19,6 +30,8 @@ asset stronghold_neutral {
     chart dome2 box { width = 32px; height = 10px; coverage = opaque; }
     chart dome3 box { width = 20px; height = 6px; coverage = opaque; }
     chart entrance box { width = 8px; height = 4px; coverage = opaque; }
+    chart pole box { width = 4px; height = 5px; coverage = opaque; }
+    chart flag box { width = 8px; height = 3px; coverage = opaque; }
     material = opaque;
   }
   surface paint: Skin {
@@ -33,6 +46,7 @@ asset stronghold_neutral {
         slits_k = #14202c;
         body_neutral = (#55585e, #8f949c, #c8ccd2);
         trim_neutral = (#3a3d42, #62666e, #8f949c);
+        metal = (#4e5666, #8a93a6, #c3cbd9);
       }
       stamp slits { pixels = "kkk......kkk"; k = slits_k; }
       chart plinth box {
@@ -56,7 +70,13 @@ asset stronghold_neutral {
         origin = (33px, 47px); fill = body_neutral;
       }
       chart entrance box {
-        origin = (54px, 47px); fill = trim_neutral;
+        origin = (0px, 58px); fill = trim_neutral;
+      }
+      chart pole box {
+        origin = (54px, 47px); fill = metal;
+      }
+      chart flag box {
+        origin = (9px, 58px); fill = body_neutral;
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -66,6 +86,7 @@ asset stronghold_neutral {
     requires rig skeleton: ModelRig;
     requires surface skin: Skin;
     bind bone body to skeleton.body;
+    bind bone flag to skeleton.flag;
     geometry {
       bone body {
         cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
@@ -74,13 +95,17 @@ asset stronghold_neutral {
         cube dome2 { origin = (-4u, 8u, -4u); size = (8u, 2u, 8u); surface = skin.dome2; }
         cube dome3 { origin = (-2.5u, 10u, -2.5u); size = (5u, 1u, 5u); surface = skin.dome3; }
         cube entrance { origin = (-1.5u, 1u, -7u); size = (3u, 3u, 1u); surface = skin.entrance; }
+        cube pole { origin = (-0.5u, 11u, -0.5u); size = (1u, 4u, 1u); surface = skin.pole; }
+        bone flag {
+          cube flag { origin = (0.5u, 13u, -0.5u); size = (3u, 2u, 1u); surface = skin.flag; }
+        }
       }
     }
   }
   export asset stronghold_neutral {
     settings { density = 16; forward = north; }
     skeleton = ModelSkeleton;
-
+    motion = idle;
     use Body as model { bind skeleton = ModelRig; bind skin = paint; };
   }
 }

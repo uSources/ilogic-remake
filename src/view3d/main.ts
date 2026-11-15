@@ -9,6 +9,7 @@ import '../hud/hud.css';
 import * as THREE from 'three';
 import { render, h } from 'preact';
 import { mapGrid } from '../core/mapGrid';
+import type { MovementMotion } from '../core/content';
 import type { Pos } from '../core/model';
 import { Hud } from '../hud/Hud';
 import type { Anchor } from '../hud/store';
@@ -25,6 +26,8 @@ import { startPrototype } from './prototypeMatch';
 import { buildTerrain, TERRAIN_MODEL_FILES } from './terrain';
 import { TurnControls } from './turnControls';
 import { World } from './world';
+import { GroundMarks } from './groundMarks';
+import { ParticleSystem, type PuffKind } from './particles';
 import { SandDust } from './sandDust';
 import { WeatherView } from './weather3d';
 
@@ -93,7 +96,16 @@ function refresh(): void {
 /** Cuanto alrededor de lo que se mira hay clima y polvo: un poco mas que lo que se ve. */
 const WEATHER_REACH = 0.9;
 
-const animations = { board, layer: effects, animate: (seconds: number, step: (progress: number) => void) => world.animate(seconds, step) };
+const particles = new ParticleSystem();
+const marks = new GroundMarks();
+world.scene.add(particles.object, marks.mesh);
+const animations = {
+  board,
+  layer: effects,
+  animate: (seconds: number, step: (progress: number) => void) => world.animate(seconds, step),
+  puff: (kind: PuffKind, at: THREE.Vector3, count?: number) => particles.emit(kind, at, count),
+  mark: (at: THREE.Vector3, heading: number, motion: MovementMotion) => marks.leave(at, heading, motion),
+};
 const controls = new TurnControls({ session, viewer, highlights, animations, refresh });
 
 /** Elige la unidad y lleva la camara hasta ella. */
@@ -155,6 +167,9 @@ world.onFrame((seconds) => {
   const viewportHeight = world.renderer.domElement.clientHeight;
   weather.update(seconds, target, distance * WEATHER_REACH, world.camera, viewportHeight);
   sandDust.update(seconds, target, distance * WEATHER_REACH, world.camera, viewportHeight);
+  particles.keepEmitting(board.smokeSources(), seconds);
+  particles.update(seconds, world.camera, viewportHeight);
+  marks.update(seconds);
   // Los bocadillos (menu, prevision) siguen a su casilla mientras la camara se mueve.
   if (controls.menu() || (cursor && controls.forecastAt(cursor))) publish();
 });

@@ -4,9 +4,11 @@
  * diga la partida con el siguiente `sync`). Lo que la niebla tapa no se anima: no se delata.
  */
 import * as THREE from 'three';
+import type { MovementMotion } from '../core/content';
 import type { GameEvent, Pos } from '../core/model';
 import type { BoardView, UnitPiece } from './board';
 import { floatingText, projectile, sparks, type FxHost } from './fx';
+import type { PuffKind } from './particles';
 import { facingAngle } from './space';
 
 /** Segundos por casilla al moverse. */
@@ -27,6 +29,9 @@ const DAMAGE_COLOR = '#ff7a73';
 /** Lo que necesita una animacion: las piezas, la capa de efectos y el reloj del mundo. */
 export interface AnimationHost extends FxHost {
   board: BoardView;
+  /** Humo, polvo y fuego (particles.ts) y las huellas en el suelo (groundMarks.ts). */
+  puff(kind: PuffKind, at: THREE.Vector3, count?: number): void;
+  mark(at: THREE.Vector3, heading: number, motion: MovementMotion): void;
 }
 
 type EventOf<K extends GameEvent['kind']> = Extract<GameEvent, { kind: K }>;
@@ -35,23 +40,45 @@ type EventAnimations = { readonly [K in GameEvent['kind']]?: (event: EventOf<K>,
 /** El giro mas corto de `from` a `to` (sin dar la vuelta entera). */
 const shortestTurn = (from: number, to: number): number => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 
-async function stepTo(object: THREE.Object3D, from: Pos, to: Pos, host: AnimationHost): Promise<void> {
+/** En que momentos de cada paso se deja huella (y polvo, si es un vehiculo): a mitad y al llegar. */
+const MARK_MOMENTS = [0.5, 1] as const;
+
+async function stepTo(piece: UnitPiece, from: Pos, to: Pos, host: AnimationHost): Promise<void> {
+  const { object } = piece;
   const start = host.board.groundOf(from);
   const end = host.board.groundOf(to);
   const startAngle = object.rotation.y;
   const turn = shortestTurn(startAngle, facingAngle(from, to));
+  let marked = 0;
   await host.animate(STEP_SECONDS, (progress) => {
     object.position.lerpVectors(start, end, progress);
     object.position.y += Math.sin(progress * Math.PI) * STEP_HOP;
     object.rotation.y = startAngle + turn * Math.min(progress * 3, 1);
+    for (; marked < MARK_MOMENTS.length && progress >= MARK_MOMENTS[marked]!; marked++)
+      leaveTrace(piece, new THREE.Vector3().lerpVectors(start, end, progress), host);
   });
+}
+
+/** La huella en el suelo y, si es un vehiculo, una nube de polvo detras. */
+function leaveTrace(piece: UnitPiece, ground: THREE.Vector3, host: AnimationHost): void {
+  host.mark(ground, piece.object.rotation.y, piece.motion);
+  if (piece.motion !== 'drive') return;
+  const behind = new THREE.Vector3(Math.sin(piece.object.rotation.y), 0, Math.cos(piece.object.rotation.y)).multiplyScalar(-0.35);
+  host.puff(
+    'dust',
+    ground
+      .clone()
+      .add(behind)
+      .add(new THREE.Vector3(0, 0.05, 0)),
+    3,
+  );
 }
 
 async function animateMove(event: EventOf<'move'>, host: AnimationHost): Promise<void> {
   const piece = host.board.pieceOf(event.uid);
   if (!piece?.object.visible) return;
   piece.glb?.play('drive');
-  for (let index = 1; index < event.path.length; index++) await stepTo(piece.object, event.path[index - 1]!, event.path[index]!, host);
+  for (let index = 1; index < event.path.length; index++) await stepTo(piece, event.path[index - 1]!, event.path[index]!, host);
   piece.glb?.play('idle');
 }
 
@@ -85,6 +112,7 @@ async function shoot(shooter: UnitPiece, target: UnitPiece, host: AnimationHost)
   await aimAt(shooter, target.object.position, host);
   const from = muzzleOf(shooter);
   const to = muzzleOf(target);
+  host.puff('gunSmoke', from, 4);
   await Promise.all([recoil(shooter, host), projectile(host, from, to, from.distanceTo(to) > ARC_FROM)]);
 }
 
@@ -102,6 +130,8 @@ async function takeHit(piece: UnitPiece, damage: number, host: AnimationHost): P
 /** Una unidad destruida vuelca, se encoge y desaparece (despues `sync` quita su pieza). */
 async function fall(piece: UnitPiece, host: AnimationHost): Promise<void> {
   void sparks(host, muzzleOf(piece), 1.6);
+  host.puff('blast', muzzleOf(piece), 14);
+  host.puff('darkSmoke', muzzleOf(piece), 8);
   await host.animate(FALL_SECONDS, (progress) => {
     piece.body.rotation.z = progress * 1.4;
     piece.object.scale.setScalar(1 - progress * 0.9);

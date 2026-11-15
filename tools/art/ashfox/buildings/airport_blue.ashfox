@@ -5,12 +5,27 @@ asset airport_blue {
     frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
     joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
     joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint radar { parent = body; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
   }
   skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind radar { parent-origin = (-4.5u, 14u, -4.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
-
+  motion idle for ModelRig {
+    duration = 2.4s; fps = 20; loop = loop; rest-relative = true;
+    track radar.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.3s = (0deg, 22.5deg, 0deg) step;
+      key 0.6s = (0deg, 45deg, 0deg) step;
+      key 0.9s = (0deg, 67.5deg, 0deg) step;
+      key 1.2s = (0deg, 90deg, 0deg) step;
+      key 1.5s = (0deg, 112.5deg, 0deg) step;
+      key 1.8s = (0deg, 135deg, 0deg) step;
+      key 2.1s = (0deg, 157.5deg, 0deg) step;
+      key 2.4s = (0deg, 0deg, 0deg) step;
+    }
+  }
   surface contract Skin {
     atlas { width = 64px; height = 64px; }
     chart runway box { width = 56px; height = 15px; coverage = opaque; }
@@ -19,6 +34,7 @@ asset airport_blue {
     chart cab_roof box { width = 16px; height = 5px; coverage = opaque; }
     chart hangar box { width = 28px; height = 12px; coverage = opaque; }
     chart hangar_roof box { width = 24px; height = 8px; coverage = opaque; }
+    chart radar_dish box { width = 10px; height = 2px; coverage = opaque; }
     material = opaque;
   }
   surface paint: Skin {
@@ -32,6 +48,7 @@ asset airport_blue {
         glass = (#4f9fc8, #9fe3ff, #e6f8ff);
         trim_blue = (#0a3c4c, #16788a, #2fb4c6);
         hangar_door_k = #14202c;
+        metal = (#4e5666, #8a93a6, #c3cbd9);
       }
       stamp dashes { pixels = "ww..ww..ww"; w = dashes_w; }
       stamp hangar_door { pixels = ".kkkkk./.kkkkk./.kkkkk."; k = hangar_door_k; }
@@ -55,6 +72,9 @@ asset airport_blue {
       chart hangar_roof box {
         origin = (0px, 30px); fill = trim_blue;
       }
+      chart radar_dish box {
+        origin = (0px, 39px); fill = metal;
+      }
       grain clustered { seed = 2013; }
       tone voxel;
     }
@@ -63,6 +83,7 @@ asset airport_blue {
     requires rig skeleton: ModelRig;
     requires surface skin: Skin;
     bind bone body to skeleton.body;
+    bind bone radar to skeleton.radar;
     geometry {
       bone body {
         cube runway { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.runway; }
@@ -71,13 +92,16 @@ asset airport_blue {
         cube cab_roof { origin = (-6.5u, 13u, -6.5u); size = (4u, 1u, 4u); surface = skin.cab_roof; }
         cube hangar { origin = (-1u, 1u, -6u); size = (7u, 5u, 7u); surface = skin.hangar; }
         cube hangar_roof { origin = (0u, 6u, -6u); size = (5u, 1u, 7u); surface = skin.hangar_roof; }
+        bone radar {
+          cube radar_dish { origin = (-6.5u, 14u, -5u); size = (4u, 1u, 1u); surface = skin.radar_dish; }
+        }
       }
     }
   }
   export asset airport_blue {
     settings { density = 16; forward = north; }
     skeleton = ModelSkeleton;
-
+    motion = idle;
     use Body as model { bind skeleton = ModelRig; bind skin = paint; };
   }
 }
