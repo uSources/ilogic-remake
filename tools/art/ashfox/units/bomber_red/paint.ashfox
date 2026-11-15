@@ -1,0 +1,39 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = team_red; background-alpha = 255;
+      palette {
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_6_r = #f2786c;
+        rim_team_red_14_r = #f2786c;
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        dark_red = (#80181a, #962220, #a82c28);
+        gun = (#2a2e38, #343a46, #3e4554);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        rim_dark_red_1_r = #c04a40;
+        rim_dark_red_4_r = #c04a40;
+      }
+      stamp rim_team_red_6 { pixels = "rrrrrr"; r = rim_team_red_6_r; }
+      stamp rim_team_red_14 { pixels = "rrrrrrrrrrrrrr"; r = rim_team_red_14_r; }
+      stamp rim_dark_red_1 { pixels = "r"; r = rim_dark_red_1_r; }
+      stamp rim_dark_red_4 { pixels = "rrrr"; r = rim_dark_red_4_r; }
+      chart fuselage box { origin = (0px, 0px); fill = team_red; face north { stamp rim_team_red_6 { at = (0px, 0px); } } face south { stamp rim_team_red_6 { at = (0px, 0px); } } face east { stamp rim_team_red_14 { at = (0px, 0px); } } face west { stamp rim_team_red_14 { at = (0px, 0px); } } }
+      chart nose box { origin = (0px, 38px); fill = glass; }
+      chart windscreen box { origin = (50px, 38px); fill = glass; }
+      chart wing box { origin = (0px, 30px); fill = dark_red; }
+      chart engine_left box { origin = (0px, 21px); fill = gun; }
+      chart engine_right box { origin = (17px, 21px); fill = gun; }
+      chart prop_left_a box { origin = (0px, 45px); fill = steel; }
+      chart prop_left_b box { origin = (13px, 38px); fill = steel; }
+      chart prop_right_a box { origin = (13px, 45px); fill = steel; }
+      chart prop_right_b box { origin = (18px, 38px); fill = steel; }
+      chart fin box { origin = (41px, 0px); fill = dark_red; face north { stamp rim_dark_red_1 { at = (0px, 0px); } } face south { stamp rim_dark_red_1 { at = (0px, 0px); } } face east { stamp rim_dark_red_4 { at = (0px, 0px); } } face west { stamp rim_dark_red_4 { at = (0px, 0px); } } }
+      chart tailplane box { origin = (23px, 38px); fill = dark_red; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

@@ -1,0 +1,27 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart wheel_front box { width = 12px; height = 10px; coverage = opaque; }
+    chart wheel_front_round box { width = 14px; height = 10px; coverage = opaque; }
+    chart wheel_back box { width = 12px; height = 10px; coverage = opaque; }
+    chart wheel_back_round box { width = 14px; height = 10px; coverage = opaque; }
+    chart fork box { width = 4px; height = 6px; coverage = opaque; }
+    chart engine box { width = 14px; height = 7px; coverage = opaque; }
+    chart tank box { width = 16px; height = 8px; coverage = opaque; }
+    chart headlight box { width = 6px; height = 3px; coverage = opaque; }
+    chart seat box { width = 14px; height = 5px; coverage = opaque; }
+    chart fender box { width = 14px; height = 5px; coverage = opaque; }
+    chart exhaust box { width = 14px; height = 7px; coverage = opaque; }
+    chart handlebar box { width = 14px; height = 2px; coverage = opaque; }
+    chart leg_left box { width = 14px; height = 7px; coverage = opaque; }
+    chart leg_right box { width = 14px; height = 7px; coverage = opaque; }
+    chart rider_body box { width = 16px; height = 7px; coverage = opaque; }
+    chart arm_left box { width = 10px; height = 5px; coverage = opaque; }
+    chart arm_right box { width = 10px; height = 5px; coverage = opaque; }
+    chart rider_head box { width = 20px; height = 9px; coverage = opaque; }
+    chart rider_helmet box { width = 24px; height = 8px; coverage = opaque; }
+    chart scarf box { width = 18px; height = 6px; coverage = opaque; }
+    material = opaque;
+  }
+}

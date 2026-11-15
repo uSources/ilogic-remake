@@ -1,0 +1,47 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 128px); background = tire; background-alpha = 255;
+      palette {
+        tire = (#14171e, #1c2029, #252a35);
+        hub_h = #8a93a6;
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_10_r = #f2786c;
+        rim_team_red_5_r = #f2786c;
+        windshield_g = #9fe3ff;
+        lights_l = #ffe066;
+        lights_k = #141824;
+        side_window_g = #9fe3ff;
+        gun = (#2a2e38, #343a46, #3e4554);
+        dark_red = (#80181a, #962220, #a82c28);
+        canvas = (#b8a8a0, #c8b8b0, #d6c8c0);
+        ribs_d = #a8968c;
+      }
+      stamp hub { pixels = "hh/hh"; h = hub_h; }
+      stamp rim_team_red_10 { pixels = "rrrrrrrrrr"; r = rim_team_red_10_r; }
+      stamp rim_team_red_5 { pixels = "rrrrr"; r = rim_team_red_5_r; }
+      stamp windshield { pixels = "gggggggg/gggggggg/gggggggg"; g = windshield_g; }
+      stamp lights { pixels = "l.kkkkkk.l"; l = lights_l; k = lights_k; }
+      stamp side_window { pixels = "ggg/ggg"; g = side_window_g; }
+      stamp ribs { pixels = "d..d..d/d..d..d/d..d..d"; d = ribs_d; }
+      chart wheel_front_left box { origin = (37px, 43px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+      chart wheel_front_left_round box { origin = (50px, 43px); fill = tire; }
+      chart wheel_front_right box { origin = (0px, 55px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+      chart wheel_front_right_round box { origin = (13px, 55px); fill = tire; }
+      chart wheel_back_left box { origin = (28px, 55px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+      chart wheel_back_left_round box { origin = (41px, 55px); fill = tire; }
+      chart wheel_back_right box { origin = (0px, 66px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+      chart wheel_back_right_round box { origin = (13px, 66px); fill = tire; }
+      chart cab box { origin = (0px, 30px); fill = team_red; face north { stamp rim_team_red_10 { at = (0px, 0px); } stamp windshield { at = (1px, 1px); } stamp lights { at = (0px, 5px); } } face south { stamp rim_team_red_10 { at = (0px, 0px); } } face east { stamp rim_team_red_5 { at = (0px, 0px); } stamp side_window { at = (1px, 1px); } } face west { stamp rim_team_red_5 { at = (0px, 0px); } stamp side_window { at = (1px, 1px); } } }
+      chart bumper box { origin = (28px, 66px); fill = gun; }
+      chart bed box { origin = (0px, 16px); fill = dark_red; }
+      chart cover box { origin = (0px, 0px); fill = canvas; face east { stamp ribs { at = (1px, 1px); } } face west { stamp ribs { at = (1px, 1px); } } }
+      chart cover_top box { origin = (0px, 43px); fill = canvas; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

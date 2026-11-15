@@ -1,0 +1,30 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone chassis to skeleton.chassis;
+    bind bone hull to skeleton.hull;
+    bind bone turret to skeleton.turret;
+    bind bone barrel to skeleton.barrel;
+    geometry {
+      bone chassis {
+        cube track0 { origin = (-6u, 0u, -5.5u); size = (4u, 4u, 11u); surface = skin.track0; }
+        cube track1 { origin = (2u, 0u, -5.5u); size = (4u, 4u, 11u); surface = skin.track1; }
+      }
+      bone hull {
+        cube hull { origin = (-5u, 3u, -5.5u); size = (10u, 2u, 11u); surface = skin.hull; }
+        bone turret {
+          cube turret { origin = (-3u, 5u, -2.5u); size = (6u, 3u, 5u); surface = skin.turret; }
+          cube turret_top { origin = (-2u, 8u, -1.5u); size = (4u, 1u, 3u); surface = skin.turret_top; }
+          bone barrel {
+            cube barrel { origin = (-0.5u, 6u, -8.5u); size = (1u, 1u, 6u); surface = skin.barrel; }
+            cube muzzle { origin = (-1u, 5.5u, -9.5u); size = (2u, 2u, 1u); surface = skin.muzzle; }
+          }
+        }
+      }
+    }
+  }
+}

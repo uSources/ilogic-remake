@@ -1,0 +1,27 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = trunk; background-alpha = 255;
+      palette {
+        trunk = (#4a2c18, #6e4224, #8e5a32);
+        leaf = (#25661f, #3c8f2e, #62bd44);
+        leaf_spots = (#4fae3a, #78d055, #a2e670);
+      }
+
+      chart a_trunk box { origin = (38px, 25px); fill = trunk; }
+      chart a_crown0 box { origin = (33px, 0px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 4; } }
+      chart a_crown1 box { origin = (25px, 14px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 17; } }
+      chart b_trunk box { origin = (47px, 25px); fill = trunk; }
+      chart b_crown0 box { origin = (0px, 14px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 4; } }
+      chart b_crown1 box { origin = (21px, 25px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 17; } }
+      chart c_trunk box { origin = (56px, 25px); fill = trunk; }
+      chart c_crown0 box { origin = (0px, 0px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 0; } }
+      chart c_crown1 box { origin = (0px, 25px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 13; } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

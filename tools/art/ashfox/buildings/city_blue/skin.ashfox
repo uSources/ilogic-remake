@@ -1,0 +1,12 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart plinth box { width = 56px; height = 15px; coverage = opaque; }
+    chart tower box { width = 36px; height = 24px; coverage = opaque; }
+    chart awning box { width = 14px; height = 3px; coverage = opaque; }
+    chart parapet box { width = 40px; height = 11px; coverage = opaque; }
+    chart skylight box { width = 16px; height = 5px; coverage = opaque; }
+    material = opaque;
+  }
+}

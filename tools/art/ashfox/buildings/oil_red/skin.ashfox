@@ -1,0 +1,14 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart plinth box { width = 56px; height = 15px; coverage = opaque; }
+    chart deck box { width = 40px; height = 10px; coverage = opaque; }
+    chart leg_left box { width = 8px; height = 10px; coverage = opaque; }
+    chart leg_right box { width = 8px; height = 10px; coverage = opaque; }
+    chart beam box { width = 32px; height = 6px; coverage = opaque; }
+    chart cap box { width = 12px; height = 5px; coverage = opaque; }
+    chart drill box { width = 6px; height = 9px; coverage = opaque; }
+    material = opaque;
+  }
+}

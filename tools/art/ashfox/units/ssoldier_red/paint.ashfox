@@ -1,0 +1,61 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = boot; background-alpha = 255;
+      palette {
+        boot = (#3a3430, #4c443c, #5e544a);
+        dark_red = (#80181a, #962220, #a82c28);
+        rim_dark_red_2_r = #c04a40;
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_5_r = #f2786c;
+        rim_team_red_3_r = #f2786c;
+        belt5_x = #5a3a22;
+        belt3_x = #5a3a22;
+        skin = (#e4b88c, #f1c79b, #f8d4ac);
+        eyes_k = #1d2a4a;
+        mask_m = #80181a;
+        mask_side_m = #80181a;
+        rim_team_red_7_r = #f2786c;
+        rim_team_red_2_r = #f2786c;
+        hand2_x = #f1c79b;
+        riot = (#4a505c, #5a606c, #6a707c);
+        rim_riot_6_r = #9aa0ac;
+        rim_riot_1_r = #9aa0ac;
+        visor_g = #2a3a48;
+        rivets_r = #8a909c;
+      }
+      stamp rim_dark_red_2 { pixels = "rr"; r = rim_dark_red_2_r; }
+      stamp rim_team_red_5 { pixels = "rrrrr"; r = rim_team_red_5_r; }
+      stamp rim_team_red_3 { pixels = "rrr"; r = rim_team_red_3_r; }
+      stamp belt5 { pixels = "xxxxx"; x = belt5_x; }
+      stamp belt3 { pixels = "xxx"; x = belt3_x; }
+      stamp eyes { pixels = "k..k"; k = eyes_k; }
+      stamp mask { pixels = "mmmmmm/mmmmmm"; m = mask_m; }
+      stamp mask_side { pixels = "mmmmmm/mmmmmm"; m = mask_side_m; }
+      stamp rim_team_red_7 { pixels = "rrrrrrr"; r = rim_team_red_7_r; }
+      stamp rim_team_red_2 { pixels = "rr"; r = rim_team_red_2_r; }
+      stamp hand2 { pixels = "xx"; x = hand2_x; }
+      stamp rim_riot_6 { pixels = "rrrrrr"; r = rim_riot_6_r; }
+      stamp rim_riot_1 { pixels = "r"; r = rim_riot_1_r; }
+      stamp visor { pixels = "gggg/gggg"; g = visor_g; }
+      stamp rivets { pixels = "r....r"; r = rivets_r; }
+      chart boot_left box { origin = (39px, 23px); fill = boot; }
+      chart leg_left box { origin = (46px, 12px); fill = dark_red; face north { stamp rim_dark_red_2 { at = (0px, 0px); } } face south { stamp rim_dark_red_2 { at = (0px, 0px); } } face east { stamp rim_dark_red_2 { at = (0px, 0px); } } face west { stamp rim_dark_red_2 { at = (0px, 0px); } } }
+      chart boot_right box { origin = (50px, 23px); fill = boot; }
+      chart leg_right box { origin = (55px, 12px); fill = dark_red; face north { stamp rim_dark_red_2 { at = (0px, 0px); } } face south { stamp rim_dark_red_2 { at = (0px, 0px); } } face east { stamp rim_dark_red_2 { at = (0px, 0px); } } face west { stamp rim_dark_red_2 { at = (0px, 0px); } } }
+      chart torso box { origin = (29px, 12px); fill = team_red; face north { stamp rim_team_red_5 { at = (0px, 0px); } stamp belt5 { at = (0px, 3px); } } face south { stamp rim_team_red_5 { at = (0px, 0px); } stamp belt5 { at = (0px, 3px); } } face east { stamp rim_team_red_3 { at = (0px, 0px); } stamp belt3 { at = (0px, 3px); } } face west { stamp rim_team_red_3 { at = (0px, 0px); } stamp belt3 { at = (0px, 3px); } } }
+      chart head box { origin = (15px, 0px); fill = skin; face north { stamp eyes { at = (1px, 1px); } stamp mask { at = (0px, 2px); } } face east { stamp mask_side { at = (0px, 2px); } } face west { stamp mask_side { at = (0px, 2px); } } }
+      chart helmet box { origin = (0px, 12px); fill = team_red; face north { stamp rim_team_red_7 { at = (0px, 0px); } } face south { stamp rim_team_red_7 { at = (0px, 0px); } } face east { stamp rim_team_red_7 { at = (0px, 0px); } } face west { stamp rim_team_red_7 { at = (0px, 0px); } } }
+      chart helmet_top box { origin = (0px, 23px); fill = team_red; }
+      chart neck_guard box { origin = (0px, 30px); fill = team_red; }
+      chart arm_left box { origin = (21px, 23px); fill = team_red; face north { stamp rim_team_red_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } } face south { stamp rim_team_red_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } } face east { stamp rim_team_red_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } } face west { stamp rim_team_red_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } } }
+      chart arm_right box { origin = (30px, 23px); fill = team_red; face north { stamp rim_team_red_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } } face south { stamp rim_team_red_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } } face east { stamp rim_team_red_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } } face west { stamp rim_team_red_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } } }
+      chart shield box { origin = (0px, 0px); fill = riot; face north { stamp rim_riot_6 { at = (0px, 0px); } stamp visor { at = (1px, 2px); } stamp rivets { at = (0px, 8px); } } face south { stamp rim_riot_6 { at = (0px, 0px); } } face east { stamp rim_riot_1 { at = (0px, 0px); } } face west { stamp rim_riot_1 { at = (0px, 0px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

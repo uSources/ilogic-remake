@@ -1,0 +1,19 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart boot_left box { width = 10px; height = 4px; coverage = opaque; }
+    chart leg_left box { width = 8px; height = 6px; coverage = opaque; }
+    chart boot_right box { width = 10px; height = 4px; coverage = opaque; }
+    chart leg_right box { width = 8px; height = 6px; coverage = opaque; }
+    chart torso box { width = 16px; height = 7px; coverage = opaque; }
+    chart head box { width = 24px; height = 10px; coverage = opaque; }
+    chart helmet box { width = 28px; height = 10px; coverage = opaque; }
+    chart helmet_top box { width = 20px; height = 6px; coverage = opaque; }
+    chart neck_guard box { width = 16px; height = 3px; coverage = opaque; }
+    chart arm_left box { width = 8px; height = 5px; coverage = opaque; }
+    chart arm_right box { width = 8px; height = 5px; coverage = opaque; }
+    chart shield box { width = 14px; height = 11px; coverage = opaque; }
+    material = opaque;
+  }
+}

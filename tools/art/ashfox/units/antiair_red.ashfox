@@ -1,122 +1,14 @@
 ashfox-model 1
 asset antiair_red {
-rig contract ModelRig {
-handedness = right;
-frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-joint chassis { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-joint hull { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-joint turret { parent = hull; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-joint barrel { parent = turret; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-}
-skeleton ModelSkeleton implements ModelRig {
-bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-bind chassis { parent-origin = (0u, 2u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-bind turret { parent-origin = (0u, 2u, 0.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-bind barrel { parent-origin = (0u, 3u, -1.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-}
-motion idle for ModelRig {
-duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
-track hull.rotation {
-key 0s = (0deg, 0deg, 0deg) catmullrom;
-key 0.3s = (0.6deg, 0deg, 0.4deg) catmullrom;
-key 0.6s = (0deg, 0deg, 0deg) catmullrom;
-key 0.9s = (-0.6deg, 0deg, -0.4deg) catmullrom;
-key 1.2s = (0deg, 0deg, 0deg) catmullrom;
-}
-}
-motion drive for ModelRig {
-duration = 0.4s; fps = 20; loop = loop; rest-relative = true;
-track hull.rotation {
-key 0s = (0deg, 0deg, 0deg) catmullrom;
-key 0.1s = (-2deg, 0deg, 1deg) catmullrom;
-key 0.2s = (0deg, 0deg, 0deg) catmullrom;
-key 0.3s = (2deg, 0deg, -1deg) catmullrom;
-key 0.4s = (0deg, 0deg, 0deg) catmullrom;
-}
-}
-motion fire for ModelRig {
-duration = 0.5s; fps = 30; loop = once; rest-relative = true;
-track barrel.scale {
-key 0s = (1, 1, 1) linear;
-key 0.05s = (1.15, 1.15, 0.6) linear;
-key 0.4s = (1, 1, 1) linear;
-}
-track hull.rotation {
-key 0s = (0deg, 0deg, 0deg) linear;
-key 0.06s = (5deg, 0deg, 0deg) linear;
-key 0.4s = (0deg, 0deg, 0deg) linear;
-}
-}
-surface contract Skin {
-atlas { width = 64px; height = 128px; }
-chart track0 box { width = 32px; height = 16px; coverage = opaque; }
-chart track1 box { width = 32px; height = 16px; coverage = opaque; }
-chart hull box { width = 42px; height = 13px; coverage = opaque; }
-chart turret box { width = 30px; height = 9px; coverage = opaque; }
-chart gun_mount box { width = 16px; height = 5px; coverage = opaque; }
-chart gun_left box { width = 22px; height = 11px; coverage = opaque; }
-chart gun_right box { width = 22px; height = 11px; coverage = opaque; }
-material = opaque;
-}
-surface paint: Skin {
-material = opaque;
-texture atlas {
-atlas = (64px, 128px); background = tread; background-alpha = 255;
-palette {
-tread = (#1a1e28, #232836, #2c3242);
-wheels12_s = #5a6272;
-wheels12_t = #363d4c;
-sprocket_s = #6a7282;
-team_red = (#b02824, #c8302a, #d84038);
-dark_red = (#80181a, #962220, #a82c28);
-steel = (#7a8394, #8a93a6, #9aa3b6);
-}
-stamp wheels12 { pixels = "tttttttttttt/.ss.ss.ss.../.ss.ss.ss.../tttttttttttt"; s = wheels12_s; t = wheels12_t; }
-stamp sprocket { pixels = "ss/ss"; s = sprocket_s; }
-chart track0 box { origin = (0px, 0px); fill = tread; face west { stamp wheels12 { at = (0px, 0px); } } face north { stamp sprocket { at = (1px, 1px); } } face south { stamp sprocket { at = (1px, 1px); } } }
-chart track1 box { origin = (0px, 17px); fill = tread; face east { stamp wheels12 { at = (0px, 0px); } } face north { stamp sprocket { at = (1px, 1px); } } face south { stamp sprocket { at = (1px, 1px); } } }
-chart hull box { origin = (0px, 34px); fill = team_red; }
-chart turret box { origin = (0px, 60px); fill = team_red; }
-chart gun_mount box { origin = (31px, 60px); fill = dark_red; }
-chart gun_left box { origin = (0px, 48px); fill = steel; }
-chart gun_right box { origin = (23px, 48px); fill = steel; }
-grain clustered { seed = 2013; }
-tone voxel;
-}
-}
-component Body {
-requires rig skeleton: ModelRig;
-requires surface skin: Skin;
-bind bone chassis to skeleton.chassis;
-bind bone hull to skeleton.hull;
-bind bone turret to skeleton.turret;
-bind bone barrel to skeleton.barrel;
-geometry {
-bone chassis {
-cube track0 { origin = (-6u, 0u, -6u); size = (4u, 4u, 12u); surface = skin.track0; }
-cube track1 { origin = (2u, 0u, -6u); size = (4u, 4u, 12u); surface = skin.track1; }
-}
-bone hull {
-cube hull { origin = (-5u, 3u, -5.5u); size = (10u, 2u, 11u); surface = skin.hull; }
-bone turret {
-cube turret { origin = (-4u, 5u, -3u); size = (8u, 2u, 7u); surface = skin.turret; }
-cube gun_mount { origin = (-2.5u, 7u, -2u); size = (5u, 2u, 3u); surface = skin.gun_mount; }
-bone barrel {
-cube gun_left { origin = (-2u, 7.5u, -11u); size = (1u, 1u, 10u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 8u, -1u); surface = skin.gun_left; }
-cube gun_right { origin = (1u, 7.5u, -11u); size = (1u, 1u, 10u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 8u, -1u); surface = skin.gun_right; }
-}
-}
-}
-}
-}
-export asset antiair_red {
-settings { density = 16; forward = north; }
-skeleton = ModelSkeleton;
-motion = idle;
-motion = drive;
-motion = fire;
-use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-}
+  import "./antiair_red/rig.ashfox" as rig;
+  import "./antiair_red/paint.ashfox" as paint;
+  import "./antiair_red/body.ashfox" as body;
+  export asset antiair_red {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+    motion = rig.idle;
+    motion = rig.drive;
+    motion = rig.fire;
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
 }

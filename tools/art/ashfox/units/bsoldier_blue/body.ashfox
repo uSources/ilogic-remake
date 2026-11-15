@@ -1,0 +1,47 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone leg_left to skeleton.leg_left;
+    bind bone leg_right to skeleton.leg_right;
+    bind bone torso to skeleton.torso;
+    bind bone head to skeleton.head;
+    bind bone arm_left to skeleton.arm_left;
+    bind bone arm_right to skeleton.arm_right;
+    bind bone gear to skeleton.gear;
+    geometry {
+      bone leg_left {
+        cube boot_left { origin = (-2.5u, 0u, -1.5u); size = (2u, 1u, 3u); surface = skin.boot_left; }
+        cube leg_left { origin = (-2.5u, 1u, -1u); size = (2u, 4u, 2u); surface = skin.leg_left; }
+      }
+      bone leg_right {
+        cube boot_right { origin = (0.5u, 0u, -1.5u); size = (2u, 1u, 3u); surface = skin.boot_right; }
+        cube leg_right { origin = (0.5u, 1u, -1u); size = (2u, 4u, 2u); surface = skin.leg_right; }
+      }
+      bone torso {
+        cube torso { origin = (-2.5u, 5u, -1.5u); size = (5u, 4u, 3u); surface = skin.torso; }
+        bone head {
+          cube head { origin = (-3u, 9u, -3u); size = (6u, 4u, 6u); surface = skin.head; }
+          cube helmet { origin = (-3.5u, 12u, -3.5u); size = (7u, 3u, 7u); surface = skin.helmet; }
+          cube helmet_top { origin = (-2.5u, 15u, -2.5u); size = (5u, 1u, 5u); surface = skin.helmet_top; }
+          cube neck_guard { origin = (-3.5u, 10u, 2.5u); size = (7u, 2u, 1u); surface = skin.neck_guard; }
+        }
+        bone arm_left {
+          cube arm_left { origin = (-4.5u, 6u, -1u); size = (2u, 3u, 2u); surface = skin.arm_left; }
+        }
+        bone arm_right {
+          cube arm_right { origin = (2.5u, 6u, -1u); size = (2u, 3u, 2u); surface = skin.arm_right; }
+          cube tube { origin = (3u, 9u, -6u); size = (2u, 2u, 11u); surface = skin.tube; }
+          cube muzzle { origin = (2.5u, 8.5u, -6.5u); size = (3u, 3u, 1u); surface = skin.muzzle; }
+          cube breech { origin = (2.5u, 8.5u, 4.5u); size = (3u, 3u, 1u); surface = skin.breech; }
+          cube sight { origin = (3.5u, 11u, -3u); size = (1u, 1u, 2u); surface = skin.sight; }
+        }
+      }
+      bone gear {
+      }
+    }
+  }
+}

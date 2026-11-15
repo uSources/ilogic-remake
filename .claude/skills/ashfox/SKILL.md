@@ -1,6 +1,6 @@
 ---
 name: ashfox
-description: Use when creating, changing or reviewing the 3D models of Ilogic (units, buildings, terrain tiles and decor for the 3D view, 3d.html) with Ashfox, or when touching tools/art/ashfox or src/view3d/glbModels.ts. Covers how models are described and generated, how to export them, how to check them visually (capture, replay) and the Ashfox rules that break exports.
+description: Use when creating, changing or reviewing the 3D models of Ilogic (units, buildings, terrain tiles and decor of the game's 3D board) with Ashfox, or when touching tools/art/ashfox or src/view3d/glbModels.ts. Covers how models are described and generated, how to export them, how to check them visually (capture, replay) and the Ashfox rules that break exports.
 ---
 
 # Modelos 3D con Ashfox
@@ -32,10 +32,20 @@ nombre con colores distintos. Hay piezas comunes que se reutilizan (el muñeco `
 de escribir cubos sueltos. Los detalles pequeños (ojos, gafas, ventanas, faros, remaches) van como
 `stamps`, no como cubos.
 
+Cada modelo sale en varios ficheros: `<grupo>/<nombre>.ashfox` (el que se valida, se captura y se
+exporta) importa sus modulos de `<grupo>/<nombre>/`: `rig` (huesos y animaciones), `skin` (lo que
+pide la textura: el atlas y el trozo de cada cubo), `paint` (la textura pintada) y `body` (la
+geometria). Ashfox no admite mas de 20000 caracteres por fichero y un modelo con detalle se pasaria.
+El grano de la textura depende del texto de la fuente: si cambia el formato de lo generado, los GLB
+cambian de bytes aunque se vean igual.
+
 **Nunca** se tocan a mano los `.ashfox` generados (`tools/art/ashfox/{units,buildings,terrain}/`)
 ni los GLB (`public/assets/models/`): se regeneran.
 
 ## Antes de empezar
+
+0. **Estetica**: como tiene que verse el modelo (proporciones, cara, pose, detalle, materiales),
+   `docs/ESTETICA.md` (skill `estetica`). Lo que aqui se cuenta es el como; aquello, el que.
 
 1. **Referencia 2D**: los modelos se parecen al arte del juego. Unidades en `public/assets/img/u/`
    (`b_` azul, `r_` rojo), edificios en `public/assets/img/flat/bld_*`, terreno en
@@ -67,21 +77,28 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
   antes la imagen).
 - **Compararlo con el 2D**: de lado, `--azimuth 90 --elevation 18` deja la unidad mirando a la derecha,
   como los sprites; en una hoja con Pillow, el sprite ampliado (vecino mas cercano) junto a la captura.
-- Exportar todo tarda unos minutos (82 modelos); para probar uno, `ashfox export <fuente> --output
-  public/assets/models/<grupo>/<nombre>.glb` (borrando antes el `.glb`: Ashfox no sobrescribe).
+- Exportar todo tarda unos minutos (82 modelos); para probar uno o varios,
+  `ASHFOX=... node tools/art/ashfox/generate.mjs --export --only soldier_blue,soldier_red` (no
+  `ashfox export` a mano: no encogeria los modelos con `detail`).
 - **Playground de modelos** (`npm run dev` y `/units3d.html`, codigo en `src/view3d/playground/`):
   todas las unidades o edificios, o uno (`?model=Tank&side=enemy`), con la luz del juego y la de
   cada clima; sus animaciones (velocidad, pausa, fotograma a fotograma, disparo en bucle), la
   torreta y lo que mide cada modelo. Tras exportar, «Recargar modelos» (o R) los trae sin perder lo
   elegido. Desde la consola, `window.ilogicPlayground`.
-- Despues, **en el juego**: `npm run dev` y `/3d.html` (`?seed=` para elegir mapa, `?seed=2` es
-  desierto y `?seed=7` nevado). Desde la consola, `GlbLibrary.load(...)` de
-  `/src/view3d/glbModels.ts` y `lib.unit(id, 'own')` sirven para poner modelos en fila y mirarlos.
+- Despues, **en el juego**: `npm run dev` y `/` (`?seed=` para una escaramuza directa en ese mapa,
+  `?seed=2` es desierto y `?seed=7` nevado; `?elevation=0` sin relieve). Desde la consola,
+  `window.ilogic3d` (`board`, `rig`, `world`...). Tambien `GlbLibrary.load(...)` de `/src/view3d/glbModels.ts` y
+  `lib.unit(id, 'own')` sirven para poner modelos en fila y mirarlos.
 - Al acabar, `npm run check`. Ashfox no entra en los tests: lo que se comprueba a ojo, se dice.
 
 ## Convenciones de Ilogic
 
-- **Medidas**: 16 unidades de Ashfox = una casilla. Las casillas van de -8 a 8 en x y z; el
+- **Detalle**: Ashfox pone siempre un pixel de textura por unidad, y a 16 por casilla se queda en la
+  mitad de resolucion que los sprites (32×32). Un modelo con `detail: 2` se describe a 32 unidades
+  por casilla (el doble de pixeles por lado) y el generador lo encoge al exportar. Doblar no basta:
+  el detalle hay que pintarlo (cara, gafas, hebillas, correas, suelas...), como el soldado
+  (`trooper` en `units.mjs`, el modelo a seguir para la infanteria).
+- **Medidas**: 16 unidades de Ashfox = una casilla (32 en los modelos con `detail: 2`). Las casillas van de -8 a 8 en x y z; el
   decorado, los edificios y las unidades se apoyan en y = 0.
 - **Miran al norte (-z)**: delante van caras, puertas, ventanas y cañones. El juego los gira.
 - **Nombres**: `<id del contenido en minusculas>_<lado>` (`missile_truck_red`, `city_neutral`). El
@@ -110,6 +127,8 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
 - En una pista de animacion, todas las claves con la misma interpolacion; un bucle acaba como empieza
   (las ruedas y las helices giran a saltos con `spin`, aprovechando su simetria).
 - Patrones: solo `blotch`, y su `phase` no puede ser negativa.
+- Un fichero `.ashfox` no pasa de 20000 caracteres (`source.too_long`; el conjunto, hasta un millon).
+  Por eso el generador reparte cada modelo en modulos (abajo) y avisa si alguno se pasa.
 - Nombres de exportacion en minusculas; numeros sin restos de coma flotante (el generador los redondea).
 
 ## Lo que no hacer

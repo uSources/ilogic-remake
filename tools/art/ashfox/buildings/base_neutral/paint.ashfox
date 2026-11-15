@@ -1,0 +1,36 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = trim_neutral; background-alpha = 255;
+      palette {
+        trim_neutral = (#5a5e66, #62666e, #6e727a);
+        rim_trim_neutral_14_r = #8f949c;
+        body_neutral = (#868a92, #8f949c, #9ca0a8);
+        rim_body_neutral_5_r = #c8ccd2;
+        tall_windows_w = #14202c;
+        tall_windows_l = #ffe08a;
+        short_windows_w = #14202c;
+        short_windows_l = #ffe08a;
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+        asphalt = (#1c2028, #2a2e38, #3c4250);
+      }
+      stamp rim_trim_neutral_14 { pixels = "rrrrrrrrrrrrrr"; r = rim_trim_neutral_14_r; }
+      stamp rim_body_neutral_5 { pixels = "rrrrr"; r = rim_body_neutral_5_r; }
+      stamp tall_windows { pixels = "www/.../wlw/.../www/.../lww/.../www"; w = tall_windows_w; l = tall_windows_l; }
+      stamp short_windows { pixels = "www/.../wwl/.../www"; w = short_windows_w; l = short_windows_l; }
+      chart platform box { origin = (0px, 19px); fill = trim_neutral; face north { stamp rim_trim_neutral_14 { at = (0px, 0px); } } face south { stamp rim_trim_neutral_14 { at = (0px, 0px); } } face east { stamp rim_trim_neutral_14 { at = (0px, 0px); } } face west { stamp rim_trim_neutral_14 { at = (0px, 0px); } } }
+      chart tall box { origin = (0px, 0px); fill = body_neutral; face north { stamp rim_body_neutral_5 { at = (0px, 0px); } stamp tall_windows { at = (1px, 2px); } } face south { stamp rim_body_neutral_5 { at = (0px, 0px); } } face east { stamp rim_body_neutral_5 { at = (0px, 0px); } } face west { stamp rim_body_neutral_5 { at = (0px, 0px); } } }
+      chart short box { origin = (0px, 37px); fill = body_neutral; face north { stamp rim_body_neutral_5 { at = (0px, 0px); } stamp short_windows { at = (1px, 2px); } } face south { stamp rim_body_neutral_5 { at = (0px, 0px); } } face east { stamp rim_body_neutral_5 { at = (0px, 0px); } } face west { stamp rim_body_neutral_5 { at = (0px, 0px); } } }
+      chart antenna box { origin = (21px, 37px); fill = metal; }
+      chart flag box { origin = (26px, 37px); fill = body_neutral; }
+      chart gate box { origin = (35px, 37px); fill = asphalt; }
+      chart radar_post box { origin = (55px, 37px); fill = metal; }
+      chart radar_dish box { origin = (44px, 37px); fill = metal; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

@@ -1,0 +1,40 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = pavement; background-alpha = 255;
+      palette {
+        pavement = (#aea896, #b9b2a0, #c4bdaa);
+        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+        body_blue = (#1a8ea2, #1f9fb4, #2cb0c4);
+        rim_body_blue_12_r = #6ad8e4;
+        rim_body_blue_9_r = #6ad8e4;
+        hall_windows_w = #14202c;
+        hall_windows_l = #ffe08a;
+        door_d = #14202c;
+        trim_blue = (#126c7e, #16788a, #1f889a);
+        rim_trim_blue_4_r = #2fb4c6;
+        rim_trim_blue_8_r = #2fb4c6;
+        glazing_g = #9fe3ff;
+      }
+      stamp rim_body_blue_12 { pixels = "rrrrrrrrrrrr"; r = rim_body_blue_12_r; }
+      stamp rim_body_blue_9 { pixels = "rrrrrrrrr"; r = rim_body_blue_9_r; }
+      stamp hall_windows { pixels = ".ww.ww.wl.ww/............/.ww.lw.ww.ww"; w = hall_windows_w; l = hall_windows_l; }
+      stamp door { pixels = "ddd/ddd/ddd"; d = door_d; }
+      stamp rim_trim_blue_4 { pixels = "rrrr"; r = rim_trim_blue_4_r; }
+      stamp rim_trim_blue_8 { pixels = "rrrrrrrr"; r = rim_trim_blue_8_r; }
+      stamp glazing { pixels = "gggggggg/gggggggg"; g = glazing_g; }
+      chart plinth box { origin = (0px, 0px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } }
+      chart hall box { origin = (0px, 16px); fill = body_blue; face north { stamp rim_body_blue_12 { at = (0px, 0px); } stamp hall_windows { at = (0px, 1px); } stamp door { at = (1px, 3px); } } face south { stamp rim_body_blue_12 { at = (0px, 0px); } } face east { stamp rim_body_blue_9 { at = (0px, 0px); } } face west { stamp rim_body_blue_9 { at = (0px, 0px); } } }
+      chart tooth0 box { origin = (0px, 32px); fill = trim_blue; face north { stamp rim_trim_blue_4 { at = (0px, 0px); } } face south { stamp rim_trim_blue_4 { at = (0px, 0px); } } face east { stamp rim_trim_blue_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } } face west { stamp rim_trim_blue_8 { at = (0px, 0px); } } }
+      chart tooth1 box { origin = (25px, 32px); fill = trim_blue; face north { stamp rim_trim_blue_4 { at = (0px, 0px); } } face south { stamp rim_trim_blue_4 { at = (0px, 0px); } } face east { stamp rim_trim_blue_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } } face west { stamp rim_trim_blue_8 { at = (0px, 0px); } } }
+      chart tooth2 box { origin = (0px, 45px); fill = trim_blue; face north { stamp rim_trim_blue_4 { at = (0px, 0px); } } face south { stamp rim_trim_blue_4 { at = (0px, 0px); } } face east { stamp rim_trim_blue_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } } face west { stamp rim_trim_blue_8 { at = (0px, 0px); } } }
+      chart chimney box { origin = (43px, 16px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } }
+      chart chimney_cap box { origin = (25px, 45px); fill = trim_blue; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

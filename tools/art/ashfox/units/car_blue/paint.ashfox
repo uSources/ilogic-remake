@@ -1,0 +1,48 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = tire; background-alpha = 255;
+      palette {
+        tire = (#14171e, #1c2029, #252a35);
+        hub_h = #8a93a6;
+        team_blue = (#2766c4, #2f74d6, #3d84e2);
+        rim_team_blue_9_r = #6fb0f2;
+        rim_team_blue_13_r = #6fb0f2;
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        gun = (#2a2e38, #343a46, #3e4554);
+        skin = (#e4b88c, #f1c79b, #f8d4ac);
+        eyes_k = #1d2a4a;
+        strap5_x = #5a3a22;
+        goggles5_b = #5a3a22;
+        goggles5_g = #a8dcec;
+      }
+      stamp hub { pixels = "hh/hh"; h = hub_h; }
+      stamp rim_team_blue_9 { pixels = "rrrrrrrrr"; r = rim_team_blue_9_r; }
+      stamp rim_team_blue_13 { pixels = "rrrrrrrrrrrrr"; r = rim_team_blue_13_r; }
+      stamp eyes { pixels = "k..k/k..k"; k = eyes_k; }
+      stamp strap5 { pixels = "xxxxx"; x = strap5_x; }
+      stamp goggles5 { pixels = "bgggb"; b = goggles5_b; g = goggles5_g; }
+      chart wheel_front_left box { origin = (45px, 0px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+      chart wheel_front_left_round box { origin = (0px, 17px); fill = tire; }
+      chart wheel_front_right box { origin = (15px, 17px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+      chart wheel_front_right_round box { origin = (28px, 17px); fill = tire; }
+      chart wheel_back_left box { origin = (43px, 17px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+      chart wheel_back_left_round box { origin = (0px, 28px); fill = tire; }
+      chart wheel_back_right box { origin = (15px, 28px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+      chart wheel_back_right_round box { origin = (28px, 28px); fill = tire; }
+      chart body box { origin = (0px, 0px); fill = team_blue; face north { stamp rim_team_blue_9 { at = (0px, 0px); } } face south { stamp rim_team_blue_9 { at = (0px, 0px); } } face east { stamp rim_team_blue_13 { at = (0px, 0px); } } face west { stamp rim_team_blue_13 { at = (0px, 0px); } } }
+      chart windshield box { origin = (0px, 47px); fill = glass; }
+      chart windshield_frame box { origin = (19px, 47px); fill = gun; }
+      chart driver_head box { origin = (43px, 28px); fill = skin; face north { stamp eyes { at = (0px, 1px); } } }
+      chart driver_helmet box { origin = (0px, 39px); fill = team_blue; face south { stamp strap5 { at = (0px, 1px); } } face east { stamp strap5 { at = (0px, 1px); } } face west { stamp strap5 { at = (0px, 1px); } } face north { stamp goggles5 { at = (0px, 1px); } } }
+      chart gun_post box { origin = (34px, 39px); fill = gun; }
+      chart gun_body box { origin = (39px, 39px); fill = gun; }
+      chart gun box { origin = (21px, 39px); fill = gun; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

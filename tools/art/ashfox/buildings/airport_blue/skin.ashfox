@@ -1,0 +1,16 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart runway box { width = 56px; height = 15px; coverage = opaque; }
+    chart tower box { width = 16px; height = 13px; coverage = opaque; }
+    chart cab box { width = 20px; height = 8px; coverage = opaque; }
+    chart cab_roof box { width = 20px; height = 6px; coverage = opaque; }
+    chart cab_top box { width = 12px; height = 4px; coverage = opaque; }
+    chart radar_dish box { width = 10px; height = 2px; coverage = opaque; }
+    chart hangar box { width = 32px; height = 12px; coverage = opaque; }
+    chart hangar_roof box { width = 28px; height = 9px; coverage = opaque; }
+    chart hangar_ridge box { width = 24px; height = 9px; coverage = opaque; }
+    material = opaque;
+  }
+}

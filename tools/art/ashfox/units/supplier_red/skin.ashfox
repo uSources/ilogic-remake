@@ -1,0 +1,24 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 128px; }
+    chart wheel_front_left box { width = 12px; height = 10px; coverage = opaque; }
+    chart wheel_front_left_round box { width = 14px; height = 10px; coverage = opaque; }
+    chart wheel_front_right box { width = 12px; height = 10px; coverage = opaque; }
+    chart wheel_front_right_round box { width = 14px; height = 10px; coverage = opaque; }
+    chart wheel_back_left box { width = 12px; height = 10px; coverage = opaque; }
+    chart wheel_back_left_round box { width = 14px; height = 10px; coverage = opaque; }
+    chart wheel_back_right box { width = 12px; height = 10px; coverage = opaque; }
+    chart wheel_back_right_round box { width = 14px; height = 10px; coverage = opaque; }
+    chart cab box { width = 30px; height = 12px; coverage = opaque; }
+    chart bumper box { width = 22px; height = 2px; coverage = opaque; }
+    chart bed box { width = 42px; height = 13px; coverage = opaque; }
+    chart board_left box { width = 24px; height = 12px; coverage = opaque; }
+    chart board_right box { width = 24px; height = 12px; coverage = opaque; }
+    chart board_back box { width = 18px; height = 2px; coverage = opaque; }
+    chart crate_a box { width = 16px; height = 8px; coverage = opaque; }
+    chart crate_b box { width = 12px; height = 6px; coverage = opaque; }
+    chart jerrycan box { width = 10px; height = 6px; coverage = opaque; }
+    material = opaque;
+  }
+}

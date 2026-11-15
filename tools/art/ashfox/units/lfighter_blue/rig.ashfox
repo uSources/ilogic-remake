@@ -1,0 +1,109 @@
+ashfox-model 1
+module rig {
+  export rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint prop { parent = body; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  export skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 10u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind prop { parent-origin = (0u, 2u, -8u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  export motion idle for ModelRig {
+    duration = 2s; fps = 20; loop = loop; rest-relative = true;
+    track body.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.5s = (3deg, 0deg, 5deg) catmullrom;
+      key 1s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.5s = (-3deg, 0deg, -5deg) catmullrom;
+      key 2s = (0deg, 0deg, 0deg) catmullrom;
+    }
+    track prop.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.05s = (0deg, 0deg, 22.5deg) step;
+      key 0.1s = (0deg, 0deg, 45deg) step;
+      key 0.15s = (0deg, 0deg, 67.5deg) step;
+      key 0.2s = (0deg, 0deg, 90deg) step;
+      key 0.25s = (0deg, 0deg, 112.5deg) step;
+      key 0.3s = (0deg, 0deg, 135deg) step;
+      key 0.35s = (0deg, 0deg, 157.5deg) step;
+      key 0.4s = (0deg, 0deg, 180deg) step;
+      key 0.45s = (0deg, 0deg, 202.5deg) step;
+      key 0.5s = (0deg, 0deg, 225deg) step;
+      key 0.55s = (0deg, 0deg, 247.5deg) step;
+      key 0.6s = (0deg, 0deg, 270deg) step;
+      key 0.65s = (0deg, 0deg, 292.5deg) step;
+      key 0.7s = (0deg, 0deg, 315deg) step;
+      key 0.75s = (0deg, 0deg, 337.5deg) step;
+      key 0.8s = (0deg, 0deg, 360deg) step;
+      key 0.85s = (0deg, 0deg, 382.5deg) step;
+      key 0.9s = (0deg, 0deg, 405deg) step;
+      key 0.95s = (0deg, 0deg, 427.5deg) step;
+      key 1s = (0deg, 0deg, 450deg) step;
+      key 1.05s = (0deg, 0deg, 472.5deg) step;
+      key 1.1s = (0deg, 0deg, 495deg) step;
+      key 1.15s = (0deg, 0deg, 517.5deg) step;
+      key 1.2s = (0deg, 0deg, 540deg) step;
+      key 1.25s = (0deg, 0deg, 562.5deg) step;
+      key 1.3s = (0deg, 0deg, 585deg) step;
+      key 1.35s = (0deg, 0deg, 607.5deg) step;
+      key 1.4s = (0deg, 0deg, 630deg) step;
+      key 1.45s = (0deg, 0deg, 652.5deg) step;
+      key 1.5s = (0deg, 0deg, 675deg) step;
+      key 1.55s = (0deg, 0deg, 697.5deg) step;
+      key 1.6s = (0deg, 0deg, 720deg) step;
+      key 1.65s = (0deg, 0deg, 742.5deg) step;
+      key 1.7s = (0deg, 0deg, 765deg) step;
+      key 1.75s = (0deg, 0deg, 787.5deg) step;
+      key 1.8s = (0deg, 0deg, 810deg) step;
+      key 1.85s = (0deg, 0deg, 832.5deg) step;
+      key 1.9s = (0deg, 0deg, 855deg) step;
+      key 1.95s = (0deg, 0deg, 877.5deg) step;
+      key 2s = (0deg, 0deg, 0deg) step;
+    }
+  }
+  export motion drive for ModelRig {
+    duration = 1s; fps = 20; loop = loop; rest-relative = true;
+    track body.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.25s = (-4deg, 0deg, 6deg) catmullrom;
+      key 0.5s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.75s = (4deg, 0deg, -6deg) catmullrom;
+      key 1s = (0deg, 0deg, 0deg) catmullrom;
+    }
+    track prop.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.05s = (0deg, 0deg, 22.5deg) step;
+      key 0.1s = (0deg, 0deg, 45deg) step;
+      key 0.15s = (0deg, 0deg, 67.5deg) step;
+      key 0.2s = (0deg, 0deg, 90deg) step;
+      key 0.25s = (0deg, 0deg, 112.5deg) step;
+      key 0.3s = (0deg, 0deg, 135deg) step;
+      key 0.35s = (0deg, 0deg, 157.5deg) step;
+      key 0.4s = (0deg, 0deg, 180deg) step;
+      key 0.45s = (0deg, 0deg, 202.5deg) step;
+      key 0.5s = (0deg, 0deg, 225deg) step;
+      key 0.55s = (0deg, 0deg, 247.5deg) step;
+      key 0.6s = (0deg, 0deg, 270deg) step;
+      key 0.65s = (0deg, 0deg, 292.5deg) step;
+      key 0.7s = (0deg, 0deg, 315deg) step;
+      key 0.75s = (0deg, 0deg, 337.5deg) step;
+      key 0.8s = (0deg, 0deg, 360deg) step;
+      key 0.85s = (0deg, 0deg, 382.5deg) step;
+      key 0.9s = (0deg, 0deg, 405deg) step;
+      key 0.95s = (0deg, 0deg, 427.5deg) step;
+      key 1s = (0deg, 0deg, 0deg) step;
+    }
+  }
+  export motion fire for ModelRig {
+    duration = 0.4s; fps = 30; loop = once; rest-relative = true;
+    track body.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (-5deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+}

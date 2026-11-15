@@ -1,0 +1,30 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 128px); background = tread; background-alpha = 255;
+      palette {
+        tread = (#1a1e28, #232836, #2c3242);
+        wheels12_s = #5a6272;
+        wheels12_t = #363d4c;
+        sprocket_s = #6a7282;
+        team_red = (#b02824, #c8302a, #d84038);
+        dark_red = (#80181a, #962220, #a82c28);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+      }
+      stamp wheels12 { pixels = "tttttttttttt/.ss.ss.ss.../.ss.ss.ss.../tttttttttttt"; s = wheels12_s; t = wheels12_t; }
+      stamp sprocket { pixels = "ss/ss"; s = sprocket_s; }
+      chart track0 box { origin = (0px, 0px); fill = tread; face west { stamp wheels12 { at = (0px, 0px); } } face north { stamp sprocket { at = (1px, 1px); } } face south { stamp sprocket { at = (1px, 1px); } } }
+      chart track1 box { origin = (0px, 17px); fill = tread; face east { stamp wheels12 { at = (0px, 0px); } } face north { stamp sprocket { at = (1px, 1px); } } face south { stamp sprocket { at = (1px, 1px); } } }
+      chart hull box { origin = (0px, 34px); fill = team_red; }
+      chart turret box { origin = (0px, 60px); fill = team_red; }
+      chart gun_mount box { origin = (31px, 60px); fill = dark_red; }
+      chart gun_left box { origin = (0px, 48px); fill = steel; }
+      chart gun_right box { origin = (23px, 48px); fill = steel; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

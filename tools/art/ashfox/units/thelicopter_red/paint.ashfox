@@ -1,0 +1,44 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = team_red; background-alpha = 255;
+      palette {
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_7_r = #f2786c;
+        rim_team_red_8_r = #f2786c;
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        dark_red = (#80181a, #962220, #a82c28);
+        rim_dark_red_1_r = #c04a40;
+        rim_dark_red_2_r = #c04a40;
+        gun = (#2a2e38, #343a46, #3e4554);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        blur = (#8fb8d8, #a8cce6, #c0dcf0);
+      }
+      stamp rim_team_red_7 { pixels = "rrrrrrr"; r = rim_team_red_7_r; }
+      stamp rim_team_red_8 { pixels = "rrrrrrrr"; r = rim_team_red_8_r; }
+      stamp rim_dark_red_1 { pixels = "r"; r = rim_dark_red_1_r; }
+      stamp rim_dark_red_2 { pixels = "rr"; r = rim_dark_red_2_r; }
+      chart cabin box { origin = (0px, 22px); fill = team_red; face north { stamp rim_team_red_7 { at = (0px, 0px); } } face south { stamp rim_team_red_7 { at = (0px, 0px); } } face east { stamp rim_team_red_8 { at = (0px, 0px); } } face west { stamp rim_team_red_8 { at = (0px, 0px); } } }
+      chart cabin_top box { origin = (0px, 49px); fill = team_red; }
+      chart bubble box { origin = (44px, 37px); fill = glass; }
+      chart boom box { origin = (23px, 37px); fill = dark_red; }
+      chart tail_fin box { origin = (23px, 49px); fill = dark_red; face north { stamp rim_dark_red_1 { at = (0px, 0px); } } face south { stamp rim_dark_red_1 { at = (0px, 0px); } } face east { stamp rim_dark_red_2 { at = (0px, 0px); } } face west { stamp rim_dark_red_2 { at = (0px, 0px); } } }
+      chart skid0 box { origin = (31px, 22px); fill = gun; }
+      chart strut_front0 box { origin = (46px, 49px); fill = gun; }
+      chart strut_back0 box { origin = (51px, 49px); fill = gun; }
+      chart skid1 box { origin = (0px, 37px); fill = gun; }
+      chart strut_front1 box { origin = (56px, 49px); fill = gun; }
+      chart strut_back1 box { origin = (0px, 57px); fill = gun; }
+      chart mast box { origin = (5px, 57px); fill = steel; }
+      chart blade_a box { origin = (10px, 57px); fill = blur; }
+      chart blade_b box { origin = (0px, 0px); fill = blur; }
+      chart tail_blade_a box { origin = (30px, 49px); fill = steel; }
+      chart tail_blade_b box { origin = (35px, 49px); fill = steel; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

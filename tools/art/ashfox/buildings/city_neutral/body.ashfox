@@ -1,0 +1,19 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
+        cube tower { origin = (-4.5u, 1u, -4.5u); size = (9u, 15u, 9u); surface = skin.tower; }
+        cube awning { origin = (-2.5u, 4u, -6u); size = (5u, 1u, 2u); surface = skin.awning; }
+        cube parapet { origin = (-5u, 16u, -5u); size = (10u, 1u, 10u); surface = skin.parapet; }
+        cube skylight { origin = (-2u, 17u, -2u); size = (4u, 1u, 4u); surface = skin.skylight; }
+      }
+    }
+  }
+}

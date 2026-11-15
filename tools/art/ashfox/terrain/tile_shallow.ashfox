@@ -1,49 +1,12 @@
 ashfox-model 1
 asset tile_shallow {
-rig contract ModelRig {
-handedness = right;
-frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-}
-skeleton ModelSkeleton implements ModelRig {
-bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-}
+  import "./tile_shallow/rig.ashfox" as rig;
+  import "./tile_shallow/paint.ashfox" as paint;
+  import "./tile_shallow/body.ashfox" as body;
+  export asset tile_shallow {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
 
-surface contract Skin {
-atlas { width = 64px; height = 32px; }
-chart water box { width = 64px; height = 26px; coverage = opaque; }
-material = opaque;
-}
-surface paint: Skin {
-material = opaque;
-texture atlas {
-atlas = (64px, 32px); background = shallow; background-alpha = 255;
-palette {
-shallow = (#58c6c0, #8ee0d6, #c6f4ea);
-shallow_spots = (#e8d6a0, #f4e4b4, #fff2cc);
-}
-
-chart water box { origin = (0px, 0px); fill = shallow; pattern blotch { paint = shallow_spots; scale = (4px, 2px, 4px); density = 0.25ratio; phase = 7; } }
-grain clustered { seed = 2013; }
-tone voxel;
-}
-}
-component Body {
-requires rig skeleton: ModelRig;
-requires surface skin: Skin;
-bind bone body to skeleton.body;
-geometry {
-bone body {
-cube water { origin = (-8u, -8u, -8u); size = (16u, 10u, 16u); surface = skin.water; }
-}
-}
-}
-export asset tile_shallow {
-settings { density = 16; forward = north; }
-skeleton = ModelSkeleton;
-
-use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-}
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
 }

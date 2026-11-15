@@ -1,0 +1,23 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart cabin box { width = 30px; height = 14px; coverage = opaque; }
+    chart cabin_top box { width = 22px; height = 7px; coverage = opaque; }
+    chart bubble box { width = 18px; height = 8px; coverage = opaque; }
+    chart boom box { width = 20px; height = 10px; coverage = opaque; }
+    chart tail_fin box { width = 6px; height = 5px; coverage = opaque; }
+    chart skid0 box { width = 22px; height = 11px; coverage = opaque; }
+    chart strut_front0 box { width = 4px; height = 3px; coverage = opaque; }
+    chart strut_back0 box { width = 4px; height = 3px; coverage = opaque; }
+    chart skid1 box { width = 22px; height = 11px; coverage = opaque; }
+    chart strut_front1 box { width = 4px; height = 3px; coverage = opaque; }
+    chart strut_back1 box { width = 4px; height = 3px; coverage = opaque; }
+    chart mast box { width = 4px; height = 2px; coverage = opaque; }
+    chart blade_a box { width = 42px; height = 2px; coverage = opaque; }
+    chart blade_b box { width = 42px; height = 21px; coverage = opaque; }
+    chart tail_blade_a box { width = 4px; height = 5px; coverage = opaque; }
+    chart tail_blade_b box { width = 10px; height = 5px; coverage = opaque; }
+    material = opaque;
+  }
+}

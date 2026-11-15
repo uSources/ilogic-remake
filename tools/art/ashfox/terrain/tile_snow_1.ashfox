@@ -1,59 +1,12 @@
 ashfox-model 1
 asset tile_snow_1 {
-rig contract ModelRig {
-handedness = right;
-frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-}
-skeleton ModelSkeleton implements ModelRig {
-bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-}
+  import "./tile_snow_1/rig.ashfox" as rig;
+  import "./tile_snow_1/paint.ashfox" as paint;
+  import "./tile_snow_1/body.ashfox" as body;
+  export asset tile_snow_1 {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
 
-surface contract Skin {
-atlas { width = 64px; height = 64px; }
-chart base box { width = 64px; height = 26px; coverage = opaque; }
-chart top box { width = 64px; height = 18px; coverage = opaque; }
-material = opaque;
-}
-surface paint: Skin {
-material = opaque;
-texture atlas {
-atlas = (64px, 64px); background = ice_rock; background-alpha = 255;
-palette {
-ice_rock = (#2c4c7c, #4a72a8, #7aa2d6);
-ice_rock_spots = (#203a62, #36588a, #56809e);
-snow = (#bcd3ec, #e6f0fb, #ffffff);
-snow_spots = (#9fc0e4, #bcd6f0, #d6e8f8);
-crack_c = #9fc0e4;
-drift_b = #d6e6f6;
-sparkle_s = #bcd6f0;
-}
-stamp crack { pixels = "c.../.cc./...c"; c = crack_c; }
-stamp drift { pixels = "bbb"; b = drift_b; }
-stamp sparkle { pixels = "s"; s = sparkle_s; }
-chart base box { origin = (0px, 0px); fill = ice_rock; pattern blotch { paint = ice_rock_spots; scale = (2px, 2px, 2px); density = 0.2ratio; phase = 20; } }
-chart top box { origin = (0px, 27px); fill = snow; pattern blotch { paint = snow_spots; scale = (3px, 1px, 3px); density = 0.12ratio; phase = 20; } face up { stamp crack { at = (10px, 11px); } stamp drift { at = (13px, 11px); } stamp drift { at = (1px, 12px); } stamp drift { at = (8px, 1px); } stamp sparkle { at = (3px, 2px); } stamp sparkle { at = (7px, 5px); } } }
-grain clustered { seed = 2013; }
-tone voxel;
-}
-}
-component Body {
-requires rig skeleton: ModelRig;
-requires surface skin: Skin;
-bind bone body to skeleton.body;
-geometry {
-bone body {
-cube base { origin = (-8u, -8u, -8u); size = (16u, 10u, 16u); surface = skin.base; }
-cube top { origin = (-8u, 2u, -8u); size = (16u, 2u, 16u); surface = skin.top; }
-}
-}
-}
-export asset tile_snow_1 {
-settings { density = 16; forward = north; }
-skeleton = ModelSkeleton;
-
-use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-}
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
 }

@@ -1,0 +1,14 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart plinth box { width = 56px; height = 15px; coverage = opaque; }
+    chart hall box { width = 42px; height = 15px; coverage = opaque; }
+    chart tooth0 box { width = 24px; height = 12px; coverage = opaque; }
+    chart tooth1 box { width = 24px; height = 12px; coverage = opaque; }
+    chart tooth2 box { width = 24px; height = 12px; coverage = opaque; }
+    chart chimney box { width = 8px; height = 13px; coverage = opaque; }
+    chart chimney_cap box { width = 12px; height = 4px; coverage = opaque; }
+    material = opaque;
+  }
+}

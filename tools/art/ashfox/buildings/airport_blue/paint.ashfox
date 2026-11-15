@@ -1,0 +1,36 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = asphalt; background-alpha = 255;
+      palette {
+        asphalt = (#1c2028, #2a2e38, #3c4250);
+        dashes_w = #f2f5ff;
+        body_blue = (#1a8ea2, #1f9fb4, #2cb0c4);
+        rim_body_blue_4_r = #6ad8e4;
+        window_glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        trim_blue = (#126c7e, #16788a, #1f889a);
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+        rim_body_blue_8_r = #6ad8e4;
+        hangar_door_k = #14202c;
+      }
+      stamp dashes { pixels = "ww..ww..ww"; w = dashes_w; }
+      stamp rim_body_blue_4 { pixels = "rrrr"; r = rim_body_blue_4_r; }
+      stamp rim_body_blue_8 { pixels = "rrrrrrrr"; r = rim_body_blue_8_r; }
+      stamp hangar_door { pixels = ".kkkkkk./.kkkkkk./.kkkkkk."; k = hangar_door_k; }
+      chart runway box { origin = (0px, 0px); fill = asphalt; face up { stamp dashes { at = (2px, 11px); } } }
+      chart tower box { origin = (0px, 16px); fill = body_blue; face north { stamp rim_body_blue_4 { at = (0px, 0px); } } face south { stamp rim_body_blue_4 { at = (0px, 0px); } } face east { stamp rim_body_blue_4 { at = (0px, 0px); } } face west { stamp rim_body_blue_4 { at = (0px, 0px); } } }
+      chart cab box { origin = (0px, 40px); fill = window_glass; }
+      chart cab_roof box { origin = (21px, 40px); fill = trim_blue; }
+      chart cab_top box { origin = (42px, 40px); fill = trim_blue; }
+      chart radar_dish box { origin = (0px, 49px); fill = metal; }
+      chart hangar box { origin = (17px, 16px); fill = body_blue; face north { stamp rim_body_blue_8 { at = (0px, 0px); } stamp hangar_door { at = (0px, 1px); } } face south { stamp rim_body_blue_8 { at = (0px, 0px); } } face east { stamp rim_body_blue_8 { at = (0px, 0px); } } face west { stamp rim_body_blue_8 { at = (0px, 0px); } } }
+      chart hangar_roof box { origin = (0px, 30px); fill = body_blue; }
+      chart hangar_ridge box { origin = (29px, 30px); fill = trim_blue; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

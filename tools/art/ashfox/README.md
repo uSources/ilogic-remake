@@ -1,6 +1,6 @@
 # Modelos 3D con Ashfox (prototipo)
 
-Fuentes `.ashfox` de los modelos del prototipo 3D (`3d.html`). [Ashfox](https://ashfox.io) describe
+Fuentes `.ashfox` de los modelos 3D del juego (`index.html`; para verlos, `units3d.html`). [Ashfox](https://ashfox.io) describe
 un modelo como datos: cubos colgados de huesos, una textura de pixel art hecha con paleta, manchas y
 «stamps», y animaciones por fotogramas clave. Sale un GLB con su textura y sus animaciones, que carga
 `src/view3d/glbModels.ts`.
@@ -34,7 +34,19 @@ Desde la raiz del juego:
 ```sh
 node tools/art/ashfox/generate.mjs                                                       # escribe los .ashfox
 ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --export    # y los GLB
+ASHFOX=... node tools/art/ashfox/generate.mjs --export --only soldier_blue,soldier_red   # solo esos
 ```
+
+Cada modelo sale repartido en modulos: `<grupo>/<nombre>.ashfox` importa los de `<grupo>/<nombre>/`
+(`rig`: huesos y animaciones; `skin`: el atlas y el trozo de cada cubo; `paint`: la textura pintada;
+`body`: la geometria). Ashfox no admite mas de 20000 caracteres por fichero, y asi cada parte tiene
+el suyo. Se valida, se captura y se exporta `<grupo>/<nombre>.ashfox`, como siempre.
+
+Ashfox pone siempre un pixel de textura por unidad (16 por casilla, la mitad que los sprites de
+32×32). Un modelo con `detail: 2` se describe a 32 unidades por casilla y tiene el doble de pixeles
+por lado; al exportarlo, el generador encoge su hueso raiz a la mitad en el GLB y el juego lo ve del
+tamaño de siempre. Por eso esos modelos se exportan con el generador (`--only`), no con
+`ashfox export` a mano. El soldado (`trooper` en `models/units.mjs`) es el primero asi.
 
 Lo que Ashfox exige (el generador ya lo cumple o avisa):
 

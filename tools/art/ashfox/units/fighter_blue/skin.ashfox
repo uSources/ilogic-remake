@@ -1,0 +1,14 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 32px; }
+    chart fuselage box { width = 34px; height = 17px; coverage = opaque; }
+    chart nose box { width = 10px; height = 5px; coverage = opaque; }
+    chart canopy box { width = 16px; height = 7px; coverage = opaque; }
+    chart wing box { width = 34px; height = 6px; coverage = opaque; }
+    chart tailplane box { width = 20px; height = 3px; coverage = opaque; }
+    chart fin box { width = 8px; height = 7px; coverage = opaque; }
+    chart nozzle box { width = 8px; height = 4px; coverage = opaque; }
+    material = opaque;
+  }
+}

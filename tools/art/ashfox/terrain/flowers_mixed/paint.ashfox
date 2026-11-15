@@ -1,0 +1,63 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = leaf; background-alpha = 255;
+      palette {
+        leaf = (#25661f, #3c8f2e, #62bd44);
+        leaf_spots = (#4fae3a, #78d055, #a2e670);
+        stem = (#2f7a2a, #3f9a34, #5cbf4a);
+        flower_center = (#c89a10, #f2c81e, #ffe866);
+        petal_red = (#b02030, #e83a48, #ff7a80);
+        petal_yellow = (#c89a10, #f2c81e, #ffe866);
+        petal_purple = (#6a2a9a, #9a46d0, #c48af0);
+        petal_white = (#c8ccd8, #eef2fa, #ffffff);
+        petal_pink = (#b8487a, #ee6aa0, #ffa0c8);
+      }
+
+      chart a_leaves box { origin = (0px, 0px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; } }
+      chart b_leaves box { origin = (22px, 0px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; } }
+      chart c_leaves box { origin = (35px, 0px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; } }
+      chart f0_stem box { origin = (53px, 0px); fill = stem; }
+      chart f0_center box { origin = (10px, 6px); fill = flower_center; }
+      chart f0_petal0 box { origin = (15px, 6px); fill = petal_red; }
+      chart f0_petal1 box { origin = (20px, 6px); fill = petal_red; }
+      chart f0_petal2 box { origin = (25px, 6px); fill = petal_red; }
+      chart f0_petal3 box { origin = (30px, 6px); fill = petal_red; }
+      chart f1_stem box { origin = (48px, 0px); fill = stem; }
+      chart f1_center box { origin = (35px, 6px); fill = flower_center; }
+      chart f1_petal0 box { origin = (40px, 6px); fill = petal_yellow; }
+      chart f1_petal1 box { origin = (45px, 6px); fill = petal_yellow; }
+      chart f1_petal2 box { origin = (50px, 6px); fill = petal_yellow; }
+      chart f1_petal3 box { origin = (55px, 6px); fill = petal_yellow; }
+      chart f2_stem box { origin = (58px, 0px); fill = stem; }
+      chart f2_center box { origin = (60px, 6px); fill = flower_center; }
+      chart f2_petal0 box { origin = (0px, 10px); fill = petal_purple; }
+      chart f2_petal1 box { origin = (5px, 10px); fill = petal_purple; }
+      chart f2_petal2 box { origin = (10px, 10px); fill = petal_purple; }
+      chart f2_petal3 box { origin = (15px, 10px); fill = petal_purple; }
+      chart f3_stem box { origin = (0px, 6px); fill = stem; }
+      chart f3_center box { origin = (20px, 10px); fill = flower_center; }
+      chart f3_petal0 box { origin = (25px, 10px); fill = petal_white; }
+      chart f3_petal1 box { origin = (30px, 10px); fill = petal_white; }
+      chart f3_petal2 box { origin = (35px, 10px); fill = petal_white; }
+      chart f3_petal3 box { origin = (40px, 10px); fill = petal_white; }
+      chart f4_stem box { origin = (17px, 0px); fill = stem; }
+      chart f4_center box { origin = (45px, 10px); fill = flower_center; }
+      chart f4_petal0 box { origin = (50px, 10px); fill = petal_pink; }
+      chart f4_petal1 box { origin = (55px, 10px); fill = petal_pink; }
+      chart f4_petal2 box { origin = (60px, 10px); fill = petal_pink; }
+      chart f4_petal3 box { origin = (0px, 13px); fill = petal_pink; }
+      chart f5_stem box { origin = (5px, 6px); fill = stem; }
+      chart f5_center box { origin = (5px, 13px); fill = flower_center; }
+      chart f5_petal0 box { origin = (10px, 13px); fill = petal_red; }
+      chart f5_petal1 box { origin = (15px, 13px); fill = petal_red; }
+      chart f5_petal2 box { origin = (20px, 13px); fill = petal_red; }
+      chart f5_petal3 box { origin = (25px, 13px); fill = petal_red; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

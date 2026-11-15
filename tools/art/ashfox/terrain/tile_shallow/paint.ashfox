@@ -1,0 +1,18 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = shallow; background-alpha = 255;
+      palette {
+        shallow = (#58c6c0, #8ee0d6, #c6f4ea);
+        shallow_spots = (#e8d6a0, #f4e4b4, #fff2cc);
+      }
+
+      chart water box { origin = (0px, 0px); fill = shallow; pattern blotch { paint = shallow_spots; scale = (4px, 2px, 4px); density = 0.25ratio; phase = 7; } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

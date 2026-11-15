@@ -1,0 +1,34 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = pavement; background-alpha = 255;
+      palette {
+        pavement = (#aea896, #b9b2a0, #c4bdaa);
+        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+        body_red = (#a42424, #b8282a, #c8383a);
+        rim_body_red_9_r = #ee6a60;
+        front_windows_w = #14202c;
+        front_windows_l = #ffe08a;
+        door_d = #14202c;
+        side_windows_w = #14202c;
+        side_windows_l = #ffe08a;
+        trim_red = (#741416, #86181a, #962420);
+        window_glass = (#8ad4f4, #9fe3ff, #b8ecff);
+      }
+      stamp rim_body_red_9 { pixels = "rrrrrrrrr"; r = rim_body_red_9_r; }
+      stamp front_windows { pixels = ".w.l.w.w./.w.l.w.w./........./.w.w.w.l./.w.w.w.l./........./.l.w.w.w./.l.w.w.w./........./.w.w.l.w./.w.w.l.w."; w = front_windows_w; l = front_windows_l; }
+      stamp door { pixels = "ddd/ddd/ddd"; d = door_d; }
+      stamp side_windows { pixels = ".w.l.w.w./.w.l.w.w./........./.w.w.w.l./.w.w.w.l./........./.l.w.w.w./.l.w.w.w./........./.w.w.l.w./.w.w.l.w./........./.w.w.w.w./.w.w.w.w."; w = side_windows_w; l = side_windows_l; }
+      chart plinth box { origin = (0px, 25px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } }
+      chart tower box { origin = (0px, 0px); fill = body_red; face north { stamp rim_body_red_9 { at = (0px, 0px); } stamp front_windows { at = (0px, 1px); } stamp door { at = (3px, 12px); } } face south { stamp rim_body_red_9 { at = (0px, 0px); } stamp side_windows { at = (0px, 1px); } } face east { stamp rim_body_red_9 { at = (0px, 0px); } stamp side_windows { at = (0px, 1px); } } face west { stamp rim_body_red_9 { at = (0px, 0px); } stamp side_windows { at = (0px, 1px); } } }
+      chart awning box { origin = (0px, 53px); fill = trim_red; }
+      chart parapet box { origin = (0px, 41px); fill = trim_red; }
+      chart skylight box { origin = (41px, 41px); fill = window_glass; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

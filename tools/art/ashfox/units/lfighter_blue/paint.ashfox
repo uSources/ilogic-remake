@@ -1,0 +1,43 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = team_blue; background-alpha = 255;
+      palette {
+        team_blue = (#2766c4, #2f74d6, #3d84e2);
+        rim_team_blue_4_r = #6fb0f2;
+        rim_team_blue_11_r = #6fb0f2;
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        dark_blue = (#1a468e, #1f56a8, #2a64b8);
+        rim_dark_blue_1_r = #3f7ccc;
+        rim_dark_blue_3_r = #3f7ccc;
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        skin = (#e4b88c, #f1c79b, #f8d4ac);
+        tire = (#14171e, #1c2029, #252a35);
+        gun = (#2a2e38, #343a46, #3e4554);
+      }
+      stamp rim_team_blue_4 { pixels = "rrrr"; r = rim_team_blue_4_r; }
+      stamp rim_team_blue_11 { pixels = "rrrrrrrrrrr"; r = rim_team_blue_11_r; }
+      stamp rim_dark_blue_1 { pixels = "r"; r = rim_dark_blue_1_r; }
+      stamp rim_dark_blue_3 { pixels = "rrr"; r = rim_dark_blue_3_r; }
+      chart fuselage box { origin = (0px, 0px); fill = team_blue; face north { stamp rim_team_blue_4 { at = (0px, 0px); } } face south { stamp rim_team_blue_4 { at = (0px, 0px); } } face east { stamp rim_team_blue_11 { at = (0px, 0px); } } face west { stamp rim_team_blue_11 { at = (0px, 0px); } } }
+      chart cowl box { origin = (39px, 16px); fill = steel; }
+      chart tail box { origin = (45px, 0px); fill = team_blue; }
+      chart fin box { origin = (36px, 0px); fill = dark_blue; face north { stamp rim_dark_blue_1 { at = (0px, 0px); } } face south { stamp rim_dark_blue_1 { at = (0px, 0px); } } face east { stamp rim_dark_blue_3 { at = (0px, 0px); } } face west { stamp rim_dark_blue_3 { at = (0px, 0px); } } }
+      chart tailplane box { origin = (27px, 23px); fill = dark_blue; }
+      chart wing box { origin = (0px, 16px); fill = dark_blue; }
+      chart windscreen box { origin = (0px, 28px); fill = glass; }
+      chart pilot box { origin = (50px, 16px); fill = skin; }
+      chart pilot_helmet box { origin = (0px, 23px); fill = team_blue; }
+      chart wheel_left box { origin = (13px, 23px); fill = tire; }
+      chart wheel_right box { origin = (20px, 23px); fill = tire; }
+      chart prop_hub box { origin = (48px, 23px); fill = gun; }
+      chart prop_a box { origin = (11px, 28px); fill = steel; }
+      chart prop_b box { origin = (31px, 0px); fill = steel; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

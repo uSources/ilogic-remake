@@ -1,67 +1,12 @@
 ashfox-model 1
 asset snowman {
-rig contract ModelRig {
-handedness = right;
-frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-}
-skeleton ModelSkeleton implements ModelRig {
-bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-}
+  import "./snowman/rig.ashfox" as rig;
+  import "./snowman/paint.ashfox" as paint;
+  import "./snowman/body.ashfox" as body;
+  export asset snowman {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
 
-surface contract Skin {
-atlas { width = 64px; height = 32px; }
-chart body box { width = 24px; height = 11px; coverage = opaque; }
-chart head box { width = 16px; height = 8px; coverage = opaque; }
-chart scarf box { width = 20px; height = 6px; coverage = opaque; }
-chart nose box { width = 4px; height = 2px; coverage = opaque; }
-chart brim box { width = 20px; height = 6px; coverage = opaque; }
-chart hat box { width = 12px; height = 6px; coverage = opaque; }
-material = opaque;
-}
-surface paint: Skin {
-material = opaque;
-texture atlas {
-atlas = (64px, 32px); background = snowcap; background-alpha = 255;
-palette {
-snowcap = (#d6e6f6, #f0f6ff, #ffffff);
-eyes_k = #141824;
-scarf = (#9a1c22, #d8323a, #ff6a62);
-carrot = (#c85a10, #ee7a20, #ff9a40);
-hat = (#141824, #262c3c, #3c4458);
-}
-stamp eyes { pixels = "k..k"; k = eyes_k; }
-chart body box { origin = (0px, 0px); fill = snowcap; }
-chart head box { origin = (25px, 0px); fill = snowcap; face north { stamp eyes { at = (0px, 1px); } } }
-chart scarf box { origin = (42px, 0px); fill = scarf; }
-chart nose box { origin = (34px, 12px); fill = carrot; }
-chart brim box { origin = (0px, 12px); fill = hat; }
-chart hat box { origin = (21px, 12px); fill = hat; }
-grain clustered { seed = 2013; }
-tone voxel;
-}
-}
-component Body {
-requires rig skeleton: ModelRig;
-requires surface skin: Skin;
-bind bone body to skeleton.body;
-geometry {
-bone body {
-cube body { origin = (-3u, 0u, -3u); size = (6u, 5u, 6u); surface = skin.body; }
-cube head { origin = (-2u, 5u, -2u); size = (4u, 4u, 4u); surface = skin.head; }
-cube scarf { origin = (-2.5u, 4.5u, -2.5u); size = (5u, 1u, 5u); surface = skin.scarf; }
-cube nose { origin = (-0.5u, 6.5u, -3u); size = (1u, 1u, 1u); surface = skin.nose; }
-cube brim { origin = (-2.5u, 9u, -2.5u); size = (5u, 1u, 5u); surface = skin.brim; }
-cube hat { origin = (-1.5u, 10u, -1.5u); size = (3u, 3u, 3u); surface = skin.hat; }
-}
-}
-}
-export asset snowman {
-settings { density = 16; forward = north; }
-skeleton = ModelSkeleton;
-
-use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-}
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
 }

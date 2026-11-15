@@ -1,68 +1,12 @@
 ashfox-model 1
 asset cactus {
-rig contract ModelRig {
-handedness = right;
-frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-}
-skeleton ModelSkeleton implements ModelRig {
-bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-}
+  import "./cactus/rig.ashfox" as rig;
+  import "./cactus/paint.ashfox" as paint;
+  import "./cactus/body.ashfox" as body;
+  export asset cactus {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
 
-surface contract Skin {
-atlas { width = 64px; height = 16px; }
-chart trunk box { width = 8px; height = 12px; coverage = opaque; }
-chart arm_left box { width = 8px; height = 4px; coverage = opaque; }
-chart arm_left_up box { width = 8px; height = 5px; coverage = opaque; }
-chart arm_right box { width = 8px; height = 4px; coverage = opaque; }
-chart arm_right_up box { width = 8px; height = 4px; coverage = opaque; }
-chart round box { width = 16px; height = 7px; coverage = opaque; }
-chart bloom box { width = 8px; height = 3px; coverage = opaque; }
-material = opaque;
-}
-surface paint: Skin {
-material = opaque;
-texture atlas {
-atlas = (64px, 16px); background = cactus; background-alpha = 255;
-palette {
-cactus = (#2f7a34, #45a046, #6cc860);
-cactus_spots = (#2a6a2e, #3a8a3c, #58b052);
-petal_red = (#b02030, #e83a48, #ff7a80);
-}
-
-chart trunk box { origin = (0px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
-chart arm_left box { origin = (35px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
-chart arm_left_up box { origin = (26px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
-chart arm_right box { origin = (44px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
-chart arm_right_up box { origin = (53px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
-chart round box { origin = (9px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
-chart bloom box { origin = (0px, 13px); fill = petal_red; }
-grain clustered { seed = 2013; }
-tone voxel;
-}
-}
-component Body {
-requires rig skeleton: ModelRig;
-requires surface skin: Skin;
-bind bone body to skeleton.body;
-geometry {
-bone body {
-cube trunk { origin = (-3u, 0u, -2u); size = (2u, 10u, 2u); surface = skin.trunk; }
-cube arm_left { origin = (-5u, 4u, -2u); size = (2u, 2u, 2u); surface = skin.arm_left; }
-cube arm_left_up { origin = (-5u, 6u, -2u); size = (2u, 3u, 2u); surface = skin.arm_left_up; }
-cube arm_right { origin = (-1u, 5u, -2u); size = (2u, 2u, 2u); surface = skin.arm_right; }
-cube arm_right_up { origin = (-1u, 7u, -2u); size = (2u, 2u, 2u); surface = skin.arm_right_up; }
-cube round { origin = (2u, 0u, 1u); size = (4u, 3u, 4u); surface = skin.round; }
-cube bloom { origin = (3u, 3u, 2u); size = (2u, 1u, 2u); surface = skin.bloom; }
-}
-}
-}
-export asset cactus {
-settings { density = 16; forward = north; }
-skeleton = ModelSkeleton;
-
-use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-}
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
 }

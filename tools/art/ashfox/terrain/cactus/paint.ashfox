@@ -1,0 +1,25 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = cactus; background-alpha = 255;
+      palette {
+        cactus = (#2f7a34, #45a046, #6cc860);
+        cactus_spots = (#2a6a2e, #3a8a3c, #58b052);
+        petal_red = (#b02030, #e83a48, #ff7a80);
+      }
+
+      chart trunk box { origin = (0px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
+      chart arm_left box { origin = (35px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
+      chart arm_left_up box { origin = (26px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
+      chart arm_right box { origin = (44px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
+      chart arm_right_up box { origin = (53px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
+      chart round box { origin = (9px, 0px); fill = cactus; pattern blotch { paint = cactus_spots; scale = (1px, 3px, 1px); density = 0.3ratio; phase = 7; } }
+      chart bloom box { origin = (0px, 13px); fill = petal_red; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

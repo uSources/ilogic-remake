@@ -6,8 +6,10 @@
 //
 //   node tools/art/ashfox/generate.mjs            escribe los .ashfox
 //   node tools/art/ashfox/generate.mjs --export   y exporta los GLB (ASHFOX=<ruta del ejecutable>)
+//   ... --only soldier_blue                        solo ese modelo (o varios, separados por comas)
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { Buffer } from 'node:buffer';
 import { join } from 'node:path';
 import * as buildings from './models/buildings.mjs';
 import * as terrain from './models/terrain.mjs';
@@ -84,25 +86,25 @@ function stampDeclarations(cubes) {
   });
 }
 
+/** La receta del trozo de un cubo, en una linea. */
 function chartRecipe({ cube, origin }) {
   const paint = PAINTS[cube.paint];
-  const lines = [`      chart ${cube.name} box {`, `        origin = ${vec(origin, 'px')}; fill = ${cube.paint};`];
+  const parts = [`origin = ${vec(origin, 'px')}; fill = ${cube.paint};`];
   if (paint.blotch) {
     const { scale, density } = paint.blotch;
-    lines.push(
-      `        pattern blotch { paint = ${cube.paint}_spots; scale = ${vec(scale, 'px')}; density = ${density}ratio; phase = ${cube.phase ?? 7}; }`,
+    parts.push(
+      `pattern blotch { paint = ${cube.paint}_spots; scale = ${vec(scale, 'px')}; density = ${density}ratio; phase = ${cube.phase ?? 7}; }`,
     );
   }
   const byFace = Map.groupBy(cube.stamps ?? [], (stamp) => stamp.face);
   for (const [face, stamps] of byFace) {
     const placed = stamps.map((stamp) => stamp.at.map((at) => `stamp ${stamp.name} { at = ${vec(at, 'px')}; }`).join(' ')).join(' ');
-    lines.push(`        face ${face} { ${placed} }`);
+    parts.push(`face ${face} { ${placed} }`);
   }
-  lines.push('      }');
-  return lines.join('\n');
+  return `      chart ${cube.name} box { ${parts.join(' ')} }`;
 }
 
-/** Los cubos mas bajos no llevan borde: en uno tan pequeño seria la mitad de la cara. */
+/** Los cubos mas bajos no llevan borde: en uno tan pequeño seria la mitad de la cara (a 16 unidades por casilla; con mas detalle, a proporcion). */
 const RIM_MIN_HEIGHT = 3;
 /** Las caras de lado y el eje que da su ancho. */
 const SIDE_FACES = { north: 0, south: 0, east: 2, west: 2 };
@@ -111,9 +113,9 @@ const SIDE_FACES = { north: 0, south: 0, east: 2, west: 2 };
  * Si su pintura lo pide (`rim`), la fila de arriba de cada lado, mas clara: el borde iluminado del
  * pixel art, que separa las piezas del mismo color. Va antes que los stamps del cubo (que la tapan).
  */
-function withRim(cube) {
+function withRim(cube, detail) {
   const rim = PAINTS[cube.paint]?.rim;
-  if (!rim || cube.size[1] < RIM_MIN_HEIGHT) return cube;
+  if (!rim || cube.size[1] < RIM_MIN_HEIGHT * detail) return cube;
   const rims = Object.entries(SIDE_FACES).map(([face, axis]) => {
     const width = cube.size[axis];
     return { name: `rim_${cube.paint}_${width}`, face, pixels: 'r'.repeat(width), colors: { r: rim }, at: [[0, 0]] };
@@ -138,13 +140,13 @@ function rigDeclarations(bones) {
     const offset = bone.pivot.map((value, axis) => value - pivotOf(bones, bone.parent)[axis]);
     return `    bind ${bone.name} { parent-origin = ${vec(offset, 'u')}; ${IDENTITY_FRAME} }`;
   });
-  return `  rig contract ModelRig {
+  return `  export rig contract ModelRig {
     handedness = right;
     ${IDENTITY_FRAME}
     joint root { parent = none; role = root; ${IDENTITY_FRAME} channels = (rotation, scale); mirror = none; }
 ${joints.join('\n')}
   }
-  skeleton ModelSkeleton implements ModelRig {
+  export skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); ${IDENTITY_FRAME} }
 ${binds.join('\n')}
   }`;
@@ -175,7 +177,7 @@ function motionDeclaration(name, motion) {
     );
     return `    track ${track.bone}.${track.channel} {\n${keys.join('\n')}\n    }`;
   });
-  return `  motion ${name} for ModelRig {
+  return `  export motion ${name} for ModelRig {
     duration = ${motion.duration}s; fps = ${motion.fps ?? 20}; loop = ${motion.loop ?? 'loop'}; rest-relative = true;
 ${tracks.join('\n')}
   }`;
@@ -189,24 +191,32 @@ function checkBones(name, model) {
       throw new Error(`${name}: el cubo ${cube.name} cuelga de ${cube.bone ?? 'body'}, que no es un hueso del modelo`);
 }
 
-function source(name, model) {
-  checkBones(name, model);
-  const cubes = model.cubes.map(withRim);
-  const bones = bonesOf(model);
-  const motions = Object.entries(model.motions ?? {});
-  const { charts, atlas } = packCharts(cubes);
-  const palette = [...paletteOf(cubes)].map(([role, colors]) => `        ${role} = ${colorList(colors)};`);
-  const topBones = bones.filter((bone) => bone.parent === 'root');
-  return `ashfox-model 1
-asset ${name} {
+/** El modulo del esqueleto: huesos y animaciones. */
+const rigModule = (bones, motions) => `ashfox-model 1
+module rig {
 ${rigDeclarations(bones)}
 ${motions.map(([motion, spec]) => motionDeclaration(motion, spec)).join('\n')}
-  surface contract Skin {
+}
+`;
+
+/** El modulo de lo que pide la textura: el atlas y el trozo de cada cubo. */
+const skinModule = (charts, atlas) => `ashfox-model 1
+module skin {
+  export surface contract Skin {
     atlas { width = ${atlas[0]}px; height = ${atlas[1]}px; }
 ${charts.map(({ cube, size }) => `    chart ${cube.name} box { width = ${size[0]}px; height = ${size[1]}px; coverage = opaque; }`).join('\n')}
     material = opaque;
   }
-  surface paint: Skin {
+}
+`;
+
+/** El modulo de la textura pintada: paleta, stamps y la receta de cada trozo. */
+function paintModule(cubes, charts, atlas, seed) {
+  const palette = [...paletteOf(cubes)].map(([role, colors]) => `        ${role} = ${colorList(colors)};`);
+  return `ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
     material = opaque;
     texture atlas {
       atlas = ${vec(atlas, 'px')}; background = ${cubes[0].paint}; background-alpha = 255;
@@ -215,48 +225,134 @@ ${palette.join('\n')}
       }
 ${stampDeclarations(cubes).join('\n')}
 ${charts.map(chartRecipe).join('\n')}
-      grain clustered { seed = ${model.seed ?? 2013}; }
+      grain clustered { seed = ${seed}; }
       tone voxel;
     }
-  }
-  component Body {
-    requires rig skeleton: ModelRig;
-    requires surface skin: Skin;
-${bones.map((bone) => `    bind bone ${bone.name} to skeleton.${bone.name};`).join('\n')}
-    geometry {
-${topBones.map((bone) => boneGeometry(model, bone.name, 3)).join('\n')}
-    }
-  }
-  export asset ${name} {
-    settings { density = 16; forward = north; }
-    skeleton = ModelSkeleton;
-${motions.map(([motion]) => `    motion = ${motion};`).join('\n')}
-    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
   }
 }
 `;
 }
 
+/** El modulo de la geometria: cada hueso con sus cubos. */
+function bodyModule(model, bones) {
+  const topBones = bones.filter((bone) => bone.parent === 'root');
+  return `ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+${bones.map((bone) => `    bind bone ${bone.name} to skeleton.${bone.name};`).join('\n')}
+    geometry {
+${topBones.map((bone) => boneGeometry(model, bone.name, 3)).join('\n')}
+    }
+  }
+}
+`;
+}
+
+/** La fuente del modelo, la que se valida, se captura y se exporta: junta los modulos de su carpeta. */
+const entrySource = (name, motions) => `ashfox-model 1
+asset ${name} {
+  import "./${name}/rig.ashfox" as rig;
+  import "./${name}/paint.ashfox" as paint;
+  import "./${name}/body.ashfox" as body;
+  export asset ${name} {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+${motions.map(([motion]) => `    motion = rig.${motion};`).join('\n')}
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}
+`;
+
+/**
+ * Las fuentes de un modelo, repartidas: Ashfox no admite mas de MAX_SOURCE_LENGTH caracteres por
+ * fichero, y un modelo con detalle se pasa. `<nombre>.ashfox` las junta; sus modulos (esqueleto y
+ * animaciones, lo que pide la textura, la textura pintada y la geometria) van en `<nombre>/`.
+ */
+function sources(name, model) {
+  checkBones(name, model);
+  const cubes = model.cubes.map((cube) => withRim(cube, detailOf(model)));
+  const bones = bonesOf(model);
+  const motions = Object.entries(model.motions ?? {});
+  const { charts, atlas } = packCharts(cubes);
+  return {
+    [`${name}.ashfox`]: entrySource(name, motions),
+    [`${name}/rig.ashfox`]: rigModule(bones, motions),
+    [`${name}/skin.ashfox`]: skinModule(charts, atlas),
+    [`${name}/paint.ashfox`]: paintModule(cubes, charts, atlas, model.seed ?? 2013),
+    [`${name}/body.ashfox`]: bodyModule(model, bones),
+  };
+}
+
+/** Lo mas largo que acepta Ashfox en un fichero (caracteres). */
+const MAX_SOURCE_LENGTH = 20000;
+
 function writeSources(group, models) {
-  mkdirSync(sourcesOf(group), { recursive: true });
-  for (const [name, model] of Object.entries(models)) writeFileSync(join(sourcesOf(group), `${name}.ashfox`), source(name, model));
+  for (const [name, model] of Object.entries(models)) {
+    mkdirSync(join(sourcesOf(group), name), { recursive: true });
+    for (const [file, text] of Object.entries(sources(name, model))) {
+      if (text.length > MAX_SOURCE_LENGTH)
+        throw new Error(`${file}: mide ${text.length} caracteres y Ashfox no pasa de ${MAX_SOURCE_LENGTH} por fichero: reparte mas`);
+      writeFileSync(join(sourcesOf(group), file), text);
+    }
+  }
   console.log(`${group}: ${Object.keys(models).length} modelos`);
 }
 
-/** Exporta cada modelo a su GLB (Ashfox no sobrescribe: se borra antes). */
+/**
+ * Ashfox pone siempre un pixel de textura por unidad. Un modelo con `detail: 2` se describe al doble
+ * (32 unidades por casilla en vez de 16) para tener el doble de pixeles por lado; al exportarlo se
+ * encoge en el GLB (la escala de su hueso raiz) y el juego lo ve del tamaño de siempre.
+ */
+const detailOf = (model) => model.detail ?? 1;
+
+const GLB_HEADER = 12;
+const CHUNK_HEADER = 8;
+/** Cambia la escala del nodo raiz de la escena de un GLB (el JSON va relleno con espacios hasta multiplo de 4). */
+function scaleGlbRoot(path, scale) {
+  const glb = readFileSync(path);
+  const jsonLength = glb.readUInt32LE(GLB_HEADER);
+  const gltf = JSON.parse(glb.subarray(GLB_HEADER + CHUNK_HEADER, GLB_HEADER + CHUNK_HEADER + jsonLength).toString());
+  for (const node of gltf.scenes[gltf.scene ?? 0].nodes) gltf.nodes[node].scale = [scale, scale, scale];
+  const text = JSON.stringify(gltf);
+  const json = Buffer.from(text.padEnd(Math.ceil(text.length / 4) * 4, ' '));
+  const rest = glb.subarray(GLB_HEADER + CHUNK_HEADER + jsonLength);
+  const header = Buffer.alloc(GLB_HEADER + CHUNK_HEADER);
+  glb.copy(header, 0, 0, 8);
+  header.writeUInt32LE(header.length + json.length + rest.length, 8);
+  header.writeUInt32LE(json.length, GLB_HEADER);
+  header.write('JSON', GLB_HEADER + 4);
+  writeFileSync(path, Buffer.concat([header, json, rest]));
+}
+
+/** Exporta cada modelo a su GLB (Ashfox no sobrescribe: se borra antes), encogido si va con mas detalle. */
 function exportModels(group, models) {
   const ashfox = process.env.ASHFOX ?? 'ashfox';
   mkdirSync(outputOf(group), { recursive: true });
-  for (const name of Object.keys(models)) {
+  for (const [name, model] of Object.entries(models)) {
     const output = join(outputOf(group), `${name}.glb`);
     rmSync(output, { force: true });
     const input = join(sourcesOf(group), `${name}.ashfox`);
     execFileSync(ashfox, ['export', input, '--output', output], { stdio: ['ignore', 'ignore', 'inherit'] });
+    if (detailOf(model) !== 1) scaleGlbRoot(output, 1 / detailOf(model));
   }
   console.log(`${group}: ${Object.keys(models).length} GLB`);
 }
 
-for (const [group, models] of Object.entries(GROUPS)) {
+/** Los modelos pedidos con --only (todos si no se pide ninguno). */
+function chosen(models) {
+  const only = process.argv[process.argv.indexOf('--only') + 1];
+  if (!process.argv.includes('--only')) return models;
+  const names = new Set(only.split(','));
+  return Object.fromEntries(Object.entries(models).filter(([name]) => names.has(name)));
+}
+
+for (const [group, allModels] of Object.entries(GROUPS)) {
+  const models = chosen(allModels);
+  if (Object.keys(models).length === 0) continue;
   writeSources(group, models);
   if (process.argv.includes('--export')) exportModels(group, models);
 }

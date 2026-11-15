@@ -1,0 +1,68 @@
+ashfox-model 1
+module rig {
+  export rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint hull { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint wheels_front { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint wheels_back { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint turret { parent = hull; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint barrel { parent = turret; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  export skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_front { parent-origin = (0u, 3u, -5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_back { parent-origin = (0u, 3u, 5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind turret { parent-origin = (2u, 3u, 3.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind barrel { parent-origin = (0u, 4.5u, -2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  export motion idle for ModelRig {
+    duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
+    track hull.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.3s = (0.5deg, 0deg, 0.5deg) catmullrom;
+      key 0.6s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.9s = (-0.5deg, 0deg, -0.5deg) catmullrom;
+      key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+  export motion drive for ModelRig {
+    duration = 0.4s; fps = 20; loop = loop; rest-relative = true;
+    track wheels_front.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.1s = (-22.5deg, 0deg, 0deg) step;
+      key 0.2s = (-45deg, 0deg, 0deg) step;
+      key 0.3s = (-67.5deg, 0deg, 0deg) step;
+      key 0.4s = (0deg, 0deg, 0deg) step;
+    }
+    track wheels_back.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.1s = (-22.5deg, 0deg, 0deg) step;
+      key 0.2s = (-45deg, 0deg, 0deg) step;
+      key 0.3s = (-67.5deg, 0deg, 0deg) step;
+      key 0.4s = (0deg, 0deg, 0deg) step;
+    }
+    track hull.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.1s = (-1.5deg, 0deg, 1deg) linear;
+      key 0.2s = (0deg, 0deg, 0deg) linear;
+      key 0.3s = (1.5deg, 0deg, -1deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+  export motion fire for ModelRig {
+    duration = 0.4s; fps = 30; loop = once; rest-relative = true;
+    track turret.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (10deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+    track hull.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (3deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+}

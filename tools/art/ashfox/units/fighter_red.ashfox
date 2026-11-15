@@ -1,106 +1,14 @@
 ashfox-model 1
 asset fighter_red {
-rig contract ModelRig {
-handedness = right;
-frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-}
-skeleton ModelSkeleton implements ModelRig {
-bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-bind body { parent-origin = (0u, 10u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-}
-motion idle for ModelRig {
-duration = 2s; fps = 20; loop = loop; rest-relative = true;
-track body.rotation {
-key 0s = (0deg, 0deg, 0deg) catmullrom;
-key 0.5s = (3deg, 0deg, 5deg) catmullrom;
-key 1s = (0deg, 0deg, 0deg) catmullrom;
-key 1.5s = (-3deg, 0deg, -5deg) catmullrom;
-key 2s = (0deg, 0deg, 0deg) catmullrom;
-}
-}
-motion drive for ModelRig {
-duration = 1s; fps = 20; loop = loop; rest-relative = true;
-track body.rotation {
-key 0s = (0deg, 0deg, 0deg) catmullrom;
-key 0.25s = (-4deg, 0deg, 6deg) catmullrom;
-key 0.5s = (0deg, 0deg, 0deg) catmullrom;
-key 0.75s = (4deg, 0deg, -6deg) catmullrom;
-key 1s = (0deg, 0deg, 0deg) catmullrom;
-}
-}
-motion fire for ModelRig {
-duration = 0.4s; fps = 30; loop = once; rest-relative = true;
-track body.rotation {
-key 0s = (0deg, 0deg, 0deg) linear;
-key 0.06s = (-5deg, 0deg, 0deg) linear;
-key 0.4s = (0deg, 0deg, 0deg) linear;
-}
-}
-surface contract Skin {
-atlas { width = 64px; height = 32px; }
-chart fuselage box { width = 34px; height = 17px; coverage = opaque; }
-chart nose box { width = 10px; height = 5px; coverage = opaque; }
-chart canopy box { width = 16px; height = 7px; coverage = opaque; }
-chart wing box { width = 34px; height = 6px; coverage = opaque; }
-chart tailplane box { width = 20px; height = 3px; coverage = opaque; }
-chart fin box { width = 8px; height = 7px; coverage = opaque; }
-chart nozzle box { width = 8px; height = 4px; coverage = opaque; }
-material = opaque;
-}
-surface paint: Skin {
-material = opaque;
-texture atlas {
-atlas = (64px, 32px); background = team_red; background-alpha = 255;
-palette {
-team_red = (#b02824, #c8302a, #d84038);
-rim_team_red_5_r = #f2786c;
-rim_team_red_12_r = #f2786c;
-steel = (#7a8394, #8a93a6, #9aa3b6);
-glass = (#8ad4f4, #9fe3ff, #b8ecff);
-dark_red = (#80181a, #962220, #a82c28);
-rim_dark_red_1_r = #c04a40;
-rim_dark_red_3_r = #c04a40;
-gun = (#2a2e38, #343a46, #3e4554);
-}
-stamp rim_team_red_5 { pixels = "rrrrr"; r = rim_team_red_5_r; }
-stamp rim_team_red_12 { pixels = "rrrrrrrrrrrr"; r = rim_team_red_12_r; }
-stamp rim_dark_red_1 { pixels = "r"; r = rim_dark_red_1_r; }
-stamp rim_dark_red_3 { pixels = "rrr"; r = rim_dark_red_3_r; }
-chart fuselage box { origin = (0px, 0px); fill = team_red; face north { stamp rim_team_red_5 { at = (0px, 0px); } } face south { stamp rim_team_red_5 { at = (0px, 0px); } } face east { stamp rim_team_red_12 { at = (0px, 0px); } } face west { stamp rim_team_red_12 { at = (0px, 0px); } } }
-chart nose box { origin = (35px, 18px); fill = steel; }
-chart canopy box { origin = (35px, 0px); fill = glass; }
-chart wing box { origin = (0px, 18px); fill = dark_red; }
-chart tailplane box { origin = (0px, 25px); fill = dark_red; }
-chart fin box { origin = (52px, 0px); fill = dark_red; face north { stamp rim_dark_red_1 { at = (0px, 0px); } } face south { stamp rim_dark_red_1 { at = (0px, 0px); } } face east { stamp rim_dark_red_3 { at = (0px, 0px); } } face west { stamp rim_dark_red_3 { at = (0px, 0px); } } }
-chart nozzle box { origin = (46px, 18px); fill = gun; }
-grain clustered { seed = 2013; }
-tone voxel;
-}
-}
-component Body {
-requires rig skeleton: ModelRig;
-requires surface skin: Skin;
-bind bone body to skeleton.body;
-geometry {
-bone body {
-cube fuselage { origin = (-2.5u, 10u, -6u); size = (5u, 5u, 12u); surface = skin.fuselage; }
-cube nose { origin = (-1.5u, 11u, -8u); size = (3u, 3u, 2u); surface = skin.nose; }
-cube canopy { origin = (-1.5u, 15u, -4u); size = (3u, 2u, 5u); surface = skin.canopy; }
-cube wing { origin = (-6u, 11u, -1u); size = (12u, 1u, 5u); surface = skin.wing; }
-cube tailplane { origin = (-4u, 12u, 5u); size = (8u, 1u, 2u); surface = skin.tailplane; }
-cube fin { origin = (-0.5u, 15u, 3u); size = (1u, 4u, 3u); surface = skin.fin; }
-cube nozzle { origin = (-1.5u, 11u, 6u); size = (3u, 3u, 1u); surface = skin.nozzle; }
-}
-}
-}
-export asset fighter_red {
-settings { density = 16; forward = north; }
-skeleton = ModelSkeleton;
-motion = idle;
-motion = drive;
-motion = fire;
-use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-}
+  import "./fighter_red/rig.ashfox" as rig;
+  import "./fighter_red/paint.ashfox" as paint;
+  import "./fighter_red/body.ashfox" as body;
+  export asset fighter_red {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+    motion = rig.idle;
+    motion = rig.drive;
+    motion = rig.fire;
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
 }

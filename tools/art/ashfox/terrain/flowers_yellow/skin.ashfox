@@ -1,0 +1,46 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 16px; }
+    chart a_leaves box { width = 16px; height = 5px; coverage = opaque; }
+    chart b_leaves box { width = 12px; height = 4px; coverage = opaque; }
+    chart c_leaves box { width = 12px; height = 4px; coverage = opaque; }
+    chart f0_stem box { width = 4px; height = 4px; coverage = opaque; }
+    chart f0_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f0_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f0_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f0_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f0_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_stem box { width = 4px; height = 4px; coverage = opaque; }
+    chart f1_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_stem box { width = 4px; height = 5px; coverage = opaque; }
+    chart f2_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_stem box { width = 4px; height = 5px; coverage = opaque; }
+    chart f3_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_stem box { width = 4px; height = 5px; coverage = opaque; }
+    chart f4_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_stem box { width = 4px; height = 5px; coverage = opaque; }
+    chart f5_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    material = opaque;
+  }
+}

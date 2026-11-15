@@ -1,0 +1,30 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = pavement; background-alpha = 255;
+      palette {
+        pavement = (#aea896, #b9b2a0, #c4bdaa);
+        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+        trim_neutral = (#5a5e66, #62666e, #6e727a);
+        body_neutral = (#868a92, #8f949c, #9ca0a8);
+        rim_body_neutral_2_r = #c8ccd2;
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+        brace_k = #14202c;
+      }
+      stamp rim_body_neutral_2 { pixels = "rr"; r = rim_body_neutral_2_r; }
+      stamp brace { pixels = "k./.k/k./.k/k./.k/k./.k"; k = brace_k; }
+      chart plinth box { origin = (0px, 0px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } }
+      chart deck box { origin = (0px, 16px); fill = trim_neutral; }
+      chart leg_left box { origin = (41px, 16px); fill = body_neutral; face north { stamp rim_body_neutral_2 { at = (0px, 0px); } } face south { stamp rim_body_neutral_2 { at = (0px, 0px); } } face east { stamp rim_body_neutral_2 { at = (0px, 0px); } } face west { stamp rim_body_neutral_2 { at = (0px, 0px); } } }
+      chart leg_right box { origin = (50px, 16px); fill = body_neutral; face north { stamp rim_body_neutral_2 { at = (0px, 0px); } } face south { stamp rim_body_neutral_2 { at = (0px, 0px); } } face east { stamp rim_body_neutral_2 { at = (0px, 0px); } } face west { stamp rim_body_neutral_2 { at = (0px, 0px); } } }
+      chart beam box { origin = (7px, 27px); fill = body_neutral; }
+      chart cap box { origin = (40px, 27px); fill = trim_neutral; }
+      chart drill box { origin = (0px, 27px); fill = metal; face north { stamp brace { at = (0px, 0px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

@@ -1,0 +1,14 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart track0 box { width = 30px; height = 15px; coverage = opaque; }
+    chart track1 box { width = 30px; height = 15px; coverage = opaque; }
+    chart hull box { width = 42px; height = 13px; coverage = opaque; }
+    chart turret box { width = 22px; height = 8px; coverage = opaque; }
+    chart turret_top box { width = 14px; height = 4px; coverage = opaque; }
+    chart barrel box { width = 14px; height = 7px; coverage = opaque; }
+    chart muzzle box { width = 6px; height = 3px; coverage = opaque; }
+    material = opaque;
+  }
+}

@@ -1,0 +1,15 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart platform box { width = 56px; height = 17px; coverage = opaque; }
+    chart tall box { width = 20px; height = 18px; coverage = opaque; }
+    chart short box { width = 20px; height = 14px; coverage = opaque; }
+    chart antenna box { width = 4px; height = 4px; coverage = opaque; }
+    chart flag box { width = 8px; height = 3px; coverage = opaque; }
+    chart gate box { width = 8px; height = 3px; coverage = opaque; }
+    chart radar_post box { width = 4px; height = 2px; coverage = opaque; }
+    chart radar_dish box { width = 10px; height = 3px; coverage = opaque; }
+    material = opaque;
+  }
+}

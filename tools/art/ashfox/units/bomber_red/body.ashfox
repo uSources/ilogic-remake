@@ -1,0 +1,32 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    bind bone prop_left to skeleton.prop_left;
+    bind bone prop_right to skeleton.prop_right;
+    geometry {
+      bone body {
+        cube fuselage { origin = (-3u, 10u, -7u); size = (6u, 6u, 14u); surface = skin.fuselage; }
+        cube nose { origin = (-2u, 11u, -9u); size = (4u, 4u, 2u); surface = skin.nose; }
+        cube windscreen { origin = (-2u, 16u, -6u); size = (4u, 1u, 2u); surface = skin.windscreen; }
+        cube wing { origin = (-11u, 12u, -3u); size = (22u, 1u, 6u); surface = skin.wing; }
+        cube engine_left { origin = (-7u, 11u, -5u); size = (3u, 3u, 5u); surface = skin.engine_left; }
+        cube engine_right { origin = (4u, 11u, -5u); size = (3u, 3u, 5u); surface = skin.engine_right; }
+        cube fin { origin = (-0.5u, 16u, 3u); size = (1u, 5u, 4u); surface = skin.fin; }
+        cube tailplane { origin = (-5u, 14u, 5u); size = (10u, 1u, 3u); surface = skin.tailplane; }
+        bone prop_left {
+          cube prop_left_a { origin = (-8u, 12u, -6u); size = (5u, 1u, 1u); surface = skin.prop_left_a; }
+          cube prop_left_b { origin = (-6u, 10u, -6u); size = (1u, 5u, 1u); surface = skin.prop_left_b; }
+        }
+        bone prop_right {
+          cube prop_right_a { origin = (3u, 12u, -6u); size = (5u, 1u, 1u); surface = skin.prop_right_a; }
+          cube prop_right_b { origin = (5u, 10u, -6u); size = (1u, 5u, 1u); surface = skin.prop_right_b; }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone chassis to skeleton.chassis;
+    bind bone hull to skeleton.hull;
+    bind bone turret to skeleton.turret;
+    bind bone barrel to skeleton.barrel;
+    bind bone fan to skeleton.fan;
+    geometry {
+      bone chassis {
+        cube skirt { origin = (-7u, 0u, -7u); size = (14u, 2u, 14u); surface = skin.skirt; }
+      }
+      bone hull {
+        cube hull { origin = (-6u, 2u, -6u); size = (12u, 3u, 12u); surface = skin.hull; }
+        cube fan_top { origin = (-4u, 11u, 6u); size = (8u, 1u, 1u); surface = skin.fan_top; }
+        cube fan_bottom { origin = (-4u, 4u, 6u); size = (8u, 1u, 1u); surface = skin.fan_bottom; }
+        cube fan_left { origin = (-4u, 5u, 6u); size = (1u, 6u, 1u); surface = skin.fan_left; }
+        cube fan_right { origin = (3u, 5u, 6u); size = (1u, 6u, 1u); surface = skin.fan_right; }
+        bone turret {
+          cube turret { origin = (-3u, 5u, -3u); size = (6u, 3u, 6u); surface = skin.turret; }
+          bone barrel {
+            cube barrel { origin = (-0.5u, 6u, -10u); size = (1u, 1u, 7u); surface = skin.barrel; }
+            cube muzzle { origin = (-1u, 5.5u, -11u); size = (2u, 2u, 1u); surface = skin.muzzle; }
+          }
+        }
+        bone fan {
+          cube blade_a { origin = (-3u, 7.5u, 6u); size = (6u, 1u, 1u); surface = skin.blade_a; }
+          cube blade_b { origin = (-0.5u, 5u, 6u); size = (1u, 6u, 1u); surface = skin.blade_b; }
+        }
+      }
+    }
+  }
+}

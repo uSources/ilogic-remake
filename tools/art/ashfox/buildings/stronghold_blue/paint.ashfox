@@ -1,0 +1,40 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 128px); background = pavement; background-alpha = 255;
+      palette {
+        pavement = (#aea896, #b9b2a0, #c4bdaa);
+        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+        body_blue = (#1a8ea2, #1f9fb4, #2cb0c4);
+        rim_body_blue_13_r = #6ad8e4;
+        rim_body_blue_12_r = #6ad8e4;
+        slits_k = #14202c;
+        trim_blue = (#126c7e, #16788a, #1f889a);
+        rim_trim_blue_5_r = #2fb4c6;
+        rim_trim_blue_1_r = #2fb4c6;
+        door_d = #14202c;
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+      }
+      stamp rim_body_blue_13 { pixels = "rrrrrrrrrrrrr"; r = rim_body_blue_13_r; }
+      stamp rim_body_blue_12 { pixels = "rrrrrrrrrrrr"; r = rim_body_blue_12_r; }
+      stamp slits { pixels = ".kkk....kkk."; k = slits_k; }
+      stamp rim_trim_blue_5 { pixels = "rrrrr"; r = rim_trim_blue_5_r; }
+      stamp rim_trim_blue_1 { pixels = "r"; r = rim_trim_blue_1_r; }
+      stamp door { pixels = "ddd/ddd/ddd"; d = door_d; }
+      chart plinth box { origin = (0px, 17px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } }
+      chart ring0 box { origin = (0px, 0px); fill = body_blue; face north { stamp rim_body_blue_13 { at = (0px, 0px); } } face south { stamp rim_body_blue_13 { at = (0px, 0px); } } face east { stamp rim_body_blue_13 { at = (0px, 0px); } } face west { stamp rim_body_blue_13 { at = (0px, 0px); } } }
+      chart ring1 box { origin = (0px, 33px); fill = body_blue; face north { stamp rim_body_blue_12 { at = (0px, 0px); } stamp slits { at = (0px, 1px); } } face south { stamp rim_body_blue_12 { at = (0px, 0px); } } face east { stamp rim_body_blue_12 { at = (0px, 0px); } } face west { stamp rim_body_blue_12 { at = (0px, 0px); } } }
+      chart ring2 box { origin = (0px, 49px); fill = body_blue; }
+      chart ring3 box { origin = (0px, 62px); fill = body_blue; }
+      chart ring4 box { origin = (33px, 62px); fill = body_blue; }
+      chart entrance box { origin = (0px, 72px); fill = trim_blue; face north { stamp rim_trim_blue_5 { at = (0px, 0px); } stamp door { at = (1px, 0px); } } face south { stamp rim_trim_blue_5 { at = (0px, 0px); } } face east { stamp rim_trim_blue_1 { at = (0px, 0px); } } face west { stamp rim_trim_blue_1 { at = (0px, 0px); } } }
+      chart pole box { origin = (58px, 62px); fill = metal; }
+      chart flag box { origin = (13px, 72px); fill = body_blue; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}
