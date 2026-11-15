@@ -61,6 +61,14 @@ Lo que vale para todo muñeco; la referencia es el soldado.
   (solo asoma la franja de los ojos), casco con visera oscura y sin gafas, peto, espaldar y
   hombreras grises, escudo alto hasta los ojos (mirilla oscura, franja del equipo, remaches) y una pistola pequeña en la otra mano (no porra): la mano coge la culata justo bajo la corredera clara, que lleva sus miras.
 
+- **El del bazuca:** casco con cinta oscura, chaleco antibalas oscuro con franjas claras delante y
+  detrás (dos bolsas y una granada delante), la bolsa de cohetes verde a la espalda con dos de
+  repuesto asomando (cabeza roja), un cohete cargado asomando por la boca, almohadilla en el hombro,
+  y el bazuca **encima** del hombro derecho y algo alzado, con la boca de atrás bien por detrás
+  (tubo con las bocas anchas, franja, mira junto a la cara y empuñadura), cogido con la mano
+  derecha; la otra, libre. Al principio iba a la altura de la cara y desde arriba parecía que
+  apuntaba al suelo: «si lo lanza así, sale volando».
+
 ### La pose
 
 - **En guardia, con el arma en las dos manos.** Nunca el arma colgando de una mano a un lado ni
@@ -77,9 +85,10 @@ Lo que vale para todo muñeco; la referencia es el soldado.
 La referencia es el tanque (`tank` en `units.mjs`). Lo mismo que en los muñecos: 32 unidades por
 casilla, el color del equipo en la carrocería y el detalle dibujado.
 
-- **Orugas con sus ruedas:** de lado, eslabones arriba y abajo y cinco ruedas con buje claro; delante
-  y detrás, solo eslabones oscuros (nada gris: la oruga es negra entera). Ocupan casi toda la
-  casilla de largo.
+- **Orugas con sus ruedas:** de lado, eslabones arriba y abajo y cinco ruedas pintadas con buje
+  claro; delante y detrás, solo eslabones oscuros (nada gris: la oruga es negra entera). Ocupan casi
+  toda la casilla de largo. Se probaron ruedas de rodaje en 3D que giraban al andar y quedaban feas:
+  la oruga va pintada. Si se anima, que sea en el juego (que corran los eslabones), no con piezas.
 - **Casco:** guardabarros sobre las orugas con el borde de arriba claro y una junta oscura debajo, el
   bajo oscuro entre las orugas, faros amarillos en 3D delante, rejilla del motor detrás y alguna caja
   (herramientas) encima.
@@ -93,12 +102,33 @@ casilla, el color del equipo en la carrocería y el detalle dibujado.
   guardabarros, parabrisas levantado, asientos de cuero, el conductor pequeño (cara seria, casco con
   gafas en 3D, manos al volante), arco antivuelco y la ametralladora en su poste, en el lado del
   acompañante para que no la tape el conductor (camisa con agujeros, caja de balas y asas).
-- **La artillería** (`artillery`): las orugas y el casco bajo del tanque, la cureña que gira con sus
-  muñones, el cañón gordo **del color del equipo** alzado (faja oscura y boca con el ánima), y el
-  artillero (el tripulante pequeño, `crewman`) detrás con su macuto.
-- **El bloqueador** (`blocker`): un cajón blindado alto sobre orugas; el frente, una placa que
-  sobresale (se ve redondeado), juntas con remaches, la mirilla oscura en 3D, escotilla y
-  periscopio arriba y la puerta detrás.
+- **La artillería** (`artillery`): un obús autopropulsado. Orugas y casco bajo; la casamata grande
+  del equipo (puertas, rejillas detrás, techo oscuro con escotilla y antena) con el mantelete; el
+  cañón largo **del color del equipo**, alzado, con manguito oscuro y freno de boca con ranuras; y
+  detrás, las palas de anclaje. **Sin artillero** (se probó y se quitó, y la primera versión, un
+  tanque con un tubo gordo, no gustó).
+- **El bloqueador** (`blocker`): un blindado muy alto (casi una casilla) que cierra el paso. El
+  frente, redondeado a escalones como en el 2D, con la mirilla; una banda blindada con remaches
+  alrededor; mirillas pequeñas a los lados; delante, abajo, **la pala con franjas de peligro**
+  amarillas y negras; arriba, escotilla, periscopio y foco; detrás, la puerta y los tubos de escape.
+  (La primera versión, un cajón liso, no gustó.)
+- **El tanque ligero** (`lightTank`): orugas y casco más cortos que el tanque, torreta más pequeña
+  con escotilla y antena, y un solo cañón gordo del color del equipo.
+- **El lanzamisiles** (`missileTruck`): cuatro ruedas, más pequeñas que las del jeep (con aquellas
+  parecían enormes); la cabina del transporte y, detrás, mucho detalle: la
+  plataforma con franjas de peligro, barandillas del equipo, la caja del misil de repuesto, la
+  plataforma giratoria con dos pistones y la caja de mandos (luces), la rampa con sus abrazaderas y
+  el misil blanco (franjas, letras, punta, tobera y aletas rojas), pilotos y las patas de apoyo con
+  su franja.
+- **El de suministros** (`supplier`): **el mismo camión que el transporte** (cabina, ruedas y
+  medidas); solo cambia la caja: abierta, con laterales del equipo y trampilla, y la carga ordenada
+  (cajas de suministros con la cruz amarilla, tres abajo y dos encima, con su cincha, y cuatro bidones
+  verdes en su soporte). Se probaron camionetas más pequeñas y, al lado del transporte, parecían de
+  juguete: los vehículos de la misma familia comparten medidas.
+- **El antiaéreo** (`antiair`): orugas y casco del tanque; torreta alta y cuadrada con juntas y
+  remaches, un cañón gordo a cada lado por fuera en su afuste (camisa y freno de boca), el radar de
+  búsqueda arriba que gira en reposo y el de tiro delante. (La primera versión, torreta baja con
+  cuatro cañones finos como palos, no gustó.)
 - **El transporte** (`transport`): camión con la cabina del equipo delante (parabrisas en 3D con su
   barra, ventanillas, rejilla, faros, retrovisores) y la caja con la lona (costillas, la abertura
   oscura de detrás con la lona enrollada) y pilotos rojos.

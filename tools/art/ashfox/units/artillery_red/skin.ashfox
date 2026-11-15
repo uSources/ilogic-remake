@@ -2,26 +2,24 @@ ashfox-model 1
 module skin {
   export surface contract Skin {
     atlas { width = 128px; height = 256px; }
-    chart track0 box { width = 66px; height = 34px; coverage = opaque; }
-    chart track1 box { width = 66px; height = 34px; coverage = opaque; }
-    chart lower_hull box { width = 72px; height = 28px; coverage = opaque; }
-    chart hull box { width = 112px; height = 30px; coverage = opaque; }
+    chart track0 box { width = 70px; height = 36px; coverage = opaque; }
+    chart track1 box { width = 70px; height = 36px; coverage = opaque; }
+    chart lower_hull box { width = 76px; height = 30px; coverage = opaque; }
+    chart hull box { width = 116px; height = 32px; coverage = opaque; }
     chart front_plate box { width = 58px; height = 4px; coverage = opaque; }
     chart headlight_left box { width = 8px; height = 3px; coverage = opaque; }
     chart headlight_right box { width = 8px; height = 3px; coverage = opaque; }
-    chart ammo_box box { width = 22px; height = 9px; coverage = opaque; }
-    chart mount box { width = 52px; height = 16px; coverage = opaque; }
-    chart trunnion box { width = 32px; height = 10px; coverage = opaque; }
-    chart gun_barrel box { width = 50px; height = 25px; coverage = opaque; }
-    chart gun_band box { width = 16px; height = 8px; coverage = opaque; }
-    chart gun_muzzle box { width = 16px; height = 8px; coverage = opaque; }
-    chart gunner_torso box { width = 20px; height = 10px; coverage = opaque; }
-    chart gunner_head box { width = 30px; height = 14px; coverage = opaque; }
-    chart gunner_helmet box { width = 38px; height = 13px; coverage = opaque; }
-    chart gunner_goggles box { width = 18px; height = 3px; coverage = opaque; }
-    chart gunner_lens_left box { width = 8px; height = 2px; coverage = opaque; }
-    chart gunner_lens_right box { width = 8px; height = 2px; coverage = opaque; }
-    chart gunner_bag box { width = 14px; height = 7px; coverage = opaque; }
+    chart spade_left box { width = 14px; height = 9px; coverage = opaque; }
+    chart spade_right box { width = 14px; height = 9px; coverage = opaque; }
+    chart ammo_box box { width = 22px; height = 8px; coverage = opaque; }
+    chart casemate box { width = 76px; height = 29px; coverage = opaque; }
+    chart casemate_roof box { width = 68px; height = 17px; coverage = opaque; }
+    chart casemate_hatch box { width = 20px; height = 6px; coverage = opaque; }
+    chart casemate_antenna box { width = 4px; height = 10px; coverage = opaque; }
+    chart mantlet box { width = 24px; height = 10px; coverage = opaque; }
+    chart gun_barrel box { width = 52px; height = 26px; coverage = opaque; }
+    chart gun_sleeve box { width = 20px; height = 10px; coverage = opaque; }
+    chart gun_brake box { width = 18px; height = 9px; coverage = opaque; }
     material = opaque;
   }
 }

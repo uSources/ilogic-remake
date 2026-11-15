@@ -9,19 +9,39 @@ module body {
     bind bone hull to skeleton.hull;
     bind bone turret to skeleton.turret;
     bind bone barrel to skeleton.barrel;
+    bind bone radar to skeleton.radar;
     geometry {
       bone chassis {
-        cube track0 { origin = (-6u, 0u, -6u); size = (4u, 4u, 12u); surface = skin.track0; }
-        cube track1 { origin = (2u, 0u, -6u); size = (4u, 4u, 12u); surface = skin.track1; }
+        cube track0 { origin = (-15u, 0u, -14u); size = (7u, 8u, 28u); surface = skin.track0; }
+        cube track1 { origin = (8u, 0u, -14u); size = (7u, 8u, 28u); surface = skin.track1; }
       }
       bone hull {
-        cube hull { origin = (-5u, 3u, -5.5u); size = (10u, 2u, 11u); surface = skin.hull; }
+        cube lower_hull { origin = (-7u, 2u, -12u); size = (14u, 6u, 24u); surface = skin.lower_hull; }
+        cube hull { origin = (-15u, 8u, -14u); size = (30u, 4u, 28u); surface = skin.hull; }
+        cube front_plate { origin = (-14u, 9u, -15u); size = (28u, 3u, 1u); surface = skin.front_plate; }
+        cube headlight_left { origin = (-13u, 10u, -16u); size = (3u, 2u, 1u); surface = skin.headlight_left; }
+        cube headlight_right { origin = (10u, 10u, -16u); size = (3u, 2u, 1u); surface = skin.headlight_right; }
+        cube engine_deck { origin = (-8u, 12u, 9u); size = (16u, 1u, 5u); surface = skin.engine_deck; }
+        cube toolbox { origin = (9u, 12u, -12u); size = (5u, 3u, 7u); surface = skin.toolbox; }
         bone turret {
-          cube turret { origin = (-4u, 5u, -3u); size = (8u, 2u, 7u); surface = skin.turret; }
-          cube gun_mount { origin = (-2.5u, 7u, -2u); size = (5u, 2u, 3u); surface = skin.gun_mount; }
+          cube turret { origin = (-8u, 12u, -7u); size = (16u, 9u, 16u); surface = skin.turret; }
+          cube turret_front { origin = (-7u, 13u, -9u); size = (14u, 6u, 2u); surface = skin.turret_front; }
+          cube turret_roof { origin = (-7u, 21u, -6u); size = (14u, 1u, 14u); surface = skin.turret_roof; }
+          cube turret_hatch { origin = (1u, 22u, 0u); size = (5u, 1u, 5u); surface = skin.turret_hatch; }
+          cube radar_mast { origin = (-4u, 22u, 4u); size = (2u, 3u, 2u); surface = skin.radar_mast; }
+          cube tracking_radar { origin = (-3u, 19u, -10u); size = (6u, 5u, 1u); surface = skin.tracking_radar; }
           bone barrel {
-            cube gun_left { origin = (-2u, 7.5u, -11u); size = (1u, 1u, 10u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 8u, -1u); surface = skin.gun_left; }
-            cube gun_right { origin = (1u, 7.5u, -11u); size = (1u, 1u, 10u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 8u, -1u); surface = skin.gun_right; }
+            cube gun_mount_left { origin = (-13u, 13u, -6u); size = (5u, 7u, 10u); surface = skin.gun_mount_left; }
+            cube gun_left { origin = (-11.5u, 16u, -24u); size = (2u, 2u, 18u); rotation = (30deg, 0deg, 0deg); pivot = (-10.5u, 17u, -2u); surface = skin.gun_left; }
+            cube gun_jacket_left { origin = (-12u, 15.5u, -11u); size = (3u, 3u, 5u); rotation = (30deg, 0deg, 0deg); pivot = (-10.5u, 17u, -2u); surface = skin.gun_jacket_left; }
+            cube gun_brake_left { origin = (-12u, 15.5u, -26u); size = (3u, 3u, 2u); rotation = (30deg, 0deg, 0deg); pivot = (-10.5u, 17u, -2u); surface = skin.gun_brake_left; }
+            cube gun_mount_right { origin = (8u, 13u, -6u); size = (5u, 7u, 10u); surface = skin.gun_mount_right; }
+            cube gun_right { origin = (9.5u, 16u, -24u); size = (2u, 2u, 18u); rotation = (30deg, 0deg, 0deg); pivot = (10.5u, 17u, -2u); surface = skin.gun_right; }
+            cube gun_jacket_right { origin = (9u, 15.5u, -11u); size = (3u, 3u, 5u); rotation = (30deg, 0deg, 0deg); pivot = (10.5u, 17u, -2u); surface = skin.gun_jacket_right; }
+            cube gun_brake_right { origin = (9u, 15.5u, -26u); size = (3u, 3u, 2u); rotation = (30deg, 0deg, 0deg); pivot = (10.5u, 17u, -2u); surface = skin.gun_brake_right; }
+          }
+          bone radar {
+            cube radar_dish { origin = (-8u, 25u, 4.5u); size = (8u, 4u, 1u); surface = skin.radar_dish; }
           }
         }
       }

@@ -13,14 +13,23 @@ module body {
         cube track1 { origin = (8u, 0u, -14u); size = (7u, 8u, 28u); surface = skin.track1; }
       }
       bone hull {
-        cube box { origin = (-13u, 8u, -12u); size = (26u, 16u, 26u); surface = skin.box; }
-        cube front_plate { origin = (-12u, 9u, -14u); size = (24u, 13u, 2u); surface = skin.front_plate; }
-        cube brow { origin = (-12u, 22u, -13u); size = (24u, 2u, 1u); surface = skin.brow; }
-        cube vision_slit { origin = (-5u, 18u, -15u); size = (10u, 2u, 1u); surface = skin.vision_slit; }
-        cube roof { origin = (-11u, 24u, -10u); size = (22u, 1u, 21u); surface = skin.roof; }
-        cube hatch { origin = (-4u, 25u, -2u); size = (8u, 1u, 8u); surface = skin.hatch; }
-        cube periscope { origin = (5u, 25u, -8u); size = (3u, 2u, 2u); surface = skin.periscope; }
-        cube back_door { origin = (-5u, 9u, 14u); size = (10u, 11u, 1u); surface = skin.back_door; }
+        cube box { origin = (-13u, 8u, -9u); size = (26u, 22u, 22u); surface = skin.box; }
+        cube front_curve_1 { origin = (-13u, 9u, -11u); size = (26u, 19u, 2u); surface = skin.front_curve_1; }
+        cube front_curve_2 { origin = (-12u, 11u, -13u); size = (24u, 14u, 2u); surface = skin.front_curve_2; }
+        cube vision_slit { origin = (-5u, 21u, -14u); size = (10u, 2u, 1u); surface = skin.vision_slit; }
+        cube roof { origin = (-12u, 30u, -8u); size = (24u, 1u, 20u); surface = skin.roof; }
+        cube hatch { origin = (-4u, 31u, -1u); size = (8u, 1u, 8u); surface = skin.hatch; }
+        cube periscope { origin = (5u, 31u, -6u); size = (3u, 2u, 2u); surface = skin.periscope; }
+        cube searchlight { origin = (-9u, 31u, -6u); size = (3u, 3u, 2u); surface = skin.searchlight; }
+        cube plow { origin = (-15u, 1u, -17u); size = (30u, 7u, 2u); surface = skin.plow; }
+        cube lower_hull { origin = (-7u, 2u, -12u); size = (14u, 6u, 24u); surface = skin.lower_hull; }
+        cube plow_arm_left { origin = (-6u, 4u, -15u); size = (2u, 2u, 3u); surface = skin.plow_arm_left; }
+        cube plow_arm_right { origin = (4u, 4u, -15u); size = (2u, 2u, 3u); surface = skin.plow_arm_right; }
+        cube headlight_left { origin = (-11u, 25u, -12u); size = (3u, 2u, 1u); surface = skin.headlight_left; }
+        cube headlight_right { origin = (8u, 25u, -12u); size = (3u, 2u, 1u); surface = skin.headlight_right; }
+        cube back_door { origin = (-5u, 9u, 13u); size = (10u, 15u, 1u); surface = skin.back_door; }
+        cube exhaust_left { origin = (-11u, 20u, 13u); size = (2u, 8u, 2u); surface = skin.exhaust_left; }
+        cube exhaust_right { origin = (9u, 20u, 13u); size = (2u, 8u, 2u); surface = skin.exhaust_right; }
       }
     }
   }

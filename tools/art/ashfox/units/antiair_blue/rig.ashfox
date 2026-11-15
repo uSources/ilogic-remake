@@ -8,22 +8,35 @@ module rig {
     joint hull { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
     joint turret { parent = hull; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
     joint barrel { parent = turret; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint radar { parent = turret; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
   }
   export skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind chassis { parent-origin = (0u, 2u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind turret { parent-origin = (0u, 2u, 0.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind barrel { parent-origin = (0u, 3u, -1.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind chassis { parent-origin = (0u, 4u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind hull { parent-origin = (0u, 6u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind turret { parent-origin = (0u, 6u, 1u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind barrel { parent-origin = (0u, 5u, -3u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind radar { parent-origin = (-3u, 13u, 4u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   export motion idle for ModelRig {
-    duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
+    duration = 2.4s; fps = 20; loop = loop; rest-relative = true;
     track hull.rotation {
       key 0s = (0deg, 0deg, 0deg) catmullrom;
-      key 0.3s = (0.6deg, 0deg, 0.4deg) catmullrom;
-      key 0.6s = (0deg, 0deg, 0deg) catmullrom;
-      key 0.9s = (-0.6deg, 0deg, -0.4deg) catmullrom;
+      key 0.6s = (0.6deg, 0deg, 0.4deg) catmullrom;
       key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.8s = (-0.6deg, 0deg, -0.4deg) catmullrom;
+      key 2.4s = (0deg, 0deg, 0deg) catmullrom;
+    }
+    track radar.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.3s = (0deg, 45deg, 0deg) step;
+      key 0.6s = (0deg, 90deg, 0deg) step;
+      key 0.9s = (0deg, 135deg, 0deg) step;
+      key 1.2s = (0deg, 180deg, 0deg) step;
+      key 1.5s = (0deg, 225deg, 0deg) step;
+      key 1.8s = (0deg, 270deg, 0deg) step;
+      key 2.1s = (0deg, 315deg, 0deg) step;
+      key 2.4s = (0deg, 0deg, 0deg) step;
     }
   }
   export motion drive for ModelRig {

@@ -11,17 +11,26 @@ module body {
     bind bone barrel to skeleton.barrel;
     geometry {
       bone chassis {
-        cube track0 { origin = (-6u, 0u, -5.5u); size = (4u, 4u, 11u); surface = skin.track0; }
-        cube track1 { origin = (2u, 0u, -5.5u); size = (4u, 4u, 11u); surface = skin.track1; }
+        cube track0 { origin = (-15u, 0u, -12u); size = (7u, 8u, 24u); surface = skin.track0; }
+        cube track1 { origin = (8u, 0u, -12u); size = (7u, 8u, 24u); surface = skin.track1; }
       }
       bone hull {
-        cube hull { origin = (-5u, 3u, -5.5u); size = (10u, 2u, 11u); surface = skin.hull; }
+        cube lower_hull { origin = (-7u, 2u, -10u); size = (14u, 6u, 20u); surface = skin.lower_hull; }
+        cube hull { origin = (-15u, 8u, -12u); size = (30u, 4u, 24u); surface = skin.hull; }
+        cube front_plate { origin = (-14u, 9u, -13u); size = (28u, 3u, 1u); surface = skin.front_plate; }
+        cube headlight_left { origin = (-13u, 10u, -14u); size = (3u, 2u, 1u); surface = skin.headlight_left; }
+        cube headlight_right { origin = (10u, 10u, -14u); size = (3u, 2u, 1u); surface = skin.headlight_right; }
+        cube engine_deck { origin = (-8u, 12u, 7u); size = (16u, 1u, 5u); surface = skin.engine_deck; }
+        cube toolbox { origin = (9u, 12u, -10u); size = (5u, 3u, 7u); surface = skin.toolbox; }
         bone turret {
-          cube turret { origin = (-3u, 5u, -2.5u); size = (6u, 3u, 5u); surface = skin.turret; }
-          cube turret_top { origin = (-2u, 8u, -1.5u); size = (4u, 1u, 3u); surface = skin.turret_top; }
+          cube turret { origin = (-6u, 12u, -4u); size = (12u, 7u, 11u); surface = skin.turret; }
+          cube turret_top { origin = (-5u, 19u, -3u); size = (10u, 1u, 9u); surface = skin.turret_top; }
+          cube hatch { origin = (-3u, 20u, 0u); size = (5u, 1u, 5u); surface = skin.hatch; }
+          cube mantlet { origin = (-3u, 13u, -6u); size = (6u, 5u, 2u); surface = skin.mantlet; }
+          cube antenna { origin = (4u, 19u, 5u); size = (1u, 8u, 1u); surface = skin.antenna; }
           bone barrel {
-            cube barrel { origin = (-0.5u, 6u, -8.5u); size = (1u, 1u, 6u); surface = skin.barrel; }
-            cube muzzle { origin = (-1u, 5.5u, -9.5u); size = (2u, 2u, 1u); surface = skin.muzzle; }
+            cube barrel { origin = (-1.5u, 14u, -17u); size = (3u, 3u, 11u); surface = skin.barrel; }
+            cube muzzle { origin = (-2u, 13.5u, -19u); size = (4u, 4u, 2u); surface = skin.muzzle; }
           }
         }
       }
