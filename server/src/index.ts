@@ -109,7 +109,7 @@ const isHandToAiRequest = (value: unknown): value is { token: string; seat: numb
   isObject(value) && isToken(value.token) && isInt(value.seat, 0, MAX_SEATS);
 
 /** Quien creo la sala da un asiento vacio a la IA (`POST /rooms/:code/ai`, cuerpo `{ token, seat }`). */
-async function handSeatToAi(request: Request, env: Env, code: string): Promise<Response> {
+async function handToAi(request: Request, env: Env, code: string): Promise<Response> {
   const read = await bodyOf(request);
   if (!read.ok) return refuse(read.error);
   if (!isHandToAiRequest(read.body)) return refuse('badRequest');
@@ -126,7 +126,7 @@ async function connect(request: Request, env: Env, code: string): Promise<Respon
 const ROUTES: readonly Route[] = [
   { method: 'POST', pattern: /^\/rooms$/, run: createRoom },
   { method: 'GET', pattern: /^\/rooms\/([^/]+)$/, run: lobbyOf },
-  { method: 'POST', pattern: /^\/rooms\/([^/]+)\/ai$/, run: handSeatToAi },
+  { method: 'POST', pattern: /^\/rooms\/([^/]+)\/ai$/, run: handToAi },
   { method: 'GET', pattern: /^\/rooms\/([^/]+)\/ws$/, run: connect },
 ];
 

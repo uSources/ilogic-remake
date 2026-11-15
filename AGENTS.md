@@ -48,7 +48,7 @@ npm run huella              # huella del comportamiento: igual antes y despues d
 
 ## Documentacion
 
-- `docs/ARQUITECTURA.md`: capas, flujo de un turno, decisiones.
+- `docs/ARQUITECTURA.md`: capas, flujo de un turno, decisiones. `docs/RED.md`: la partida por la red de punta a punta.
 - `docs/ESTILO.md`: como escribir codigo que se lea a la primera (con ejemplo de antes y despues).
 - `docs/IDEAS.md`: ideas pendientes y descartadas (con el porque); quitar de ahi lo que se haga.
 - `docs/ESTETICA.md`: la estetica del juego (como se ven los modelos 3D, decidida con el usuario):

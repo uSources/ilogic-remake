@@ -23,7 +23,7 @@ El juego pasó de 2D (Phaser) a 3D (three.js, `src/view3d/`). Las reglas, la IA 
 son las mismas, pero la vista 3D aún no deja hacer todo:
 
 16. **Jugar en línea en 3D.** El servidor y la parte de red del navegador (`server/`, `src/net/`,
-    la pantalla de salas `src/menu/onlineScreen.ts`) ya están, pero el cliente iba enganchado a la
+    las pantallas de salas, `src/menu/online/`) ya están, pero el cliente iba enganchado a la
     escena 2D, que se quitó. Falta que la partida 3D juegue con la conexión (`OnlineMatch`) y dar al
     menú 3D su `openOnline`; hasta entonces la tarjeta «Jugar en línea» no sale.
 17. **Escuadras, órdenes permanentes, grupos y recuadro** (las reglas están en el núcleo).

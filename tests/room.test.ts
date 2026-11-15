@@ -26,7 +26,7 @@ function newRoom(teams: readonly MatchTeam[] = TWO_PEOPLE_AND_AI, seed = 21, set
   return Room.create({ match: skirmishConfig({ seed, size: 16, teams, settingChanges }) }, context());
 }
 
-const tokensOf = (room: Room): string[] => room.people().map((seat) => seat.token);
+const tokensOf = (room: Room): string[] => room.personSeats().map((seat) => seat.token);
 
 /** Los mensajes de `outgoing` para el asiento `seat`. */
 const toSeat = (outgoing: readonly Outgoing[], seat: TeamId): ServerMessage[] =>
@@ -316,7 +316,7 @@ describe('la sala: una partida por la red como logica pura', () => {
     expect(restored.room.status).toBe('playing');
     expect(serialize(restored.room.state)).toBe(serialize(halfway.state));
     // Nadie esta dentro al recuperarla: cada uno vuelve a saludar.
-    expect(restored.room.people().map((seat) => seat.connection)).toEqual([null, null]);
+    expect(restored.room.personSeats().map((seat) => seat.connection)).toEqual([null, null]);
     const resumed = play(restored.room, tokens, 7);
     expect(serialize(resumed.room.state)).toBe(serialize(straight.room.state));
   }, 120_000);
@@ -559,7 +559,7 @@ describe('la sala acaba o se para sola', () => {
     expect(other.status).toBe('ended');
   });
 
-  it('con un presupuesto de pasos, la sala se queda a medias (pending) y sigue con continueMatch', () => {
+  it('con un presupuesto de pasos, la sala se queda a medias (isMidway) y sigue con continueMatch', () => {
     const room = Room.create(
       {
         match: skirmishConfig({ seed: 9, size: 16, teams: [{ controller: 'human' }, { controller: 'ai' }], settingChanges: { fog: true } }),
@@ -570,9 +570,9 @@ describe('la sala acaba o se para sola', () => {
     table.joinAll();
     const client = table.clients[0]!;
     table.exchange(0, client.ordered({ kind: 'endTurn' }));
-    expect(room.pending()).toBe(true);
+    expect(room.isMidway()).toBe(true);
     let calls = 0;
-    while (room.pending()) {
+    while (room.isMidway()) {
       table.deliver(room.continueMatch());
       calls++;
     }

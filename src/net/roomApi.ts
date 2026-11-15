@@ -2,7 +2,8 @@
  * Las rutas del servidor que no son la partida (server/README.md, "Rutas"): crear una sala
  * (`POST /rooms`), el vestibulo (`GET /rooms/:code`: quien esta, sin nada de la partida) y dar un
  * asiento vacio a la IA (`POST /rooms/:code/ai`, solo quien creo la sala). Todo JSON; lo que llega se
- * comprueba por encima (que tenga la forma), porque viene de fuera.
+ * comprueba por encima (que tenga la forma), porque viene de fuera. Lo usan las pantallas de
+ * «Jugar en línea» (src/menu/online/); la partida va aparte, por el WebSocket (serverLink.ts).
  */
 import type { SkirmishChoices } from '../core/match';
 import type { RoomStatus, SeatId } from '../core/net';
@@ -113,5 +114,5 @@ export const lobbyOf = (base: string, code: string): Promise<ApiResult<LobbyInfo
 const isOk = (value: unknown): value is { ok: true } => isObject(value) && value.ok === true;
 
 /** Quien creo la sala (su ficha) da un asiento de persona que no ha entrado a la IA. */
-export const handSeatToAi = (base: string, code: string, token: string, seat: SeatId): Promise<ApiResult<{ ok: true }>> =>
+export const handToAi = (base: string, code: string, token: string, seat: SeatId): Promise<ApiResult<{ ok: true }>> =>
   request(`${base}/rooms/${code}/ai`, jsonPost({ token, seat }), isOk);

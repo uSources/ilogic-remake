@@ -1,7 +1,8 @@
 /**
  * «Mis partidas en línea»: las salas en las que este navegador tiene asiento, en localStorage, para
  * volver a entrar (la partida vive en el servidor; aqui solo el codigo, la ficha del asiento y lo
- * ultimo que se supo de ella). Funciones puras sobre la lista mas leer y guardar.
+ * ultimo que se supo de ella). Funciones puras sobre la lista mas leer y guardar. Lo usan el menu de
+ * «Jugar en línea» (src/menu/online/) y MenuScene (un enlace `#/sala/...` al cargar: `parseInvite`).
  */
 import type { RoomStatus, SeatId } from '../core/net';
 import type { TeamId } from '../core/model';

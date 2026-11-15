@@ -48,7 +48,7 @@ export interface Invitation {
 export type HandToAiError = 'badToken' | 'notWaiting' | 'noSeat' | 'seatTaken';
 
 /** A quien se espera ahora: su asiento y el dia (otro dia del mismo asiento es otro turno). */
-export interface Awaited {
+export interface AwaitedSeat {
   seat: SeatId;
   day: number;
 }
@@ -80,7 +80,7 @@ export class RoomAdapter {
 
   /** Las fichas de las personas (para los enlaces de invitacion, al crear la sala). */
   invitations(): Invitation[] {
-    return this.room.people().map((seat) => ({ seat: seat.id, team: seat.team, token: seat.token }));
+    return this.room.personSeats().map((seat) => ({ seat: seat.id, team: seat.team, token: seat.token }));
   }
 
   lobby(): LobbyInfo {
@@ -96,13 +96,13 @@ export class RoomAdapter {
   /** Los asientos de las personas que no estan dentro (para darselos a la IA si no llegan). */
   absentSeats(): SeatId[] {
     return this.room
-      .people()
+      .personSeats()
       .filter((seat) => seat.connection === null)
       .map((seat) => seat.id);
   }
 
   /** A quien se espera (una persona), o null si a nadie (la IA juega, o la partida ha acabado o no ha empezado). */
-  awaiting(): Awaited | null {
+  awaiting(): AwaitedSeat | null {
     const seat = this.room.awaiting;
     return seat && this.room.status === 'playing' ? { seat: seat.id, day: this.room.state.day } : null;
   }
@@ -135,10 +135,10 @@ export class RoomAdapter {
    * que no ha entrado, mientras la sala espera: lo que hay que mandar, o por que no.
    */
   handToAi(token: string, seat: SeatId): { ok: true; outgoing: Outgoing[] } | { ok: false; error: HandToAiError } {
-    const creator = this.room.people()[0];
+    const creator = this.room.personSeats()[0];
     if (!creator || !sameToken(token, creator.token)) return { ok: false, error: 'badToken' };
     if (this.room.status !== 'waiting') return { ok: false, error: 'notWaiting' };
-    const target = this.room.people().find((person) => person.id === seat);
+    const target = this.room.personSeats().find((person) => person.id === seat);
     if (!target || target.id === creator.id) return { ok: false, error: 'noSeat' };
     if (target.connection !== null) return { ok: false, error: 'seatTaken' };
     return { ok: true, outgoing: this.room.replaceWithAi(seat) };
@@ -149,9 +149,9 @@ export class RoomAdapter {
     return this.room.endTurnOf(seat);
   }
 
-  /** La partida sigue sin esperar a nadie (la IA se quedo a medias por el presupuesto de pasos): hay que `continueMatch`. */
-  pending(): boolean {
-    return this.room.pending();
+  /** La partida se ha quedado a medias (la IA, por el presupuesto de pasos) sin esperar a nadie: hay que `continueMatch`. */
+  isMidway(): boolean {
+    return this.room.isMidway();
   }
 
   /** Sigue la partida que se quedo a medias: lo que hay que mandar. */

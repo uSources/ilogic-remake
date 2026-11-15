@@ -65,7 +65,8 @@ jugar con un servidor propio sin recompilar). Sin servidor, Inicio no ofrece «J
   siendo tuyo: vuelve con el enlace).
 
 `npm run online` lo prueba de punta a punta con un servidor local (`wrangler dev`) y dos
-navegadores.
+navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada, los mensajes):
+[docs/RED.md](docs/RED.md).
 
 ## Como se juega
 
@@ -252,8 +253,8 @@ Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` 
 ### Preparado para trabajar con IA
 
 - `CLAUDE.md` y `AGENTS.md` (el mismo contenido para otras IAs): normas y comandos.
-- `docs/ARQUITECTURA.md` (capas, flujo de un turno, vista 3D, decisiones) y `docs/AGENTES.md` (como
-  comprobar el trabajo).
+- `docs/ARQUITECTURA.md` (capas, flujo de un turno, vista 3D, decisiones), `docs/RED.md` (la partida
+  por la red de punta a punta) y `docs/AGENTES.md` (como comprobar el trabajo).
 - Skills en `.claude/skills/`: `ilogic-code`, `ashfox` (modelos 3D), `arte-retro-diffusion`,
   `nueva-unidad`, `nueva-mision`, `sacar-version` y `equilibrar`.
 - `.claude/settings.json`: formato y lint automaticos al editar y proteccion de ficheros generados.
