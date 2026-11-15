@@ -19,7 +19,7 @@ partir de descripciones cortas en `tools/art/ashfox/models/`. Se edita eso:
 |---|---|
 | `models/units.mjs` | las 19 unidades, una por equipo (`blue`, `red`), con huesos y animaciones |
 | `models/buildings.mjs` | los 6 edificios, uno por lado (`blue`, `red`, `neutral`) |
-| `models/terrain.mjs` | casillas (con variantes de detalles) y decorado |
+| `models/terrain.mjs` | casillas (con variantes de detalles) y decorado (las montañas y la arena son relieve del juego) |
 
 Cada modelo es una lista de cubos (`name`, `origin`, `size`, `paint`, y si hace falta `bone`,
 `rotation` + `pivot` y `stamps`); los que se mueven, ademas `bones` y `motions`. Las pinturas son
@@ -82,8 +82,9 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
 - **Aviones**: todo cuelga del hueso `body`, subido `FLYING_HEIGHT`; la barra de vida se pone sola
   encima de lo mas alto del modelo.
 - **Terreno**: que casilla y que decorado lleva cada terreno, `TERRAIN_PIECES` en
-  `src/view3d/terrain.ts` (con `summit` en las montañas: ahi se pone quien esta en ellas). El agua y
-  la cara de arriba de la arena los dibujan shaders (`water.ts`, `sand.ts`), no la textura.
+  `src/view3d/terrain.ts`. Las montañas, las mesetas y la arena **no son modelos de Ashfox**: son
+  relieve que dibuja el juego (`relief.ts`, su `ReliefStyle` en `TERRAIN_PIECES`); el agua se mueve
+  con un shader (`water.ts`).
 
 ## Lo que hace fallar a Ashfox (aprendido)
 

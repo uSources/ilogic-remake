@@ -12,7 +12,7 @@ cada cubo, que Ashfox no coloca solo.
 
 | Fichero | Que describe | Salida |
 |---|---|---|
-| `models/terrain.mjs` | casillas (con variantes de detalles) y decorado | `terrain/` → `public/assets/models/terrain/` |
+| `models/terrain.mjs` | casillas (con variantes de detalles) y decorado; las montañas y la arena no: son relieve (`src/view3d/relief.ts`) | `terrain/` → `public/assets/models/terrain/` |
 | `models/buildings.mjs` | los edificios, uno por lado (`blue`, `red`, `neutral`) | `buildings/` → `.../buildings/` |
 | `models/units.mjs` | las unidades, una por equipo (`blue`, `red`), con huesos y animaciones `idle`, `drive` y `fire` | `units/` → `.../units/` |
 

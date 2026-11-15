@@ -1,6 +1,7 @@
-// El terreno y su decorado para Ashfox, a semejanza del terreno 2D (public/assets/img/wang y flat):
-// hierba lima con flores y borde de tierra, bosque de copas verde oscuro, agua azul con vetas, arena,
-// nieve con grietas azules, montañas por capas y el decorado suelto (cactus, flores, muñeco de nieve).
+// El terreno y su decorado para Ashfox, a semejanza del terreno 2D (public/assets/img/wang):
+// hierba lima con flores y borde de tierra, bosque de copas verde oscuro, agua azul con vetas, nieve
+// con grietas azules y el decorado suelto (cactus, flores, muñeco de nieve). Las montañas y la arena
+// no son modelos: son relieve que dibuja el juego (src/view3d/relief.ts).
 // Medidas en unidades de Ashfox: 16 = una casilla. Las casillas van de -8 a 8 en x y z y su cara de
 // arriba es el suelo; el decorado se apoya en y = 0 (encima de la casilla). Lo escribe generate.mjs.
 
@@ -11,11 +12,6 @@ export const PAINTS = {
   forest_floor: {
     ramp: ['#2f6f24', '#468f2f', '#62ae3c'],
     blotch: { ramp: ['#255a1d', '#357a26', '#4e9630'], scale: [2, 2, 2], density: 0.25 },
-  },
-  sand: { ramp: ['#d99a3c', '#f2c262', '#ffe08e'], blotch: { ramp: ['#c4842e', '#dca24a', '#f0bd62'], scale: [3, 2, 3], density: 0.18 } },
-  sandstone: {
-    ramp: ['#9a5a2a', '#c47a3c', '#e29b55'],
-    blotch: { ramp: ['#7e4620', '#a2602e', '#c47a3c'], scale: [4, 1, 4], density: 0.3 },
   },
   snow: { ramp: ['#bcd3ec', '#e6f0fb', '#ffffff'], blotch: { ramp: ['#9fc0e4', '#bcd6f0', '#d6e8f8'], scale: [3, 1, 3], density: 0.12 } },
   ice_rock: {
@@ -33,13 +29,6 @@ export const PAINTS = {
   trunk: { ramp: ['#4a2c18', '#6e4224', '#8e5a32'] },
   pine: { ramp: ['#1d3f6e', '#2e5a96', '#4a7cc0'], blotch: { ramp: ['#3e6eb0', '#5e8ed0', '#8ab0ea'], scale: [2, 1, 2], density: 0.25 } },
   snowcap: { ramp: ['#d6e6f6', '#f0f6ff', '#ffffff'] },
-  rock: { ramp: ['#454a55', '#676e7b', '#8f97a5'], blotch: { ramp: ['#3d7a2a', '#5a9e38', '#7cc24a'], scale: [4, 1, 4], density: 0.22 } },
-  mesa: { ramp: ['#a8501e', '#d0712c', '#ee9a48'], blotch: { ramp: ['#8a3e16', '#b05a22', '#d07434'], scale: [6, 1, 6], density: 0.3 } },
-  mesa_light: { ramp: ['#d0782e', '#eea050', '#ffc46e'] },
-  snowrock: {
-    ramp: ['#55657e', '#7a8ca8', '#a6b6cc'],
-    blotch: { ramp: ['#cfdef0', '#e6f0fa', '#ffffff'], scale: [3, 2, 3], density: 0.3 },
-  },
   cactus: { ramp: ['#2f7a34', '#45a046', '#6cc860'], blotch: { ramp: ['#2a6a2e', '#3a8a3c', '#58b052'], scale: [1, 3, 1], density: 0.3 } },
   petal_red: { ramp: ['#b02030', '#e83a48', '#ff7a80'] },
   petal_yellow: { ramp: ['#c89a10', '#f2c81e', '#ffe866'] },
@@ -66,12 +55,6 @@ const GROUND_DETAILS = {
     { name: 'buttercup', pixels: 'y', colors: { y: '#ffe866' }, weight: 3 },
     { name: 'clearing', pixels: 'll./lll', colors: { l: '#a8e05a' }, weight: 2 },
   ],
-  sand: [
-    { name: 'ripple', pixels: 'ddddd', colors: { d: '#d29540' }, weight: 4 },
-    { name: 'dune', pixels: '..ddd/dd...', colors: { d: '#d29540' }, weight: 3 },
-    { name: 'shine', pixels: 'll', colors: { l: '#ffeab0' }, weight: 3 },
-    { name: 'pebble', pixels: 'pq', colors: { p: '#8a7a66', q: '#b8a68c' }, weight: 2 },
-  ],
   snow: [
     { name: 'crack', pixels: 'c.../.cc./...c', colors: { c: '#9fc0e4' }, weight: 3 },
     { name: 'drift', pixels: 'bbb', colors: { b: '#d6e6f6' }, weight: 4 },
@@ -84,7 +67,7 @@ const GROUND_DETAILS = {
   ],
 };
 /** Cuantos detalles lleva una casilla de cada suelo. */
-const DETAILS_PER_TILE = { grass: 9, sand: 7, snow: 6, forest_floor: 8 };
+const DETAILS_PER_TILE = { grass: 9, snow: 6, forest_floor: 8 };
 
 /** Azar con semilla (mulberry32): la misma variante sale siempre igual. */
 function seeded(seed) {
@@ -161,18 +144,6 @@ function tree(id, [x, z], crowns, crownPaint, capPaint) {
   return cubes;
 }
 
-/** Una montaña por capas centrada en la casilla. */
-function mountain(layers) {
-  let y = 0;
-  return {
-    cubes: layers.map(([width, height, paint], index) => {
-      const cube = { name: `layer${index}`, origin: [-width / 2, y, -width / 2], size: [width, height, width], paint, phase: index * 31 };
-      y += height;
-      return cube;
-    }),
-  };
-}
-
 /**
  * Una flor en (x, z): tallo y, arriba, cuatro petalos en cruz alrededor del centro amarillo (vista
  * desde arriba, una flor de pixel como las del 2D).
@@ -227,8 +198,6 @@ function flowerPatch(petals, seed) {
 export const MODELS = {
   ...groundVariants('grass', 'grass', 'earth', 4),
   ...groundVariants('forest', 'forest_floor', 'earth', 3),
-  // La cara de arriba de la arena la dibuja un shader en el juego (src/view3d/sand.ts): basta una.
-  ...groundVariants('sand', 'sand', 'sandstone', 1),
   ...groundVariants('snow', 'snow', 'ice_rock', 3),
   tile_water: liquid('water', 1),
   tile_deep: liquid('deep', 0),
@@ -293,23 +262,6 @@ export const MODELS = {
       ),
     ],
   },
-  mount_grass: mountain([
-    [14, 5, 'rock'],
-    [10, 5, 'rock'],
-    [6, 4, 'rock'],
-    [3, 2, 'snowcap'],
-  ]),
-  mount_mesa: mountain([
-    [15, 4, 'mesa'],
-    [13, 4, 'mesa_light'],
-    [11, 4, 'mesa'],
-  ]),
-  mount_snow: mountain([
-    [14, 5, 'snowrock'],
-    [10, 5, 'snowrock'],
-    [6, 4, 'snowcap'],
-    [3, 2, 'snowcap'],
-  ]),
   cactus: {
     cubes: [
       { name: 'trunk', origin: [-3, 0, -2], size: [2, 10, 2], paint: 'cactus' },
