@@ -75,6 +75,8 @@ export interface PlacedUnit {
 export interface SandboxConfig {
   mode: 'sandbox';
   size: number;
+  /** Terreno de otro mapa (de `size` casillas de lado, map[x][y]) y su tema; sin poner, todo llano. */
+  terrain?: { map: GameState['map']; theme: string };
   settingChanges?: Partial<MatchSettings>;
   teams: readonly MatchTeam[];
   buildings: readonly PlacedBuilding[];
@@ -148,7 +150,8 @@ function mission(config: MissionConfig, { content, modes }: MatchSetupContext): 
 function sandbox(config: SandboxConfig, { content, modes }: MatchSetupContext): GameState {
   const s = newGameState({
     modes,
-    map: blankMap(config.size, content.plainTerrain.id),
+    map: config.terrain?.map ?? blankMap(config.size, content.plainTerrain.id),
+    theme: config.terrain?.theme,
     settings: settingsWith(content, config.settingChanges ?? {}),
     content,
     mode: 'sandbox',
