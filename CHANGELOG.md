@@ -7,15 +7,37 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.10.0] - 2026-11-15 — El juego en 3D
 
 ### Novedades
-- **Jugar en línea**: partidas contra amigos por internet, cada uno en su navegador y sin prisa. En Inicio → «Jugar en línea» creas una sala (de 2 a 4 equipos, personas o IA, con generales, y si quieres un reloj por turno) y repartes un enlace de invitación por asiento; con el enlace se entra directamente, y «Mis partidas en línea» recuerda tus salas para volver. Tu turno se juega como siempre; mientras juegan los demás ves «Esperando al equipo N…» y, al acabar, lo que han hecho animado. Si cambias de pestaña, el título te avisa de que te toca. Si se corta la conexión, el juego vuelve solo. Hace falta un servidor de partidas (ver el README).
+- **Todo en 3D**: el tablero es ahora un mundo 3D de juguete. Montañas y dunas con relieve, agua que se mueve, lluvia, nieve y tormentas de arena, y una cámara de estrategia: arrastra para moverla, botón derecho para girarla y rueda para acercarla.
+- **Unidades y edificios nuevos**: las 19 unidades y los seis edificios, hechos de bloques con mucho detalle y del color de su bando. Se mueven: los soldados andan con su arma en las manos, las ruedas giran, los cañones retroceden al disparar, las hélices, los radares y los contrapesos de la bomba de petróleo giran, y las banderas ondean.
+
+### Cambios de juego
+- **Altura**: cada casilla tiene su altura (el agua abajo, las montañas arriba). Desde arriba se acierta más (+10 % por nivel) y desde abajo menos, se ve una casilla más lejos por nivel y subir cuesta un punto de movimiento más. A los aviones no les afecta.
+
+### Interfaz
+- La ayuda de la partida enseña los controles de la vista 3D. «Gráficos» pasa a llamarse «Dibujos de los paneles», que es lo que cambia, y se quita «Fondo del menú».
+
+### Todavía no
+- Algunas cosas del juego en 2D aún no están en 3D y volverán en próximas versiones: jugar en línea, escuadras y órdenes, elegir varias unidades con un recuadro, el minimapa, los poderes de los generales y el tutorial.
+- Las partidas guardadas con versiones anteriores no se pueden seguir.
 
 <!-- en -->
 
 ### New
-- **Play online**: games against friends over the internet, each in their own browser and at their own pace. From Home → “Play online” you create a room (2 to 4 teams, people or AI, with generals, and a turn timer if you want) and hand out one invite link per seat; the link joins directly, and “My online games” remembers your rooms so you can come back. Your turn plays as always; while the others play you see “Waiting for team N…” and, when they finish, what they did, animated. If you switch tabs, the title tells you when it's your turn. If the connection drops, the game reconnects by itself. It needs a game server (see the README).
+- **Everything in 3D**: the board is now a toy 3D world. Mountains and dunes with relief, moving water, rain, snow and sandstorms, and a strategy camera: drag to move it, right button to turn it and the wheel to zoom.
+- **New units and buildings**: all 19 units and the six buildings, made of blocks with lots of detail and in their side's colour. They move: soldiers walk with their weapon in their hands, wheels turn, guns recoil when firing, propellers, radars and the oil pump's counterweights spin, and flags wave.
+
+### Gameplay
+- **Height**: every tile has a height (water low, mountains high). Shooting from above hits more often (+10% per level) and from below less, you see one tile further per level, and climbing costs one more movement point. Aircraft don't care.
+
+### Interface
+- The in-game help shows the 3D view's controls. “Graphics” is now called “Panel pictures”, which is what it changes, and “Menu background” is gone.
+
+### Not yet
+- Some things from the 2D game are not in 3D yet and will come back in later versions: online play, squads and orders, selecting several units with a box, the minimap, generals' powers and the tutorial.
+- Games saved with earlier versions can't be continued.
 
 ## [0.9.0] - 2026-11-07 — Teclas a tu gusto y edificios que vigilan
 
