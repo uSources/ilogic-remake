@@ -30,7 +30,7 @@ Precios orientativos (2026): RD Pro 32x32 ≈ 0,18 $; reduccion K-Centroid ≈ 0
 - **Una imagen por encargo**, con su semilla, mejor que hojas con varias.
 - Unidades de lado mirando a la derecha, chibi "de juguete", contorno oscuro, luz arriba a la
   izquierda, **fondo blanco liso** y un pixel de margen. Aviones con cabina de cristal **sin piloto**
-  (salvo cabina abierta). Tanque pesado con doble cañon.
+  (salvo cabina abierta). Tanque con doble cañon.
 - **Color del bando en magenta.** Se genera una sola version neutral y el codigo saca azul, rojo y gris
   girando el tono (`tools/art/team_key.py`): conserva brillo, saturacion y contorno.
 - Edificios: perspectiva cenital 3/4 como el mapa. Los "reimaginados" con mas fantasia se rechazaron

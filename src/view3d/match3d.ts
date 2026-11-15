@@ -28,6 +28,7 @@ import type { StartedGame } from './gameStart';
 import { screenEnd } from '../core/session';
 import { PauseMenu, saveGame, showEndIfOver } from './matchMenus';
 import { playMusic } from '../audio/music';
+import type { SoundPort } from '../audio/sounds';
 import { OptionsPanel } from '../menu/optionsPanel';
 
 const START_DISTANCE = 16;
@@ -40,7 +41,7 @@ const PAUSE_ANCHOR = { x: 0, y: 0 };
 const END_SCREEN_DELAY_MS = 2200;
 
 /** Juega esa partida en la pagina (hasta que se sale al menu, que recarga). */
-export function playMatch({ session, viewer }: StartedGame, images: GameImages, glbModels: GlbLibrary): void {
+export function playMatch({ session, viewer }: StartedGame, images: GameImages, glbModels: GlbLibrary, sounds: SoundPort): void {
   const state = session.state;
   const world = new World(document.getElementById('game')!);
   const terrain = buildTerrain(state, glbModels);
@@ -101,6 +102,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   world.scene.add(particles.object, marks.mesh, wrecks.object);
   const animations = {
     board,
+    sounds,
     layer: effects,
     animate: (seconds: number, step: (progress: number) => void) => world.animate(seconds, step),
     puff: (kind: PuffKind, at: THREE.Vector3, count?: number) => particles.emit(kind, at, count),
@@ -108,7 +110,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     scorch: (at: THREE.Vector3) => marks.scorch(at),
     wreck: (model: THREE.Object3D) => wrecks.leave(model),
   };
-  const controls = new TurnControls({ session, viewer, highlights, animations, refresh, onOver: () => showEndSoon() });
+  const controls = new TurnControls({ session, viewer, highlights, animations, sounds, refresh, onOver: () => showEndSoon() });
   const options = new OptionsPanel(
     'game',
     () => publish(),

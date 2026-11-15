@@ -1,0 +1,75 @@
+ashfox-model 1
+
+// Generado por tools/art/ashfox/sounds.mjs desde models/sounds.mjs. No editar a mano.
+sound ui_move {
+  duration = 0.1;
+  sampleRate = 48000;
+  seed = 1;
+  voices = [{
+    id = "tick";
+    highpass = 400;
+    lowpass = 16000;
+    source = {
+      kind = "resonator";
+      excitation = {
+        kind = "impulse";
+      };
+      modes = [{
+        id = "mode_0";
+        hz = 1900;
+        decay = 0.03;
+        gain = 1;
+      }];
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.08;
+        value = 0.7;
+      }, {
+        at = 0.35;
+        value = 0.245;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }];
+  sequences = [{
+    id = "phrase";
+    start = 0;
+    repeat = {
+      count = 1;
+      period = 0;
+    };
+    steps = [{
+      id = "note_0";
+      voice = "tick";
+      at = 0.01;
+      duration = 0.06;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }];
+  }];
+  variants = [{
+    id = "v1";
+    seed = 1;
+  }];
+  playback = {
+    kind = "oneshot";
+  };
+  output = {
+    gainDb = -2;
+    peakDb = -1;
+  };
+}

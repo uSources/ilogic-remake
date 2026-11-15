@@ -1,0 +1,84 @@
+ashfox-model 1
+
+// Generado por tools/art/ashfox/sounds.mjs desde models/sounds.mjs. No editar a mano.
+sound ui_select {
+  duration = 0.19;
+  sampleRate = 48000;
+  seed = 1;
+  voices = [{
+    id = "blip";
+    highpass = 20;
+    lowpass = 6000;
+    source = {
+      kind = "fm";
+      pitch = 880;
+      ratio = 2;
+      index = 0.2;
+      vibratoHz = 0;
+      vibratoCents = 0;
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.06;
+        value = 0.6;
+      }, {
+        at = 0.35;
+        value = 0.21;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }];
+  sequences = [{
+    id = "phrase";
+    start = 0;
+    repeat = {
+      count = 1;
+      period = 0;
+    };
+    steps = [{
+      id = "note_0";
+      voice = "blip";
+      at = 0.01;
+      duration = 0.09;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }, {
+      id = "note_1";
+      voice = "blip";
+      at = 0.07;
+      duration = 0.09;
+      gain = 1;
+      pitchCents = 700;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [1, 1];
+        duration = [1, 1];
+      };
+    }];
+  }];
+  variants = [{
+    id = "v1";
+    seed = 1;
+  }];
+  playback = {
+    kind = "oneshot";
+  };
+  output = {
+    gainDb = -16;
+    peakDb = -1;
+  };
+}

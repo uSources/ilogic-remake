@@ -1,6 +1,7 @@
 /** Pantalla de opciones. */
 export const options = {
   music: 'Música',
+  sfx: 'Efectos de sonido',
   autosave: 'Autoguardado',
   language: 'Idioma',
   on: 'SÍ',

@@ -14,6 +14,7 @@ import { Hud } from '../hud/Hud';
 import { ui } from '../hud/store';
 import { registerServiceWorker } from '../pwa';
 import { applySettings } from '../settings';
+import { installSounds, webAudioSounds } from '../audio/sfx';
 import { pendingStart, sessionFor } from './gameStart';
 import { GlbLibrary } from './glbModels';
 import { playMatch } from './match3d';
@@ -26,6 +27,7 @@ applySettings();
 // Sin menu contextual del navegador sobre la interfaz, y Tab no recorre sus botones (es «siguiente unidad»).
 hudRoot.addEventListener('contextmenu', (event) => event.preventDefault());
 installTabGuard(window);
+installSounds();
 ui.set({ screen: 'loading' });
 
 /** Los tipos de unidad y de edificio del juego: de cada uno se busca su modelo de Ashfox. */
@@ -38,8 +40,8 @@ const MODEL_TYPES = {
 const start = pendingStart();
 const started = start ? sessionFor(start) : null;
 const images = await loadGameImages(asset);
-if (started) playMatch(started, images, await GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES));
-else new MenuFlow(images).open();
+if (started) playMatch(started, images, await GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES), webAudioSounds);
+else new MenuFlow(images, webAudioSounds).open();
 
 // Instalar como app y jugar sin conexion (solo en la web publicada).
 registerServiceWorker();

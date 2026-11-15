@@ -1,0 +1,140 @@
+ashfox-model 1
+
+// Generado por tools/art/ashfox/sounds.mjs desde models/sounds.mjs. No editar a mano.
+sound shot_missile {
+  duration = 0.565;
+  sampleRate = 48000;
+  seed = 1;
+  voices = [{
+    id = "launch";
+    highpass = 200;
+    lowpass = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 1200;
+      }, {
+        at = 0.4;
+        value = 5000;
+      }, {
+        at = 1;
+        value = 2500;
+      }];
+    };
+    source = {
+      kind = "noise";
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.04;
+        value = 0.9;
+      }, {
+        at = 0.3;
+        value = 0.6;
+      }, {
+        at = 0.8;
+        value = 0.2;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }, {
+    id = "motor";
+    highpass = 20;
+    lowpass = 2500;
+    source = {
+      kind = "fm";
+      pitch = {
+        domain = "linear";
+        interpolation = "smooth";
+        points = [{
+          at = 0;
+          value = 200;
+        }, {
+          at = 1;
+          value = 420;
+        }];
+      };
+      ratio = 2.5;
+      index = 1.5;
+      vibratoHz = 0;
+      vibratoCents = 0;
+    };
+    gain = {
+      domain = "linear";
+      interpolation = "smooth";
+      points = [{
+        at = 0;
+        value = 0;
+      }, {
+        at = 0.05;
+        value = 0.3;
+      }, {
+        at = 0.7;
+        value = 0.2;
+      }, {
+        at = 1;
+        value = 0;
+      }];
+    };
+  }];
+  sequences = [{
+    id = "phrase";
+    start = 0;
+    repeat = {
+      count = 1;
+      period = 0;
+    };
+    steps = [{
+      id = "note_0";
+      voice = "launch";
+      at = 0.01;
+      duration = 0.5;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [0, 0];
+        gain = [0.9, 1.05];
+        duration = [0.95, 1.05];
+      };
+    }, {
+      id = "note_1";
+      voice = "motor";
+      at = 0.01;
+      duration = 0.5;
+      gain = 1;
+      pitchCents = 0;
+      vary = {
+        timing = [0, 0];
+        pitchCents = [-40, 40];
+        gain = [0.9, 1.05];
+        duration = [0.95, 1.05];
+      };
+    }];
+  }];
+  variants = [{
+    id = "v1";
+    seed = 1;
+  }, {
+    id = "v2";
+    seed = 2;
+  }, {
+    id = "v3";
+    seed = 3;
+  }];
+  playback = {
+    kind = "oneshot";
+  };
+  output = {
+    gainDb = -10;
+    peakDb = -1;
+  };
+}
