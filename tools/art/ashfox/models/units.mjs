@@ -240,9 +240,9 @@ const trooperLeg = (side, bone, [x, z]) => [
   },
 ];
 
-/** El cuerpo: cinturon de dos filas, los tirantes de la mochila por delante y, encima, hebilla y cartucheras. */
-function trooperTorso(side) {
-  const straps = mark('straps', 'north', Array(6).fill('..s....s..').join('/'), { s: BROWN }, [0, 0]);
+/** El cuerpo: cinturon de dos filas (y los tirantes de la mochila por delante, si la lleva) y, encima, hebilla y cartucheras. */
+function trooperTorso(side, look) {
+  const straps = look.backpack ? [mark('straps', 'north', Array(6).fill('..s....s..').join('/'), { s: BROWN }, [0, 0])] : [];
   return [
     {
       name: 'torso',
@@ -250,7 +250,7 @@ function trooperTorso(side) {
       origin: [-5, 9, -3],
       size: TROOPER_TORSO,
       paint: `team_${side}`,
-      stamps: [...band('belt', TROOPER_TORSO, 6, BROWN, 2), straps],
+      stamps: [...band('belt', TROOPER_TORSO, 6, BROWN, 2), ...straps],
     },
     {
       name: 'buckle',
@@ -269,7 +269,7 @@ function trooperTorso(side) {
 const TROOPER_FACE = ['............', '..kk....kk..', '..kk....kk..', '............', '....mmmm....'].join('/');
 
 /** La cabeza: cara delante, orejas y patillas a los lados y pelo detras. */
-const trooperHead = () => ({
+const bareHead = () => ({
   name: 'head',
   bone: 'head',
   origin: [-6, 17, -6],
@@ -282,6 +282,21 @@ const trooperHead = () => ({
   ],
 });
 
+/** El pasamontañas: solo asoma la franja de los ojos (bajo el casco). */
+const MASK_EYES = ['ssssssssssss', 'sskksssskkss', 'sskksssskkss'].join('/');
+
+/** La cabeza tapada con el pasamontañas oscuro del equipo. */
+const maskedHead = (side) => ({
+  name: 'head',
+  bone: 'head',
+  origin: [-6, 17, -6],
+  size: TROOPER_HEAD,
+  paint: `dark_${side}`,
+  stamps: [mark('mask_eyes', 'north', MASK_EYES, { s: SKIN, k: EYE }, [0, 3])],
+});
+
+const trooperHead = (side, look) => (look.mask ? maskedHead(side) : bareHead());
+
 /** Un cristal de las gafas, que sobresale del marco, con su brillo arriba a la izquierda. */
 const lens = (name, x) => ({
   name,
@@ -292,17 +307,28 @@ const lens = (name, x) => ({
   stamps: [mark('lens_shine', 'north', 'w', { w: SHINE }, [0, 0])],
 });
 
-/** El casco: las gafas delante (marco y cristales) con su correa por los lados, la copa y la nuca. */
-function trooperHelmet(side) {
+/** Las gafas: el marco y los dos cristales, delante del casco. */
+const GOGGLES = [
+  { name: 'goggles', bone: 'head', origin: [-6, 24, -8], size: [12, 4, 1], paint: 'leather' },
+  lens('lens_left', -5),
+  lens('lens_right', 1),
+];
+
+/**
+ * El casco, con la copa y la nuca: con gafas (`look.goggles`, y su correa por los lados) o, el
+ * antidisturbios, con visera oscura delante.
+ */
+function trooperHelmet(side, look) {
   const team = `team_${side}`;
-  const strap = band('helmet_strap', TROOPER_HELMET, 2, BROWN, 2).filter((stamp) => stamp.face === 'east' || stamp.face === 'west');
+  const strap = look.goggles
+    ? band('helmet_strap', TROOPER_HELMET, 2, BROWN, 2).filter((stamp) => stamp.face === 'east' || stamp.face === 'west')
+    : [];
+  const front = look.goggles ? GOGGLES : [{ name: 'brim', bone: 'head', origin: [-7, 23, -9], size: [14, 1, 2], paint: `dark_${side}` }];
   return [
     { name: 'helmet', bone: 'head', origin: [-7, 23, -7], size: TROOPER_HELMET, paint: team, stamps: strap },
     { name: 'helmet_top', bone: 'head', origin: [-5, 29, -5], size: [10, 2, 9], paint: team },
     { name: 'neck_guard', bone: 'head', origin: [-7, 20, 4], size: [14, 3, 2], paint: team },
-    { name: 'goggles', bone: 'head', origin: [-6, 24, -8], size: [12, 4, 1], paint: 'leather' },
-    lens('lens_left', -5),
-    lens('lens_right', 1),
+    ...front,
   ];
 }
 
@@ -456,16 +482,16 @@ const BACKPACK = [
   },
 ];
 
-/** El muñeco con detalle de un equipo, con el fusil en las manos (sin lo que lleva a la espalda). */
-const trooper = (side) => [
+/**
+ * El muñeco con detalle de un equipo, sin brazos ni lo que lleva: piernas, cuerpo, cabeza y casco.
+ * `look` dice lo que cambia: gafas (`goggles`), pasamontañas (`mask`) y tirantes de mochila (`backpack`).
+ */
+const trooper = (side, look) => [
   ...trooperLeg(side, 'leg_left', [-5, -3]),
   ...trooperLeg(side, 'leg_right', [1, -0.5]),
-  ...trooperTorso(side),
-  trooperHead(),
-  ...trooperHelmet(side),
-  ...trooperArm(side, 'arm_right', { shoulder: [15, 0, 15], grip: RIGHT_GRIP }),
-  ...trooperArm(side, 'arm_left', { shoulder: [65, 0, 20], grip: LEFT_GRIP }),
-  ...RIFLE,
+  ...trooperTorso(side, look),
+  trooperHead(side, look),
+  ...trooperHelmet(side, look),
 ];
 
 /** Las manos no sueltan el fusil: al andar solo se mueven las piernas y el cuerpo; al disparar, el cuerpo se echa atras. */
@@ -483,7 +509,13 @@ const TROOPER_MOTIONS = {
 const rifleman = (side) => ({
   detail: DETAIL,
   bones: TROOPER_BONES,
-  cubes: [...trooper(side), ...BACKPACK],
+  cubes: [
+    ...trooper(side, { goggles: true, backpack: true }),
+    ...trooperArm(side, 'arm_right', { shoulder: [15, 0, 15], grip: RIGHT_GRIP }),
+    ...trooperArm(side, 'arm_left', { shoulder: [65, 0, 20], grip: LEFT_GRIP }),
+    ...RIFLE,
+    ...BACKPACK,
+  ],
   motions: TROOPER_MOTIONS,
 });
 
@@ -496,18 +528,77 @@ const bazooka = (side) =>
     { name: 'sight', bone: 'arm_right', origin: [3.5, 11, -3], size: [1, 1, 2], paint: 'steel' },
   ]);
 
-/** El del escudo: pasamontañas y un escudo antidisturbios alto, delante a la izquierda, con su mirilla. */
-const shield = (side) =>
-  infantry(side, { mask: true }, () => [
-    {
-      name: 'shield',
-      bone: 'arm_left',
-      origin: [-7.5, 1, -4.5],
-      size: [6, 10, 1],
-      paint: 'riot',
-      stamps: [mark('visor', 'north', 'gggg/gggg', { g: '#2a3a48' }, [1, 2]), mark('rivets', 'north', 'r....r', { r: '#8a909c' }, [0, 8])],
-    },
-  ]);
+// ---- El antidisturbios: escudo y pistola ----
+
+/** Donde coge cada mano: la izquierda, el asa por detras del escudo; la derecha, la pistola, al frente y abajo. */
+const SHIELD_GRIP = [-3.5, 12.5, -7.5];
+const PISTOL_GRIP = [6.5, 11, -6.5];
+
+/**
+ * El escudo antidisturbios, alto (hasta los ojos) y delante a la izquierda: gris con el borde claro,
+ * la mirilla oscura arriba, una franja del color del equipo y remaches abajo.
+ */
+function riotShield(side) {
+  const stripe = Array(2).fill('t'.repeat(11)).join('/');
+  return {
+    name: 'shield',
+    bone: 'arm_left',
+    origin: [-9, 2, -10],
+    size: [11, 19, 1],
+    paint: 'riot',
+    stamps: [
+      mark('shield_visor', 'north', 'lgggggggl/ggggggggg/ggggggggg/ggggggggg', { g: '#2a3a48', l: '#4a5e70' }, [1, 2]),
+      mark('shield_stripe', 'north', stripe, { t: SIDES[side].team[1] }, [0, 9]),
+      mark('shield_rivets', 'north', 'r.........r', { r: '#c4c8d0' }, [0, 16]),
+    ],
+  };
+}
+
+/** La pistola pequeña, al frente en la mano derecha: culata bajo la mano, corredera con su raya clara y la boca. */
+const PISTOL = [
+  { name: 'pistol_grip', origin: [PISTOL_GRIP[0] - 1, PISTOL_GRIP[1] - 3.5, PISTOL_GRIP[2] - 1], size: [2, 3, 2], paint: 'gun' },
+  {
+    name: 'pistol_slide',
+    origin: [PISTOL_GRIP[0] - 1, PISTOL_GRIP[1] + 0.5, PISTOL_GRIP[2] - 6],
+    size: [2, 2, 5],
+    paint: 'gun',
+    stamps: ['east', 'west'].map((face) => mark('slide_line', face, 'sssss', { s: '#6a7282' }, [0, 0])),
+  },
+  { name: 'pistol_muzzle', origin: [PISTOL_GRIP[0] - 0.5, PISTOL_GRIP[1] + 1, PISTOL_GRIP[2] - 7], size: [1, 1, 1], paint: 'steel' },
+].map((part) => ({ ...part, bone: 'arm_right' }));
+
+/** La proteccion: peto gris en el pecho y en la espalda, y hombreras. */
+const RIOT_ARMOR = [
+  {
+    name: 'chest_plate',
+    bone: 'torso',
+    origin: [-4, 12, -4],
+    size: [8, 5, 1],
+    paint: 'riot',
+    stamps: [mark('plate_seam', 'north', '...dd...', { d: '#4a505c' }, [0, 2])],
+  },
+  { name: 'back_plate', bone: 'torso', origin: [-4, 11, 3], size: [8, 6, 1], paint: 'riot' },
+  { name: 'pad_left', bone: 'torso', origin: [-9, 15.5, -2.5], size: [4, 2, 5], paint: 'riot' },
+  { name: 'pad_right', bone: 'torso', origin: [5, 15.5, -2.5], size: [4, 2, 5], paint: 'riot' },
+];
+
+/** Al disparar, la pistola salta hacia arriba y el cuerpo se echa un poco atras. */
+const RIOT_MOTIONS = { ...TROOPER_MOTIONS, fire: onceMotion(0.4, [kick('arm_right', 15), kick('torso', 4)]) };
+
+/** El antidisturbios: pasamontañas, casco con visera, peto y hombreras, escudo alto y pistola pequeña. */
+const riotTrooper = (side) => ({
+  detail: DETAIL,
+  bones: TROOPER_BONES,
+  cubes: [
+    ...trooper(side, { mask: true }),
+    ...trooperArm(side, 'arm_right', { shoulder: [20, 0, 10], grip: PISTOL_GRIP }),
+    ...trooperArm(side, 'arm_left', { shoulder: [40, 0, 20], grip: SHIELD_GRIP }),
+    ...RIOT_ARMOR,
+    riotShield(side),
+    ...PISTOL,
+  ],
+  motions: RIOT_MOTIONS,
+});
 
 /** El del mortero: casco de camuflaje, señala al frente; delante, sacos terreros y el tubo asomando. */
 const mortar = (side) =>
@@ -581,17 +672,17 @@ function tank(side) {
 function heavyTank(side) {
   const team = `team_${side}`;
   return {
-    bones: VEHICLE_BONES([0, 6.5, 0.5], [0, 8, -3.5]),
+    bones: VEHICLE_BONES([0, 7, 0.5], [0, 8.5, -3.5]),
     motions: VEHICLE_MOTIONS,
     cubes: [
       ...tracks(16, 16),
-      { name: 'hull', bone: 'hull', origin: [-7, 3.5, -8], size: [14, 3.5, 16], paint: team },
-      { name: 'turret', bone: 'turret', origin: [-5, 7, -4], size: [10, 3.5, 8], paint: team },
-      { name: 'turret_top', bone: 'turret', origin: [-4, 10.5, -3], size: [8, 1.5, 5], paint: team },
-      { name: 'hatch', bone: 'turret', origin: [-2, 11.5, 1], size: [2.5, 1, 2], paint: `dark_${side}` },
-      { name: 'mantlet', bone: 'turret', origin: [-3, 7.5, -4], size: [6, 2.5, 1], paint: `dark_${side}` },
-      { name: 'barrel_left', bone: 'barrel', origin: [-2.5, 8, -12], size: [1.5, 1.5, 10], paint: 'steel' },
-      { name: 'barrel_right', bone: 'barrel', origin: [0.5, 8, -12], size: [1.5, 1.5, 10], paint: 'steel' },
+      { name: 'hull', bone: 'hull', origin: [-7, 4, -8], size: [14, 4, 16], paint: team },
+      { name: 'turret', bone: 'turret', origin: [-5, 8, -4], size: [10, 4, 8], paint: team },
+      { name: 'turret_top', bone: 'turret', origin: [-4, 12, -3], size: [8, 2, 5], paint: team },
+      { name: 'hatch', bone: 'turret', origin: [-2, 13, 1], size: [2, 1, 2], paint: `dark_${side}` },
+      { name: 'mantlet', bone: 'turret', origin: [-3, 8, -12], size: [6, 2, 1], paint: `dark_${side}` },
+      { name: 'barrel_left', bone: 'barrel', origin: [-2.5, 8.5, -12], size: [2, 2, 10], paint: 'steel' },
+      { name: 'barrel_right', bone: 'barrel', origin: [0.5, 8.5, -12], size: [2, 2, 10], paint: 'steel' },
     ],
   };
 }
@@ -1030,7 +1121,7 @@ function helicopter(side) {
 const UNITS = {
   Soldier: rifleman,
   BSoldier: bazooka,
-  SSoldier: shield,
+  SSoldier: riotTrooper,
   MSoldier: mortar,
   FSoldier: biker,
   Tank: tank,

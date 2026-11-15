@@ -56,6 +56,11 @@ Lo que vale para todo muñeco; la referencia es el soldado.
 - **Brazos:** hombro y antebrazo, del mismo grosor (3) y manos pequeñas (3×3×3). Nada de bloques
   anchos tipo hombrera ni manos más gordas que el brazo.
 
+- **Variantes:** todos salen del mismo muñeco (`trooper(side, look)`: gafas, pasamontañas, tirantes
+  de mochila) y cambian lo que llevan. El antidisturbios: pasamontañas del color oscuro del equipo
+  (solo asoma la franja de los ojos), casco con visera oscura y sin gafas, peto, espaldar y
+  hombreras grises, escudo alto hasta los ojos (mirilla oscura, franja del equipo, remaches) y una pistola pequeña en la otra mano (no porra).
+
 ### La pose
 
 - **En guardia, con el arma en las dos manos.** Nunca el arma colgando de una mano a un lado ni
