@@ -5,7 +5,7 @@ Instrucciones para agentes de IA (Codex, Cursor, Copilot, Gemini, Claude...). Mi
 
 ## Proyecto
 
-Remake en 3D de *Ilogic* (estrategia por turnos, 2013) en TypeScript + three.js + Preact (rama `3d`: sin 2D;
+Remake en 3D de *Ilogic* (estrategia por turnos, 2013) en TypeScript + three.js + Preact (sin 2D:
 de aquel juego solo quedan las imagenes). Identificadores
 en ingles; comentarios, textos y commits en español (sin tildes en el codigo; con tildes en los textos
 del juego). Ver `docs/ESTILO.md`, regla 11.
