@@ -46,6 +46,8 @@ export interface StaticPart {
 /** Una unidad con modelo GLB: su objeto (ya mirando hacia +z, como los de bloques) y como animarla. */
 export interface GlbUnit {
   object: THREE.Group;
+  /** Las animaciones que trae el modelo (sus nombres, con lo que duran en segundos). */
+  clips: readonly { name: string; seconds: number }[];
   play(clip: UnitClip): void;
   update(seconds: number): void;
 }
@@ -94,10 +96,12 @@ export class GlbLibrary {
 
   /**
    * Carga los modelos de esos tipos de unidad y de edificio (los que tengan: el que falta se salta) y
-   * los fijos que se piden (`staticFiles`, rutas dentro de assets/models).
+   * los fijos que se piden (`staticFiles`, rutas dentro de assets/models). Con `fresh`, preguntando
+   * al servidor si han cambiado (el playground recarga asi los modelos recien exportados).
    */
-  static async load(types: GlbTypes, staticFiles: readonly string[] = []): Promise<GlbLibrary> {
+  static async load(types: GlbTypes, staticFiles: readonly string[] = [], fresh = false): Promise<GlbLibrary> {
     const loader = new GLTFLoader();
+    if (fresh) loader.setRequestHeader({ 'Cache-Control': 'no-cache' });
     const unitFiles = types.units.flatMap((type) => Object.keys(UNIT_SIDES).map((side) => unitFile(type, side as keyof typeof UNIT_SIDES)));
     const buildingFiles = types.buildings.flatMap((type) =>
       Object.keys(BUILDING_SIDES).map((side) => buildingFile(type, side as keyof typeof BUILDING_SIDES)),
@@ -155,7 +159,8 @@ function animatedCopy(model: LoadedModel): GlbUnit {
   mixer.addEventListener('finished', () => play('idle'));
   play('idle');
   startOutOfStep(actions.get('idle'));
-  return { object, play, update: (seconds) => mixer.update(seconds) };
+  const clips = model.clips.map((clip) => ({ name: clip.name, seconds: clip.duration }));
+  return { object, clips, play, update: (seconds) => mixer.update(seconds) };
 }
 
 /** Cada copia empieza su reposo en otro momento y lo lleva a su ritmo: que no se mezan todas a la vez. */
