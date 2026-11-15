@@ -1,0 +1,43 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    bind bone prop_left to skeleton.prop_left;
+    bind bone prop_right to skeleton.prop_right;
+    geometry {
+      bone body {
+        cube fuselage { origin = (-6u, 20u, -14u); size = (12u, 11u, 28u); surface = skin.fuselage; }
+        cube glass_nose { origin = (-5u, 21u, -16u); size = (10u, 9u, 2u); surface = skin.glass_nose; }
+        cube glass_nose_mid { origin = (-4u, 22u, -18u); size = (8u, 7u, 2u); surface = skin.glass_nose_mid; }
+        cube glass_nose_tip { origin = (-3u, 23u, -19u); size = (6u, 5u, 1u); surface = skin.glass_nose_tip; }
+        cube cockpit { origin = (-4u, 31u, -12u); size = (8u, 2u, 5u); surface = skin.cockpit; }
+        cube dorsal_turret { origin = (-2u, 31u, 2u); size = (4u, 3u, 4u); surface = skin.dorsal_turret; }
+        cube dorsal_guns { origin = (-1u, 32.5u, -2u); size = (2u, 1u, 4u); surface = skin.dorsal_guns; }
+        cube wing { origin = (-22u, 24u, -6u); size = (44u, 2u, 12u); surface = skin.wing; }
+        cube engine_left { origin = (-15u, 22u, -11u); size = (6u, 6u, 10u); surface = skin.engine_left; }
+        cube bomb_left { origin = (-10u, 21u, -3u); size = (2u, 3u, 6u); surface = skin.bomb_left; }
+        cube bomb_tip_left { origin = (-10u, 21u, -5u); size = (2u, 3u, 2u); surface = skin.bomb_tip_left; }
+        cube engine_right { origin = (9u, 22u, -11u); size = (6u, 6u, 10u); surface = skin.engine_right; }
+        cube bomb_right { origin = (8u, 21u, -3u); size = (2u, 3u, 6u); surface = skin.bomb_right; }
+        cube bomb_tip_right { origin = (8u, 21u, -5u); size = (2u, 3u, 2u); surface = skin.bomb_tip_right; }
+        cube tailplane { origin = (-11u, 28u, 10u); size = (22u, 1u, 5u); surface = skin.tailplane; }
+        cube fin_left { origin = (-11u, 29u, 10u); size = (1u, 7u, 5u); surface = skin.fin_left; }
+        cube fin_right { origin = (10u, 29u, 10u); size = (1u, 7u, 5u); surface = skin.fin_right; }
+        bone prop_left {
+          cube prop_left_a { origin = (-17u, 24.5u, -12.5u); size = (10u, 1u, 1u); surface = skin.prop_left_a; }
+          cube prop_left_b { origin = (-12.5u, 20u, -12.5u); size = (1u, 10u, 1u); surface = skin.prop_left_b; }
+          cube prop_left_spinner { origin = (-13.5u, 23.5u, -13.5u); size = (3u, 3u, 2u); surface = skin.prop_left_spinner; }
+        }
+        bone prop_right {
+          cube prop_right_a { origin = (7u, 24.5u, -12.5u); size = (10u, 1u, 1u); surface = skin.prop_right_a; }
+          cube prop_right_b { origin = (11.5u, 20u, -12.5u); size = (1u, 10u, 1u); surface = skin.prop_right_b; }
+          cube prop_right_spinner { origin = (10.5u, 23.5u, -13.5u); size = (3u, 3u, 2u); surface = skin.prop_right_spinner; }
+        }
+      }
+    }
+  }
+}

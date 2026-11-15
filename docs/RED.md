@@ -6,6 +6,11 @@ Las decisiones de diseño y el porque de cada una estan resumidas en `docs/ARQUI
 "Servidor", "Cliente"); aqui esta el recorrido. Los nombres son los del codigo (si uno no cuadra con
 el codigo, gana el codigo y hay que arreglar esto).
 
+> **Aviso (vista 3D):** el juego paso de la escena 2D (Phaser) a la vista 3D y la escena se quito.
+> Lo que aqui se cuenta de `GameScene` y `src/scenes/game/onlinePlay.ts` es como jugaba el cliente
+> en 2D; en 3D falta portarlo (`docs/IDEAS.md`, «Jugar en línea en 3D»). El servidor y `src/net/`
+> siguen igual.
+
 Tres piezas, en tres sitios:
 
 | Pieza | Donde | Que es |

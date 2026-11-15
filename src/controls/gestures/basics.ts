@@ -1,5 +1,5 @@
 /**
- * Piezas comunes de los gestos: el evento de puntero sin Phaser, las teclas que lo acompañan y el
+ * Piezas comunes de los gestos: el evento de puntero sin motor de juego, las teclas que lo acompañan y el
  * umbral que separa un toque de un arrastre.
  */
 
@@ -18,7 +18,7 @@ export interface Pt {
 
 export const distance = (a: Pt, b: Pt): number => Math.hypot(a.x - b.x, a.y - b.y);
 
-/** Un evento del raton o de un dedo, sin Phaser (GameScene lo traduce desde Phaser.Input.Pointer). */
+/** Un evento del raton o de un dedo, tal como lo traduce quien escucha al navegador. */
 export interface PointerIn {
   id: number;
   /** Posicion en pixeles del lienzo. */

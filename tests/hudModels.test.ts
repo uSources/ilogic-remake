@@ -1,6 +1,6 @@
 import { entryOf } from '@core/content';
 import { changeSettings } from '@core/gameState';
-import type Phaser from 'phaser';
+import { GameImages } from '../src/atlas';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
@@ -24,19 +24,19 @@ import {
   weatherVM,
 } from '../src/ui/hudModels';
 import { blankState, diceFrom, hqId, unitTypeNamed, fight, withoutHeadquarters } from './helpers';
-import { ownerSideOf, sideColor, sideLetter, sideOf, sidePaint, unitSideLetter } from '../src/ui/sides';
-import { PAL } from '../src/ui/palette';
+import { ownerSideOf, sideLetter, sideOf, sidePaint, unitSideLetter } from '../src/ui/sides';
 import { teamState } from '@core/teams';
 
 const HQ = hqId();
 const MAX_FUNDS = defaultContent().maxFunds;
 
-/** Texturas de mentira: todas las imagenes "existen" (las fichas solo usan sus nombres). */
-const textures = {
-  exists: () => true,
-  get: () => ({ has: () => true }),
-  getFrame: () => null,
-} as unknown as Phaser.Textures.TextureManager;
+/** Imagenes de mentira: todas "existen" (las fichas solo usan sus nombres). */
+class EveryImage extends GameImages {
+  override has(): boolean {
+    return true;
+  }
+}
+const images = new EveryImage(new Map());
 const unitType = unitTypeNamed;
 
 beforeEach(() => {
@@ -53,10 +53,10 @@ describe('datos de la interfaz', () => {
     newUnit(s, unitType('Tank'), 1, { x: 4, y: 4 });
     s.buildings.push({ type: HQ, owner: 1, x: 4, y: 4, capture: null });
     const fog = createLayer(s, false);
-    const hidden = tileVM(textures, s, { x: 4, y: 4 }, { viewer: 0, vis: fog, hidden: new Set() });
+    const hidden = tileVM(images, s, { x: 4, y: 4 }, { viewer: 0, vis: fog, hidden: new Set() });
     expect(hidden.unit).toBeUndefined();
     expect(hidden.building?.owner).toBe('unknown');
-    const seen = tileVM(textures, s, { x: 4, y: 4 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set() });
+    const seen = tileVM(images, s, { x: 4, y: 4 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set() });
     expect(seen.unit?.side).toBe('enemy');
     expect(seen.building?.owner).toBe('enemy');
     expect(seen.terrain.defense).toBeGreaterThan(0);
@@ -65,9 +65,9 @@ describe('datos de la interfaz', () => {
   it('ficha: la unidad que se esta moviendo sale aunque su sprite este oculto', () => {
     const s = blankState();
     const unit = newUnit(s, unitType('Soldier'), 0, { x: 2, y: 2 });
-    const vm = tileVM(textures, s, { x: 2, y: 2 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set([unit.uid]), selected: unit });
+    const vm = tileVM(images, s, { x: 2, y: 2 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set([unit.uid]), selected: unit });
     expect(vm.unit?.name).toBeTruthy();
-    expect(tileVM(textures, s, { x: 2, y: 2 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set([unit.uid]) }).unit).toBeUndefined();
+    expect(tileVM(images, s, { x: 2, y: 2 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set([unit.uid]) }).unit).toBeUndefined();
   });
 
   it('textos: movimiento y alcance, puntos de captura', () => {
@@ -267,9 +267,6 @@ describe('lados para quien mira (con mas de dos equipos)', () => {
   });
 
   it('colores y letras de lado de un solo sitio: azul lo propio y aliado, rojo lo enemigo, gris lo de nadie', () => {
-    expect(sideColor('own')).toBe(PAL.blue);
-    expect(sideColor('ally')).toBe(PAL.blue);
-    expect(sideColor('enemy')).toBe(PAL.red);
     expect(sidePaint('ally', 'fill')).toBe(sidePaint('own', 'fill'));
     expect(sidePaint('unknown', 'text')).toBe(sidePaint('neutral', 'text'));
     expect(sidePaint('enemy', 'canvas')).not.toBe(sidePaint('own', 'canvas'));
@@ -283,10 +280,10 @@ describe('lados para quien mira (con mas de dos equipos)', () => {
     newUnit(s, unitType('Tank'), 2, { x: 4, y: 4 });
     s.buildings.push({ type: 'City', owner: 2, x: 9, y: 9, capture: null });
     const all = createLayer(s, true);
-    expect(tileVM(textures, s, { x: 4, y: 4 }, { viewer: 1, vis: all, hidden: new Set() }).unit?.side).toBe('ally');
+    expect(tileVM(images, s, { x: 4, y: 4 }, { viewer: 1, vis: all, hidden: new Set() }).unit?.side).toBe('ally');
     const fog = createLayer(s, false);
-    expect(tileVM(textures, s, { x: 9, y: 9 }, { viewer: 1, vis: fog, hidden: new Set() }).building?.owner).toBe('ally');
-    expect(tileVM(textures, s, { x: 9, y: 9 }, { viewer: 0, vis: fog, hidden: new Set() }).building?.owner).toBe('unknown');
+    expect(tileVM(images, s, { x: 9, y: 9 }, { viewer: 1, vis: fog, hidden: new Set() }).building?.owner).toBe('ally');
+    expect(tileVM(images, s, { x: 9, y: 9 }, { viewer: 0, vis: fog, hidden: new Set() }).building?.owner).toBe('unknown');
     expect(minimapVM({}, s, { viewer: 1, vis: all, hidden: new Set() }).units).toEqual([{ x: 4, y: 4, side: 'ally' }]);
   });
 

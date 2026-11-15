@@ -1,9 +1,12 @@
 ---
 name: arte-retro-diffusion
-description: Use when creating or redoing game art for Ilogic (units, buildings, terrain decor, textures) with Retro Diffusion, or when touching the art pipeline in tools/art. Covers cost rules, prompts that worked, the magenta team-color key and how art reaches the game.
+description: Use when creating or redoing 2D images for Ilogic (unit and building portraits, HUD icons, general portraits, terrain images used by the HUD and as reference for the 3D models) with Retro Diffusion, or when touching the image pipeline in tools/art. Covers cost rules, prompts that worked, the magenta team-color key and how images reach the HUD. 3D models are the ashfox skill.
 ---
 
 # Graficos con Retro Diffusion
+
+El tablero es 3D (modelos de Ashfox, skill `ashfox`): las imagenes de aqui son las de la interfaz
+HTML (fichas, compra, retratos, iconos, miniaturas de mapa) y sirven de referencia para los modelos.
 
 Retro Diffusion (RD) **cuesta dinero en la cuenta del usuario**. Reglas, sin excepciones:
 
@@ -41,7 +44,7 @@ Precios orientativos (2026): RD Pro 32x32 ≈ 0,18 $; reduccion K-Centroid ≈ 0
 encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inbox/X.png
   → revisar con el usuario → mover a tools/art/retrodiffusion/units32/ (o buildings32/, decor/...)
   → npm run assets (rd_units32.py quita el fondo blanco unido al borde y saca b_/i_/r_)
-  → npm run shots (ver como queda) → commit
+  → mirarlo en la interfaz (npm run dev) → commit
 ```
 
 - Unidades: `units32/<Nombre>.png` → `public/assets/img/u/{b,i,r}_<Nombre>.png` (r mira a la izquierda).
@@ -60,7 +63,8 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
 - Marcas de unidad (`mk_star/noheal/cargo`): igual que las de orden y luego reducidas a 8-10 px por
   moda de color (sin mezclar) antes de guardarlas en `ui/`.
 - Efectos animados: la hoja va como `ui/anim_<nombre>.png` y `rd_ui.py` la parte en fotogramas (lado
-  en `ANIM_FRAME`) sin los vacios ni el magenta suelto; `playAnim` (src/ui/fx.ts) la reproduce.
+  en `ANIM_FRAME`) sin los vacios ni el magenta suelto. Los reproducia el 2D (`playAnim`); la vista 3D
+  no los usa (sus efectos son particulas, `src/view3d/particles.ts`).
 - **Rechazado:** proyectiles del combate (misil, bala de cañon, bombas) con RD Plus y la explosion
   de `rd_animation__vfx`: no encajan con la estetica del juego. Los proyectiles siguen por codigo.
 - **Explosion que si encaja** (`ui/anim_boom.png`, fotogramas de 64x64): fotograma clave con

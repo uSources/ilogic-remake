@@ -1,0 +1,58 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone leg_left to skeleton.leg_left;
+    bind bone leg_right to skeleton.leg_right;
+    bind bone torso to skeleton.torso;
+    bind bone head to skeleton.head;
+    bind bone arm_left to skeleton.arm_left;
+    bind bone arm_right to skeleton.arm_right;
+    geometry {
+      bone leg_left {
+        cube boot_leg_left { origin = (-5u, 0u, -4.5u); size = (4u, 3u, 6u); surface = skin.boot_leg_left; }
+        cube leg_left { origin = (-5u, 3u, -3u); size = (4u, 6u, 4u); surface = skin.leg_left; }
+      }
+      bone leg_right {
+        cube boot_leg_right { origin = (1u, 0u, -2u); size = (4u, 3u, 6u); surface = skin.boot_leg_right; }
+        cube leg_right { origin = (1u, 3u, -0.5u); size = (4u, 6u, 4u); surface = skin.leg_right; }
+      }
+      bone torso {
+        cube torso { origin = (-5u, 9u, -3u); size = (10u, 8u, 6u); surface = skin.torso; }
+        cube buckle { origin = (-1.5u, 9u, -4u); size = (3u, 2u, 1u); surface = skin.buckle; }
+        cube pouch_left { origin = (-4.5u, 9u, -4u); size = (2u, 2u, 1u); surface = skin.pouch_left; }
+        cube pouch_right { origin = (2.5u, 9u, -4u); size = (2u, 2u, 1u); surface = skin.pouch_right; }
+        cube chest_plate { origin = (-4u, 12u, -4u); size = (8u, 5u, 1u); surface = skin.chest_plate; }
+        cube back_plate { origin = (-4u, 11u, 3u); size = (8u, 6u, 1u); surface = skin.back_plate; }
+        cube pad_left { origin = (-9u, 15.5u, -2.5u); size = (4u, 2u, 5u); surface = skin.pad_left; }
+        cube pad_right { origin = (5u, 15.5u, -2.5u); size = (4u, 2u, 5u); surface = skin.pad_right; }
+        bone head {
+          cube head { origin = (-6u, 17u, -6u); size = (12u, 9u, 11u); surface = skin.head; }
+          cube helmet { origin = (-7u, 23u, -7u); size = (14u, 6u, 13u); surface = skin.helmet; }
+          cube helmet_top { origin = (-5u, 29u, -5u); size = (10u, 2u, 9u); surface = skin.helmet_top; }
+          cube neck_guard { origin = (-7u, 20u, 4u); size = (14u, 3u, 2u); surface = skin.neck_guard; }
+          cube brim { origin = (-7u, 23u, -9u); size = (14u, 1u, 2u); surface = skin.brim; }
+        }
+        bone arm_left {
+          cube upper_arm_left { origin = (-8.5u, 12u, -1.5u); size = (3u, 5u, 3u); rotation = (40deg, 0deg, 20deg); pivot = (-7u, 16u, 0u); surface = skin.upper_arm_left; }
+          cube fore_arm_left { origin = (-7.5u, 12u, -7u); size = (3u, 3u, 5u); rotation = (-10.5deg, -24deg, 0deg); pivot = (-6u, 13.5u, -2u); surface = skin.fore_arm_left; }
+          cube hand_arm_left { origin = (-7.5u, 12u, -10u); size = (3u, 3u, 3u); rotation = (-10.5deg, -24deg, 0deg); pivot = (-6u, 13.5u, -2u); surface = skin.hand_arm_left; }
+          cube shield { origin = (-9u, 2u, -10u); size = (11u, 19u, 1u); surface = skin.shield; }
+        }
+        bone arm_right {
+          cube upper_arm_right { origin = (5.5u, 12u, -1.5u); size = (3u, 5u, 3u); rotation = (30deg, 0deg, 10deg); pivot = (7u, 16u, 0u); surface = skin.upper_arm_right; }
+          cube fore_arm_right { origin = (6u, 11.5u, -6.5u); size = (3u, 3u, 5u); rotation = (-13deg, 8.5deg, 0deg); pivot = (7.5u, 13u, -1.5u); surface = skin.fore_arm_right; }
+          cube hand_arm_right { origin = (6u, 11.5u, -9.5u); size = (3u, 3u, 3u); rotation = (-13deg, 8.5deg, 0deg); pivot = (7.5u, 13u, -1.5u); surface = skin.hand_arm_right; }
+          cube pistol_slide { origin = (5.5u, 13u, -13.5u); size = (2u, 2u, 7u); surface = skin.pistol_slide; }
+          cube pistol_front_sight { origin = (6u, 15u, -13u); size = (1u, 1u, 1u); surface = skin.pistol_front_sight; }
+          cube pistol_rear_sight { origin = (6u, 15u, -7.5u); size = (1u, 1u, 1u); surface = skin.pistol_rear_sight; }
+          cube pistol_frame { origin = (5.5u, 12u, -12.5u); size = (2u, 1u, 3u); surface = skin.pistol_frame; }
+          cube pistol_grip { origin = (5.5u, 9u, -9u); size = (2u, 4u, 2u); rotation = (-15deg, 0deg, 0deg); pivot = (6.5u, 13u, -8u); surface = skin.pistol_grip; }
+        }
+      }
+    }
+  }
+}

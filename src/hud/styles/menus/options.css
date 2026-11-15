@@ -21,7 +21,7 @@
   color: var(--muted);
   font-family: var(--display);
   font-size: 14px;
-  cursor: var(--cursor-button, pointer);
+  cursor: pointer;
   box-shadow:
     inset 3px 3px 0 var(--hi),
     inset -3px -3px 0 var(--lo);

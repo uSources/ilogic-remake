@@ -3,7 +3,7 @@
 Lista viva de lo que se ha hablado para Ilogic y aún no está hecho (o se descartó, y por qué). Se
 actualiza al terminar cada cosa: lo hecho sale de aquí y va a las notas de versión (`CHANGELOG.md`).
 
-Estado a 1 de noviembre de 2026, después de la versión 0.7.1. Ahora el foco es un núcleo PvE bueno;
+Estado a 1 de noviembre de 2026, después de la versión 0.7.1 (la sección «Vista 3D», del 15 de noviembre). Ahora el foco es un núcleo PvE bueno;
 el PvP, después.
 
 ## En marcha
@@ -16,6 +16,31 @@ el PvP, después.
 | Órdenes con un gesto | PR #49 | Lista |
 | Borde de la pantalla y menús por el sistema común de controles | PR #50 | Lista |
 | Versión 0.8.0 con todo lo anterior | — | Después de lo anterior |
+
+## Vista 3D (lo que tenía el 2D y aún falta)
+
+El juego pasó de 2D (Phaser) a 3D (three.js, `src/view3d/`). Las reglas, la IA y la interfaz HTML
+son las mismas, pero la vista 3D aún no deja hacer todo. La ayuda de la partida solo cuenta lo que
+ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`).
+
+16. **Jugar en línea en 3D.** El servidor y la parte de red del navegador (`server/`, `src/net/`,
+    las pantallas de salas, `src/menu/online/`) ya están, pero el cliente iba enganchado a la
+    escena 2D, que se quitó. Falta que la partida 3D juegue con la conexión (`OnlineMatch`) y dar al
+    menú 3D su `openOnline`; hasta entonces la tarjeta «Jugar en línea» no sale.
+17. **Escuadras, órdenes permanentes, grupos y recuadro** (las reglas están en el núcleo). Del 2D
+    quedan, sin usar, piezas para esto: los gestos (`src/controls/pointer.ts`), la selección
+    (`src/controls/selection.ts`), el camino trazado con el cursor (`src/core/trail.ts`) y desde dónde
+    atacar (`src/core/targeting.ts`), con sus tests.
+18. **Poderes de los generales:** elegirlos y animarlos.
+19. **Minimapa dibujado** (el panel del HUD y la tecla M están, pero la vista 3D no lo rellena),
+    tutorial y paneles de misión.
+20. **Varias personas en la misma pantalla** (el aviso de cambio de jugador), repetir el turno
+    enemigo y guardado automático.
+21. **El dedo:** pellizcar para acercar y girar con dos dedos (`docs/PLAN-MOVIL.md`).
+22. **Laboratorio de animaciones** (se quitó con el 2D; para los modelos está `units3d.html`) y fondo
+    vivo del menú (se quitó también su opción).
+23. **Comprobar lo visual sin mirar:** ya no hay capturas comparadas (`npm run shots` se quitó con
+    el 2D) ni API de depuración para agentes (solo `window.ilogic3d` en la consola).
 
 ## Jugabilidad
 

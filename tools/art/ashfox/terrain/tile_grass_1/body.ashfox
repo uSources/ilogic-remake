@@ -1,0 +1,16 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube base { origin = (-8u, -8u, -8u); size = (16u, 10u, 16u); surface = skin.base; }
+        cube top { origin = (-8u, 2u, -8u); size = (16u, 2u, 16u); surface = skin.top; }
+      }
+    }
+  }
+}

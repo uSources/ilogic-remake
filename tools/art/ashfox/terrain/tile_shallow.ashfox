@@ -1,0 +1,12 @@
+ashfox-model 1
+asset tile_shallow {
+  import "./tile_shallow/rig.ashfox" as rig;
+  import "./tile_shallow/paint.ashfox" as paint;
+  import "./tile_shallow/body.ashfox" as body;
+  export asset tile_shallow {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

@@ -40,7 +40,7 @@
   color: var(--text);
   font-family: var(--display);
   font-size: 14px;
-  cursor: var(--cursor-button, pointer);
+  cursor: pointer;
   text-align: left;
   box-shadow:
     inset 2px 2px 0 var(--hi),

@@ -1,0 +1,14 @@
+ashfox-model 1
+asset bomber_red {
+  import "./bomber_red/rig.ashfox" as rig;
+  import "./bomber_red/paint.ashfox" as paint;
+  import "./bomber_red/body.ashfox" as body;
+  export asset bomber_red {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+    motion = rig.idle;
+    motion = rig.drive;
+    motion = rig.fire;
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

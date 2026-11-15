@@ -1,0 +1,65 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 64px); background = team_blue; background-alpha = 255;
+      palette {
+        team_blue = (#2766c4, #2f74d6, #3d84e2);
+        rim_team_blue_8_r = #6fb0f2;
+        rim_team_blue_22_r = #6fb0f2;
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        cowl_exhaust_k = #141824;
+        dark_blue = (#1a468e, #1f56a8, #2a64b8);
+        rim_dark_blue_1_r = #3f7ccc;
+        rim_dark_blue_5_r = #3f7ccc;
+        wing_roundel_left_t = #6fb0f2;
+        wing_roundel_left_w = #f2f2ea;
+        wing_roundel_left_k = #1a468e;
+        wing_roundel_right_t = #6fb0f2;
+        wing_roundel_right_w = #f2f2ea;
+        wing_roundel_right_k = #1a468e;
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        windscreen_shine_w = #ffffff;
+        leather = (#4a2e1a, #5a3a22, #6a4630);
+        skin = (#e4b88c, #f1c79b, #f8d4ac);
+        pilot_face_k = #1d2a4a;
+        pilot_face_m = #8a4a3a;
+        gun = (#2a2e38, #343a46, #3e4554);
+        tire = (#14171e, #1c2029, #252a35);
+        warhead = (#c02830, #d8323a, #e8484e);
+      }
+      stamp rim_team_blue_8 { pixels = "rrrrrrrr"; r = rim_team_blue_8_r; }
+      stamp rim_team_blue_22 { pixels = "rrrrrrrrrrrrrrrrrrrrrr"; r = rim_team_blue_22_r; }
+      stamp cowl_exhaust { pixels = "k/k/k"; k = cowl_exhaust_k; }
+      stamp rim_dark_blue_1 { pixels = "r"; r = rim_dark_blue_1_r; }
+      stamp rim_dark_blue_5 { pixels = "rrrrr"; r = rim_dark_blue_5_r; }
+      stamp wing_roundel_left { pixels = ".ttt./twwwt/twkwt/twwwt/.ttt."; t = wing_roundel_left_t; w = wing_roundel_left_w; k = wing_roundel_left_k; }
+      stamp wing_roundel_right { pixels = ".ttt./twwwt/twkwt/twwwt/.ttt."; t = wing_roundel_right_t; w = wing_roundel_right_w; k = wing_roundel_right_k; }
+      stamp windscreen_shine { pixels = "w./.w"; w = windscreen_shine_w; }
+      stamp pilot_face { pixels = ".k.k./...../.mmm."; k = pilot_face_k; m = pilot_face_m; }
+      chart fuselage box { origin = (0px, 0px); fill = team_blue; face north { stamp rim_team_blue_8 { at = (0px, 0px); } } face south { stamp rim_team_blue_8 { at = (0px, 0px); } } face east { stamp rim_team_blue_22 { at = (0px, 0px); } } face west { stamp rim_team_blue_22 { at = (0px, 0px); } } }
+      chart cowl box { origin = (79px, 30px); fill = steel; face east { stamp cowl_exhaust { at = (0px, 2px); } } face west { stamp cowl_exhaust { at = (0px, 2px); } } }
+      chart tail_cone box { origin = (79px, 0px); fill = team_blue; }
+      chart fin box { origin = (66px, 0px); fill = dark_blue; face north { stamp rim_dark_blue_1 { at = (0px, 0px); } } face south { stamp rim_dark_blue_1 { at = (0px, 0px); } } face east { stamp rim_dark_blue_5 { at = (0px, 0px); } } face west { stamp rim_dark_blue_5 { at = (0px, 0px); } } }
+      chart tailplane box { origin = (80px, 42px); fill = dark_blue; }
+      chart wing box { origin = (0px, 30px); fill = dark_blue; face up { stamp wing_roundel_left { at = (2px, 2px); } stamp wing_roundel_right { at = (23px, 2px); } } }
+      chart windscreen box { origin = (11px, 51px); fill = glass; face north { stamp windscreen_shine { at = (1px, 0px); } } }
+      chart cockpit_rim box { origin = (0px, 42px); fill = leather; }
+      chart pilot_head box { origin = (102px, 30px); fill = skin; face north { stamp pilot_face { at = (0px, 1px); } } }
+      chart pilot_cap box { origin = (29px, 42px); fill = leather; }
+      chart pilot_goggles box { origin = (35px, 51px); fill = glass; }
+      chart gear_strut_left box { origin = (117px, 42px); fill = gun; }
+      chart gear_wheel_left box { origin = (54px, 42px); fill = tire; }
+      chart gear_strut_right box { origin = (122px, 42px); fill = gun; }
+      chart gear_wheel_right box { origin = (67px, 42px); fill = tire; }
+      chart prop_hub box { origin = (26px, 51px); fill = gun; }
+      chart prop_a box { origin = (48px, 51px); fill = steel; }
+      chart prop_b box { origin = (61px, 0px); fill = steel; }
+      chart prop_spinner box { origin = (0px, 51px); fill = warhead; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

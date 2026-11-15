@@ -4,7 +4,7 @@ El juego carga 2-3 PNG en vez de cientos, y en la GPU todo sale de las mismas te
 
 Salida:
   public/assets/atlas/atlas-<n>.png   paginas
-  public/assets/atlas/atlas-<n>.json  marcos en formato JSON Hash (el de Phaser/TexturePacker)
+  public/assets/atlas/atlas-<n>.json  marcos en formato JSON Hash (el de TexturePacker; lo lee src/atlas.ts)
   src/atlasPages.ts                   numero de paginas, para el cargador
 
 Las imagenes no se recortan ni se giran: cada marco mide lo mismo que su PNG, asi el codigo que
@@ -78,7 +78,7 @@ def main():
         frames = {}
         for key, im, x, y in page['frames']:
             sheet.paste(im, (x, y))
-            # Sin recorte ni giro: a Phaser le basta con el rectangulo.
+            # Sin recorte ni giro: a src/atlas.ts le basta con el rectangulo.
             frames[key] = {'frame': {'x': x, 'y': y, 'w': im.width, 'h': im.height}}
         name = f'atlas-{n}'
         path = os.path.join(OUT, name + '.png')

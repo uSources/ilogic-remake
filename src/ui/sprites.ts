@@ -1,9 +1,7 @@
-import type Phaser from 'phaser';
 import type { TerrainType, UnitType } from '../core/content';
-import { buildingTypeOf, terrainAt, themeOf, unitTypeOf } from '../core/gameContent';
-import { isOnBoard } from '../core/mapGrid';
+import { buildingTypeOf, terrainAt, unitTypeOf } from '../core/gameContent';
 import type { Building, GameState, Pos, TeamId, Unit } from '../core/model';
-import { hasImage } from '../atlas';
+import { hasImage, type GameImages } from '../atlas';
 import { settings } from '../settings';
 import { ownerSideOf, sideLetter, sideOf, unitSideLetter } from './sides';
 import { canStillAct } from '../core/rules';
@@ -15,12 +13,11 @@ import { canStillAct } from '../core/rules';
  */
 
 /** Orillas de 2013 de cada tema (id de themes.json): c_<numero>_<mascara>. */
-const CLASSIC_COAST: Readonly<Record<string, number>> = { Plains: 0, Desert: 1, Forest: 2, Swamp: 3, Snowy: 4 };
 
 const warned = new Set<string>();
 
 /** Devuelve la primera clave que exista; avisa una vez por consola si no hay ninguna. */
-function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[]): string | null {
+function firstExisting(textures: GameImages, keys: string[]): string | null {
   for (const key of keys) if (hasImage(textures, key)) return key;
   if (!warned.has(keys[0]!)) {
     warned.add(keys[0]!);
@@ -44,13 +41,7 @@ export const AS_ACTIVE: UnitDrawing = { active: true };
  * El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado) la propia y la aliada,
  * roja la enemiga; `drawing` dice si se dibuja de otra forma que como esta (UnitDrawing).
  */
-export function unitKey(
-  textures: Phaser.Textures.TextureManager,
-  s: GameState,
-  unit: Unit,
-  viewer: TeamId,
-  drawing: UnitDrawing = {},
-): string | null {
+export function unitKey(textures: GameImages, s: GameState, unit: Unit, viewer: TeamId, drawing: UnitDrawing = {}): string | null {
   const isActive = drawing.active ?? canStillAct(unit);
   const drawnAt = drawing.at ?? unit;
   const unitSide = sideOf(s, viewer, unit.team);
@@ -68,13 +59,7 @@ export function unitIconKey(unitType: UnitType, available: boolean): string {
   return settings.terrainArt === 'new' ? `u/${key}` : key;
 }
 
-export function buildingKey(
-  textures: Phaser.Textures.TextureManager,
-  s: GameState,
-  building: Building,
-  visible: boolean,
-  viewer: TeamId,
-): string | null {
+export function buildingKey(textures: GameImages, s: GameState, building: Building, visible: boolean, viewer: TeamId): string | null {
   const owner = visible ? ownerSideOf(s, viewer, building.owner) : 'neutral';
   const side = owner === 'neutral' ? '' : `${sideLetter(owner)}_`;
   const buildingType = buildingTypeOf(s, building);
@@ -94,22 +79,3 @@ export function terrainKey(terrain: TerrainType): string {
 }
 
 /** La casilla a (dx, dy) de `tile` es tierra. Fuera del mapa cuenta como agua: no hay orilla en los bordes. */
-function isLandBeside(s: GameState, tile: Pos, dx: number, dy: number): boolean {
-  const pos = { x: tile.x + dx, y: tile.y + dy };
-  return isOnBoard(s, pos) && !terrainAt(s, pos).isWater;
-}
-
-/** Orillas de una casilla de agua: c_<tema>_<mascara> y esquinas 16..19. */
-export function shoreKeys(s: GameState, tile: Pos): string[] {
-  if (!terrainAt(s, tile).isWater) return [];
-  const isLand = (dx: number, dy: number) => isLandBeside(s, tile, dx, dy);
-  const mask = (isLand(0, 1) ? 8 : 0) | (isLand(-1, 0) ? 4 : 0) | (isLand(0, -1) ? 2 : 0) | (isLand(1, 0) ? 1 : 0);
-  const theme = CLASSIC_COAST[themeOf(s).id] ?? 0;
-  const keys: string[] = [];
-  if (mask) keys.push(`c_${theme}_${mask}`);
-  if (isLand(-1, -1) && (mask & 6) === 0) keys.push(`c_${theme}_16`);
-  if (isLand(1, -1) && (mask & 3) === 0) keys.push(`c_${theme}_17`);
-  if (isLand(1, 1) && (mask & 9) === 0) keys.push(`c_${theme}_18`);
-  if (isLand(-1, 1) && (mask & 12) === 0) keys.push(`c_${theme}_19`);
-  return keys;
-}

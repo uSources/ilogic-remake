@@ -33,8 +33,8 @@ Areas: equilibrio, IA enemiga y caza de fallos. Solo se lanza cuando el usuario 
    - Pasarles: la rama, la nota de inicio, el area y el limite (3 intentos cada uno).
 5. **Revisar.** Por cada cambio aceptado, lanzar `revisor` sobre la rama. Si dice CAMBIOS, devolverselo
    al agente una vez; si sigue mal, quitar ese commit y apuntarlo como DESCARTADO en el diario.
-6. **Comprobar todo junto.** En la rama del ciclo: `npm run check`, `npm run metrics` (nota final) y
-   `npm run shots` (no deberia cambiar nada visual; si cambia, explicarlo).
+6. **Comprobar todo junto.** En la rama del ciclo: `npm run check` y `npm run metrics` (nota final). No
+   deberia cambiar nada visual; si cambia, explicarlo.
 7. **Proponer.** Push de la rama y un **solo PR** "Automejora AAAA-MM-DD: nota A → B":
    `gh api repos/uSources/ilogic-remake/pulls -f title=... -f head=mejora/... -f base=main -f body=...`
    con una tabla por cambio (que, por que, evidencia), lo descartado y la nota por partes antes y

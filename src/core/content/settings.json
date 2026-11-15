@@ -26,7 +26,11 @@
     "abilities": true,
     "controlPoints": 3,
     "controlIncome": 1000,
-    "controlRadius": 1
+    "controlRadius": 1,
+    "elevation": false,
+    "elevationHit": 0.1,
+    "elevationVision": 1,
+    "elevationClimb": 1
   },
   "maxFunds": 999999
 }

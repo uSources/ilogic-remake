@@ -57,6 +57,17 @@ export interface MatchSettings {
   controlIncome: number;
   /** [CAMBIO] Tamaño de la zona de cada punto: casillas alrededor del centro (1 = zona de 3×3). */
   controlRadius: number;
+  /**
+   * [CAMBIO] Elevacion: cada casilla tiene una altura (`GameState.elevation`, de 0 a 2). Desde arriba
+   * se acierta y se ve mas, y subir cuesta. El original era plano; la altura se lee en la vista 3D.
+   */
+  elevation: boolean;
+  /** [CAMBIO] Con elevacion: lo que cambia el acierto por cada nivel que el atacante esta por encima (o por debajo) del objetivo. */
+  elevationHit: number;
+  /** [CAMBIO] Con elevacion: casillas de vision de mas por cada nivel de altura (las unidades de tierra). */
+  elevationVision: number;
+  /** [CAMBIO] Con elevacion: lo que cuesta de mas subir un nivel (bajar no cuesta). */
+  elevationClimb: number;
 }
 
 /** Los modelos de daño que hay (cada uno es una entrada de DAMAGE_MODELS, damage.ts). */

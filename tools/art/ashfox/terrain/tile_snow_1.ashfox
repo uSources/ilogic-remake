@@ -1,0 +1,12 @@
+ashfox-model 1
+asset tile_snow_1 {
+  import "./tile_snow_1/rig.ashfox" as rig;
+  import "./tile_snow_1/paint.ashfox" as paint;
+  import "./tile_snow_1/body.ashfox" as body;
+  export asset tile_snow_1 {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

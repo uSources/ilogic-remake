@@ -133,11 +133,14 @@ export interface CaptureFactor {
   factor(s: GameState, unit: Unit): number;
 }
 
-/** Lo que cuesta entrar en una casilla a un tipo de movimiento (el coste del terreno). */
+/** Lo que cuesta entrar en una casilla a un tipo de movimiento (el coste del terreno, subir una cuesta). */
 export interface EnterCostRule {
   readonly id: string;
-  /** El coste con esta regla, partiendo de `cost` (1, o lo que han dejado las de antes). */
-  cost(s: GameState, movement: MoveType, pos: Pos, cost: number): number;
+  /**
+   * El coste con esta regla, partiendo de `cost` (1, o lo que han dejado las de antes). `from` es la
+   * casilla de la que se viene (null si no se sabe: la ficha de la casilla enseña lo que cuesta entrar).
+   */
+  cost(s: GameState, movement: MoveType, pos: Pos, cost: number, from: Pos | null): number;
 }
 
 /** Lo que puede gastar en un turno una unidad de ese tipo (el clima frena). */
@@ -248,6 +251,7 @@ export interface RuleModuleIds {
   ambush: true;
   counterattack: true;
   bounty: true;
+  elevation: true;
 }
 
 /**

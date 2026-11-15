@@ -1,0 +1,113 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 128px); background = tire; background-alpha = 255;
+      palette {
+        tire = (#14171e, #1c2029, #252a35);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        wheel_cap_k = #1c2029;
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_18_r = #f2786c;
+        rim_team_red_26_r = #f2786c;
+        tub_seam18_x = #80181a;
+        tub_seam26_x = #80181a;
+        shovel_b = #7e5432;
+        shovel_s = #9aa3b6;
+        grille_k = #80181a;
+        hood_star_w = #f2f2ea;
+        dark_red = (#80181a, #962220, #a82c28);
+        lamp = (#e8c020, #f8d838, #fff070);
+        gun = (#2a2e38, #343a46, #3e4554);
+        spare_cap_s = #8a93a6;
+        canteen = (#4e5a3a, #5c6a44, #6a7a4e);
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        windshield_shine_w = #ffffff;
+        leather = (#4a2e1a, #5a3a22, #6a4630);
+        steering_ring_s = #6a7282;
+        rim_team_red_6_r = #f2786c;
+        rim_team_red_4_r = #f2786c;
+        skin = (#e4b88c, #f1c79b, #f8d4ac);
+        driver_face_k = #1d2a4a;
+        driver_face_m = #8a4a3a;
+        mg_side_s = #6a7282;
+        mg_side_k = #141824;
+        mg_holes_east_k = #141824;
+        mg_holes_west_k = #141824;
+        mg_holes_up_k = #141824;
+      }
+      stamp wheel_cap { pixels = "k..k/..../..../k..k"; k = wheel_cap_k; }
+      stamp rim_team_red_18 { pixels = "rrrrrrrrrrrrrrrrrr"; r = rim_team_red_18_r; }
+      stamp rim_team_red_26 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrrrr"; r = rim_team_red_26_r; }
+      stamp tub_seam18 { pixels = "xxxxxxxxxxxxxxxxxx"; x = tub_seam18_x; }
+      stamp tub_seam26 { pixels = "xxxxxxxxxxxxxxxxxxxxxxxxxx"; x = tub_seam26_x; }
+      stamp shovel { pixels = "..bbbbbbbbbbbss"; b = shovel_b; s = shovel_s; }
+      stamp grille { pixels = ".k.k.k.k.k.k.k.k/.k.k.k.k.k.k.k.k/.k.k.k.k.k.k.k.k/.k.k.k.k.k.k.k.k"; k = grille_k; }
+      stamp hood_star { pixels = "..w../.www./wwwww/.www./.w.w."; w = hood_star_w; }
+      stamp spare_cap { pixels = ".ss./ssss/ssss/.ss."; s = spare_cap_s; }
+      stamp windshield_shine { pixels = "w.../.w.."; w = windshield_shine_w; }
+      stamp steering_ring { pixels = ".ss./s..s/s..s/.ss."; s = steering_ring_s; }
+      stamp rim_team_red_6 { pixels = "rrrrrr"; r = rim_team_red_6_r; }
+      stamp rim_team_red_4 { pixels = "rrrr"; r = rim_team_red_4_r; }
+      stamp driver_face { pixels = ".kk..kk./.kk..kk./......../...mm..."; k = driver_face_k; m = driver_face_m; }
+      stamp mg_side { pixels = ".ss..k"; s = mg_side_s; k = mg_side_k; }
+      stamp mg_holes_east { pixels = ".k.k.k."; k = mg_holes_east_k; }
+      stamp mg_holes_west { pixels = ".k.k.k."; k = mg_holes_west_k; }
+      stamp mg_holes_up { pixels = "k./../k./../k./../k."; k = mg_holes_up_k; }
+      chart wheel_front_left box { origin = (89px, 0px); fill = tire; }
+      chart wheel_front_left_round box { origin = (0px, 34px); fill = tire; }
+      chart wheel_front_left_cap box { origin = (69px, 96px); fill = steel; face west { stamp wheel_cap { at = (0px, 0px); } } }
+      chart wheel_front_right box { origin = (27px, 34px); fill = tire; }
+      chart wheel_front_right_round box { origin = (48px, 34px); fill = tire; }
+      chart wheel_front_right_cap box { origin = (80px, 96px); fill = steel; face east { stamp wheel_cap { at = (0px, 0px); } } }
+      chart wheel_back_left box { origin = (75px, 34px); fill = tire; }
+      chart wheel_back_left_round box { origin = (96px, 34px); fill = tire; }
+      chart wheel_back_left_cap box { origin = (91px, 96px); fill = steel; face west { stamp wheel_cap { at = (0px, 0px); } } }
+      chart wheel_back_right box { origin = (0px, 51px); fill = tire; }
+      chart wheel_back_right_round box { origin = (21px, 51px); fill = tire; }
+      chart wheel_back_right_cap box { origin = (102px, 96px); fill = steel; face east { stamp wheel_cap { at = (0px, 0px); } } }
+      chart tub box { origin = (0px, 0px); fill = team_red; face north { stamp rim_team_red_18 { at = (0px, 0px); } stamp tub_seam18 { at = (0px, 4px); } stamp grille { at = (0px, 2px); } } face south { stamp rim_team_red_18 { at = (0px, 0px); } stamp tub_seam18 { at = (0px, 4px); } } face east { stamp rim_team_red_26 { at = (0px, 0px); } stamp tub_seam26 { at = (0px, 4px); } } face west { stamp rim_team_red_26 { at = (0px, 0px); } stamp tub_seam26 { at = (0px, 4px); } stamp shovel { at = (6px, 3px); } } }
+      chart hood box { origin = (44px, 82px); fill = team_red; face up { stamp hood_star { at = (5px, 2px); } } }
+      chart fender_left box { origin = (79px, 51px); fill = dark_red; }
+      chart fender_right box { origin = (0px, 68px); fill = dark_red; }
+      chart rear_fender_left box { origin = (33px, 68px); fill = dark_red; }
+      chart rear_fender_right box { origin = (66px, 68px); fill = dark_red; }
+      chart headlight_left box { origin = (31px, 115px); fill = lamp; }
+      chart headlight_right box { origin = (40px, 115px); fill = lamp; }
+      chart bumper box { origin = (49px, 115px); fill = gun; }
+      chart spare_wheel box { origin = (95px, 82px); fill = tire; face south { stamp spare_cap { at = (2px, 2px); } } }
+      chart jerrycan box { origin = (71px, 107px); fill = canteen; }
+      chart windshield_post_left box { origin = (113px, 96px); fill = gun; }
+      chart windshield_post_right box { origin = (118px, 96px); fill = gun; }
+      chart windshield_top box { origin = (7px, 122px); fill = gun; }
+      chart windshield box { origin = (0px, 107px); fill = glass; face north { stamp windshield_shine { at = (1px, 1px); } } }
+      chart seat_driver box { origin = (33px, 107px); fill = leather; }
+      chart seat_passenger box { origin = (52px, 107px); fill = leather; }
+      chart steering_wheel box { origin = (11px, 115px); fill = gun; face south { stamp steering_ring { at = (0px, 0px); } } }
+      chart driver_torso box { origin = (0px, 96px); fill = team_red; face north { stamp rim_team_red_6 { at = (0px, 0px); } } face south { stamp rim_team_red_6 { at = (0px, 0px); } } face east { stamp rim_team_red_4 { at = (0px, 0px); } } face west { stamp rim_team_red_4 { at = (0px, 0px); } } }
+      chart driver_head box { origin = (48px, 51px); fill = skin; face north { stamp driver_face { at = (0px, 2px); } } }
+      chart driver_helmet box { origin = (0px, 82px); fill = team_red; }
+      chart driver_goggles box { origin = (92px, 115px); fill = leather; }
+      chart driver_lens_left box { origin = (44px, 122px); fill = glass; }
+      chart driver_lens_right box { origin = (53px, 122px); fill = glass; }
+      chart driver_arm_left box { origin = (82px, 107px); fill = team_red; }
+      chart driver_arm_right box { origin = (95px, 107px); fill = team_red; }
+      chart driver_hand_left box { origin = (111px, 115px); fill = skin; }
+      chart driver_hand_right box { origin = (118px, 115px); fill = skin; }
+      chart rollbar_left box { origin = (21px, 96px); fill = gun; }
+      chart rollbar_right box { origin = (26px, 96px); fill = gun; }
+      chart rollbar_top box { origin = (62px, 122px); fill = gun; }
+      chart gun_post box { origin = (39px, 82px); fill = gun; }
+      chart gun_receiver box { origin = (31px, 96px); fill = gun; face east { stamp mg_side { at = (0px, 1px); } } face west { stamp mg_side { at = (0px, 1px); } } }
+      chart gun_jacket box { origin = (50px, 96px); fill = steel; face east { stamp mg_holes_east { at = (0px, 1px); } } face west { stamp mg_holes_west { at = (0px, 1px); } } face up { stamp mg_holes_up { at = (0px, 0px); } } }
+      chart gun_barrel box { origin = (108px, 107px); fill = gun; }
+      chart gun_muzzle box { origin = (22px, 115px); fill = gun; }
+      chart gun_ammo box { origin = (0px, 115px); fill = canteen; }
+      chart gun_handles box { origin = (0px, 122px); fill = steel; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

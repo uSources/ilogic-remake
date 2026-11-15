@@ -1,0 +1,12 @@
+ashfox-model 1
+asset tile_grass_3 {
+  import "./tile_grass_3/rig.ashfox" as rig;
+  import "./tile_grass_3/paint.ashfox" as paint;
+  import "./tile_grass_3/body.ashfox" as body;
+  export asset tile_grass_3 {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

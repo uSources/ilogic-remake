@@ -5,7 +5,7 @@
  * de mover (`availableActions`), y SELECTION_MENU, lo que se puede mandar a unas unidades elegidas
  * (un grupo, o una desde la bandeja: `canDoWithSelection`). Una opcion nueva es una entrada en una
  * de las dos; lo que solo es de la interfaz (si hay un enemigo a la vista en la casilla, que formar
- * escuadra pide dos o mas) lo añaden los mandos (controls/actions.ts).
+ * escuadra pide dos o mas) lo añaden los mandos.
  */
 import { cargoUnits } from '../rules/queries';
 import { unloadTiles } from '../rules/transport';

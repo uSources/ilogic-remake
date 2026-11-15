@@ -1,0 +1,61 @@
+ashfox-model 1
+module rig {
+  export rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint hull { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint wheels_front { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint wheels_back { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint rider { parent = hull; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  export skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind hull { parent-origin = (0u, 8u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_front { parent-origin = (0u, 6u, -12u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_back { parent-origin = (0u, 6u, 11u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind rider { parent-origin = (0u, 7u, 2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  export motion idle for ModelRig {
+    duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
+    track rider.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.3s = (2deg, 0deg, 1deg) catmullrom;
+      key 0.6s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.9s = (-2deg, 0deg, -1deg) catmullrom;
+      key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+  export motion drive for ModelRig {
+    duration = 0.4s; fps = 20; loop = loop; rest-relative = true;
+    track wheels_front.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.1s = (-22.5deg, 0deg, 0deg) step;
+      key 0.2s = (-45deg, 0deg, 0deg) step;
+      key 0.3s = (-67.5deg, 0deg, 0deg) step;
+      key 0.4s = (0deg, 0deg, 0deg) step;
+    }
+    track wheels_back.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.1s = (-22.5deg, 0deg, 0deg) step;
+      key 0.2s = (-45deg, 0deg, 0deg) step;
+      key 0.3s = (-67.5deg, 0deg, 0deg) step;
+      key 0.4s = (0deg, 0deg, 0deg) step;
+    }
+    track hull.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.1s = (0deg, 0deg, 3deg) linear;
+      key 0.2s = (0deg, 0deg, 0deg) linear;
+      key 0.3s = (0deg, 0deg, -3deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+  export motion fire for ModelRig {
+    duration = 0.4s; fps = 30; loop = once; rest-relative = true;
+    track rider.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (8deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+}

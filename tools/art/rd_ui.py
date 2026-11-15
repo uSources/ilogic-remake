@@ -35,7 +35,7 @@ OUT = os.path.normpath(os.path.join(D, '..', '..', 'public', 'assets', 'img', 'u
 ANIM_FRAME = {'boom': 64}
 TEAMS = {'anim': None, 'gen': 'br', 'zona': 'bri', 'flag': 'bri', 'ab': None, 'wx': None, 'cmd': None, 'mk': None}
 
-# Color de cada orden (tono 0..1), el mismo que COMMAND_FLAG de src/ui/mapView.ts; 'go' = ir alli (dorado).
+# Color de cada orden (tono 0..1); 'go' = ir alli (dorado).
 CMD_HUES = {'attack': 0.0, 'defend': 0.47, 'capture': 0.13, 'go': 0.13}
 
 

@@ -1,0 +1,12 @@
+ashfox-model 1
+asset stronghold_neutral {
+  import "./stronghold_neutral/rig.ashfox" as rig;
+  import "./stronghold_neutral/paint.ashfox" as paint;
+  import "./stronghold_neutral/body.ashfox" as body;
+  export asset stronghold_neutral {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+    motion = rig.idle;
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

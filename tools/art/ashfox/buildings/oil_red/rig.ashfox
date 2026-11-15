@@ -1,0 +1,56 @@
+ashfox-model 1
+module rig {
+  export rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint pump { parent = body; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint bridle { parent = pump; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint pitman { parent = pump; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint crank { parent = body; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  export skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind pump { parent-origin = (0u, 20u, -3u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind bridle { parent-origin = (-16u, -6u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind pitman { parent-origin = (10u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind crank { parent-origin = (9u, 9u, -3u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  export motion idle for ModelRig {
+    duration = 2.4s; fps = 20; loop = loop; rest-relative = true;
+    track pump.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.6s = (0deg, 0deg, 10deg) catmullrom;
+      key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.8s = (0deg, 0deg, -10deg) catmullrom;
+      key 2.4s = (0deg, 0deg, 0deg) catmullrom;
+    }
+    track bridle.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.6s = (0deg, 0deg, -10deg) catmullrom;
+      key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.8s = (0deg, 0deg, 10deg) catmullrom;
+      key 2.4s = (0deg, 0deg, 0deg) catmullrom;
+    }
+    track pitman.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.6s = (0deg, 0deg, -10deg) catmullrom;
+      key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.8s = (0deg, 0deg, 10deg) catmullrom;
+      key 2.4s = (0deg, 0deg, 0deg) catmullrom;
+    }
+    track crank.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.3s = (0deg, 0deg, 45deg) step;
+      key 0.6s = (0deg, 0deg, 90deg) step;
+      key 0.9s = (0deg, 0deg, 135deg) step;
+      key 1.2s = (0deg, 0deg, 180deg) step;
+      key 1.5s = (0deg, 0deg, 225deg) step;
+      key 1.8s = (0deg, 0deg, 270deg) step;
+      key 2.1s = (0deg, 0deg, 315deg) step;
+      key 2.4s = (0deg, 0deg, 0deg) step;
+    }
+  }
+}

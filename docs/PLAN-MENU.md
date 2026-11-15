@@ -2,13 +2,13 @@
 
 ## Estado (27-10-2026)
 
-Hechas las seis fases:
+Hechas las seis fases (la sexta, el fondo vivo, se quitó con el paso a 3D):
 - **Inicio:** tarjetas Continuar (con miniatura de la partida guardada, solo tus unidades), Nueva partida (Rápida / Personalizar) y Campaña (progreso y casillas por misión). Abajo: Cómo se juega, Opciones, Créditos y Web original.
-- **Opciones:** pantalla propia por grupos, la misma desde el menú y desde la partida (tecla O). Añade tamaño de la interfaz, reducir movimiento, ver siempre la amenaza y el fondo del menú.
+- **Opciones:** pantalla propia por grupos, la misma desde el menú y desde la partida (tecla O). Añade tamaño de la interfaz, reducir movimiento y ver siempre la amenaza.
 - **Nueva partida:** vista previa del mapa que se va a jugar, "Otro mapa" (R), código, y los ajustes Normal / Rápida / Clásica 2013 / Personalizada con botones de segmento.
 - **Campaña:** tarjetas con miniatura, tipo de objetivo, estado y mejor marca en días.
 - **Pausa:** panel centrado con el día, el código del mapa y el objetivo de la misión.
-- **Fondo vivo:** partida IA contra IA sin niebla detrás del menú; se puede volver a la imagen de 2013 en Opciones (y no se usa con "reducir el movimiento").
+- **Fondo vivo:** era una partida IA contra IA en 2D detrás del menú; se quitó con el 2D y ahora detrás del menú está la imagen de 2013. Pendiente: un fondo vivo en 3D.
 
 ## Cómo estaban
 
@@ -106,7 +106,7 @@ Son las mismas opciones que hay ahora en el menú de partida, que tendrá un ata
 
 ## Fase 6 (opcional): fondo vivo
 
-En lugar de la imagen fija, detrás del menú se ve una partida IA contra IA en un mapa al azar, oscurecida y con la cámara moviéndose despacio. La herramienta de equilibrio ya juega esas partidas, así que es barato, y enseña el juego antes de jugarlo. Si se prefiere, se puede elegir en Opciones entre el fondo original de 2013 y el vivo.
+(Hecha en 2D y quitada con él; pendiente en 3D.) En lugar de la imagen fija, detrás del menú se ve una partida IA contra IA en un mapa al azar, oscurecida y con la cámara moviéndose despacio. La herramienta de equilibrio ya juega esas partidas, así que es barato, y enseña el juego antes de jugarlo. Si se prefiere, se puede elegir en Opciones entre el fondo original de 2013 y el vivo.
 
 ## Orden
 

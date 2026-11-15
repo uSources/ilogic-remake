@@ -1,0 +1,26 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 128px; height = 256px; }
+    chart track0 box { width = 70px; height = 36px; coverage = opaque; }
+    chart track1 box { width = 70px; height = 36px; coverage = opaque; }
+    chart box box { width = 96px; height = 44px; coverage = opaque; }
+    chart front_curve_1 box { width = 56px; height = 21px; coverage = opaque; }
+    chart front_curve_2 box { width = 52px; height = 16px; coverage = opaque; }
+    chart vision_slit box { width = 22px; height = 3px; coverage = opaque; }
+    chart roof box { width = 88px; height = 21px; coverage = opaque; }
+    chart hatch box { width = 32px; height = 9px; coverage = opaque; }
+    chart periscope box { width = 10px; height = 4px; coverage = opaque; }
+    chart searchlight box { width = 10px; height = 5px; coverage = opaque; }
+    chart plow box { width = 64px; height = 9px; coverage = opaque; }
+    chart lower_hull box { width = 76px; height = 30px; coverage = opaque; }
+    chart plow_arm_left box { width = 10px; height = 5px; coverage = opaque; }
+    chart plow_arm_right box { width = 10px; height = 5px; coverage = opaque; }
+    chart headlight_left box { width = 8px; height = 3px; coverage = opaque; }
+    chart headlight_right box { width = 8px; height = 3px; coverage = opaque; }
+    chart back_door box { width = 22px; height = 16px; coverage = opaque; }
+    chart exhaust_left box { width = 8px; height = 10px; coverage = opaque; }
+    chart exhaust_right box { width = 8px; height = 10px; coverage = opaque; }
+    material = opaque;
+  }
+}

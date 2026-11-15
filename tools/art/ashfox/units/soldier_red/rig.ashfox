@@ -1,0 +1,84 @@
+ashfox-model 1
+module rig {
+  export rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint leg_left { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint leg_right { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint torso { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint head { parent = torso; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint arm_left { parent = torso; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint arm_right { parent = torso; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  export skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind leg_left { parent-origin = (-2.5u, 9u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind leg_right { parent-origin = (2.5u, 9u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind torso { parent-origin = (0u, 9u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind head { parent-origin = (0u, 8u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind arm_left { parent-origin = (-7u, 7u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind arm_right { parent-origin = (7u, 7u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  export motion idle for ModelRig {
+    duration = 1.6s; fps = 20; loop = loop; rest-relative = true;
+    track torso.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.4s = (0deg, 3deg, 0deg) catmullrom;
+      key 0.8s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.2s = (0deg, -3deg, 0deg) catmullrom;
+      key 1.6s = (0deg, 0deg, 0deg) catmullrom;
+    }
+    track head.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.4s = (3deg, 0deg, 2deg) catmullrom;
+      key 0.8s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.2s = (-3deg, 0deg, -2deg) catmullrom;
+      key 1.6s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+  export motion drive for ModelRig {
+    duration = 0.5s; fps = 20; loop = loop; rest-relative = true;
+    track leg_left.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.125s = (30deg, 0deg, 0deg) linear;
+      key 0.25s = (0deg, 0deg, 0deg) linear;
+      key 0.375s = (-30deg, 0deg, 0deg) linear;
+      key 0.5s = (0deg, 0deg, 0deg) linear;
+    }
+    track leg_right.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.125s = (-30deg, 0deg, 0deg) linear;
+      key 0.25s = (0deg, 0deg, 0deg) linear;
+      key 0.375s = (30deg, 0deg, 0deg) linear;
+      key 0.5s = (0deg, 0deg, 0deg) linear;
+    }
+    track torso.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.125s = (0deg, 0deg, 3deg) linear;
+      key 0.25s = (0deg, 0deg, 0deg) linear;
+      key 0.375s = (0deg, 0deg, -3deg) linear;
+      key 0.5s = (0deg, 0deg, 0deg) linear;
+    }
+    track head.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.125s = (2deg, 0deg, 0deg) linear;
+      key 0.25s = (0deg, 0deg, 0deg) linear;
+      key 0.375s = (-2deg, 0deg, 0deg) linear;
+      key 0.5s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+  export motion fire for ModelRig {
+    duration = 0.4s; fps = 30; loop = once; rest-relative = true;
+    track torso.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (8deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+    track head.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (-4deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+}

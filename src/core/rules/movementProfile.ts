@@ -16,8 +16,8 @@ export interface TerrainAccess {
   readonly movement: MoveType;
   /** La casilla esta en el mapa y su terreno deja pasar a este tipo de movimiento. */
   canEnter(pos: Pos): boolean;
-  /** Lo que cuesta entrar (1 si ningun modulo dice otra cosa). */
-  enterCost(pos: Pos): number;
+  /** Lo que cuesta entrar en `pos` viniendo de `from` (1 si ningun modulo dice otra cosa; sin `from`, lo de la casilla sola). */
+  enterCost(pos: Pos, from?: Pos): number;
 }
 
 /** El movimiento de una unidad: por donde va, lo que cuesta y lo que puede gastar en un turno. */
@@ -35,7 +35,7 @@ export function terrainAccess(s: GameState, movement: MoveType): TerrainAccess {
   return {
     movement,
     canEnter: (pos) => canWalk(s, pos, movement),
-    enterCost: (pos) => costRules.reduce((cost, rule) => rule.cost(s, movement, pos, cost), BASE_ENTER_COST),
+    enterCost: (pos, from) => costRules.reduce((cost, rule) => rule.cost(s, movement, pos, cost, from ?? null), BASE_ENTER_COST),
   };
 }
 
@@ -52,5 +52,5 @@ export function moveBudget(s: GameState, unit: Pick<Unit, 'type'>): number {
 
 /** Lo que cuesta recorrer un camino (sin contar la casilla de salida). */
 export function pathCost(access: TerrainAccess, path: readonly Pos[]): number {
-  return path.slice(1).reduce((total, step) => total + access.enterCost(step), 0);
+  return path.slice(1).reduce((total, step, index) => total + access.enterCost(step, path[index]), 0);
 }

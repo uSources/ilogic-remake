@@ -1,0 +1,14 @@
+ashfox-model 1
+asset car_blue {
+  import "./car_blue/rig.ashfox" as rig;
+  import "./car_blue/paint.ashfox" as paint;
+  import "./car_blue/body.ashfox" as body;
+  export asset car_blue {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+    motion = rig.idle;
+    motion = rig.drive;
+    motion = rig.fire;
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

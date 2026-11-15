@@ -1,0 +1,12 @@
+ashfox-model 1
+asset city_neutral {
+  import "./city_neutral/rig.ashfox" as rig;
+  import "./city_neutral/paint.ashfox" as paint;
+  import "./city_neutral/body.ashfox" as body;
+  export asset city_neutral {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

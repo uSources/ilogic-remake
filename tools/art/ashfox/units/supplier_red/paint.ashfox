@@ -1,0 +1,87 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 256px); background = tire; background-alpha = 255;
+      palette {
+        tire = (#14171e, #1c2029, #252a35);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        wheel_cap_k = #1c2029;
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_20_r = #f2786c;
+        rim_team_red_9_r = #f2786c;
+        cabin_grille_k = #80181a;
+        cabin_window_g = #9fe3ff;
+        door_line_d = #80181a;
+        dark_red = (#80181a, #962220, #a82c28);
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        truck_shine_w = #ffffff;
+        gun = (#2a2e38, #343a46, #3e4554);
+        lamp = (#e8c020, #f8d838, #fff070);
+        tailgate_latches_h = #8a93a6;
+        warhead = (#c02830, #d8323a, #e8484e);
+        crate = (#94592a, #a8692f, #b8783a);
+        supply_crate_frame_d = #6a3e1c;
+        supply_crate_frame_y = #e8c020;
+        supply_crate_top_y = #e8c020;
+        canteen = (#4e5a3a, #5c6a44, #6a7a4e);
+        jerrycan_cross_k = #3a4430;
+        jerrycan_cap_y = #e8c040;
+      }
+      stamp wheel_cap { pixels = "k..k/..../..../k..k"; k = wheel_cap_k; }
+      stamp rim_team_red_20 { pixels = "rrrrrrrrrrrrrrrrrrrr"; r = rim_team_red_20_r; }
+      stamp rim_team_red_9 { pixels = "rrrrrrrrr"; r = rim_team_red_9_r; }
+      stamp cabin_grille { pixels = ".k.k.k.k.k.k/.k.k.k.k.k.k/.k.k.k.k.k.k"; k = cabin_grille_k; }
+      stamp cabin_window { pixels = "ggggg/ggggg/ggggg/ggggg"; g = cabin_window_g; }
+      stamp door_line { pixels = "d/d/d/d/d/d/d/d/d"; d = door_line_d; }
+      stamp truck_shine { pixels = "w..../.w.../..w.."; w = truck_shine_w; }
+      stamp tailgate_latches { pixels = "h..................h"; h = tailgate_latches_h; }
+      stamp supply_crate_frame { pixels = "dddddd/d.yy.d/dyyyyd/dyyyyd/d.yy.d/dddddd"; d = supply_crate_frame_d; y = supply_crate_frame_y; }
+      stamp supply_crate_top { pixels = ".yy./yyyy/yyyy/.yy."; y = supply_crate_top_y; }
+      stamp jerrycan_cross { pixels = "k.k/.k./k.k"; k = jerrycan_cross_k; }
+      stamp jerrycan_cap { pixels = "y"; y = jerrycan_cap_y; }
+      chart wheel_front_left box { origin = (59px, 53px); fill = tire; }
+      chart wheel_front_left_round box { origin = (80px, 53px); fill = tire; }
+      chart wheel_front_left_cap box { origin = (113px, 107px); fill = steel; face west { stamp wheel_cap { at = (0px, 0px); } } }
+      chart wheel_front_right box { origin = (107px, 53px); fill = tire; }
+      chart wheel_front_right_round box { origin = (0px, 77px); fill = tire; }
+      chart wheel_front_right_cap box { origin = (0px, 118px); fill = steel; face east { stamp wheel_cap { at = (0px, 0px); } } }
+      chart wheel_back_left box { origin = (27px, 77px); fill = tire; }
+      chart wheel_back_left_round box { origin = (48px, 77px); fill = tire; }
+      chart wheel_back_left_cap box { origin = (11px, 118px); fill = steel; face west { stamp wheel_cap { at = (0px, 0px); } } }
+      chart wheel_back_right box { origin = (75px, 77px); fill = tire; }
+      chart wheel_back_right_round box { origin = (96px, 77px); fill = tire; }
+      chart wheel_back_right_cap box { origin = (22px, 118px); fill = steel; face east { stamp wheel_cap { at = (0px, 0px); } } }
+      chart cabin box { origin = (0px, 53px); fill = team_red; face north { stamp rim_team_red_20 { at = (0px, 0px); } stamp cabin_grille { at = (4px, 9px); } } face south { stamp rim_team_red_20 { at = (0px, 0px); } } face east { stamp rim_team_red_9 { at = (0px, 0px); } stamp cabin_window { at = (2px, 1px); } stamp door_line { at = (8px, 1px); } } face west { stamp rim_team_red_9 { at = (0px, 0px); } stamp cabin_window { at = (2px, 1px); } stamp door_line { at = (8px, 1px); } } }
+      chart cabin_roof box { origin = (60px, 107px); fill = dark_red; }
+      chart windshield box { origin = (84px, 118px); fill = glass; face north { stamp truck_shine { at = (2px, 1px); } } }
+      chart windshield_bar box { origin = (119px, 118px); fill = gun; }
+      chart headlight_left box { origin = (57px, 127px); fill = lamp; }
+      chart headlight_right box { origin = (66px, 127px); fill = lamp; }
+      chart bumper box { origin = (75px, 127px); fill = gun; }
+      chart mirror_left box { origin = (43px, 127px); fill = gun; }
+      chart mirror_right box { origin = (50px, 127px); fill = gun; }
+      chart bed box { origin = (0px, 27px); fill = dark_red; }
+      chart bed_side_left box { origin = (0px, 0px); fill = team_red; }
+      chart bed_side_right box { origin = (47px, 0px); fill = team_red; }
+      chart tailgate box { origin = (0px, 127px); fill = team_red; face south { stamp tailgate_latches { at = (0px, 1px); } } }
+      chart tail_light_left box { origin = (122px, 127px); fill = warhead; }
+      chart tail_light_right box { origin = (0px, 133px); fill = warhead; }
+      chart crate_low_0 box { origin = (0px, 94px); fill = crate; face north { stamp supply_crate_frame { at = (0px, 0px); } } face south { stamp supply_crate_frame { at = (0px, 0px); } } face east { stamp supply_crate_frame { at = (0px, 0px); } } face west { stamp supply_crate_frame { at = (0px, 0px); } } face up { stamp supply_crate_top { at = (1px, 1px); } } }
+      chart crate_low_1 box { origin = (25px, 94px); fill = crate; face north { stamp supply_crate_frame { at = (0px, 0px); } } face south { stamp supply_crate_frame { at = (0px, 0px); } } face east { stamp supply_crate_frame { at = (0px, 0px); } } face west { stamp supply_crate_frame { at = (0px, 0px); } } face up { stamp supply_crate_top { at = (1px, 1px); } } }
+      chart crate_low_2 box { origin = (50px, 94px); fill = crate; face north { stamp supply_crate_frame { at = (0px, 0px); } } face south { stamp supply_crate_frame { at = (0px, 0px); } } face east { stamp supply_crate_frame { at = (0px, 0px); } } face west { stamp supply_crate_frame { at = (0px, 0px); } } face up { stamp supply_crate_top { at = (1px, 1px); } } }
+      chart crate_high_0 box { origin = (75px, 94px); fill = crate; face north { stamp supply_crate_frame { at = (0px, 0px); } } face south { stamp supply_crate_frame { at = (0px, 0px); } } face east { stamp supply_crate_frame { at = (0px, 0px); } } face west { stamp supply_crate_frame { at = (0px, 0px); } } face up { stamp supply_crate_top { at = (1px, 1px); } } }
+      chart crate_high_1 box { origin = (100px, 94px); fill = crate; face north { stamp supply_crate_frame { at = (0px, 0px); } } face south { stamp supply_crate_frame { at = (0px, 0px); } } face east { stamp supply_crate_frame { at = (0px, 0px); } } face west { stamp supply_crate_frame { at = (0px, 0px); } } face up { stamp supply_crate_top { at = (1px, 1px); } } }
+      chart cargo_strap box { origin = (7px, 133px); fill = canteen; }
+      chart can_rack box { origin = (33px, 118px); fill = gun; }
+      chart jerrycan_0 box { origin = (0px, 107px); fill = canteen; face south { stamp jerrycan_cross { at = (0px, 1px); } } face up { stamp jerrycan_cap { at = (1px, 1px); } } }
+      chart jerrycan_1 box { origin = (15px, 107px); fill = canteen; face south { stamp jerrycan_cross { at = (0px, 1px); } } face up { stamp jerrycan_cap { at = (1px, 1px); } } }
+      chart jerrycan_2 box { origin = (30px, 107px); fill = canteen; face south { stamp jerrycan_cross { at = (0px, 1px); } } face up { stamp jerrycan_cap { at = (1px, 1px); } } }
+      chart jerrycan_3 box { origin = (45px, 107px); fill = canteen; face south { stamp jerrycan_cross { at = (0px, 1px); } } face up { stamp jerrycan_cap { at = (1px, 1px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

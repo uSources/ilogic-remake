@@ -1,0 +1,14 @@
+ashfox-model 1
+asset tank_red {
+  import "./tank_red/rig.ashfox" as rig;
+  import "./tank_red/paint.ashfox" as paint;
+  import "./tank_red/body.ashfox" as body;
+  export asset tank_red {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+    motion = rig.idle;
+    motion = rig.drive;
+    motion = rig.fire;
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

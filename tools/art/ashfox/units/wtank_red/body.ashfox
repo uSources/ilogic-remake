@@ -1,0 +1,51 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone chassis to skeleton.chassis;
+    bind bone hull to skeleton.hull;
+    bind bone turret to skeleton.turret;
+    bind bone barrel to skeleton.barrel;
+    bind bone fan to skeleton.fan;
+    geometry {
+      bone chassis {
+        cube skirt { origin = (-15u, 0u, -14u); size = (30u, 4u, 28u); surface = skin.skirt; }
+        cube skirt_top { origin = (-14u, 4u, -13u); size = (28u, 1u, 26u); surface = skin.skirt_top; }
+      }
+      bone hull {
+        cube hull { origin = (-12u, 5u, -12u); size = (24u, 5u, 24u); surface = skin.hull; }
+        cube headlight_left { origin = (-11u, 7u, -13u); size = (3u, 2u, 1u); surface = skin.headlight_left; }
+        cube headlight_right { origin = (8u, 7u, -13u); size = (3u, 2u, 1u); surface = skin.headlight_right; }
+        cube fan_housing_top { origin = (-9u, 22u, 8u); size = (18u, 2u, 4u); surface = skin.fan_housing_top; }
+        cube fan_housing_bottom { origin = (-9u, 10u, 8u); size = (18u, 2u, 4u); surface = skin.fan_housing_bottom; }
+        cube fan_housing_left { origin = (-9u, 12u, 8u); size = (3u, 10u, 4u); surface = skin.fan_housing_left; }
+        cube fan_housing_right { origin = (6u, 12u, 8u); size = (3u, 10u, 4u); surface = skin.fan_housing_right; }
+        cube fan_corner_top_left { origin = (-6u, 20u, 8u); size = (2u, 2u, 4u); surface = skin.fan_corner_top_left; }
+        cube fan_corner_top_right { origin = (4u, 20u, 8u); size = (2u, 2u, 4u); surface = skin.fan_corner_top_right; }
+        cube fan_corner_bottom_left { origin = (-6u, 12u, 8u); size = (2u, 2u, 4u); surface = skin.fan_corner_bottom_left; }
+        cube fan_corner_bottom_right { origin = (4u, 12u, 8u); size = (2u, 2u, 4u); surface = skin.fan_corner_bottom_right; }
+        cube rudder_left { origin = (-8u, 12u, 12u); size = (1u, 10u, 3u); surface = skin.rudder_left; }
+        cube rudder_right { origin = (7u, 12u, 12u); size = (1u, 10u, 3u); surface = skin.rudder_right; }
+        bone turret {
+          cube turret { origin = (-6u, 10u, -4u); size = (12u, 7u, 11u); surface = skin.turret; }
+          cube turret_top { origin = (-5u, 17u, -3u); size = (10u, 1u, 9u); surface = skin.turret_top; }
+          cube hatch { origin = (-3u, 18u, 0u); size = (5u, 1u, 5u); surface = skin.hatch; }
+          cube mantlet { origin = (-3u, 11u, -6u); size = (6u, 5u, 2u); surface = skin.mantlet; }
+          cube antenna { origin = (4u, 17u, 5u); size = (1u, 8u, 1u); surface = skin.antenna; }
+          bone barrel {
+            cube barrel { origin = (-1.5u, 12u, -17u); size = (3u, 3u, 11u); surface = skin.barrel; }
+            cube muzzle { origin = (-2u, 11.5u, -19u); size = (4u, 4u, 2u); surface = skin.muzzle; }
+          }
+        }
+        bone fan {
+          cube fan_blade_a { origin = (-5u, 16u, 9.5u); size = (10u, 2u, 1u); surface = skin.fan_blade_a; }
+          cube fan_blade_b { origin = (-1u, 12u, 9.5u); size = (2u, 10u, 1u); surface = skin.fan_blade_b; }
+          cube fan_hub { origin = (-1.5u, 15.5u, 8.5u); size = (3u, 3u, 2u); surface = skin.fan_hub; }
+        }
+      }
+    }
+  }
+}

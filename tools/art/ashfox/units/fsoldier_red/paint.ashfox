@@ -1,0 +1,118 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 256px); background = tire; background-alpha = 255;
+      palette {
+        tire = (#14171e, #1c2029, #252a35);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        bike_spokes_k = #5a6272;
+        bike_spokes_h = #1c2029;
+        gun = (#2a2e38, #343a46, #3e4554);
+        engine_fins_s = #6a7282;
+        tank_stripe_east_t = #c8302a;
+        tank_stripe_west_t = #c8302a;
+        tank_stripe_up_t = #c8302a;
+        missile = (#e2e6ee, #eef2fa, #f8faff);
+        side_number_t = #c8302a;
+        leather = (#4a2e1a, #5a3a22, #6a4630);
+        headlight_glass_l = #ffe066;
+        muffler_end_k = #141824;
+        warhead = (#c02830, #d8323a, #e8484e);
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_10_r = #f2786c;
+        rim_team_red_6_r = #f2786c;
+        belt10x2_x = #5a3a22;
+        belt6x2_x = #5a3a22;
+        brass = (#c09a30, #d8b040, #ecc858);
+        prong_k = #5a3a22;
+        pack = (#6a462a, #7e5432, #8e6040);
+        skin = (#e4b88c, #f1c79b, #f8d4ac);
+        face_k = #1d2a4a;
+        face_m = #8a4a3a;
+        ear_h = #4a2c1c;
+        ear_e = #e0a47e;
+        hair_h = #4a2c1c;
+        rim_team_red_14_r = #f2786c;
+        rim_team_red_13_r = #f2786c;
+        helmet_strap13x2_x = #5a3a22;
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        lens_shine_w = #ffffff;
+        dark_red = (#80181a, #962220, #a82c28);
+        boot_grey = (#7a726a, #8a8279, #9d958d);
+      }
+      stamp bike_spokes { pixels = "..k../..k../kkhkk/..k../..k.."; k = bike_spokes_k; h = bike_spokes_h; }
+      stamp engine_fins { pixels = "ssssssssss/........../ssssssssss/.........."; s = engine_fins_s; }
+      stamp tank_stripe_east { pixels = "tttttttttt"; t = tank_stripe_east_t; }
+      stamp tank_stripe_west { pixels = "tttttttttt"; t = tank_stripe_west_t; }
+      stamp tank_stripe_up { pixels = "tt/tt/tt/tt/tt/tt/tt/tt/tt/tt"; t = tank_stripe_up_t; }
+      stamp side_number { pixels = "tttt/t..t/tttt"; t = side_number_t; }
+      stamp headlight_glass { pixels = "llll/llll/llll"; l = headlight_glass_l; }
+      stamp muffler_end { pixels = "kkk/kkk/kkk"; k = muffler_end_k; }
+      stamp rim_team_red_10 { pixels = "rrrrrrrrrr"; r = rim_team_red_10_r; }
+      stamp rim_team_red_6 { pixels = "rrrrrr"; r = rim_team_red_6_r; }
+      stamp belt10x2 { pixels = "xxxxxxxxxx/xxxxxxxxxx"; x = belt10x2_x; }
+      stamp belt6x2 { pixels = "xxxxxx/xxxxxx"; x = belt6x2_x; }
+      stamp prong { pixels = ".k./.k."; k = prong_k; }
+      stamp face { pixels = "............/..kk....kk../..kk....kk../............/....mmmm...."; k = face_k; m = face_m; }
+      stamp ear { pixels = "hhhhhhhhhhh/....ee...../....ee....."; h = ear_h; e = ear_e; }
+      stamp hair { pixels = "hhhhhhhhhhhh/hhhhhhhhhhhh/hhhhhhhhhhhh"; h = hair_h; }
+      stamp rim_team_red_14 { pixels = "rrrrrrrrrrrrrr"; r = rim_team_red_14_r; }
+      stamp rim_team_red_13 { pixels = "rrrrrrrrrrrrr"; r = rim_team_red_13_r; }
+      stamp helmet_strap13x2 { pixels = "xxxxxxxxxxxxx/xxxxxxxxxxxxx"; x = helmet_strap13x2_x; }
+      stamp lens_shine { pixels = "w"; w = lens_shine_w; }
+      chart wheel_front box { origin = (0px, 21px); fill = tire; }
+      chart wheel_front_round box { origin = (21px, 21px); fill = tire; }
+      chart wheel_front_hub_left box { origin = (46px, 156px); fill = steel; face west { stamp bike_spokes { at = (0px, 0px); } } }
+      chart wheel_front_hub_right box { origin = (0px, 168px); fill = steel; face east { stamp bike_spokes { at = (0px, 0px); } } }
+      chart wheel_back box { origin = (0px, 41px); fill = tire; }
+      chart wheel_back_round box { origin = (21px, 41px); fill = tire; }
+      chart wheel_back_hub_left box { origin = (13px, 168px); fill = steel; face west { stamp bike_spokes { at = (0px, 0px); } } }
+      chart wheel_back_hub_right box { origin = (26px, 168px); fill = steel; face east { stamp bike_spokes { at = (0px, 0px); } } }
+      chart fork_left box { origin = (33px, 114px); fill = steel; }
+      chart fork_right box { origin = (0px, 129px); fill = steel; }
+      chart swingarm box { origin = (27px, 129px); fill = gun; }
+      chart engine box { origin = (0px, 81px); fill = gun; face east { stamp engine_fins { at = (0px, 1px); } } face west { stamp engine_fins { at = (0px, 1px); } } }
+      chart fuel_tank box { origin = (0px, 99px); fill = gun; face east { stamp tank_stripe_east { at = (0px, 1px); } } face west { stamp tank_stripe_west { at = (0px, 1px); } } face up { stamp tank_stripe_up { at = (2px, 0px); } } }
+      chart side_cover box { origin = (0px, 179px); fill = missile; face east { stamp side_number { at = (1px, 0px); } } face west { stamp side_number { at = (1px, 0px); } } }
+      chart seat box { origin = (29px, 179px); fill = leather; }
+      chart rear_fender box { origin = (0px, 212px); fill = missile; }
+      chart front_fender box { origin = (0px, 222px); fill = missile; }
+      chart headlight box { origin = (0px, 231px); fill = missile; face north { stamp headlight_glass { at = (1px, 1px); } } }
+      chart handlebar box { origin = (29px, 252px); fill = steel; }
+      chart exhaust box { origin = (0px, 190px); fill = steel; }
+      chart muffler box { origin = (0px, 143px); fill = steel; face south { stamp muffler_end { at = (0px, 0px); } } }
+      chart tail_light box { origin = (58px, 252px); fill = warhead; }
+      chart torso box { origin = (0px, 114px); fill = team_red; face north { stamp rim_team_red_10 { at = (0px, 0px); } stamp belt10x2 { at = (0px, 6px); } } face south { stamp rim_team_red_10 { at = (0px, 0px); } stamp belt10x2 { at = (0px, 6px); } } face east { stamp rim_team_red_6 { at = (0px, 0px); } stamp belt6x2 { at = (0px, 6px); } } face west { stamp rim_team_red_6 { at = (0px, 0px); } stamp belt6x2 { at = (0px, 6px); } } }
+      chart buckle box { origin = (46px, 246px); fill = brass; face north { stamp prong { at = (0px, 0px); } } }
+      chart pouch_left box { origin = (55px, 246px); fill = pack; }
+      chart pouch_right box { origin = (0px, 252px); fill = pack; }
+      chart head box { origin = (0px, 0px); fill = skin; face north { stamp face { at = (0px, 3px); } } face east { stamp ear { at = (0px, 3px); } } face west { stamp ear { at = (0px, 3px); } } face south { stamp hair { at = (0px, 3px); } } }
+      chart helmet box { origin = (0px, 61px); fill = team_red; face north { stamp rim_team_red_14 { at = (0px, 0px); } } face south { stamp rim_team_red_14 { at = (0px, 0px); } } face east { stamp rim_team_red_13 { at = (0px, 0px); } stamp helmet_strap13x2 { at = (0px, 2px); } } face west { stamp rim_team_red_13 { at = (0px, 0px); } stamp helmet_strap13x2 { at = (0px, 2px); } } }
+      chart helmet_top box { origin = (25px, 143px); fill = team_red; }
+      chart neck_guard box { origin = (17px, 239px); fill = team_red; }
+      chart goggles box { origin = (0px, 246px); fill = leather; }
+      chart lens_left box { origin = (7px, 252px); fill = glass; face north { stamp lens_shine { at = (0px, 0px); } } }
+      chart lens_right box { origin = (18px, 252px); fill = glass; face north { stamp lens_shine { at = (0px, 0px); } } }
+      chart rider_thigh_left box { origin = (21px, 190px); fill = dark_red; }
+      chart rider_shin_left box { origin = (0px, 156px); fill = dark_red; }
+      chart rider_boot_left box { origin = (25px, 222px); fill = boot_grey; }
+      chart rider_upper_arm_left box { origin = (27px, 212px); fill = team_red; }
+      chart rider_forearm_left box { origin = (42px, 190px); fill = team_red; }
+      chart rider_glove_left box { origin = (38px, 231px); fill = leather; }
+      chart rider_thigh_right box { origin = (0px, 201px); fill = dark_red; }
+      chart rider_shin_right box { origin = (23px, 156px); fill = dark_red; }
+      chart rider_boot_right box { origin = (42px, 222px); fill = boot_grey; }
+      chart rider_upper_arm_right box { origin = (46px, 212px); fill = team_red; }
+      chart rider_forearm_right box { origin = (21px, 201px); fill = team_red; }
+      chart rider_glove_right box { origin = (51px, 231px); fill = leather; }
+      chart scarf_knot box { origin = (27px, 246px); fill = dark_red; }
+      chart scarf_tail box { origin = (17px, 231px); fill = dark_red; }
+      chart scarf_end box { origin = (0px, 239px); fill = dark_red; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

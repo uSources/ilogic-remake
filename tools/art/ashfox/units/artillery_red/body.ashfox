@@ -1,0 +1,41 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone chassis to skeleton.chassis;
+    bind bone hull to skeleton.hull;
+    bind bone turret to skeleton.turret;
+    bind bone barrel to skeleton.barrel;
+    geometry {
+      bone chassis {
+        cube track0 { origin = (-15u, 0u, -14u); size = (7u, 8u, 28u); surface = skin.track0; }
+        cube track1 { origin = (8u, 0u, -14u); size = (7u, 8u, 28u); surface = skin.track1; }
+      }
+      bone hull {
+        cube lower_hull { origin = (-7u, 2u, -12u); size = (14u, 6u, 24u); surface = skin.lower_hull; }
+        cube hull { origin = (-15u, 8u, -14u); size = (30u, 4u, 28u); surface = skin.hull; }
+        cube front_plate { origin = (-14u, 9u, -15u); size = (28u, 3u, 1u); surface = skin.front_plate; }
+        cube headlight_left { origin = (-13u, 10u, -16u); size = (3u, 2u, 1u); surface = skin.headlight_left; }
+        cube headlight_right { origin = (10u, 10u, -16u); size = (3u, 2u, 1u); surface = skin.headlight_right; }
+        cube spade_left { origin = (-11u, 3u, 14u); size = (6u, 8u, 1u); surface = skin.spade_left; }
+        cube spade_right { origin = (5u, 3u, 14u); size = (6u, 8u, 1u); surface = skin.spade_right; }
+        cube ammo_box { origin = (-14u, 12u, -13u); size = (6u, 3u, 5u); surface = skin.ammo_box; }
+        bone turret {
+          cube casemate { origin = (-10u, 12u, -6u); size = (20u, 11u, 18u); surface = skin.casemate; }
+          cube casemate_roof { origin = (-9u, 23u, -5u); size = (18u, 1u, 16u); surface = skin.casemate_roof; }
+          cube casemate_hatch { origin = (2u, 24u, 3u); size = (5u, 1u, 5u); surface = skin.casemate_hatch; }
+          cube casemate_antenna { origin = (-8u, 24u, 10u); size = (1u, 9u, 1u); surface = skin.casemate_antenna; }
+          cube mantlet { origin = (-5u, 14u, -8u); size = (10u, 8u, 2u); surface = skin.mantlet; }
+          bone barrel {
+            cube gun_barrel { origin = (-2u, 16u, -29u); size = (4u, 4u, 22u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 18u, -7u); surface = skin.gun_barrel; }
+            cube gun_sleeve { origin = (-2.5u, 15.5u, -14u); size = (5u, 5u, 5u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 18u, -7u); surface = skin.gun_sleeve; }
+            cube gun_brake { origin = (-3u, 15u, -32u); size = (6u, 6u, 3u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 18u, -7u); surface = skin.gun_brake; }
+          }
+        }
+      }
+    }
+  }
+}

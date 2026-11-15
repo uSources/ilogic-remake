@@ -119,17 +119,16 @@ describe('la ayuda enseña las teclas del jugador', () => {
   it('de serie, las letras de siempre', () => {
     const keys = keyLabels({}, KEY_NAMES.es);
     const controls = HELP_TEXTS.es.controls(keys);
-    expect(column(controls, 'Fin del turno')).toBe('E (dos veces si quedan unidades sin mover)');
-    expect(column(controls, 'Atrás')).toBe('Esc / Retroceso');
+    expect(column(controls, 'Fin del turno')).toBe('E');
+    expect(column(controls, 'Atrás')).toBe('Esc');
     expect(column(controls, 'Zoom')).toBe('+ / −');
   });
 
-  it('con cambios, las teclas nuevas (tambien en el objetivo y los colores)', () => {
-    const keys = keyLabels({ endTurn: 'KeyP', threat: 'KeyY', orderHere: 'KeyJ' }, KEY_NAMES.en);
+  it('con cambios, las teclas nuevas (tambien en el objetivo)', () => {
+    const keys = keyLabels({ endTurn: 'KeyP', nextUnit: 'KeyY', orderHere: 'KeyJ' }, KEY_NAMES.en);
     const controls = HELP_TEXTS.en.controls(keys);
-    expect(column(controls, 'End turn')).toBe('P (twice if units have not moved)');
-    expect(column(controls, 'Enemy threat')).toBe('Y');
-    expect(HELP_TEXTS.en.colors(keys)[1]?.[1]).toContain('(Y)');
+    expect(column(controls, 'End turn')).toBe('P');
+    expect(column(controls, 'Next unit that has not moved')).toBe('Y');
     expect(HELP_TEXTS.en.goalBasics(keys).join(' ')).toContain('keyboard: J');
   });
 });

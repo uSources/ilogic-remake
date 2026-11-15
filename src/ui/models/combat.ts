@@ -1,5 +1,5 @@
+import type { GameImages } from '../../atlas';
 import { unitTypeOf } from '../../core/gameContent';
-import type Phaser from 'phaser';
 import { combatForecast, engagement, flankBonusFor, killReward } from '../../core/rules';
 import type { CombatInfo, GameEvent, GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Anchor, CombatSideVM, CombatVM, ForecastVM } from '../../hud/store';
@@ -11,7 +11,7 @@ import { AS_ACTIVE, unitKey } from '../sprites';
 
 /** Prevision de combate de `attacker` (colocado en `from`) contra `target`, para el equipo que mira. */
 export function forecastVM(
-  textures: Phaser.Textures.TextureManager,
+  textures: GameImages,
   s: GameState,
   viewer: TeamId,
   attacker: Unit,

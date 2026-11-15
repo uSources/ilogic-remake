@@ -1,0 +1,64 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 128px); background = asphalt; background-alpha = 255;
+      palette {
+        asphalt = (#1c2028, #2a2e38, #3c4250);
+        runway_dashes_w = #f2f5ff;
+        runway_edge_y = #e8c020;
+        warhead = (#c02830, #d8323a, #e8484e);
+        lamp = (#e8c020, #f8d838, #fff070);
+        body_blue = (#1a8ea2, #1f9fb4, #2cb0c4);
+        rim_body_blue_8_r = #6ad8e4;
+        tower_windows_w = #14202c;
+        tower_windows_l = #ffe08a;
+        tower_windows_f = #e8ecf2;
+        tower_door_d = #14202c;
+        trim_blue = (#126c7e, #16788a, #1f889a);
+        window_glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        cab_mullions_k = #2a3a48;
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+        radar_grid_k = #3a4050;
+        rim_body_blue_18_r = #6ad8e4;
+        rim_body_blue_16_r = #6ad8e4;
+        hangar_door_y = #e8c020;
+        hangar_door_k = #2a2e38;
+        windsock = (#d8601c, #ee7a2a, #ff9a4a);
+        windsock_bands_w = #e8ecf2;
+      }
+      stamp runway_dashes { pixels = "ww...ww...ww...ww...ww...ww"; w = runway_dashes_w; }
+      stamp runway_edge { pixels = "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyy"; y = runway_edge_y; }
+      stamp rim_body_blue_8 { pixels = "rrrrrrrr"; r = rim_body_blue_8_r; }
+      stamp tower_windows { pixels = ".ff.ff./.ww.ww./.ww.ww./......./.ff.ff./.ll.ww./.ll.ww./......./.ff.ff./.ww.ll./.ww.ll."; w = tower_windows_w; l = tower_windows_l; f = tower_windows_f; }
+      stamp tower_door { pixels = "dd/dd/dd"; d = tower_door_d; }
+      stamp cab_mullions { pixels = "k...k....k/k...k....k/k...k....k/k...k....k/k...k....k"; k = cab_mullions_k; }
+      stamp radar_grid { pixels = "k.k.k.k./.k.k.k.k/k.k.k.k."; k = radar_grid_k; }
+      stamp rim_body_blue_18 { pixels = "rrrrrrrrrrrrrrrrrr"; r = rim_body_blue_18_r; }
+      stamp rim_body_blue_16 { pixels = "rrrrrrrrrrrrrrrr"; r = rim_body_blue_16_r; }
+      stamp hangar_door { pixels = "yyyyyyyyyyyyyy/kkkkkkkkkkkkkk/kkkkkkkkkkkkkk/kkkkkkkkkkkkkk/kkkkkkkkkkkkkk/kkkkkkkkkkkkkk/kkkkkkkkkkkkkk"; y = hangar_door_y; k = hangar_door_k; }
+      stamp windsock_bands { pixels = "..ww.."; w = windsock_bands_w; }
+      chart runway box { origin = (0px, 0px); fill = asphalt; face up { stamp runway_dashes { at = (3px, 27px); } stamp runway_edge { at = (1px, 30px); } } }
+      chart runway_light_0 box { origin = (17px, 112px); fill = warhead; }
+      chart runway_light_1 box { origin = (22px, 112px); fill = lamp; }
+      chart runway_light_2 box { origin = (27px, 112px); fill = warhead; }
+      chart runway_light_3 box { origin = (32px, 112px); fill = lamp; }
+      chart tower box { origin = (0px, 35px); fill = body_blue; face north { stamp rim_body_blue_8 { at = (0px, 0px); } stamp tower_windows { at = (0px, 3px); } stamp tower_door { at = (3px, 15px); } } face south { stamp rim_body_blue_8 { at = (0px, 0px); } } face east { stamp rim_body_blue_8 { at = (0px, 0px); } } face west { stamp rim_body_blue_8 { at = (0px, 0px); } } }
+      chart cab_floor box { origin = (45px, 99px); fill = trim_blue; }
+      chart cab box { origin = (45px, 81px); fill = window_glass; face north { stamp cab_mullions { at = (0px, 0px); } } face south { stamp cab_mullions { at = (0px, 0px); } } face east { stamp cab_mullions { at = (0px, 0px); } } face west { stamp cab_mullions { at = (0px, 0px); } } }
+      chart cab_roof box { origin = (0px, 99px); fill = trim_blue; }
+      chart radar_mast box { origin = (86px, 99px); fill = metal; }
+      chart radar_dish box { origin = (95px, 99px); fill = metal; face north { stamp radar_grid { at = (0px, 0px); } } }
+      chart hangar box { origin = (33px, 35px); fill = body_blue; face north { stamp rim_body_blue_18 { at = (0px, 0px); } stamp hangar_door { at = (2px, 2px); } } face south { stamp rim_body_blue_18 { at = (0px, 0px); } } face east { stamp rim_body_blue_16 { at = (0px, 0px); } } face west { stamp rim_body_blue_16 { at = (0px, 0px); } } }
+      chart hangar_roof_1 box { origin = (0px, 62px); fill = body_blue; }
+      chart hangar_roof_2 box { origin = (65px, 62px); fill = trim_blue; }
+      chart hangar_roof_3 box { origin = (0px, 81px); fill = trim_blue; }
+      chart windsock_pole box { origin = (86px, 81px); fill = metal; }
+      chart windsock box { origin = (0px, 112px); fill = windsock; face north { stamp windsock_bands { at = (0px, 0px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

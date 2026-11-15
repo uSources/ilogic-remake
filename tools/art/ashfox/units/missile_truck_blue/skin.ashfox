@@ -1,0 +1,57 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 128px; height = 256px; }
+    chart wheel_front_left box { width = 18px; height = 13px; coverage = opaque; }
+    chart wheel_front_left_round box { width = 22px; height = 13px; coverage = opaque; }
+    chart wheel_front_left_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart wheel_front_right box { width = 18px; height = 13px; coverage = opaque; }
+    chart wheel_front_right_round box { width = 22px; height = 13px; coverage = opaque; }
+    chart wheel_front_right_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart wheel_back_left box { width = 18px; height = 13px; coverage = opaque; }
+    chart wheel_back_left_round box { width = 22px; height = 13px; coverage = opaque; }
+    chart wheel_back_left_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart wheel_back_right box { width = 18px; height = 13px; coverage = opaque; }
+    chart wheel_back_right_round box { width = 22px; height = 13px; coverage = opaque; }
+    chart wheel_back_right_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart cabin box { width = 58px; height = 23px; coverage = opaque; }
+    chart cabin_roof box { width = 52px; height = 9px; coverage = opaque; }
+    chart windshield box { width = 34px; height = 7px; coverage = opaque; }
+    chart windshield_bar box { width = 4px; height = 7px; coverage = opaque; }
+    chart headlight_left box { width = 8px; height = 3px; coverage = opaque; }
+    chart headlight_right box { width = 8px; height = 3px; coverage = opaque; }
+    chart bumper box { width = 46px; height = 3px; coverage = opaque; }
+    chart mirror_left box { width = 6px; height = 4px; coverage = opaque; }
+    chart mirror_right box { width = 6px; height = 4px; coverage = opaque; }
+    chart bed box { width = 88px; height = 25px; coverage = opaque; }
+    chart bed_rail_left box { width = 46px; height = 24px; coverage = opaque; }
+    chart bed_rail_right box { width = 46px; height = 24px; coverage = opaque; }
+    chart spare_missile_crate box { width = 32px; height = 15px; coverage = opaque; }
+    chart tail_light_left box { width = 6px; height = 2px; coverage = opaque; }
+    chart tail_light_right box { width = 6px; height = 2px; coverage = opaque; }
+    chart outrigger_arm_left box { width = 10px; height = 4px; coverage = opaque; }
+    chart outrigger_leg_left box { width = 8px; height = 6px; coverage = opaque; }
+    chart outrigger_foot_left box { width = 16px; height = 5px; coverage = opaque; }
+    chart outrigger_arm_right box { width = 10px; height = 4px; coverage = opaque; }
+    chart outrigger_leg_right box { width = 8px; height = 6px; coverage = opaque; }
+    chart outrigger_foot_right box { width = 16px; height = 5px; coverage = opaque; }
+    chart turntable box { width = 48px; height = 13px; coverage = opaque; }
+    chart launcher_base box { width = 40px; height = 13px; coverage = opaque; }
+    chart piston_sleeve_left box { width = 12px; height = 9px; coverage = opaque; }
+    chart piston_rod_left box { width = 8px; height = 8px; coverage = opaque; }
+    chart piston_sleeve_right box { width = 12px; height = 9px; coverage = opaque; }
+    chart piston_rod_right box { width = 8px; height = 8px; coverage = opaque; }
+    chart control_box box { width = 12px; height = 7px; coverage = opaque; }
+    chart rail box { width = 56px; height = 24px; coverage = opaque; }
+    chart rail_clamp_left_front box { width = 6px; height = 4px; coverage = opaque; }
+    chart rail_clamp_left_back box { width = 6px; height = 4px; coverage = opaque; }
+    chart rail_clamp_right_front box { width = 6px; height = 4px; coverage = opaque; }
+    chart rail_clamp_right_back box { width = 6px; height = 4px; coverage = opaque; }
+    chart missile box { width = 46px; height = 23px; coverage = opaque; }
+    chart warhead box { width = 12px; height = 6px; coverage = opaque; }
+    chart nozzle box { width = 8px; height = 4px; coverage = opaque; }
+    chart fin_flat box { width = 22px; height = 4px; coverage = opaque; }
+    chart fin_up box { width = 8px; height = 6px; coverage = opaque; }
+    material = opaque;
+  }
+}

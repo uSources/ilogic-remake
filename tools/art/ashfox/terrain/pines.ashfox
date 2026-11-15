@@ -1,0 +1,12 @@
+ashfox-model 1
+asset pines {
+  import "./pines/rig.ashfox" as rig;
+  import "./pines/paint.ashfox" as paint;
+  import "./pines/body.ashfox" as body;
+  export asset pines {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

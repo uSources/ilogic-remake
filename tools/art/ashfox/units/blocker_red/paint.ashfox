@@ -1,0 +1,87 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 256px); background = tread; background-alpha = 255;
+      palette {
+        tread = (#1a1e28, #232836, #2c3242);
+        big_wheels_l = #3a4050;
+        big_wheels_t = #141824;
+        big_wheels_w = #4a5262;
+        big_wheels_h = #8a93a6;
+        track_end_links_l = #3a4050;
+        track_end_links_t = #141824;
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_26_r = #f2786c;
+        rim_team_red_22_r = #f2786c;
+        box_band_d = #80181a;
+        box_band_r = #8a93a6;
+        box_band_back_d = #80181a;
+        box_band_back_r = #8a93a6;
+        side_slit_k = #141824;
+        rim_team_red_2_r = #f2786c;
+        front_band_d = #80181a;
+        front_band_r = #8a93a6;
+        rim_team_red_24_r = #f2786c;
+        dark_red = (#80181a, #962220, #a82c28);
+        hatch_handle_h = #8a93a6;
+        gun = (#2a2e38, #343a46, #3e4554);
+        periscope_glass_g = #9fe3ff;
+        searchlight_glass_l = #ffe066;
+        plow_stripes_y = #e8c020;
+        plow_stripes_k = #1a1e28;
+        rim_dark_red_14_r = #c04a40;
+        rim_dark_red_24_r = #c04a40;
+        lamp = (#e8c020, #f8d838, #fff070);
+        rim_dark_red_10_r = #c04a40;
+        rim_dark_red_1_r = #c04a40;
+        door_handle_h = #8a93a6;
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        exhaust_soot_k = #141824;
+      }
+      stamp big_wheels { pixels = "ltltltltltltltltltltltltltlt/............................/...ww...ww...ww...ww...ww.../..wwww.wwww.wwww.wwww.wwww../..whhw.whhw.whhw.whhw.whhw../..whhw.whhw.whhw.whhw.whhw../..wwww.wwww.wwww.wwww.wwww../ltltltltltltltltltltltltltlt"; l = big_wheels_l; t = big_wheels_t; w = big_wheels_w; h = big_wheels_h; }
+      stamp track_end_links { pixels = "lllllll/ttttttt/lllllll/ttttttt/lllllll/ttttttt/lllllll/ttttttt"; l = track_end_links_l; t = track_end_links_t; }
+      stamp rim_team_red_26 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrrrr"; r = rim_team_red_26_r; }
+      stamp rim_team_red_22 { pixels = "rrrrrrrrrrrrrrrrrrrrrr"; r = rim_team_red_22_r; }
+      stamp box_band { pixels = "dddddddddddddddddddddd/..r...r...r...r...r.../dddddddddddddddddddddd"; d = box_band_d; r = box_band_r; }
+      stamp box_band_back { pixels = "dddddddddddddddddddddddddd/..r...r...r...r...r...r.../dddddddddddddddddddddddddd"; d = box_band_back_d; r = box_band_back_r; }
+      stamp side_slit { pixels = "kkkk"; k = side_slit_k; }
+      stamp rim_team_red_2 { pixels = "rr"; r = rim_team_red_2_r; }
+      stamp front_band { pixels = "dddddddddddddddddddddddddd/..r...r...r...r...r...r.../dddddddddddddddddddddddddd"; d = front_band_d; r = front_band_r; }
+      stamp rim_team_red_24 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrr"; r = rim_team_red_24_r; }
+      stamp hatch_handle { pixels = "hhhh"; h = hatch_handle_h; }
+      stamp periscope_glass { pixels = "ggg"; g = periscope_glass_g; }
+      stamp searchlight_glass { pixels = "ll/ll"; l = searchlight_glass_l; }
+      stamp plow_stripes { pixels = "yyykkkyyykkkyyykkkyyykkkyyykkk/yykkkyyykkkyyykkkyyykkkyyykkky/ykkkyyykkkyyykkkyyykkkyyykkkyy/kkkyyykkkyyykkkyyykkkyyykkkyyy/kkyyykkkyyykkkyyykkkyyykkkyyyk"; y = plow_stripes_y; k = plow_stripes_k; }
+      stamp rim_dark_red_14 { pixels = "rrrrrrrrrrrrrr"; r = rim_dark_red_14_r; }
+      stamp rim_dark_red_24 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrr"; r = rim_dark_red_24_r; }
+      stamp rim_dark_red_10 { pixels = "rrrrrrrrrr"; r = rim_dark_red_10_r; }
+      stamp rim_dark_red_1 { pixels = "r"; r = rim_dark_red_1_r; }
+      stamp door_handle { pixels = "hh"; h = door_handle_h; }
+      stamp exhaust_soot { pixels = "kk/kk"; k = exhaust_soot_k; }
+      chart track0 box { origin = (0px, 45px); fill = tread; face west { stamp big_wheels { at = (0px, 0px); } } face north { stamp track_end_links { at = (0px, 0px); } } face south { stamp track_end_links { at = (0px, 0px); } } }
+      chart track1 box { origin = (0px, 82px); fill = tread; face east { stamp big_wheels { at = (0px, 0px); } } face north { stamp track_end_links { at = (0px, 0px); } } face south { stamp track_end_links { at = (0px, 0px); } } }
+      chart box box { origin = (0px, 0px); fill = team_red; face north { stamp rim_team_red_26 { at = (0px, 0px); } } face south { stamp rim_team_red_26 { at = (0px, 0px); } stamp box_band_back { at = (0px, 10px); } } face east { stamp rim_team_red_22 { at = (0px, 0px); } stamp box_band { at = (0px, 10px); } stamp side_slit { at = (4px, 5px); } } face west { stamp rim_team_red_22 { at = (0px, 0px); } stamp box_band { at = (0px, 10px); } stamp side_slit { at = (4px, 5px); } } }
+      chart front_curve_1 box { origin = (0px, 150px); fill = team_red; face north { stamp rim_team_red_26 { at = (0px, 0px); } stamp front_band { at = (0px, 9px); } } face south { stamp rim_team_red_26 { at = (0px, 0px); } } face east { stamp rim_team_red_2 { at = (0px, 0px); } } face west { stamp rim_team_red_2 { at = (0px, 0px); } } }
+      chart front_curve_2 box { origin = (0px, 194px); fill = team_red; face north { stamp rim_team_red_24 { at = (0px, 0px); } } face south { stamp rim_team_red_24 { at = (0px, 0px); } } face east { stamp rim_team_red_2 { at = (0px, 0px); } } face west { stamp rim_team_red_2 { at = (0px, 0px); } } }
+      chart vision_slit box { origin = (0px, 221px); fill = tread; }
+      chart roof box { origin = (0px, 172px); fill = dark_red; }
+      chart hatch box { origin = (94px, 194px); fill = team_red; face up { stamp hatch_handle { at = (2px, 3px); } } }
+      chart periscope box { origin = (98px, 211px); fill = gun; face north { stamp periscope_glass { at = (0px, 0px); } } }
+      chart searchlight box { origin = (65px, 211px); fill = gun; face north { stamp searchlight_glass { at = (0px, 0px); } } }
+      chart plow box { origin = (0px, 211px); fill = gun; face north { stamp plow_stripes { at = (0px, 1px); } } }
+      chart lower_hull box { origin = (0px, 119px); fill = dark_red; face north { stamp rim_dark_red_14 { at = (0px, 0px); } } face south { stamp rim_dark_red_14 { at = (0px, 0px); } } face east { stamp rim_dark_red_24 { at = (0px, 0px); } } face west { stamp rim_dark_red_24 { at = (0px, 0px); } } }
+      chart plow_arm_left box { origin = (76px, 211px); fill = gun; }
+      chart plow_arm_right box { origin = (87px, 211px); fill = gun; }
+      chart headlight_left box { origin = (23px, 221px); fill = lamp; }
+      chart headlight_right box { origin = (32px, 221px); fill = lamp; }
+      chart back_door box { origin = (53px, 194px); fill = dark_red; face north { stamp rim_dark_red_10 { at = (0px, 0px); } } face south { stamp rim_dark_red_10 { at = (0px, 0px); } stamp door_handle { at = (7px, 6px); } } face east { stamp rim_dark_red_1 { at = (0px, 0px); } } face west { stamp rim_dark_red_1 { at = (0px, 0px); } } }
+      chart exhaust_left box { origin = (76px, 194px); fill = steel; face up { stamp exhaust_soot { at = (0px, 0px); } } }
+      chart exhaust_right box { origin = (85px, 194px); fill = steel; face up { stamp exhaust_soot { at = (0px, 0px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

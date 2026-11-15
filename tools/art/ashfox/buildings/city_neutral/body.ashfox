@@ -1,0 +1,32 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube plinth { origin = (-14u, 0u, -14u); size = (28u, 2u, 28u); surface = skin.plinth; }
+        cube tower { origin = (-9u, 2u, -9u); size = (18u, 28u, 18u); surface = skin.tower; }
+        cube canopy { origin = (-6u, 9u, -12u); size = (12u, 1u, 4u); surface = skin.canopy; }
+        cube canopy_post_left { origin = (-5.5u, 2u, -11.5u); size = (1u, 7u, 1u); surface = skin.canopy_post_left; }
+        cube canopy_post_right { origin = (4.5u, 2u, -11.5u); size = (1u, 7u, 1u); surface = skin.canopy_post_right; }
+        cube parapet { origin = (-10u, 30u, -10u); size = (20u, 2u, 20u); surface = skin.parapet; }
+        cube roof { origin = (-9u, 32u, -9u); size = (18u, 1u, 18u); surface = skin.roof; }
+        cube air_unit_0 { origin = (-7u, 33u, -6u); size = (4u, 2u, 3u); surface = skin.air_unit_0; }
+        cube air_unit_1 { origin = (-1u, 33u, -6u); size = (4u, 2u, 3u); surface = skin.air_unit_1; }
+        cube water_tank { origin = (2u, 33u, 1u); size = (5u, 5u, 5u); surface = skin.water_tank; }
+        cube antenna { origin = (-6u, 33u, 5u); size = (1u, 9u, 1u); surface = skin.antenna; }
+        cube antenna_light { origin = (-6u, 42u, 5u); size = (1u, 1u, 1u); surface = skin.antenna_light; }
+        cube planter_left_pot { origin = (-13u, 2u, -13u); size = (4u, 2u, 4u); surface = skin.planter_left_pot; }
+        cube planter_left_bush { origin = (-13.5u, 4u, -13.5u); size = (5u, 4u, 5u); surface = skin.planter_left_bush; }
+        cube planter_right_pot { origin = (9u, 2u, -13u); size = (4u, 2u, 4u); surface = skin.planter_right_pot; }
+        cube planter_right_bush { origin = (8.5u, 4u, -13.5u); size = (5u, 4u, 5u); surface = skin.planter_right_bush; }
+        cube lamp_post { origin = (12u, 2u, 10u); size = (1u, 10u, 1u); surface = skin.lamp_post; }
+        cube lamp_light { origin = (11u, 12u, 9u); size = (3u, 2u, 3u); surface = skin.lamp_light; }
+      }
+    }
+  }
+}

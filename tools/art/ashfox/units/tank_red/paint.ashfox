@@ -1,0 +1,81 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 256px); background = tread; background-alpha = 255;
+      palette {
+        tread = (#1a1e28, #232836, #2c3242);
+        big_wheels_l = #3a4050;
+        big_wheels_t = #141824;
+        big_wheels_w = #4a5262;
+        big_wheels_h = #8a93a6;
+        track_end_links_l = #3a4050;
+        track_end_links_t = #141824;
+        dark_red = (#80181a, #962220, #a82c28);
+        rim_dark_red_14_r = #c04a40;
+        rim_dark_red_24_r = #c04a40;
+        team_red = (#b02824, #c8302a, #d84038);
+        fender_edge28_r = #f2786c;
+        fender_edge28_d = #80181a;
+        fender_edge30_r = #f2786c;
+        fender_edge30_d = #80181a;
+        lamp = (#e8c020, #f8d838, #fff070);
+        grille_g = #141824;
+        pack = (#6a462a, #7e5432, #8e6040);
+        toolbox_latch_y = #e8c040;
+        rim_team_red_16_r = #f2786c;
+        rim_team_red_15_r = #f2786c;
+        turret_seams_d = #80181a;
+        turret_seams_r = #80181a;
+        rim_dark_red_12_r = #c04a40;
+        rim_dark_red_2_r = #c04a40;
+        mantlet_rivets_r = #8a93a6;
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        rim_dark_red_3_r = #c04a40;
+        bustle_straps_b = #5a3a22;
+        gun = (#2a2e38, #343a46, #3e4554);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+      }
+      stamp big_wheels { pixels = "ltltltltltltltltltltltltltlt/............................/...ww...ww...ww...ww...ww.../..wwww.wwww.wwww.wwww.wwww../..whhw.whhw.whhw.whhw.whhw../..whhw.whhw.whhw.whhw.whhw../..wwww.wwww.wwww.wwww.wwww../ltltltltltltltltltltltltltlt"; l = big_wheels_l; t = big_wheels_t; w = big_wheels_w; h = big_wheels_h; }
+      stamp track_end_links { pixels = "lllllll/ttttttt/lllllll/ttttttt/lllllll/ttttttt/lllllll/ttttttt"; l = track_end_links_l; t = track_end_links_t; }
+      stamp rim_dark_red_14 { pixels = "rrrrrrrrrrrrrr"; r = rim_dark_red_14_r; }
+      stamp rim_dark_red_24 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrr"; r = rim_dark_red_24_r; }
+      stamp fender_edge28 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrrrrrr/............................/dddddddddddddddddddddddddddd"; r = fender_edge28_r; d = fender_edge28_d; }
+      stamp fender_edge30 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr/............................../dddddddddddddddddddddddddddddd"; r = fender_edge30_r; d = fender_edge30_d; }
+      stamp grille { pixels = "gggggggggggggggg/................/gggggggggggggggg/................/gggggggggggggggg"; g = grille_g; }
+      stamp toolbox_latch { pixels = "yy"; y = toolbox_latch_y; }
+      stamp rim_team_red_16 { pixels = "rrrrrrrrrrrrrrrr"; r = rim_team_red_16_r; }
+      stamp rim_team_red_15 { pixels = "rrrrrrrrrrrrrrr"; r = rim_team_red_15_r; }
+      stamp turret_seams { pixels = ".r..r..r..r..r./....d.....d..../....d.....d..../....d.....d..../....d.....d..../....d.....d..../....d.....d...."; d = turret_seams_d; r = turret_seams_r; }
+      stamp rim_dark_red_12 { pixels = "rrrrrrrrrrrr"; r = rim_dark_red_12_r; }
+      stamp rim_dark_red_2 { pixels = "rr"; r = rim_dark_red_2_r; }
+      stamp mantlet_rivets { pixels = "r..........r/............/............/............/............/r..........r"; r = mantlet_rivets_r; }
+      stamp rim_dark_red_3 { pixels = "rrr"; r = rim_dark_red_3_r; }
+      stamp bustle_straps { pixels = "...b......b.../...b......b.../...b......b.../...b......b.../...b......b.../...b......b..."; b = bustle_straps_b; }
+      chart track0 box { origin = (0px, 0px); fill = tread; face west { stamp big_wheels { at = (0px, 0px); } } face north { stamp track_end_links { at = (0px, 0px); } } face south { stamp track_end_links { at = (0px, 0px); } } }
+      chart track1 box { origin = (0px, 37px); fill = tread; face east { stamp big_wheels { at = (0px, 0px); } } face north { stamp track_end_links { at = (0px, 0px); } } face south { stamp track_end_links { at = (0px, 0px); } } }
+      chart lower_hull box { origin = (0px, 107px); fill = dark_red; face north { stamp rim_dark_red_14 { at = (0px, 0px); } } face south { stamp rim_dark_red_14 { at = (0px, 0px); } } face east { stamp rim_dark_red_24 { at = (0px, 0px); } } face west { stamp rim_dark_red_24 { at = (0px, 0px); } } }
+      chart hull box { origin = (0px, 74px); fill = team_red; face east { stamp fender_edge28 { at = (0px, 0px); } } face west { stamp fender_edge28 { at = (0px, 0px); } } face north { stamp fender_edge30 { at = (0px, 0px); } } face south { stamp fender_edge30 { at = (0px, 0px); } } }
+      chart front_plate box { origin = (0px, 180px); fill = dark_red; }
+      chart headlight_left box { origin = (59px, 180px); fill = lamp; }
+      chart headlight_right box { origin = (68px, 180px); fill = lamp; }
+      chart engine_deck box { origin = (0px, 173px); fill = dark_red; face up { stamp grille { at = (0px, 0px); } } }
+      chart toolbox box { origin = (0px, 162px); fill = pack; face east { stamp toolbox_latch { at = (2px, 1px); } } }
+      chart turret box { origin = (0px, 138px); fill = team_red; face north { stamp rim_team_red_16 { at = (0px, 0px); } } face south { stamp rim_team_red_16 { at = (0px, 0px); } } face east { stamp rim_team_red_15 { at = (0px, 0px); } stamp turret_seams { at = (0px, 1px); } } face west { stamp rim_team_red_15 { at = (0px, 0px); } stamp turret_seams { at = (0px, 1px); } } }
+      chart mantlet box { origin = (60px, 162px); fill = dark_red; face north { stamp rim_dark_red_12 { at = (0px, 0px); } stamp mantlet_rivets { at = (0px, 0px); } } face south { stamp rim_dark_red_12 { at = (0px, 0px); } } face east { stamp rim_dark_red_2 { at = (0px, 0px); } } face west { stamp rim_dark_red_2 { at = (0px, 0px); } } }
+      chart cupola box { origin = (89px, 162px); fill = team_red; }
+      chart hatch box { origin = (69px, 173px); fill = dark_red; }
+      chart periscope box { origin = (77px, 180px); fill = glass; }
+      chart bustle box { origin = (25px, 162px); fill = dark_red; face north { stamp rim_dark_red_14 { at = (0px, 0px); } } face south { stamp rim_dark_red_14 { at = (0px, 0px); } stamp bustle_straps { at = (0px, 0px); } } face east { stamp rim_dark_red_3 { at = (0px, 0px); } } face west { stamp rim_dark_red_3 { at = (0px, 0px); } } }
+      chart antenna box { origin = (121px, 138px); fill = gun; }
+      chart barrel0 box { origin = (63px, 138px); fill = steel; }
+      chart muzzle0 box { origin = (43px, 173px); fill = gun; }
+      chart barrel1 box { origin = (92px, 138px); fill = steel; }
+      chart muzzle1 box { origin = (56px, 173px); fill = gun; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

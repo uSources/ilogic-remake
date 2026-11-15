@@ -1,13 +1,12 @@
 /**
  * Adaptador de punteros (raton y dedos). PointerGestures recibe los eventos de bajo nivel (bajar,
  * mover, subir, rueda) y decide que gesto son: un toque, arrastrar el mapa, coger y soltar una
- * unidad, un recuadro, una pulsacion larga, un pellizco. Sin Phaser ni estado de partida, asi que se
- * prueba sola (tests/pointer.test.ts).
+ * unidad, un recuadro, una pulsacion larga, un pellizco. Sin motor de juego ni estado de partida, asi
+ * que se prueba sola (tests/pointer.test.ts).
  *
  * Cada gesto tiene su pieza en `gestures/` (pellizco, borde, toque, pulsacion, mantener pulsado);
  * aqui solo se reparten los eventos entre ellas. Lo que cada gesto significa en la partida lo cumple
- * GameScene a traves de PointerTarget: la escena no lee punteros, solo traduce el evento de Phaser a
- * PointerIn y lo pasa aqui.
+ * quien implemente PointerTarget, que traduce el evento del navegador a PointerIn y lo pasa aqui.
  */
 import { modsOf, movedFar, type Later, type Mods, type PointerIn, type Pt } from './gestures/basics';
 import { edgeScroll, edgeZoneFor } from './gestures/edgeScroll';
@@ -24,7 +23,7 @@ export type { Box } from './gestures/press';
 export { DOUBLE_MS, type TapInfo } from './gestures/tap';
 
 /**
- * Lo que el juego hace con cada gesto. Lo pone GameScene: aqui solo se decide que gesto es (un toque,
+ * Lo que el juego hace con cada gesto. Lo pone la partida: aqui solo se decide que gesto es (un toque,
  * un arrastre, coger una unidad, un pellizco...), no lo que significa en la partida.
  */
 export interface PointerTarget {

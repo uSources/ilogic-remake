@@ -1,0 +1,45 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 128px; height = 256px; }
+    chart wheel_front_left box { width = 20px; height = 16px; coverage = opaque; }
+    chart wheel_front_left_round box { width = 26px; height = 16px; coverage = opaque; }
+    chart wheel_front_left_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart wheel_front_right box { width = 20px; height = 16px; coverage = opaque; }
+    chart wheel_front_right_round box { width = 26px; height = 16px; coverage = opaque; }
+    chart wheel_front_right_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart wheel_back_left box { width = 20px; height = 16px; coverage = opaque; }
+    chart wheel_back_left_round box { width = 26px; height = 16px; coverage = opaque; }
+    chart wheel_back_left_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart wheel_back_right box { width = 20px; height = 16px; coverage = opaque; }
+    chart wheel_back_right_round box { width = 26px; height = 16px; coverage = opaque; }
+    chart wheel_back_right_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart cabin box { width = 58px; height = 23px; coverage = opaque; }
+    chart cabin_roof box { width = 52px; height = 9px; coverage = opaque; }
+    chart windshield box { width = 34px; height = 7px; coverage = opaque; }
+    chart windshield_bar box { width = 4px; height = 7px; coverage = opaque; }
+    chart headlight_left box { width = 8px; height = 3px; coverage = opaque; }
+    chart headlight_right box { width = 8px; height = 3px; coverage = opaque; }
+    chart bumper box { width = 46px; height = 3px; coverage = opaque; }
+    chart mirror_left box { width = 6px; height = 4px; coverage = opaque; }
+    chart mirror_right box { width = 6px; height = 4px; coverage = opaque; }
+    chart bed box { width = 88px; height = 25px; coverage = opaque; }
+    chart bed_side_left box { width = 46px; height = 26px; coverage = opaque; }
+    chart bed_side_right box { width = 46px; height = 26px; coverage = opaque; }
+    chart tailgate box { width = 42px; height = 5px; coverage = opaque; }
+    chart tail_light_left box { width = 6px; height = 2px; coverage = opaque; }
+    chart tail_light_right box { width = 6px; height = 2px; coverage = opaque; }
+    chart crate_low_0 box { width = 24px; height = 12px; coverage = opaque; }
+    chart crate_low_1 box { width = 24px; height = 12px; coverage = opaque; }
+    chart crate_low_2 box { width = 24px; height = 12px; coverage = opaque; }
+    chart crate_high_0 box { width = 24px; height = 12px; coverage = opaque; }
+    chart crate_high_1 box { width = 24px; height = 12px; coverage = opaque; }
+    chart cargo_strap box { width = 40px; height = 2px; coverage = opaque; }
+    chart can_rack box { width = 50px; height = 8px; coverage = opaque; }
+    chart jerrycan_0 box { width = 14px; height = 10px; coverage = opaque; }
+    chart jerrycan_1 box { width = 14px; height = 10px; coverage = opaque; }
+    chart jerrycan_2 box { width = 14px; height = 10px; coverage = opaque; }
+    chart jerrycan_3 box { width = 14px; height = 10px; coverage = opaque; }
+    material = opaque;
+  }
+}

@@ -1,0 +1,106 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 256px); background = tire; background-alpha = 255;
+      palette {
+        tire = (#14171e, #1c2029, #252a35);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        wheel_cap_k = #1c2029;
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_20_r = #f2786c;
+        rim_team_red_9_r = #f2786c;
+        cabin_grille_k = #80181a;
+        cabin_window_g = #9fe3ff;
+        door_line_d = #80181a;
+        dark_red = (#80181a, #962220, #a82c28);
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        truck_shine_w = #ffffff;
+        gun = (#2a2e38, #343a46, #3e4554);
+        lamp = (#e8c020, #f8d838, #fff070);
+        bed_stripes_y = #e8c020;
+        bed_stripes_k = #1a1e28;
+        crate = (#94592a, #a8692f, #b8783a);
+        crate_mark_r = #d8323a;
+        crate_mark_k = #3a2416;
+        warhead = (#c02830, #d8323a, #e8484e);
+        foot_stripe_y = #e8c020;
+        foot_stripe_k = #1a1e28;
+        control_lights_g = #58d068;
+        control_lights_r = #d8323a;
+        missile = (#e2e6ee, #eef2fa, #f8faff);
+        missile_band_r = #d8323a;
+        missile_stencil_k = #3a4050;
+        missile_band_up_r = #d8323a;
+      }
+      stamp wheel_cap { pixels = "k..k/..../..../k..k"; k = wheel_cap_k; }
+      stamp rim_team_red_20 { pixels = "rrrrrrrrrrrrrrrrrrrr"; r = rim_team_red_20_r; }
+      stamp rim_team_red_9 { pixels = "rrrrrrrrr"; r = rim_team_red_9_r; }
+      stamp cabin_grille { pixels = ".k.k.k.k.k.k/.k.k.k.k.k.k/.k.k.k.k.k.k"; k = cabin_grille_k; }
+      stamp cabin_window { pixels = "ggggg/ggggg/ggggg/ggggg"; g = cabin_window_g; }
+      stamp door_line { pixels = "d/d/d/d/d/d/d/d/d"; d = door_line_d; }
+      stamp truck_shine { pixels = "w..../.w.../..w.."; w = truck_shine_w; }
+      stamp bed_stripes { pixels = "yyykkkyyykkkyyykkkyyyk/yykkkyyykkkyyykkkyyykk/ykkkyyykkkyyykkkyyykkk"; y = bed_stripes_y; k = bed_stripes_k; }
+      stamp crate_mark { pixels = "rr.k.k"; r = crate_mark_r; k = crate_mark_k; }
+      stamp foot_stripe { pixels = "ykyk"; y = foot_stripe_y; k = foot_stripe_k; }
+      stamp control_lights { pixels = "gr./..."; g = control_lights_g; r = control_lights_r; }
+      stamp missile_band { pixels = "rr/rr/rr/rr"; r = missile_band_r; }
+      stamp missile_stencil { pixels = "k.kk.k.kk"; k = missile_stencil_k; }
+      stamp missile_band_up { pixels = "rrrr/rrrr"; r = missile_band_up_r; }
+      chart wheel_front_left box { origin = (80px, 76px); fill = tire; }
+      chart wheel_front_left_round box { origin = (99px, 76px); fill = tire; }
+      chart wheel_front_left_cap box { origin = (79px, 128px); fill = steel; face west { stamp wheel_cap { at = (0px, 0px); } } }
+      chart wheel_front_right box { origin = (0px, 100px); fill = tire; }
+      chart wheel_front_right_round box { origin = (19px, 100px); fill = tire; }
+      chart wheel_front_right_cap box { origin = (90px, 128px); fill = steel; face east { stamp wheel_cap { at = (0px, 0px); } } }
+      chart wheel_back_left box { origin = (42px, 100px); fill = tire; }
+      chart wheel_back_left_round box { origin = (61px, 100px); fill = tire; }
+      chart wheel_back_left_cap box { origin = (101px, 128px); fill = steel; face west { stamp wheel_cap { at = (0px, 0px); } } }
+      chart wheel_back_right box { origin = (84px, 100px); fill = tire; }
+      chart wheel_back_right_round box { origin = (103px, 100px); fill = tire; }
+      chart wheel_back_right_cap box { origin = (112px, 128px); fill = steel; face east { stamp wheel_cap { at = (0px, 0px); } } }
+      chart cabin box { origin = (57px, 51px); fill = team_red; face north { stamp rim_team_red_20 { at = (0px, 0px); } stamp cabin_grille { at = (4px, 9px); } } face south { stamp rim_team_red_20 { at = (0px, 0px); } } face east { stamp rim_team_red_9 { at = (0px, 0px); } stamp cabin_window { at = (2px, 1px); } stamp door_line { at = (8px, 1px); } } face west { stamp rim_team_red_9 { at = (0px, 0px); } stamp cabin_window { at = (2px, 1px); } stamp door_line { at = (8px, 1px); } } }
+      chart cabin_roof box { origin = (0px, 128px); fill = dark_red; }
+      chart windshield box { origin = (18px, 138px); fill = glass; face north { stamp truck_shine { at = (2px, 1px); } } }
+      chart windshield_bar box { origin = (53px, 138px); fill = gun; }
+      chart headlight_left box { origin = (113px, 147px); fill = lamp; }
+      chart headlight_right box { origin = (0px, 153px); fill = lamp; }
+      chart bumper box { origin = (9px, 153px); fill = gun; }
+      chart mirror_left box { origin = (17px, 147px); fill = gun; }
+      chart mirror_right box { origin = (24px, 147px); fill = gun; }
+      chart bed box { origin = (0px, 0px); fill = dark_red; face south { stamp bed_stripes { at = (0px, 0px); } } }
+      chart bed_rail_left box { origin = (0px, 26px); fill = team_red; }
+      chart bed_rail_right box { origin = (47px, 26px); fill = team_red; }
+      chart spare_missile_crate box { origin = (47px, 76px); fill = crate; face west { stamp crate_mark { at = (3px, 1px); } } }
+      chart tail_light_left box { origin = (56px, 153px); fill = warhead; }
+      chart tail_light_right box { origin = (63px, 153px); fill = warhead; }
+      chart outrigger_arm_left box { origin = (31px, 147px); fill = steel; }
+      chart outrigger_leg_left box { origin = (71px, 138px); fill = steel; }
+      chart outrigger_foot_left box { origin = (111px, 138px); fill = gun; face north { stamp foot_stripe { at = (0px, 0px); } } }
+      chart outrigger_arm_right box { origin = (42px, 147px); fill = steel; }
+      chart outrigger_leg_right box { origin = (80px, 138px); fill = steel; }
+      chart outrigger_foot_right box { origin = (0px, 147px); fill = gun; face north { stamp foot_stripe { at = (0px, 0px); } } }
+      chart turntable box { origin = (0px, 114px); fill = gun; }
+      chart launcher_base box { origin = (49px, 114px); fill = steel; }
+      chart piston_sleeve_left box { origin = (53px, 128px); fill = gun; }
+      chart piston_rod_left box { origin = (0px, 138px); fill = steel; }
+      chart piston_sleeve_right box { origin = (66px, 128px); fill = gun; }
+      chart piston_rod_right box { origin = (9px, 138px); fill = steel; }
+      chart control_box box { origin = (58px, 138px); fill = gun; face east { stamp control_lights { at = (0px, 1px); } } }
+      chart rail box { origin = (0px, 51px); fill = gun; }
+      chart rail_clamp_left_front box { origin = (53px, 147px); fill = steel; }
+      chart rail_clamp_left_back box { origin = (60px, 147px); fill = steel; }
+      chart rail_clamp_right_front box { origin = (67px, 147px); fill = steel; }
+      chart rail_clamp_right_back box { origin = (74px, 147px); fill = steel; }
+      chart missile box { origin = (0px, 76px); fill = missile; face east { stamp missile_band { at = (4px, 0px); } stamp missile_stencil { at = (8px, 1px); } } face west { stamp missile_band { at = (4px, 0px); } stamp missile_stencil { at = (8px, 1px); } } face up { stamp missile_band_up { at = (0px, 4px); } } }
+      chart warhead box { origin = (89px, 138px); fill = warhead; }
+      chart nozzle box { origin = (81px, 147px); fill = gun; }
+      chart fin_flat box { origin = (90px, 147px); fill = warhead; }
+      chart fin_up box { origin = (102px, 138px); fill = warhead; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

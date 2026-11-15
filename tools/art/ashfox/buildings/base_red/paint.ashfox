@@ -1,0 +1,85 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 128px); background = trim_red; background-alpha = 255;
+      palette {
+        trim_red = (#741416, #86181a, #962420);
+        body_red = (#a42424, #b8282a, #c8383a);
+        rim_body_red_10_r = #ee6a60;
+        tall_windows_north_w = #14202c;
+        tall_windows_north_l = #ffe08a;
+        tall_windows_north_f = #e8ecf2;
+        tall_windows_east_w = #14202c;
+        tall_windows_east_l = #ffe08a;
+        tall_windows_east_f = #e8ecf2;
+        tall_windows_west_w = #14202c;
+        tall_windows_west_l = #ffe08a;
+        tall_windows_west_f = #e8ecf2;
+        tall_windows_south_w = #14202c;
+        tall_windows_south_l = #ffe08a;
+        tall_windows_south_f = #e8ecf2;
+        tall_door_d = #2a3a48;
+        tall_door_g = #9fe3ff;
+        short_windows_north_w = #14202c;
+        short_windows_north_l = #ffe08a;
+        short_windows_north_f = #e8ecf2;
+        short_windows_east_w = #14202c;
+        short_windows_east_l = #ffe08a;
+        short_windows_east_f = #e8ecf2;
+        short_windows_south_w = #14202c;
+        short_windows_south_l = #ffe08a;
+        short_windows_south_f = #e8ecf2;
+        window_glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+        radar_grid_k = #3a4050;
+        warhead = (#c02830, #d8323a, #e8484e);
+        guard_window_g = #9fe3ff;
+        asphalt = (#1c2028, #2a2e38, #3c4250);
+        lamp = (#e8c020, #f8d838, #fff070);
+        barrier_stripes_y = #d8323a;
+        barrier_stripes_k = #e8ecf2;
+        sandbag = (#c4a670, #d2b47e, #dec28e);
+        base_sandbag_seam_d = #a88a5a;
+        flag_stripe_w = #e8ecf2;
+      }
+      stamp rim_body_red_10 { pixels = "rrrrrrrrrr"; r = rim_body_red_10_r; }
+      stamp tall_windows_north { pixels = ".ff.ff.ff./.ll.ww.ww./.ll.ww.ww./........../.ff.ff.ff./.ww.ll.ww./.ww.ll.ww./........../.ff.ff.ff./.ww.ww.ll./.ww.ww.ll./........../.ff.ff.ff./.ww.ww.ww./.ww.ww.ww./........../.ff.ff.ff./.ww.ww.ww./.ww.ww.ww."; w = tall_windows_north_w; l = tall_windows_north_l; f = tall_windows_north_f; }
+      stamp tall_windows_east { pixels = ".ff.ff.ff./.ww.ww.ll./.ww.ww.ll./........../.ff.ff.ff./.ww.ww.ww./.ww.ww.ww./........../.ff.ff.ff./.ww.ww.ww./.ww.ww.ww./........../.ff.ff.ff./.ll.ww.ww./.ll.ww.ww./........../.ff.ff.ff./.ww.ll.ww./.ww.ll.ww."; w = tall_windows_east_w; l = tall_windows_east_l; f = tall_windows_east_f; }
+      stamp tall_windows_west { pixels = ".ff.ff.ff./.ww.ww.ww./.ww.ww.ww./........../.ff.ff.ff./.ll.ww.ww./.ll.ww.ww./........../.ff.ff.ff./.ww.ll.ww./.ww.ll.ww./........../.ff.ff.ff./.ww.ww.ll./.ww.ww.ll./........../.ff.ff.ff./.ww.ww.ww./.ww.ww.ww."; w = tall_windows_west_w; l = tall_windows_west_l; f = tall_windows_west_f; }
+      stamp tall_windows_south { pixels = ".ff.ff.ff./.ww.ll.ww./.ww.ll.ww./........../.ff.ff.ff./.ww.ww.ll./.ww.ww.ll./........../.ff.ff.ff./.ww.ww.ww./.ww.ww.ww./........../.ff.ff.ff./.ww.ww.ww./.ww.ww.ww./........../.ff.ff.ff./.ll.ww.ww./.ll.ww.ww."; w = tall_windows_south_w; l = tall_windows_south_l; f = tall_windows_south_f; }
+      stamp tall_door { pixels = "dddd/dggd/dggd/dggd"; d = tall_door_d; g = tall_door_g; }
+      stamp short_windows_north { pixels = ".ff.ff.ff./.ww.ww.ww./.ww.ww.ww./........../.ff.ff.ff./.ll.ww.ww./.ll.ww.ww./........../.ff.ff.ff./.ww.ll.ww./.ww.ll.ww."; w = short_windows_north_w; l = short_windows_north_l; f = short_windows_north_f; }
+      stamp short_windows_east { pixels = ".ff.ff.ff./.ww.ll.ww./.ww.ll.ww./........../.ff.ff.ff./.ww.ww.ll./.ww.ww.ll./........../.ff.ff.ff./.ww.ww.ww./.ww.ww.ww."; w = short_windows_east_w; l = short_windows_east_l; f = short_windows_east_f; }
+      stamp short_windows_south { pixels = ".ff.ff.ff./.ww.ww.ww./.ww.ww.ww./........../.ff.ff.ff./.ww.ww.ww./.ww.ww.ww./........../.ff.ff.ff./.ll.ww.ww./.ll.ww.ww."; w = short_windows_south_w; l = short_windows_south_l; f = short_windows_south_f; }
+      stamp radar_grid { pixels = "k.k.k.k./.k.k.k.k/k.k.k.k./.k.k.k.k"; k = radar_grid_k; }
+      stamp guard_window { pixels = "gg/gg"; g = guard_window_g; }
+      stamp barrier_stripes { pixels = "ykykykykykyk"; y = barrier_stripes_y; k = barrier_stripes_k; }
+      stamp base_sandbag_seam { pixels = "dddd"; d = base_sandbag_seam_d; }
+      stamp flag_stripe { pixels = "wwwwwww"; w = flag_stripe_w; }
+      chart platform box { origin = (0px, 35px); fill = trim_red; }
+      chart tall box { origin = (0px, 0px); fill = body_red; face north { stamp rim_body_red_10 { at = (0px, 0px); } stamp tall_windows_north { at = (0px, 1px); } stamp tall_door { at = (3px, 20px); } } face south { stamp rim_body_red_10 { at = (0px, 0px); } stamp tall_windows_south { at = (0px, 1px); } } face east { stamp rim_body_red_10 { at = (0px, 0px); } stamp tall_windows_east { at = (0px, 1px); } } face west { stamp rim_body_red_10 { at = (0px, 0px); } stamp tall_windows_west { at = (0px, 1px); } } }
+      chart tall_roof box { origin = (46px, 63px); fill = trim_red; }
+      chart short box { origin = (0px, 63px); fill = body_red; face north { stamp rim_body_red_10 { at = (0px, 0px); } stamp short_windows_north { at = (0px, 1px); } } face south { stamp rim_body_red_10 { at = (0px, 0px); } stamp short_windows_south { at = (0px, 1px); } } face east { stamp rim_body_red_10 { at = (0px, 0px); } stamp short_windows_east { at = (0px, 1px); } } face west { stamp rim_body_red_10 { at = (0px, 0px); } } }
+      chart short_roof box { origin = (0px, 88px); fill = trim_red; }
+      chart skybridge box { origin = (69px, 88px); fill = window_glass; }
+      chart radar_mast box { origin = (15px, 101px); fill = metal; }
+      chart radar_dish box { origin = (24px, 101px); fill = metal; face north { stamp radar_grid { at = (0px, 0px); } } }
+      chart antenna box { origin = (64px, 88px); fill = metal; }
+      chart antenna_light box { origin = (74px, 101px); fill = warhead; }
+      chart guard_box box { origin = (45px, 88px); fill = metal; face north { stamp guard_window { at = (1px, 1px); } } }
+      chart guard_roof box { origin = (86px, 88px); fill = asphalt; }
+      chart barrier box { origin = (79px, 101px); fill = lamp; face north { stamp barrier_stripes { at = (0px, 0px); } } }
+      chart barrier_post box { origin = (43px, 101px); fill = metal; }
+      chart base_sandbags_0 box { origin = (109px, 88px); fill = sandbag; face north { stamp base_sandbag_seam { at = (0px, 0px); } } }
+      chart base_sandbags_1 box { origin = (0px, 101px); fill = sandbag; face north { stamp base_sandbag_seam { at = (0px, 0px); } } }
+      chart flag_pole box { origin = (41px, 63px); fill = metal; }
+      chart flag_ball box { origin = (65px, 101px); fill = lamp; }
+      chart flag_cloth box { origin = (48px, 101px); fill = body_red; face north { stamp flag_stripe { at = (0px, 1px); } } face south { stamp flag_stripe { at = (0px, 1px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

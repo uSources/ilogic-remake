@@ -71,8 +71,10 @@ poder probarla y equilibrarla antes de dibujarla. Despues:
    cuanto acierto). Ajustar el acierto de las demas contra ella si no debe ser igual que contra la
    original.
 2. Graficos: `u/b_<id>`, `u/i_<id>` y `u/r_<id>` (skill `arte-retro-diffusion` y `npm run assets`), y
-   quitar `"art"`.
-3. `npm test`: dice lo que falte (nombres, referencias que no existen, graficos).
+   quitar `"art"` (son los de la interfaz: fichas, compra, retratos).
+3. Modelo 3D: `public/assets/models/units/<id en minusculas>_{blue,red}.glb` (skill `ashfox`); sin el, se ve con un modelo de bloques
+   (`src/view3d/models/`).
+4. `npm test`: dice lo que falte (nombres, referencias que no existen, graficos).
 
 A mano es lo mismo: copiar una unidad al final de la lista, cambiarle el `id`, y añadir su `id` en el
 `hitChance` de cada unidad que deba poder atacarla (y en `transport.carries` o en el `heals` de Suministros si toca).
@@ -149,7 +151,8 @@ ver `docs/ARQUITECTURA.md`, "Modulos de reglas"), sus textos
 | `vision` | Radio de vision que da a su dueño (rombo): 3 la Base y la fortaleza, 2 fabricas y aeropuertos, 1 ciudades y pozos |
 | `textLetter` | Letra del edificio en el mapa de la partida por texto (`npm run play`): una mayuscula distinta por edificio; la de otro equipo sale en minuscula, asi que ningun terreno puede tener esa letra (ni en minuscula) |
 
-Un edificio nuevo necesita ademas graficos (`public/assets/b/`) y, para que salga en los mapas al
+Un edificio nuevo necesita ademas imagenes (`public/assets/img/`), su modelo 3D
+(`buildings/<id>_{blue,red,neutral}.glb`, skill `ashfox`) y, para que salga en los mapas al
 azar, su sitio en `mapgen.json` (ver "Mapas al azar").
 
 Un campo mas de unidad: `art` (id de otra unidad) = se pinta con su dibujo mientras no tenga el propio.
@@ -158,7 +161,9 @@ Un campo mas de unidad: `art` (id de otra unidad) = se pinta con su dibujo mient
 
 `terrain.json` tiene los 15 terrenos. **El suelo llano** es el que lleva `"plain": true`
 (exactamente uno: el de los mapas vacios del laboratorio, los duelos y las pruebas). Se cambian sus
-numeros; uno nuevo necesita su arte (`terrainArt.ts`) y salir en algun tema (`themes.json`).
+numeros; uno nuevo necesita su modelo 3D (o su relieve: `TERRAIN_PIECES` en `src/view3d/terrain.ts`,
+skill `ashfox`), su imagen en el atlas (de ella salen los colores de las miniaturas,
+`src/ui/terrainColors.ts`) y salir en algun tema (`themes.json`).
 
 | Campo | Que es |
 |---|---|
@@ -234,7 +239,7 @@ Efectos que hay (`effect.kind`):
 Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es codigo: su forma en
 `GeneralEffect` y su validacion en `EFFECT_SHAPES` (`content/generals.ts`), su entrada en
 `POWER_EFFECTS` (`core/generalPowers.ts`: si necesita casilla, su area, como se aplica, que usa
-`applyPower`, el `apply` de la accion `usePower`, y lo que le vale a la IA, `aiValue`) y su animacion en `src/scenes/game/playback.ts` (`EventPlayer`, evento `power`). Los
+`applyPower`, el `apply` de la accion `usePower`, y lo que le vale a la IA, `aiValue`) (la vista 3D aun no anima los poderes ni deja usarlos: pendiente). Los
 "poderes" son del general (se usan una vez por turno); las "habilidades" son de las unidades
 (`abilities`, siempre activas).
 

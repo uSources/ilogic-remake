@@ -1,6 +1,6 @@
 # Herramienta de equilibrio
 
-Juega cientos de partidas IA contra IA con las reglas reales del juego (`src/core`, sin Phaser), mide qué pasa y propone ajustes. Sirve para cualquier cambio: precios, daño, terreno, ingresos o reglas nuevas.
+Juega cientos de partidas IA contra IA con las reglas reales del juego (`src/core`, sin vista), mide qué pasa y propone ajustes. Sirve para cualquier cambio: precios, daño, terreno, ingresos o reglas nuevas.
 
 ```bash
 npm run balance -- run --games 200 --name actual                  # estado actual

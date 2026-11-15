@@ -1,0 +1,29 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = trunk; background-alpha = 255;
+      palette {
+        trunk = (#4a2c18, #6e4224, #8e5a32);
+        pine = (#1d3f6e, #2e5a96, #4a7cc0);
+        pine_spots = (#3e6eb0, #5e8ed0, #8ab0ea);
+        snowcap = (#d6e6f6, #f0f6ff, #ffffff);
+      }
+
+      chart a_trunk box { origin = (13px, 22px); fill = trunk; }
+      chart a_crown0 box { origin = (0px, 0px); fill = pine; pattern blotch { paint = pine_spots; scale = (2px, 1px, 2px); density = 0.25ratio; phase = 4; } }
+      chart a_crown1 box { origin = (0px, 12px); fill = pine; pattern blotch { paint = pine_spots; scale = (2px, 1px, 2px); density = 0.25ratio; phase = 17; } }
+      chart a_crown2 box { origin = (46px, 12px); fill = pine; pattern blotch { paint = pine_spots; scale = (2px, 1px, 2px); density = 0.25ratio; phase = 30; } }
+      chart a_crown3 box { origin = (31px, 22px); fill = snowcap; }
+      chart b_trunk box { origin = (22px, 22px); fill = trunk; }
+      chart b_crown0 box { origin = (33px, 0px); fill = pine; pattern blotch { paint = pine_spots; scale = (2px, 1px, 2px); density = 0.25ratio; phase = 4; } }
+      chart b_crown1 box { origin = (25px, 12px); fill = pine; pattern blotch { paint = pine_spots; scale = (2px, 1px, 2px); density = 0.25ratio; phase = 17; } }
+      chart b_crown2 box { origin = (0px, 22px); fill = pine; pattern blotch { paint = pine_spots; scale = (2px, 1px, 2px); density = 0.25ratio; phase = 30; } }
+      chart b_crown3 box { origin = (40px, 22px); fill = snowcap; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

@@ -1,0 +1,25 @@
+ashfox-model 1
+module rig {
+  export rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint flag { parent = body; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  export skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind flag { parent-origin = (-4u, 28u, 2.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  export motion idle for ModelRig {
+    duration = 1.4s; fps = 20; loop = loop; rest-relative = true;
+    track flag.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.35s = (0deg, 22deg, 4deg) catmullrom;
+      key 0.7s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.05s = (0deg, -22deg, -4deg) catmullrom;
+      key 1.4s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+}

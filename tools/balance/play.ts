@@ -1,4 +1,4 @@
-/** Una partida IA contra IA con todo lo que pasa apuntado (sin Phaser). */
+/** Una partida IA contra IA con todo lo que pasa apuntado (sin vista). */
 import type { GameContent } from '@core/content';
 import { seededRng } from '@core/util/random';
 import { buildMatch, skirmishConfig } from '@core/match';

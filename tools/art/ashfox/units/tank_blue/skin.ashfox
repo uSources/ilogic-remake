@@ -1,0 +1,27 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 128px; height = 256px; }
+    chart track0 box { width = 70px; height = 36px; coverage = opaque; }
+    chart track1 box { width = 70px; height = 36px; coverage = opaque; }
+    chart lower_hull box { width = 76px; height = 30px; coverage = opaque; }
+    chart hull box { width = 116px; height = 32px; coverage = opaque; }
+    chart front_plate box { width = 58px; height = 4px; coverage = opaque; }
+    chart headlight_left box { width = 8px; height = 3px; coverage = opaque; }
+    chart headlight_right box { width = 8px; height = 3px; coverage = opaque; }
+    chart engine_deck box { width = 42px; height = 6px; coverage = opaque; }
+    chart toolbox box { width = 24px; height = 10px; coverage = opaque; }
+    chart turret box { width = 62px; height = 23px; coverage = opaque; }
+    chart mantlet box { width = 28px; height = 8px; coverage = opaque; }
+    chart cupola box { width = 24px; height = 8px; coverage = opaque; }
+    chart hatch box { width = 16px; height = 5px; coverage = opaque; }
+    chart periscope box { width = 6px; height = 3px; coverage = opaque; }
+    chart bustle box { width = 34px; height = 9px; coverage = opaque; }
+    chart antenna box { width = 4px; height = 11px; coverage = opaque; }
+    chart barrel0 box { width = 28px; height = 14px; coverage = opaque; }
+    chart muzzle0 box { width = 12px; height = 6px; coverage = opaque; }
+    chart barrel1 box { width = 28px; height = 14px; coverage = opaque; }
+    chart muzzle1 box { width = 12px; height = 6px; coverage = opaque; }
+    material = opaque;
+  }
+}

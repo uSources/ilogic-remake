@@ -1,0 +1,31 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = earth; background-alpha = 255;
+      palette {
+        earth = (#5a3420, #8a5530, #b47a45);
+        earth_spots = (#4a2a18, #6e4228, #8f5b36);
+        grass = (#4f9a2e, #7cc63e, #a8e05a);
+        grass_spots = (#3f8526, #5fae34, #8fd14f);
+        tuft_d = #3f8526;
+        daisy_w = #f2f5ff;
+        daisy_y = #ffd447;
+        poppy_r = #ff5a50;
+        buttercup_y = #ffe866;
+        clearing_l = #a8e05a;
+      }
+      stamp tuft { pixels = "d.d/.d."; d = tuft_d; }
+      stamp daisy { pixels = ".w./wyw/.w."; w = daisy_w; y = daisy_y; }
+      stamp poppy { pixels = "r"; r = poppy_r; }
+      stamp buttercup { pixels = "y"; y = buttercup_y; }
+      stamp clearing { pixels = "ll./lll"; l = clearing_l; }
+      chart base box { origin = (0px, 0px); fill = earth; pattern blotch { paint = earth_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 37; } }
+      chart top box { origin = (0px, 27px); fill = grass; pattern blotch { paint = grass_spots; scale = (2px, 2px, 2px); density = 0.18ratio; phase = 37; } face up { stamp tuft { at = (0px, 3px); } stamp tuft { at = (11px, 10px); } stamp daisy { at = (9px, 7px); } stamp daisy { at = (0px, 11px); } stamp poppy { at = (0px, 8px); } stamp buttercup { at = (15px, 6px); } stamp buttercup { at = (5px, 5px); } stamp buttercup { at = (5px, 14px); } stamp clearing { at = (6px, 13px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

@@ -19,7 +19,7 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 12;
+  version: 13;
   /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
   map: string[][];
   /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
@@ -77,6 +77,11 @@ export interface GameState {
   mission?: { id: string; objectives: Objective[] };
   /** [CAMBIO] Escuadras (cada una de un equipo; las unidades dicen a cual pertenecen con Unit.squad). */
   squads?: Squad[];
+  /**
+   * [CAMBIO] Altura de cada casilla (regla elevation), elevation[x][y] de 0 a 2, como el terreno. La
+   * pone el modulo al empezar la partida y no cambia; sin poner, todo es llano (ver core/elevation.ts).
+   */
+  elevation?: number[][];
   /**
    * [CAMBIO] Puntos de control: zonas (rules.controlRadius alrededor del centro) que dan
    * rules.controlIncome cada ronda a su dueño. Al acabar la ronda: si dentro solo hay unidades de una

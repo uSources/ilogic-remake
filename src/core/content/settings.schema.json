@@ -38,7 +38,11 @@
         "abilities",
         "controlPoints",
         "controlIncome",
-        "controlRadius"
+        "controlRadius",
+        "elevation",
+        "elevationHit",
+        "elevationVision",
+        "elevationClimb"
       ],
       "properties": {
         "initialFunds": {
@@ -175,6 +179,28 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 3
+        },
+        "elevation": {
+          "description": "Elevacion: cada casilla tiene una altura (0 a 2); desde arriba se acierta y se ve mas, y subir cuesta.",
+          "type": "boolean"
+        },
+        "elevationHit": {
+          "description": "Con elevacion: cuanto cambia el acierto por cada nivel de altura que el atacante tiene por encima (o por debajo) del objetivo.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "elevationVision": {
+          "description": "Con elevacion: casillas de vision de mas por cada nivel de altura (las unidades de tierra).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "elevationClimb": {
+          "description": "Con elevacion: lo que cuesta de mas subir un nivel (bajar no cuesta).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
         }
       }
     },

@@ -1,0 +1,12 @@
+ashfox-model 1
+asset trees {
+  import "./trees/rig.ashfox" as rig;
+  import "./trees/paint.ashfox" as paint;
+  import "./trees/body.ashfox" as body;
+  export asset trees {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

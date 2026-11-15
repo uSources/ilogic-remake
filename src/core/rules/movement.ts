@@ -67,7 +67,7 @@ export function stepAllowed(rules: MoveRules, step: Step, kind: StepKind = 'walk
   if (manhattan(step.from, step.to) !== 1 || !canGoOnFrom(rules, step.from)) return false;
   if (kind === 'walk' && !canStepOnto(rules, step.to)) return false;
   // Andando o entrando en una unidad (`join`), cuesta lo que la casilla de destino.
-  return step.spent + rules.profile.enterCost(step.to) <= rules.profile.budget;
+  return step.spent + rules.profile.enterCost(step.to, step.from) <= rules.profile.budget;
 }
 
 /** Saca de `open` la casilla mas barata de llegar (la primera si empatan) y la devuelve. */
@@ -92,7 +92,7 @@ function expandFrom(search: RangeSearch, current: Pos): void {
   const spent = cheapest.at(current);
   for (const next of neighbors4(cheapest, current)) {
     if (!stepAllowed(rules, { from: current, to: next, spent })) continue;
-    const cost = spent + rules.profile.enterCost(next);
+    const cost = spent + rules.profile.enterCost(next, current);
     if (cost >= cheapest.at(next)) continue;
     if (cheapest.at(next) === Infinity) search.open.push(next);
     cheapest.set(next, cost);
@@ -172,7 +172,7 @@ function allStepsAllowed(rules: MoveRules, path: readonly Pos[]): boolean {
     const from = path[index - 1];
     if (!from) continue;
     if (!stepAllowed(rules, { from, to, spent })) return false;
-    spent += rules.profile.enterCost(to);
+    spent += rules.profile.enterCost(to, from);
   }
   return true;
 }

@@ -1,0 +1,14 @@
+ashfox-model 1
+asset soldier_blue {
+  import "./soldier_blue/rig.ashfox" as rig;
+  import "./soldier_blue/paint.ashfox" as paint;
+  import "./soldier_blue/body.ashfox" as body;
+  export asset soldier_blue {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+    motion = rig.idle;
+    motion = rig.drive;
+    motion = rig.fire;
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

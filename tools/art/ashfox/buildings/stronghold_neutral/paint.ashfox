@@ -1,0 +1,70 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 128px); background = pavement; background-alpha = 255;
+      palette {
+        pavement = (#aea896, #b9b2a0, #c4bdaa);
+        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+        curb28_k = #7a7468;
+        body_neutral = (#868a92, #8f949c, #9ca0a8);
+        rim_body_neutral_22_r = #c8ccd2;
+        trim_neutral = (#5a5e66, #62666e, #6e727a);
+        slits_north_k = #14202c;
+        slits_south_k = #14202c;
+        slits_east_k = #14202c;
+        slits_west_k = #14202c;
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+        hatch_wheel_k = #3a4050;
+        gun = (#2a2e38, #343a46, #3e4554);
+        periscope_glass_g = #9fe3ff;
+        lamp = (#e8c020, #f8d838, #fff070);
+        flag_stripe_w = #e8ecf2;
+        rim_trim_neutral_10_r = #8f949c;
+        rim_trim_neutral_4_r = #8f949c;
+        bunker_door_k = #1a1e28;
+        bunker_door_m = #4e5666;
+        entrance_hazard_y = #e8c020;
+        entrance_hazard_k = #1a1e28;
+        sandbag = (#c4a670, #d2b47e, #dec28e);
+        sandbag_seams7_d = #a88a5a;
+        sandbag_seams6_d = #a88a5a;
+      }
+      stamp curb28 { pixels = "kkkkkkkkkkkkkkkkkkkkkkkkkkkk"; k = curb28_k; }
+      stamp rim_body_neutral_22 { pixels = "rrrrrrrrrrrrrrrrrrrrrr"; r = rim_body_neutral_22_r; }
+      stamp slits_north { pixels = ".kkk...kkkk...kkk.."; k = slits_north_k; }
+      stamp slits_south { pixels = ".kkk...kkkk...kkk.."; k = slits_south_k; }
+      stamp slits_east { pixels = ".kkk...kkkk...kkk.."; k = slits_east_k; }
+      stamp slits_west { pixels = ".kkk...kkkk...kkk.."; k = slits_west_k; }
+      stamp hatch_wheel { pixels = ".k./kkk/.k."; k = hatch_wheel_k; }
+      stamp periscope_glass { pixels = "gg"; g = periscope_glass_g; }
+      stamp flag_stripe { pixels = "wwwwwww"; w = flag_stripe_w; }
+      stamp rim_trim_neutral_10 { pixels = "rrrrrrrrrr"; r = rim_trim_neutral_10_r; }
+      stamp rim_trim_neutral_4 { pixels = "rrrr"; r = rim_trim_neutral_4_r; }
+      stamp bunker_door { pixels = "kkkkkk/kmmmmk/kmmmmk/kmmmmk/kmmmmk/kmmmmk"; k = bunker_door_k; m = bunker_door_m; }
+      stamp entrance_hazard { pixels = "ykykykykyk"; y = entrance_hazard_y; k = entrance_hazard_k; }
+      stamp sandbag_seams7 { pixels = "ddddddd"; d = sandbag_seams7_d; }
+      stamp sandbag_seams6 { pixels = "dddddd"; d = sandbag_seams6_d; }
+      chart plinth box { origin = (0px, 0px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } face north { stamp curb28 { at = (0px, 1px); } } face south { stamp curb28 { at = (0px, 1px); } } face east { stamp curb28 { at = (0px, 1px); } } face west { stamp curb28 { at = (0px, 1px); } } }
+      chart ring0 box { origin = (0px, 31px); fill = body_neutral; face north { stamp rim_body_neutral_22 { at = (0px, 0px); } } face south { stamp rim_body_neutral_22 { at = (0px, 0px); } } face east { stamp rim_body_neutral_22 { at = (0px, 0px); } } face west { stamp rim_body_neutral_22 { at = (0px, 0px); } } }
+      chart ring1 box { origin = (0px, 60px); fill = trim_neutral; face north { stamp slits_north { at = (0px, 2px); } } face south { stamp slits_south { at = (0px, 2px); } } face east { stamp slits_east { at = (0px, 2px); } } face west { stamp slits_west { at = (0px, 2px); } } }
+      chart ring2 box { origin = (0px, 85px); fill = body_neutral; }
+      chart ring3 box { origin = (65px, 85px); fill = trim_neutral; }
+      chart ring4 box { origin = (34px, 106px); fill = body_neutral; }
+      chart hatch box { origin = (67px, 106px); fill = metal; face up { stamp hatch_wheel { at = (1px, 1px); } } }
+      chart periscope box { origin = (92px, 106px); fill = gun; face north { stamp periscope_glass { at = (0px, 0px); } } }
+      chart flag_pole box { origin = (29px, 106px); fill = metal; }
+      chart flag_ball box { origin = (76px, 119px); fill = lamp; }
+      chart flag_cloth box { origin = (59px, 119px); fill = body_neutral; face north { stamp flag_stripe { at = (0px, 1px); } } face south { stamp flag_stripe { at = (0px, 1px); } } }
+      chart entrance box { origin = (0px, 106px); fill = trim_neutral; face north { stamp rim_trim_neutral_10 { at = (0px, 0px); } stamp bunker_door { at = (2px, 2px); } stamp entrance_hazard { at = (0px, 0px); } } face south { stamp rim_trim_neutral_10 { at = (0px, 0px); } } face east { stamp rim_trim_neutral_4 { at = (0px, 0px); } } face west { stamp rim_trim_neutral_4 { at = (0px, 0px); } } }
+      chart sandbags_left_0 box { origin = (101px, 106px); fill = sandbag; face north { stamp sandbag_seams7 { at = (0px, 0px); } } }
+      chart sandbags_left_1 box { origin = (0px, 119px); fill = sandbag; face north { stamp sandbag_seams6 { at = (0px, 0px); } } }
+      chart sandbags_right_0 box { origin = (19px, 119px); fill = sandbag; face north { stamp sandbag_seams7 { at = (0px, 0px); } } }
+      chart sandbags_right_1 box { origin = (40px, 119px); fill = sandbag; face north { stamp sandbag_seams6 { at = (0px, 0px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

@@ -6,7 +6,6 @@
 import type { GameState, TeamId } from '../core/model';
 import { areAllied, shownTeamNumber } from '../core/teams';
 import type { OwnerSide, Side } from '../hud/vm/common';
-import { PAL, PAL_MAP } from './palette';
 
 export type { OwnerSide, Side };
 
@@ -28,24 +27,21 @@ type Paint = 'friendly' | 'enemy' | 'neutral';
 const paintOf = (side: OwnerSide | 'unknown'): Paint => (isFriendly(side) ? 'friendly' : side === 'enemy' ? 'enemy' : 'neutral');
 
 /**
- * Como se pinta cada lado en cada sitio: el unico lugar con estos colores (los de Phaser son los de
- * palette.ts y los de CSS, las variables de hud.css). `map`: el mapa de Phaser; `canvas` y
- * `canvasUnit`: los lienzos del minimapa y las miniaturas (edificios y, mas claras, unidades); `fill`
- * y `text`: el CSS de las fichas (rellenos y el nombre del dueño).
+ * Como se pinta cada lado en cada sitio de la interfaz: el unico lugar con estos colores (los de CSS
+ * son las variables de hud.css). `canvas` y `canvasUnit`: los lienzos del minimapa y las miniaturas
+ * (edificios y, mas claras, unidades); `fill` y `text`: el CSS de las fichas (rellenos y el nombre
+ * del dueño). Los colores del 3D, en src/view3d.
  */
 const SIDE_PAINT = {
-  friendly: { map: PAL.blue, canvas: '#3aa8ff', canvasUnit: '#8fd0ff', fill: 'var(--blue)', text: 'var(--blue)' },
-  enemy: { map: PAL.red, canvas: '#ff4d45', canvasUnit: '#ff8a80', fill: 'var(--red)', text: 'var(--red-soft)' },
-  neutral: { map: PAL_MAP.neutral, canvas: '#c9d2e3', canvasUnit: '#c9d2e3', fill: 'var(--muted)', text: 'var(--muted)' },
+  friendly: { canvas: '#3aa8ff', canvasUnit: '#8fd0ff', fill: 'var(--blue)', text: 'var(--blue)' },
+  enemy: { canvas: '#ff4d45', canvasUnit: '#ff8a80', fill: 'var(--red)', text: 'var(--red-soft)' },
+  neutral: { canvas: '#c9d2e3', canvasUnit: '#c9d2e3', fill: 'var(--muted)', text: 'var(--muted)' },
 } as const;
 export type PaintPlace = keyof (typeof SIDE_PAINT)['friendly'];
 
 /** El color de un lado en ese sitio (ver SIDE_PAINT). */
 export const sidePaint = <P extends PaintPlace>(side: OwnerSide | 'unknown', place: P): (typeof SIDE_PAINT)[Paint][P] =>
   SIDE_PAINT[paintOf(side)][place];
-
-/** Color del mapa de Phaser de un lado. */
-export const sideColor = (side: OwnerSide): number => sidePaint(side, 'map');
 
 /** Letra de los dibujos por lado (`b_` azul, `r_` rojo, `i_` gris). */
 const SIDE_LETTER = { friendly: 'b', enemy: 'r', neutral: 'i' } as const;

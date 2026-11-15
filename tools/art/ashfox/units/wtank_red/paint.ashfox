@@ -1,0 +1,79 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 256px); background = rubber; background-alpha = 255;
+      palette {
+        rubber = (#262a34, #30353f, #3a404c);
+        skirt_seams_k = #141824;
+        team_red = (#b02824, #c8302a, #d84038);
+        hover_edgeeast_r = #f2786c;
+        hover_edgeeast_d = #80181a;
+        hover_edgewest_r = #f2786c;
+        hover_edgewest_d = #80181a;
+        hover_edgenorth_r = #f2786c;
+        hover_edgenorth_d = #80181a;
+        hover_edgesouth_r = #f2786c;
+        hover_edgesouth_d = #80181a;
+        lamp = (#e8c020, #f8d838, #fff070);
+        rim_team_red_12_r = #f2786c;
+        rim_team_red_11_r = #f2786c;
+        light_turret_seam_d = #80181a;
+        light_turret_seam_r = #80181a;
+        dark_red = (#80181a, #962220, #a82c28);
+        hatch_handle_h = #8a93a6;
+        gun = (#2a2e38, #343a46, #3e4554);
+        light_bore_k = #141824;
+        rim_team_red_3_r = #f2786c;
+        rim_team_red_4_r = #f2786c;
+        rim_dark_red_1_r = #c04a40;
+        rim_dark_red_3_r = #c04a40;
+        missile = (#e2e6ee, #eef2fa, #f8faff);
+        warhead = (#c02830, #d8323a, #e8484e);
+      }
+      stamp skirt_seams { pixels = "k...k...k...k...k...k...k.../k...k...k...k...k...k...k.../k...k...k...k...k...k...k.../k...k...k...k...k...k...k..."; k = skirt_seams_k; }
+      stamp hover_edgeeast { pixels = "rrrrrrrrrrrrrrrrrrrrrrrr/......................../......................../......................../dddddddddddddddddddddddd"; r = hover_edgeeast_r; d = hover_edgeeast_d; }
+      stamp hover_edgewest { pixels = "rrrrrrrrrrrrrrrrrrrrrrrr/......................../......................../......................../dddddddddddddddddddddddd"; r = hover_edgewest_r; d = hover_edgewest_d; }
+      stamp hover_edgenorth { pixels = "rrrrrrrrrrrrrrrrrrrrrrrr/......................../......................../......................../dddddddddddddddddddddddd"; r = hover_edgenorth_r; d = hover_edgenorth_d; }
+      stamp hover_edgesouth { pixels = "rrrrrrrrrrrrrrrrrrrrrrrr/......................../......................../......................../dddddddddddddddddddddddd"; r = hover_edgesouth_r; d = hover_edgesouth_d; }
+      stamp rim_team_red_12 { pixels = "rrrrrrrrrrrr"; r = rim_team_red_12_r; }
+      stamp rim_team_red_11 { pixels = "rrrrrrrrrrr"; r = rim_team_red_11_r; }
+      stamp light_turret_seam { pixels = ".r...r...r./.....d...../.....d...../.....d...../.....d...../.....d....."; d = light_turret_seam_d; r = light_turret_seam_r; }
+      stamp hatch_handle { pixels = "hhh"; h = hatch_handle_h; }
+      stamp light_bore { pixels = ".kk./kkkk/kkkk/.kk."; k = light_bore_k; }
+      stamp rim_team_red_3 { pixels = "rrr"; r = rim_team_red_3_r; }
+      stamp rim_team_red_4 { pixels = "rrrr"; r = rim_team_red_4_r; }
+      stamp rim_dark_red_1 { pixels = "r"; r = rim_dark_red_1_r; }
+      stamp rim_dark_red_3 { pixels = "rrr"; r = rim_dark_red_3_r; }
+      chart skirt box { origin = (0px, 0px); fill = rubber; face east { stamp skirt_seams { at = (0px, 0px); } } face west { stamp skirt_seams { at = (0px, 0px); } } }
+      chart skirt_top box { origin = (0px, 63px); fill = rubber; }
+      chart hull box { origin = (0px, 33px); fill = team_red; face east { stamp hover_edgeeast { at = (0px, 0px); } } face west { stamp hover_edgewest { at = (0px, 0px); } } face north { stamp hover_edgenorth { at = (0px, 0px); } } face south { stamp hover_edgesouth { at = (0px, 0px); } } }
+      chart headlight_left box { origin = (24px, 129px); fill = lamp; }
+      chart headlight_right box { origin = (33px, 129px); fill = lamp; }
+      chart turret box { origin = (0px, 91px); fill = team_red; face north { stamp rim_team_red_12 { at = (0px, 0px); } } face south { stamp rim_team_red_12 { at = (0px, 0px); } } face east { stamp rim_team_red_11 { at = (0px, 0px); } stamp light_turret_seam { at = (0px, 1px); } } face west { stamp rim_team_red_11 { at = (0px, 0px); } stamp light_turret_seam { at = (0px, 1px); } } }
+      chart turret_top box { origin = (7px, 110px); fill = team_red; }
+      chart hatch box { origin = (68px, 110px); fill = dark_red; face up { stamp hatch_handle { at = (1px, 2px); } } }
+      chart mantlet box { origin = (51px, 110px); fill = dark_red; }
+      chart antenna box { origin = (46px, 110px); fill = gun; }
+      chart barrel box { origin = (47px, 91px); fill = team_red; }
+      chart muzzle box { origin = (89px, 110px); fill = dark_red; face north { stamp light_bore { at = (0px, 0px); } } }
+      chart fan_housing_top box { origin = (0px, 122px); fill = dark_red; }
+      chart fan_housing_bottom box { origin = (45px, 122px); fill = team_red; }
+      chart fan_housing_left box { origin = (76px, 91px); fill = team_red; face north { stamp rim_team_red_3 { at = (0px, 0px); } } face south { stamp rim_team_red_3 { at = (0px, 0px); } } face east { stamp rim_team_red_4 { at = (0px, 0px); } } face west { stamp rim_team_red_4 { at = (0px, 0px); } } }
+      chart fan_housing_right box { origin = (91px, 91px); fill = team_red; face north { stamp rim_team_red_3 { at = (0px, 0px); } } face south { stamp rim_team_red_3 { at = (0px, 0px); } } face east { stamp rim_team_red_4 { at = (0px, 0px); } } face west { stamp rim_team_red_4 { at = (0px, 0px); } } }
+      chart fan_corner_top_left box { origin = (90px, 122px); fill = team_red; }
+      chart fan_corner_top_right box { origin = (103px, 122px); fill = team_red; }
+      chart fan_corner_bottom_left box { origin = (116px, 122px); fill = team_red; }
+      chart fan_corner_bottom_right box { origin = (0px, 129px); fill = team_red; }
+      chart rudder_left box { origin = (106px, 91px); fill = dark_red; face north { stamp rim_dark_red_1 { at = (0px, 0px); } } face south { stamp rim_dark_red_1 { at = (0px, 0px); } } face east { stamp rim_dark_red_3 { at = (0px, 0px); } } face west { stamp rim_dark_red_3 { at = (0px, 0px); } } }
+      chart rudder_right box { origin = (115px, 91px); fill = dark_red; face north { stamp rim_dark_red_1 { at = (0px, 0px); } } face south { stamp rim_dark_red_1 { at = (0px, 0px); } } face east { stamp rim_dark_red_3 { at = (0px, 0px); } } face west { stamp rim_dark_red_3 { at = (0px, 0px); } } }
+      chart fan_blade_a box { origin = (42px, 129px); fill = missile; }
+      chart fan_blade_b box { origin = (0px, 110px); fill = missile; }
+      chart fan_hub box { origin = (13px, 129px); fill = warhead; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

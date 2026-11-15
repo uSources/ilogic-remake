@@ -1,0 +1,13 @@
+ashfox-model 1
+asset blocker_blue {
+  import "./blocker_blue/rig.ashfox" as rig;
+  import "./blocker_blue/paint.ashfox" as paint;
+  import "./blocker_blue/body.ashfox" as body;
+  export asset blocker_blue {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+    motion = rig.idle;
+    motion = rig.drive;
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

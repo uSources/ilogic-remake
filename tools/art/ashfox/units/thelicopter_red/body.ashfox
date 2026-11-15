@@ -1,0 +1,41 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    bind bone rotor to skeleton.rotor;
+    bind bone tail_rotor to skeleton.tail_rotor;
+    geometry {
+      bone body {
+        cube cabin { origin = (-7u, 20u, -8u); size = (14u, 12u, 16u); surface = skin.cabin; }
+        cube cabin_top { origin = (-5u, 32u, -6u); size = (10u, 2u, 12u); surface = skin.cabin_top; }
+        cube engine { origin = (-3u, 34u, -3u); size = (6u, 3u, 8u); surface = skin.engine; }
+        cube bubble { origin = (-6u, 21u, -12u); size = (12u, 10u, 4u); surface = skin.bubble; }
+        cube bubble_mid { origin = (-5u, 22u, -14u); size = (10u, 8u, 2u); surface = skin.bubble_mid; }
+        cube bubble_tip { origin = (-4u, 23u, -15u); size = (8u, 6u, 1u); surface = skin.bubble_tip; }
+        cube boom { origin = (-2u, 26u, 8u); size = (4u, 4u, 16u); surface = skin.boom; }
+        cube tail_fin { origin = (-1u, 30u, 20u); size = (2u, 6u, 4u); surface = skin.tail_fin; }
+        cube tail_plane { origin = (-5u, 27u, 18u); size = (10u, 1u, 3u); surface = skin.tail_plane; }
+        cube skid_left { origin = (-9u, 14u, -11u); size = (2u, 2u, 22u); surface = skin.skid_left; }
+        cube strut_front_left { origin = (-9u, 16u, -6u); size = (2u, 4u, 1u); surface = skin.strut_front_left; }
+        cube strut_back_left { origin = (-9u, 16u, 4u); size = (2u, 4u, 1u); surface = skin.strut_back_left; }
+        cube skid_right { origin = (7u, 14u, -11u); size = (2u, 2u, 22u); surface = skin.skid_right; }
+        cube strut_front_right { origin = (7u, 16u, -6u); size = (2u, 4u, 1u); surface = skin.strut_front_right; }
+        cube strut_back_right { origin = (7u, 16u, 4u); size = (2u, 4u, 1u); surface = skin.strut_back_right; }
+        cube mast { origin = (-1u, 37u, -1u); size = (2u, 2u, 2u); surface = skin.mast; }
+        bone rotor {
+          cube rotor_hub { origin = (-2u, 39u, -2u); size = (4u, 1u, 4u); surface = skin.rotor_hub; }
+          cube blade_a { origin = (-20u, 39u, -1u); size = (40u, 1u, 2u); surface = skin.blade_a; }
+          cube blade_b { origin = (-1u, 39u, -20u); size = (2u, 1u, 40u); surface = skin.blade_b; }
+        }
+        bone tail_rotor {
+          cube tail_blade_a { origin = (2u, 28u, 21.5u); size = (1u, 8u, 1u); surface = skin.tail_blade_a; }
+          cube tail_blade_b { origin = (2u, 31.5u, 18u); size = (1u, 1u, 8u); surface = skin.tail_blade_b; }
+        }
+      }
+    }
+  }
+}

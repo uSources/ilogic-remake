@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { dispatch } from '@core/actions';
 import { createMatch } from '@core/defaultGames';
-import { DEFAULT_MAP_SIZE, MATCH_SETUPS, rematchOf, skirmishConfig } from '@core/match';
+import { defaultContent } from '@core/content/default';
+import { DEFAULT_MAP_SIZE, MATCH_SETUPS, rematchOf, skirmishConfig, type SandboxConfig } from '@core/match';
 import { GAME_MODES } from '@core/modes';
 import { serialize } from '@core/save';
 import { duel } from '@core/teams';
 import type { GameState } from '@core/model';
 import { DEFAULT_OPTIONS, matchConfigFor } from '../src/setup';
 import { TextMatch } from '../tools/play/textMatch';
-import { defaultLab, labMatch } from '../src/lab';
 
 describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () => {
   it('cada modo de GAME_MODES tiene su forma de prepararse, y la partida lleva su modo', () => {
@@ -72,15 +72,9 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
   });
 
   it('una partida que empezaria con un equipo ya caido (sin Base) es un fallo de su configuracion', () => {
-    const config = labMatch(defaultLab(), null);
+    const config = sandboxDuel();
     const noHq = { ...config, buildings: config.buildings.filter((building) => building.owner !== 1) };
     expect(() => createMatch(noHq)).toThrow(/empieza con el equipo 1 ya caido/);
-  });
-
-  it('el laboratorio no tiene clima porque su modo lo impone, no porque lo pida', () => {
-    const config = labMatch(defaultLab(), 'attack');
-    expect(config.settingChanges?.weather).toBeUndefined();
-    expect(createMatch(config).settings.weather).toBe(false);
   });
 
   it('revancha: el mismo mapa, reglas y equipos; una mision no la tiene', () => {
@@ -105,3 +99,26 @@ describe('partida nueva desde la pantalla (src/setup.ts)', () => {
     expect(matchConfigFor({ ...DEFAULT_OPTIONS, rival: 'human' }, 1).teams.map((team) => team.controller)).toEqual(['human', 'human']);
   });
 });
+
+/** Una partida de prueba pequeña: dos Bases y una unidad por equipo, en campo abierto. */
+function sandboxDuel(): SandboxConfig {
+  const hq = defaultContent().hq.id;
+  const unitType = defaultContent().units.list[0]!.id;
+  return {
+    mode: 'sandbox',
+    size: 12,
+    teams: [
+      { controller: 'human', funds: 0 },
+      { controller: 'ai', funds: 0 },
+    ],
+    buildings: [
+      { type: hq, owner: 0, at: { x: 0, y: 11 } },
+      { type: hq, owner: 1, at: { x: 11, y: 0 } },
+    ],
+    units: [
+      { type: unitType, team: 0, at: { x: 3, y: 6 } },
+      { type: unitType, team: 1, at: { x: 7, y: 6 } },
+    ],
+    seed: 1,
+  };
+}

@@ -29,7 +29,8 @@ export interface HomeHost {
   startNew(seed: number): void;
   openSetup(): void;
   openCampaign(): void;
-  openOnline(): void;
+  /** Abre «Jugar en línea»; sin ella (la vista 3D aun no juega por la red) no sale esa tarjeta. */
+  openOnline?(): void;
   openOptions(): void;
 }
 
@@ -76,7 +77,7 @@ export class HomeScreen {
         focus: this.focus,
         save: this.savedGameCard(),
         quick: quickSummary(this.host.options),
-        online: serverUrl() !== null,
+        online: this.canPlayOnline(),
         campaign: this.campaignCard(),
         credits: ui.get().home.credits,
       },
@@ -92,8 +93,13 @@ export class HomeScreen {
     this.publish();
   }
 
+  /** Hay servidor y quien muestra el menu sabe abrir «Jugar en línea». */
+  private canPlayOnline(): boolean {
+    return serverUrl() !== null && this.host.openOnline !== undefined;
+  }
+
   private rows(): HomeCard[][] {
-    const newGame: HomeCard[] = serverUrl() ? ['quick', 'custom', 'online'] : ['quick', 'custom'];
+    const newGame: HomeCard[] = this.canPlayOnline() ? ['quick', 'custom', 'online'] : ['quick', 'custom'];
     const middle = newGame.map((card): HomeCard[] => (this.host.save ? ['continue', card, 'campaign'] : [card, 'campaign']));
     return [...middle, FOOTER_ROW];
   }
@@ -146,7 +152,7 @@ export class HomeScreen {
       case 'campaign':
         return this.host.openCampaign();
       case 'online':
-        return this.host.openOnline();
+        return this.host.openOnline?.();
       case 'news':
         return openNotes();
       case 'help':

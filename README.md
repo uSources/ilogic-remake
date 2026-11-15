@@ -1,9 +1,9 @@
 # Ilogic (remake)
 
-Remake en **TypeScript + Phaser 4** de *Ilogic*, el juego de estrategia por turnos
+Remake en **TypeScript + three.js** (3D) de *Ilogic*, el juego de estrategia por turnos
 (estilo Advance Wars) que hicimos en Java en 2013. El codigo Java se recupero
 descompilando el `.jar`; las reglas, la IA y el generador de mapas se han portado
-a partir de el, con vuestros graficos y vuestra musica originales.
+a partir de el, con vuestra musica original; el tablero es ahora 3D y la interfaz, HTML (Preact).
 
 **Jugar:** https://usources.github.io/ilogic-remake/ (se publica sola con cada push a `main`,
 `.github/workflows/pages.yml`). Descargas para jugar sin conexion en
@@ -25,6 +25,7 @@ asi que no es un control de acceso.
 ```bash
 npm install          # la primera vez
 npm run dev          # abre el juego en http://localhost:5173 y recarga al guardar cambios
+                     # (/?seed=2013: escaramuza directa en ese mapa; /units3d.html: playground de modelos)
 npm test             # tests de la logica (reglas, mapas, IA, guardado)
 npm run build        # version para publicar en dist/ (subela a cualquier hosting estatico)
 npm run build:single # todo el juego en un solo fichero: dist-single/ilogic.html
@@ -71,32 +72,27 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
 
 | Accion | Teclado | Raton |
 |---|---|---|
-| Mover el cursor | Flechas / WASD | Pasar por encima |
-| Aceptar | Enter / Espacio | Clic |
-| Atras / cancelar | Esc / Retroceso | Clic derecho (o clic fuera del menu) |
-| Menu de partida | Esc en el mapa | Boton ☰ arriba a la derecha |
-| Fin del turno | E | Boton "Fin del turno" (dice cuántas unidades quedan sin mover; con alguna, hay que pulsar dos veces) |
-| Mover el mapa | (sigue al cursor) | Arrastrar, o raton en el borde de la pantalla |
-| Zoom | + / - | Rueda |
+| Elegir, mover y atacar | — | Clic en la unidad, en una casilla azul o en un enemigo en rojo |
+| Desplazar la camara | Flechas / WASD (mantener) | Arrastrar con el izquierdo o el central |
+| Girar la camara | — | Arrastrar con el derecho |
+| Acercar y alejar | + / - | Rueda |
+| Aceptar en un menu | Enter | Clic |
+| Atras / menu de partida | Esc (sin nada elegido abre la pausa) | Boton ☰ arriba a la derecha |
+| Fin del turno | E | Boton "Fin del turno" |
 | Siguiente unidad sin mover | Tab | Clic en la bandeja de abajo a la derecha |
-| Elegir varias | — | Ctrl + clic en cada una, o Ctrl (o Mayúsculas) + recuadro; con el dedo, "Elegir varias" |
-| Formar escuadra | — | Con varias elegidas, "Órdenes" en la bandeja y "Formar escuadra" |
-| Elegir una escuadra | 1 … 9 | Su botón en la bandeja |
-| Zona de amenaza enemiga | T | Boton "Ver amenaza enemiga" |
-| Alcance de una unidad | Enter sobre ella | Clic derecho (movil: mantener pulsado) |
-| Minimapa | M | Clic o arrastrar sobre el minimapa |
-| Ayuda | H | Menu de partida > Como se juega |
 
-- Pulsa sobre una unidad tuya (azul) para ver adonde puede ir. Al pasar por encima de una casilla
-  se dibuja el camino; pulsa el destino y elige una accion en el menu que aparece junto a la unidad.
-  Casillas azules = moverse, moradas = unirse a una unidad igual, turquesa = subir a un transporte,
-  rojas = objetivos de ataque. Al pasar por encima de un objetivo sale la prevision de combate:
-  margen de dano (del 5 % al 95 % de las tiradas), vida que le quedara y probabilidad de destruirlo.
-- Con T se ve en rojo todo lo que el enemigo (lo que ves de el) puede atacar en su proximo turno.
-- La ficha de abajo muestra la unidad, el edificio y el terreno bajo el cursor (vida,
+- Pulsa sobre una unidad tuya (azul) para ver adonde puede ir (casillas azules) y a quien puede
+  atacar (rojo). Pulsa una casilla azul para moverla y elige una accion en el menu que sale junto a
+  ella; pulsa un enemigo en rojo para ir y atacarle. Al pasar por encima de un objetivo sale la
+  prevision de combate: margen de dano (del 5 % al 95 % de las tiradas), vida que le quedara y
+  probabilidad de destruirlo.
+- La ficha de abajo muestra la unidad, el edificio y el terreno bajo el puntero (vida,
   movimiento, alcance, defensa del terreno...).
 - Pulsa sobre una ciudad, fabrica o aeropuerto tuyo libre para comprar unidades.
 - Despues de mover, "Atras" deshace el movimiento.
+- **Aun no en la vista 3D** (estaban en la 2D): escuadras y ordenes, elegir varias, zona de amenaza,
+  minimapa, poderes de los generales, tutorial guiado, resumen de ronda, repetir el turno enemigo,
+  varias personas en la misma pantalla y gestos de dos dedos. Las reglas siguen igual.
 - **Ejército:** cada unidad ocupa puntos de mando (la infantería 1, lo más grande hasta 5) y el
   ejército no puede pasar de 30. Cada ronda se paga de mantenimiento el 10 % del precio de tus unidades
   (si no llega, se paga lo que haya). Las dos reglas se cambian o se quitan en Nueva partida →
@@ -106,22 +102,13 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
   Una unidad que se queda sin usar encima de un edificio sigue capturando sola al acabar el turno.
 - El defensor que sobrevive contraataca (salvo unidades a distancia) y el daño varía
   poco (el esperado ±10 %). La previsión de combate enseña ambas cosas.
-- **Combate a la vista:** cada ataque (tuyo o del enemigo) se ve paso a paso: una mira marca el
-  objetivo, el disparo sale del atacante (en parábola si es a distancia), la barra de vida baja sobre
-  la unidad y, si hay contraataque, se anuncia y pasa igual al revés. Abajo sale el panel de combate
-  con las dos unidades (la tuya a la izquierda), quién ataca, su acierto, las vidas bajando y el daño
-  de cada lado. Una unidad que dispara desde la niebla sale como «???».
-- Durante el turno enemigo, Enter o clic acelera las animaciones.
-- En pantallas tactiles: tocar una unidad tuya la elige y tocar el destino la mueve (captura o
-  espera sola si no hay nada mas que hacer); para atacar se toca el enemigo dos veces (el primero
-  ensena la prevision). Arrastrar una unidad la lleva; mantener pulsado ensena el alcance de cualquier
-  unidad y se pellizca para hacer zoom.
-- **Final de la partida:** el mapa se descubre entero y la cámara va a la jugada decisiva (confeti al
-  ganar; mapa en gris y humo al perder). Un resumen enseña la gráfica del valor de los ejércitos día a
-  día, las estadísticas, la mejor marca de la misión y botones: Revancha (mismo mapa), Nueva partida,
+- **Combate a la vista:** el disparo sale del atacante (en parábola si es a distancia), salen
+  chispas, humo y el daño sobre la unidad, y los vehículos destruidos dejan restos humeantes.
+- **Final de la partida:** un cartel de victoria o derrota y despues un resumen con las
+  estadísticas, la mejor marca de la misión y botones: Revancha (mismo mapa), Nueva partida,
   Siguiente misión o Reintentar.
 - **Menú con tarjetas:** Continuar (con miniatura de la partida guardada), Nueva partida (Rápida o
-  Personalizar) y Campaña, sobre una partida IA contra IA en directo (o la imagen original).
+  Personalizar) y Campaña, sobre la imagen original del menú.
   **Opciones** (también con la tecla O en partida): sonido, autoguardado, avisar de unidades sin mover, velocidades, tamaño de la
   interfaz (90/100/125 %), reducir el movimiento, ver siempre la amenaza e idioma.
 - **Nueva partida** enseña el mapa que va a tocar ("Otro mapa" o R para sortear otro) y tiene los
@@ -129,19 +116,11 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
   terreno, niebla, dinero inicial, ingresos y límite de días (al acabar gana quien tenga más puntos:
   valor del ejército + 1000 por edificio). Cada mapa tiene un código (menú de partida) que se puede
   escribir en "Código del mapa" para volver a jugarlo o pasárselo a alguien.
-- En el menú de partida: repetir el último turno enemigo y rendirse.
+- En el menú de partida: guardar, opciones, ayuda y rendirse.
 - **Campaña** (menú principal): 6 misiones en mapas hechos a mano, que se desbloquean en orden.
   La primera es un tutorial que va diciendo qué hacer; las demás tienen objetivos propios (capturar
   ciudades, aguantar unos días, escoltar un convoy, destruir a todo el enemigo, asalto final).
   Las misiones están en `src/core/content/missions.json` y es fácil añadir más (skill `nueva-mision`).
-- **Mover unidades:** se cogen y se arrastran (con el dedo, manteniendo pulsado). El camino sigue al
-  puntero como una flecha y un bocadillo dice cuánto movimiento se gasta, la defensa de la casilla
-  y si allí te pueden atacar. Al soltar pasa lo lógico: sobre un enemigo,
-  ataca desde la casilla por la que llegabas; sobre un edificio, captura; sobre una unidad igual, se
-  unen; sobre un transporte, sube; en una casilla vacía sin nada más que hacer, espera. Fuera del
-  alcance vuelve a su sitio; muy lejos, queda una orden de "ir hacia allí" que la unidad cumple sola
-  turno a turno. Ctrl + clic (o Ctrl + recuadro, como en Windows) elige varias para moverlas en grupo. Ctrl+Z deshace el último
-  movimiento si no ha descubierto nada.
 - **Reglas nuevas de movimiento:** el terreno cuesta (bosque, arena y nieve frenan a los vehículos;
   acantilados y agua poco profunda, a la infantería), se atraviesan las unidades propias y, con
   niebla, el bosque esconde: si tu camino choca con un enemigo escondido, emboscada. Los edificios
@@ -159,9 +138,8 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
   general ("General enemigo") y lo usa.
 - **Veteranía** (reglas nuevas): una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas),
   cada una con +5 % de acierto y de defensa.
-- Al empezar cada turno sale un resumen de la ronda (ingresos y unidades reparadas).
 - Al acabar la partida se ven estadisticas de los dos bandos (compras, bajas, capturas, gasto).
-- Si el sistema pide reducir el movimiento, se quitan los temblores, parpadeos y paneos de camara.
+- Si el sistema pide reducir el movimiento, no salen el humo y el polvo, las particulas del clima ni los relampagos (queda el velo del clima).
 
 ## Unidades y edificios
 
@@ -176,7 +154,7 @@ estan en `themes.json` y `mapgen.json`. Guia: [docs/CONTENIDO.md](docs/CONTENIDO
 
 ```
 src/
-  core/        Logica del juego en TypeScript puro (sin Phaser): se puede probar con tests
+  core/        Logica del juego en TypeScript puro (sin three.js ni DOM): se puede probar con tests
                y reutilizar, por ejemplo, en un servidor para partidas online.
     content/     Unidades, edificios, terreno, temas, mapas al azar, reglas e IA en JSON + su validacion
                  y sus tipos resueltos (UnitType, TerrainType...): ver docs/CONTENIDO.md
@@ -208,22 +186,25 @@ src/
     save.ts      Guardar / cargar en JSON (solo el formato de ahora: las partidas de antes se descartan)
     geom.ts      Rombos y distancias
     util/random.ts Numeros aleatorios con semilla (seededRng, weightedPick, randomInt)
-  scenes/      Escenas de Phaser: Boot (carga), Logo, Menu, Game (partida y final)
-  ui/          Dibujo del mapa (mapView y sus capas en ui/map: sprites persistentes, zoom entero) y nombres de imagenes (sprites)
-    hudModels.ts Datos que enseña la interfaz (ficha de casilla, prevision de combate, minimapa), por panel en models/
-    palette.ts   Colores de Phaser (los mismos que hud.css)
-  menu/        Pantallas del menu y fondo vivo (liveBackground: partida IA contra IA)
+  view3d/      La vista 3D (three.js): main.ts (arranque: imagenes, modelos y menu o partida), menuFlow.ts
+               (menu principal), gameStart.ts (cada partida en su carga de pagina), match3d.ts (junta la
+               partida), turnControls.ts (el turno), board/terrain/relief (tablero), animations, fx,
+               particles, weather3d, world (luz y bucle), glbModels (modelos de Ashfox), playground/ (units3d.html)
+  ui/          Datos puros para la interfaz: hudModels.ts (ficha de casilla, prevision de combate,
+               minimapa, por panel en models/), sprites.ts (claves de imagen), sides.ts, palette.ts (PAL_CSS)
+  menu/        Pantallas del menu (inicio, partida nueva, campaña, opciones), sin dibujo propio
+  controls/    Teclado, menus, gestos y seleccion: funciones puras que traducen lo pulsado a ordenes
+  audio/       Musica (music.ts, con <audio>)
   net/         Partidas por la red desde el navegador: la conexion con la sala (serverLink), lo que llega
                como partida y jugadas (roomClient), las rutas (roomApi) y «Mis partidas en línea»
   patchNotes/  Novedades: notas de parche de GitHub y del CHANGELOG
-  atlas.ts     Atlas de imagenes del juego (una textura 'atlas' de varias paginas)
+  atlas.ts     Atlas de imagenes de la interfaz (GameImages, loadGameImages), sin motor de juego
   hud/         Interfaz en HTML con Preact encima del lienzo: Hud.tsx (raiz), game/ menus/ overlays/
-               (un componente por fichero), common/ (piezas compartidas), store.ts (estado que publican
-               las escenas; tipos en state.ts, actions.ts y vm/) y hud.css (estilo "retro pixel", por partes en styles/)
-  ui/fx.ts     Efectos pixel: explosiones, textos flotantes, destellos
-  display.ts   Lienzo a resolucion fisica de la pantalla (nitido en pantallas de alta densidad)
-public/assets/ img/ (cada imagen suelta, material de partida), atlas/ (lo que carga el juego) y musica
-tools/art/     Scripts que compilan los graficos a partir de los dibujos guardados (PixelLab, Retro Diffusion)
+               (un componente por fichero), common/ (piezas compartidas), store.ts (estado que publica
+               la vista; tipos en state.ts, actions.ts y vm/) y hud.css (estilo "retro pixel", por partes en styles/)
+public/assets/ img/ (cada imagen suelta, material de partida), atlas/ (lo que carga la interfaz), models/ (GLB) y musica
+tools/art/     Scripts que compilan las imagenes a partir de los dibujos guardados (PixelLab, Retro Diffusion)
+               y ashfox/ (fuentes de los modelos 3D)
 docs/          Especificacion del juego original sacada del codigo Java
 tests/         Tests (vitest)
 scripts/       assets.mjs (compila los graficos), gen-assets.mjs (lista de imagenes) y
@@ -232,27 +213,31 @@ scripts/       assets.mjs (compila los graficos), gen-assets.mjs (lista de image
 
 ### Graficos
 
-Los graficos se compilan antes de jugar, no mientras se juega. `npm run assets` (necesita Python 3
-con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/art/`:
+Los graficos se compilan antes de jugar, no mientras se juega. Hay dos clases:
 
-1. suelos Wang, montañas y bosques, edificios, unidades con sus colores de bando, flores, cactus y
-   muñecos de nieve (desde los dibujos ya guardados en `tools/art/`: no llama a ningun servicio de pago);
-2. laminas de costa, agua organica, olas, espuma de la orilla y niebla (`public/assets/img/blob`, `anim`);
-   los iconos de la interfaz (`tools/art/icons/iconos.txt` → `public/assets/img/ui`, claves `ui/vida`,
+- **Modelos 3D** (unidades, edificios, casillas y decorado del tablero): se hacen con Ashfox a partir
+  de `tools/art/ashfox/` y se guardan ya exportados en `public/assets/models/` (`.glb`). Ver la skill
+  `ashfox`. Un tipo sin GLB se ve con un modelo de bloques (`src/view3d/models/`).
+- **Imagenes de la interfaz** (retratos, iconos, fichas, miniaturas de mapa): `npm run assets`
+  (necesita Python 3 con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/art/`:
+
+1. montañas y bosques, edificios, unidades con sus colores de bando, flores, cactus y muñecos de nieve
+   (desde los dibujos ya guardados en `tools/art/`: no llama a ningun servicio de pago);
+2. los iconos de la interfaz (`tools/art/icons/iconos.txt` → `public/assets/img/ui`, claves `ui/vida`,
    `ui/dinero`...) y la letra de titulos y botones (`tools/art/font/ilogic.txt` → `src/hud/fonts/ilogic.woff2`),
    las dos dibujadas como rejillas de pixeles en texto: se retocan editando el `.txt`;
-   los iconos de la app (pestaña, PWA y pantalla de inicio) a partir del Soldado azul nuevo
-   (`tools/art/build_app_icons.py` → `public/icons`);
+   retratos, habilidades, clima y banderin; los iconos de la app (pestaña, PWA y pantalla de inicio)
+   a partir del Soldado azul nuevo (`tools/art/build_app_icons.py` → `public/icons`);
 3. la lista de imagenes (`src/assetList.ts`) y el atlas (`public/assets/atlas`: 2 paginas colocadas con MaxRects y
    comprimidas sin perdida con oxipng);
-4. una comprobacion (`tests/assets.test.ts`): que no falte ninguna imagen ni lamina, que cada
+4. una comprobacion (`tests/assets.test.ts`): que no falte ninguna imagen, que cada
    unidad y edificio tenga sus bandos y que nada se salga de la casilla.
 
 Se ejecuta solo antes de `npm run build`; si algo falla, no se compila. Lo compilado se sube al repo:
 GitHub publica la web, las previews y las Releases con esos graficos (`npm run build:ci`, sin Python ni
 `npm run assets`), asi que tras retocar un dibujo hay que ejecutar `npm run assets` y subir lo que cambie. `npm run assets:pack` rehace
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
-En `dist` solo van el atlas, los punteros del raton (`raton*.png`) y los iconos de `public/icons`; en la version de un fichero la musica va solo en mp3.
+En `dist` van el atlas, los modelos GLB, los punteros del raton (`raton*.png`) y los iconos de `public/icons`; en la version de un fichero (que incrusta tambien los `.glb`) la musica va solo en mp3.
 Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
 
 ## Calidad del codigo
@@ -261,19 +246,17 @@ Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` 
   publicar la web; `npm run build` incluye tipos y lint.
 - `npm run format` pone el formato; `git config blame.ignoreRevsFile .git-blame-ignore-revs` para que
   `git blame` se salte el commit que formateo todo.
-- `npm run shots`: capturas de 12 escenas comparadas con `tests/visual/ref/` (informe en
-  `tests/visual/out/index.html`); `npm run shots:update` para aceptar cambios.
+- Lo visual se mira en el navegador (`npm run dev`; `window.ilogic3d` en la consola). Ya no hay
+  capturas comparadas: se quitaron con la vista 2D.
 - `npm run play`: partida por texto (reglas sin graficos), para probar reglas o la IA en segundos.
 
 ### Preparado para trabajar con IA
 
 - `CLAUDE.md` y `AGENTS.md` (el mismo contenido para otras IAs): normas y comandos.
-- `docs/ARQUITECTURA.md` (capas, flujo de un turno, decisiones), `docs/RED.md` (la partida por la red
-  de punta a punta) y `docs/AGENTES.md` (como comprobar el trabajo: API `window.ilogicDebug`, partida
-  por texto, capturas).
-- Skills en `.claude/skills/`: `ilogic-code`, `phaser4` (lleva a las oficiales de Phaser 4 en
-  `node_modules/phaser/skills/`), `arte-retro-diffusion`, `nueva-unidad`, `nueva-mision`,
-  `sacar-version` y `equilibrar`.
+- `docs/ARQUITECTURA.md` (capas, flujo de un turno, vista 3D, decisiones), `docs/RED.md` (la partida
+  por la red de punta a punta) y `docs/AGENTES.md` (como comprobar el trabajo).
+- Skills en `.claude/skills/`: `ilogic-code`, `ashfox` (modelos 3D), `arte-retro-diffusion`,
+  `nueva-unidad`, `nueva-mision`, `sacar-version` y `equilibrar`.
 - `.claude/settings.json`: formato y lint automaticos al editar y proteccion de ficheros generados.
 - GitHub: `@claude` en issues y PRs y revision automatica de PRs (ver "Claude en GitHub").
 
@@ -301,11 +284,10 @@ aceptado o no, queda en `improve/DIARIO.md`. Nada se fusiona sin aprobarlo.
 Para activarlo (una vez): instalar la app de Claude (https://github.com/apps/claude) en el repo y crear
 **uno** de estos secretos en *Settings → Secrets and variables → Actions*: `CLAUDE_CODE_OAUTH_TOKEN`
 (planes Pro/Max: `claude setup-token` en tu ordenador) o `ANTHROPIC_API_KEY`. Sin secreto no hacen
-nada. `.github/workflows/visual.yml` pasa las capturas en las PR que pueden cambiar lo que se ve
-(codigo, graficos, CHANGELOG...) y deja el informe como artefacto.
+nada.
 
 Para gastar pocos minutos de Actions, cada cosa se hace una vez: los tests (`npm run check`) solo en
-las PR (`main` solo cambia por PR), las capturas solo en las PR que tocan algo visible, y la web y las
+las PR (`main` solo cambia por PR), y la web y las
 Releases solo compilan (`npm run build:ci`, unos segundos) con los graficos ya compilados del repo.
 
 ## Commits
@@ -355,14 +337,13 @@ marcados en el codigo con `[CAMBIO]`. Los principales:
 - Mapas: las dos bases siempre existen, estan conectadas por tierra y separadas.
 - IA: ataca solo a lo que puede danar y elige el mejor objetivo, vuelve a repararse,
   avanza hacia la Base del jugador y compra con mas criterio.
-- Interfaz nueva de estilo pixel (HTML y CSS sobre el lienzo): mapa a pantalla completa y nitido
-  a cualquier tamano (zoom entero), menus emergentes junto a la unidad, fichas de terreno y unidad,
-  compra con nombres y estadisticas, camino previsto, prevision de combate, bandeja de unidades
-  sin mover (Tab), zona de amenaza enemiga (T), alcance de cualquier unidad, minimapa, ayuda,
-  resumen de cada ronda, estadisticas finales, gestos tactiles (pellizcar, mantener pulsado),
-  explosiones y efectos pixel, y cartel de cambio de turno. Se conservan los graficos,
+- Tablero en 3D (three.js) con modelos hechos con Ashfox, relieve, agua y clima animados, y una
+  camara que se desplaza, gira y acerca.
+- Interfaz nueva de estilo pixel (HTML y CSS sobre el lienzo): menus emergentes junto a la unidad,
+  fichas de terreno y unidad, compra con nombres y estadisticas, prevision de combate, bandeja de
+  unidades sin mover (Tab), ayuda, estadisticas finales y cartel de cambio de turno. Se conservan
   el logo y el fondo del menu originales (las pantallas de victoria y derrota de 2013 se cambiaron
-  por un final dentro del mapa).
+  por un final dentro de la partida).
 - Guardado y configuracion en el navegador (localStorage).
 - El original no tenia graficos para las esquinas inferiores de las orillas en los temas
   llanura y bosque: se han generado girando las superiores (`c_0_18/19`, `c_2_18/19`).

@@ -1,0 +1,96 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 256px); background = team_blue; background-alpha = 255;
+      palette {
+        team_blue = (#2766c4, #2f74d6, #3d84e2);
+        rim_team_blue_10_r = #6fb0f2;
+        rim_team_blue_6_r = #6fb0f2;
+        belt10x2_x = #5a3a22;
+        belt6x2_x = #5a3a22;
+        brass = (#c09a30, #d8b040, #ecc858);
+        prong_k = #5a3a22;
+        pack = (#6a462a, #7e5432, #8e6040);
+        skin = (#e4b88c, #f1c79b, #f8d4ac);
+        face_k = #1d2a4a;
+        face_m = #8a4a3a;
+        ear_h = #4a2c1c;
+        ear_e = #e0a47e;
+        hair_h = #4a2c1c;
+        camo_blue = (#2766c4, #2f74d6, #3d84e2);
+        camo_blue_spots = (#4a4a2a, #6a6a3a, #8a7a4a);
+        helmet_strap13x2_x = #5a3a22;
+        leather = (#4a2e1a, #5a3a22, #6a4630);
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        lens_shine_w = #ffffff;
+        dark_blue = (#1a468e, #1f56a8, #2a64b8);
+        boot_grey = (#7a726a, #8a8279, #9d958d);
+        sole4_x = #3a3430;
+        sole6_x = #3a3430;
+        gun = (#2a2e38, #343a46, #3e4554);
+        canteen = (#4e5a3a, #5c6a44, #6a7a4e);
+        warhead = (#c02830, #d8323a, #e8484e);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        plate_rim_k = #5a6272;
+        mortar_bore_k = #141824;
+        shell_tips_r = #d8323a;
+      }
+      stamp rim_team_blue_10 { pixels = "rrrrrrrrrr"; r = rim_team_blue_10_r; }
+      stamp rim_team_blue_6 { pixels = "rrrrrr"; r = rim_team_blue_6_r; }
+      stamp belt10x2 { pixels = "xxxxxxxxxx/xxxxxxxxxx"; x = belt10x2_x; }
+      stamp belt6x2 { pixels = "xxxxxx/xxxxxx"; x = belt6x2_x; }
+      stamp prong { pixels = ".k./.k."; k = prong_k; }
+      stamp face { pixels = "............/..kk....kk../..kk....kk../............/....mmmm...."; k = face_k; m = face_m; }
+      stamp ear { pixels = "hhhhhhhhhhh/....ee...../....ee....."; h = ear_h; e = ear_e; }
+      stamp hair { pixels = "hhhhhhhhhhhh/hhhhhhhhhhhh/hhhhhhhhhhhh"; h = hair_h; }
+      stamp helmet_strap13x2 { pixels = "xxxxxxxxxxxxx/xxxxxxxxxxxxx"; x = helmet_strap13x2_x; }
+      stamp lens_shine { pixels = "w"; w = lens_shine_w; }
+      stamp sole4 { pixels = "xxxx"; x = sole4_x; }
+      stamp sole6 { pixels = "xxxxxx"; x = sole6_x; }
+      stamp plate_rim { pixels = "kkkkkkkk/k......k/k......k/k......k/k......k/k......k/kkkkkkkk"; k = plate_rim_k; }
+      stamp mortar_bore { pixels = ".k./kkk/.k."; k = mortar_bore_k; }
+      stamp shell_tips { pixels = "r.r/.../r.r"; r = shell_tips_r; }
+      chart torso box { origin = (0px, 41px); fill = team_blue; face north { stamp rim_team_blue_10 { at = (0px, 0px); } stamp belt10x2 { at = (0px, 6px); } } face south { stamp rim_team_blue_10 { at = (0px, 0px); } stamp belt10x2 { at = (0px, 6px); } } face east { stamp rim_team_blue_6 { at = (0px, 0px); } stamp belt6x2 { at = (0px, 6px); } } face west { stamp rim_team_blue_6 { at = (0px, 0px); } stamp belt6x2 { at = (0px, 6px); } } }
+      chart buckle box { origin = (46px, 134px); fill = brass; face north { stamp prong { at = (0px, 0px); } } }
+      chart pouch_left box { origin = (55px, 134px); fill = pack; }
+      chart pouch_right box { origin = (0px, 139px); fill = pack; }
+      chart head box { origin = (0px, 0px); fill = skin; face north { stamp face { at = (0px, 3px); } } face east { stamp ear { at = (0px, 3px); } } face west { stamp ear { at = (0px, 3px); } } face south { stamp hair { at = (0px, 3px); } } }
+      chart helmet box { origin = (0px, 21px); fill = camo_blue; pattern blotch { paint = camo_blue_spots; scale = (1px, 1px, 1px); density = 0.5ratio; phase = 7; } face east { stamp helmet_strap13x2 { at = (0px, 2px); } } face west { stamp helmet_strap13x2 { at = (0px, 2px); } } }
+      chart helmet_top box { origin = (25px, 56px); fill = camo_blue; pattern blotch { paint = camo_blue_spots; scale = (1px, 1px, 1px); density = 0.5ratio; phase = 7; } }
+      chart neck_guard box { origin = (0px, 128px); fill = camo_blue; pattern blotch { paint = camo_blue_spots; scale = (1px, 1px, 1px); density = 0.5ratio; phase = 7; } }
+      chart goggles box { origin = (33px, 128px); fill = leather; }
+      chart lens_left box { origin = (7px, 139px); fill = glass; face north { stamp lens_shine { at = (0px, 0px); } } }
+      chart lens_right box { origin = (18px, 139px); fill = glass; face north { stamp lens_shine { at = (0px, 0px); } } }
+      chart thigh_left box { origin = (23px, 69px); fill = dark_blue; }
+      chart shin_left box { origin = (44px, 69px); fill = dark_blue; }
+      chart boot_left box { origin = (21px, 81px); fill = boot_grey; face north { stamp sole4 { at = (0px, 2px); } } face south { stamp sole4 { at = (0px, 2px); } } face east { stamp sole6 { at = (0px, 2px); } } face west { stamp sole6 { at = (0px, 2px); } } }
+      chart thigh_right box { origin = (0px, 81px); fill = dark_blue; }
+      chart shin_right box { origin = (42px, 81px); fill = dark_blue; }
+      chart boot_right box { origin = (0px, 92px); fill = boot_grey; face north { stamp sole4 { at = (0px, 2px); } } face south { stamp sole4 { at = (0px, 2px); } } face east { stamp sole6 { at = (0px, 2px); } } face west { stamp sole6 { at = (0px, 2px); } } }
+      chart upper_arm_left box { origin = (0px, 69px); fill = team_blue; }
+      chart forearm_left box { origin = (21px, 92px); fill = team_blue; }
+      chart hand_left box { origin = (31px, 112px); fill = skin; }
+      chart upper_arm_right box { origin = (40px, 92px); fill = team_blue; }
+      chart forearm_right box { origin = (0px, 102px); fill = team_blue; }
+      chart hand_right box { origin = (44px, 112px); fill = skin; }
+      chart shell_fins box { origin = (0px, 134px); fill = gun; }
+      chart shell_body box { origin = (0px, 121px); fill = canteen; }
+      chart shell_tip box { origin = (29px, 139px); fill = warhead; }
+      chart mortar_plate box { origin = (0px, 112px); fill = steel; face up { stamp plate_rim { at = (0px, 0px); } } }
+      chart mortar_tube box { origin = (55px, 21px); fill = gun; }
+      chart mortar_muzzle box { origin = (13px, 134px); fill = steel; face up { stamp mortar_bore { at = (0px, 0px); } } }
+      chart bipod_clamp box { origin = (26px, 134px); fill = steel; }
+      chart bipod_leg_left box { origin = (33px, 41px); fill = gun; }
+      chart bipod_leg_right box { origin = (0px, 56px); fill = gun; }
+      chart bipod_wheel box { origin = (39px, 134px); fill = gun; }
+      chart shell_box box { origin = (19px, 102px); fill = canteen; face up { stamp shell_tips { at = (1px, 1px); } } }
+      chart loose_shell_0 box { origin = (9px, 121px); fill = canteen; }
+      chart loose_shell_1 box { origin = (22px, 121px); fill = canteen; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

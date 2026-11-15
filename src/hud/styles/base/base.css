@@ -43,8 +43,7 @@
 html,
 body {
   margin: 0;
-  /* Punteros propios del raton (los pone BootScene: --cursor y --cursor-button). */
-  cursor: var(--cursor, auto);
+  cursor: auto;
   height: 100%;
   background: var(--ink);
   overflow: hidden;

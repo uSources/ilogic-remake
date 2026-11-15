@@ -1,0 +1,76 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone hull to skeleton.hull;
+    bind bone wheels_front to skeleton.wheels_front;
+    bind bone wheels_back to skeleton.wheels_back;
+    bind bone turret to skeleton.turret;
+    bind bone barrel to skeleton.barrel;
+    geometry {
+      bone hull {
+        cube tub { origin = (-9u, 4u, -14u); size = (18u, 7u, 26u); surface = skin.tub; }
+        cube hood { origin = (-8u, 11u, -14u); size = (16u, 2u, 9u); surface = skin.hood; }
+        cube fender_left { origin = (-13u, 10u, -15u); size = (4u, 1u, 12u); surface = skin.fender_left; }
+        cube fender_right { origin = (9u, 10u, -15u); size = (4u, 1u, 12u); surface = skin.fender_right; }
+        cube rear_fender_left { origin = (-13u, 10u, 3u); size = (4u, 1u, 12u); surface = skin.rear_fender_left; }
+        cube rear_fender_right { origin = (9u, 10u, 3u); size = (4u, 1u, 12u); surface = skin.rear_fender_right; }
+        cube headlight_left { origin = (-8u, 9u, -15u); size = (3u, 2u, 1u); surface = skin.headlight_left; }
+        cube headlight_right { origin = (5u, 9u, -15u); size = (3u, 2u, 1u); surface = skin.headlight_right; }
+        cube bumper { origin = (-10u, 4u, -16u); size = (20u, 2u, 1u); surface = skin.bumper; }
+        cube spare_wheel { origin = (-4u, 4u, 12u); size = (8u, 8u, 2u); surface = skin.spare_wheel; }
+        cube jerrycan { origin = (5u, 11u, 9u); size = (3u, 4u, 2u); surface = skin.jerrycan; }
+        cube windshield_post_left { origin = (-8.5u, 13u, -5.5u); size = (1u, 6u, 1u); surface = skin.windshield_post_left; }
+        cube windshield_post_right { origin = (7.5u, 13u, -5.5u); size = (1u, 6u, 1u); surface = skin.windshield_post_right; }
+        cube windshield_top { origin = (-8.5u, 19u, -5.5u); size = (17u, 1u, 1u); surface = skin.windshield_top; }
+        cube windshield { origin = (-7.5u, 13u, -5u); size = (15u, 6u, 1u); surface = skin.windshield; }
+        cube seat_driver { origin = (-8u, 11u, 3u); size = (7u, 5u, 2u); surface = skin.seat_driver; }
+        cube seat_passenger { origin = (1u, 11u, 3u); size = (7u, 5u, 2u); surface = skin.seat_passenger; }
+        cube steering_wheel { origin = (-6u, 13u, -4.5u); size = (4u, 4u, 1u); surface = skin.steering_wheel; }
+        cube driver_torso { origin = (-7u, 11u, -1u); size = (6u, 6u, 4u); surface = skin.driver_torso; }
+        cube driver_head { origin = (-8u, 17u, -1u); size = (8u, 7u, 7u); surface = skin.driver_head; }
+        cube driver_helmet { origin = (-9u, 22u, -2u); size = (10u, 4u, 9u); surface = skin.driver_helmet; }
+        cube driver_goggles { origin = (-8u, 22.5u, -3u); size = (8u, 2u, 1u); surface = skin.driver_goggles; }
+        cube driver_lens_left { origin = (-7.5u, 23u, -4u); size = (3u, 1u, 1u); surface = skin.driver_lens_left; }
+        cube driver_lens_right { origin = (-3.5u, 23u, -4u); size = (3u, 1u, 1u); surface = skin.driver_lens_right; }
+        cube driver_arm_left { origin = (-9u, 13u, -4u); size = (2u, 2u, 4u); surface = skin.driver_arm_left; }
+        cube driver_arm_right { origin = (-3u, 13u, -4u); size = (2u, 2u, 4u); surface = skin.driver_arm_right; }
+        cube driver_hand_left { origin = (-8.5u, 13.5u, -5.5u); size = (2u, 2u, 1u); surface = skin.driver_hand_left; }
+        cube driver_hand_right { origin = (-3.5u, 13.5u, -5.5u); size = (2u, 2u, 1u); surface = skin.driver_hand_right; }
+        cube rollbar_left { origin = (-9u, 11u, 6u); size = (1u, 9u, 1u); surface = skin.rollbar_left; }
+        cube rollbar_right { origin = (8u, 11u, 6u); size = (1u, 9u, 1u); surface = skin.rollbar_right; }
+        cube rollbar_top { origin = (-9u, 20u, 6u); size = (18u, 1u, 1u); surface = skin.rollbar_top; }
+        bone turret {
+          cube gun_post { origin = (3u, 11u, 9u); size = (1u, 11u, 1u); surface = skin.gun_post; }
+          bone barrel {
+            cube gun_receiver { origin = (2u, 22u, 5u); size = (3u, 3u, 6u); surface = skin.gun_receiver; }
+            cube gun_jacket { origin = (2.5u, 22.5u, -2u); size = (2u, 2u, 7u); surface = skin.gun_jacket; }
+            cube gun_barrel { origin = (3u, 23u, -7u); size = (1u, 1u, 5u); surface = skin.gun_barrel; }
+            cube gun_muzzle { origin = (2.5u, 22.5u, -9u); size = (2u, 2u, 2u); surface = skin.gun_muzzle; }
+            cube gun_ammo { origin = (5u, 21u, 6u); size = (2u, 3u, 3u); surface = skin.gun_ammo; }
+            cube gun_handles { origin = (2.5u, 22.5u, 11u); size = (2u, 2u, 1u); surface = skin.gun_handles; }
+          }
+        }
+      }
+      bone wheels_front {
+        cube wheel_front_left { origin = (-13u, 0u, -12u); size = (4u, 10u, 6u); surface = skin.wheel_front_left; }
+        cube wheel_front_left_round { origin = (-12.5u, 2u, -14u); size = (3u, 6u, 10u); surface = skin.wheel_front_left_round; }
+        cube wheel_front_left_cap { origin = (-14u, 3u, -11u); size = (1u, 4u, 4u); surface = skin.wheel_front_left_cap; }
+        cube wheel_front_right { origin = (9u, 0u, -12u); size = (4u, 10u, 6u); surface = skin.wheel_front_right; }
+        cube wheel_front_right_round { origin = (9.5u, 2u, -14u); size = (3u, 6u, 10u); surface = skin.wheel_front_right_round; }
+        cube wheel_front_right_cap { origin = (13u, 3u, -11u); size = (1u, 4u, 4u); surface = skin.wheel_front_right_cap; }
+      }
+      bone wheels_back {
+        cube wheel_back_left { origin = (-13u, 0u, 6u); size = (4u, 10u, 6u); surface = skin.wheel_back_left; }
+        cube wheel_back_left_round { origin = (-12.5u, 2u, 4u); size = (3u, 6u, 10u); surface = skin.wheel_back_left_round; }
+        cube wheel_back_left_cap { origin = (-14u, 3u, 7u); size = (1u, 4u, 4u); surface = skin.wheel_back_left_cap; }
+        cube wheel_back_right { origin = (9u, 0u, 6u); size = (4u, 10u, 6u); surface = skin.wheel_back_right; }
+        cube wheel_back_right_round { origin = (9.5u, 2u, 4u); size = (3u, 6u, 10u); surface = skin.wheel_back_right_round; }
+        cube wheel_back_right_cap { origin = (13u, 3u, 7u); size = (1u, 4u, 4u); surface = skin.wheel_back_right_cap; }
+      }
+    }
+  }
+}

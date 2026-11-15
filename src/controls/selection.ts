@@ -2,7 +2,7 @@
  * [CAMBIO] Seleccion de unidades como en los juegos de estrategia en tiempo real (StarCraft, Age of
  * Empires, Total War). Logica pura: recibe lo que ha pasado (clic, doble clic, recuadro, tecla de
  * grupo) y devuelve la seleccion nueva. No sabe de raton, dedo ni teclado: el adaptador de cada
- * mando decide el gesto y GameScene aplica el resultado (tests/selection.test.ts).
+ * mando decide el gesto y la partida aplica el resultado (tests/selection.test.ts).
  *
  * - Clic en una unidad propia: solo esa.
  * - Mayusculas + clic: la añade o la quita.

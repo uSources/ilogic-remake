@@ -1,0 +1,76 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone hull to skeleton.hull;
+    bind bone wheels_front to skeleton.wheels_front;
+    bind bone wheels_back to skeleton.wheels_back;
+    bind bone turret to skeleton.turret;
+    bind bone barrel to skeleton.barrel;
+    geometry {
+      bone hull {
+        cube cabin { origin = (-10u, 5u, -16u); size = (20u, 14u, 9u); surface = skin.cabin; }
+        cube cabin_roof { origin = (-9u, 19u, -15u); size = (18u, 1u, 8u); surface = skin.cabin_roof; }
+        cube windshield { origin = (-8u, 12u, -17u); size = (16u, 6u, 1u); surface = skin.windshield; }
+        cube windshield_bar { origin = (-0.5u, 12u, -17.5u); size = (1u, 6u, 1u); surface = skin.windshield_bar; }
+        cube headlight_left { origin = (-10u, 7u, -17u); size = (3u, 2u, 1u); surface = skin.headlight_left; }
+        cube headlight_right { origin = (7u, 7u, -17u); size = (3u, 2u, 1u); surface = skin.headlight_right; }
+        cube bumper { origin = (-11u, 4u, -18u); size = (22u, 2u, 1u); surface = skin.bumper; }
+        cube mirror_left { origin = (-12u, 14u, -14u); size = (2u, 3u, 1u); surface = skin.mirror_left; }
+        cube mirror_right { origin = (10u, 14u, -14u); size = (2u, 3u, 1u); surface = skin.mirror_right; }
+        cube bed { origin = (-11u, 5u, -7u); size = (22u, 3u, 22u); surface = skin.bed; }
+        cube bed_rail_left { origin = (-11u, 8u, -7u); size = (1u, 2u, 22u); surface = skin.bed_rail_left; }
+        cube bed_rail_right { origin = (10u, 8u, -7u); size = (1u, 2u, 22u); surface = skin.bed_rail_right; }
+        cube spare_missile_crate { origin = (-10u, 8u, 2u); size = (4u, 3u, 12u); surface = skin.spare_missile_crate; }
+        cube tail_light_left { origin = (-10u, 6u, 15u); size = (2u, 1u, 1u); surface = skin.tail_light_left; }
+        cube tail_light_right { origin = (8u, 6u, 15u); size = (2u, 1u, 1u); surface = skin.tail_light_right; }
+        cube outrigger_arm_left { origin = (-14u, 5u, 15u); size = (3u, 2u, 2u); surface = skin.outrigger_arm_left; }
+        cube outrigger_leg_left { origin = (-14u, 1u, 15u); size = (2u, 4u, 2u); surface = skin.outrigger_leg_left; }
+        cube outrigger_foot_left { origin = (-15u, 0u, 14u); size = (4u, 1u, 4u); surface = skin.outrigger_foot_left; }
+        cube outrigger_arm_right { origin = (11u, 5u, 15u); size = (3u, 2u, 2u); surface = skin.outrigger_arm_right; }
+        cube outrigger_leg_right { origin = (12u, 1u, 15u); size = (2u, 4u, 2u); surface = skin.outrigger_leg_right; }
+        cube outrigger_foot_right { origin = (11u, 0u, 14u); size = (4u, 1u, 4u); surface = skin.outrigger_foot_right; }
+        bone turret {
+          cube turntable { origin = (-6u, 8u, 0u); size = (12u, 1u, 12u); surface = skin.turntable; }
+          cube launcher_base { origin = (-5u, 9u, 1u); size = (10u, 3u, 10u); surface = skin.launcher_base; }
+          cube piston_sleeve_left { origin = (-4.5u, 8u, -6u); size = (3u, 6u, 3u); surface = skin.piston_sleeve_left; }
+          cube piston_rod_left { origin = (-4u, 14u, -5.5u); size = (2u, 6u, 2u); surface = skin.piston_rod_left; }
+          cube piston_sleeve_right { origin = (1.5u, 8u, -6u); size = (3u, 6u, 3u); surface = skin.piston_sleeve_right; }
+          cube piston_rod_right { origin = (2u, 14u, -5.5u); size = (2u, 6u, 2u); surface = skin.piston_rod_right; }
+          cube control_box { origin = (5u, 12u, 4u); size = (3u, 4u, 3u); surface = skin.control_box; }
+          bone barrel {
+            cube rail { origin = (-3u, 11u, -14u); size = (6u, 2u, 22u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.rail; }
+            cube rail_clamp_left_front { origin = (-3u, 13u, -9u); size = (1u, 2u, 2u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.rail_clamp_left_front; }
+            cube rail_clamp_left_back { origin = (-3u, 13u, 0u); size = (1u, 2u, 2u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.rail_clamp_left_back; }
+            cube rail_clamp_right_front { origin = (2u, 13u, -9u); size = (1u, 2u, 2u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.rail_clamp_right_front; }
+            cube rail_clamp_right_back { origin = (2u, 13u, 0u); size = (1u, 2u, 2u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.rail_clamp_right_back; }
+            cube missile { origin = (-2u, 13u, -15u); size = (4u, 4u, 19u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.missile; }
+            cube warhead { origin = (-1.5u, 13.5u, -18u); size = (3u, 3u, 3u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.warhead; }
+            cube nozzle { origin = (-1.5u, 13.5u, 4u); size = (3u, 3u, 1u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.nozzle; }
+            cube fin_flat { origin = (-4u, 14.5u, 1u); size = (8u, 1u, 3u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.fin_flat; }
+            cube fin_up { origin = (-0.5u, 17u, 1u); size = (1u, 3u, 3u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 11u, 6u); surface = skin.fin_up; }
+          }
+        }
+      }
+      bone wheels_front {
+        cube wheel_front_left { origin = (-15u, 0u, -13.5u); size = (4u, 8u, 5u); surface = skin.wheel_front_left; }
+        cube wheel_front_left_round { origin = (-14.5u, 1.5u, -15u); size = (3u, 5u, 8u); surface = skin.wheel_front_left_round; }
+        cube wheel_front_left_cap { origin = (-16u, 2u, -13u); size = (1u, 4u, 4u); surface = skin.wheel_front_left_cap; }
+        cube wheel_front_right { origin = (11u, 0u, -13.5u); size = (4u, 8u, 5u); surface = skin.wheel_front_right; }
+        cube wheel_front_right_round { origin = (11.5u, 1.5u, -15u); size = (3u, 5u, 8u); surface = skin.wheel_front_right_round; }
+        cube wheel_front_right_cap { origin = (15u, 2u, -13u); size = (1u, 4u, 4u); surface = skin.wheel_front_right_cap; }
+      }
+      bone wheels_back {
+        cube wheel_back_left { origin = (-15u, 0u, 6.5u); size = (4u, 8u, 5u); surface = skin.wheel_back_left; }
+        cube wheel_back_left_round { origin = (-14.5u, 1.5u, 5u); size = (3u, 5u, 8u); surface = skin.wheel_back_left_round; }
+        cube wheel_back_left_cap { origin = (-16u, 2u, 7u); size = (1u, 4u, 4u); surface = skin.wheel_back_left_cap; }
+        cube wheel_back_right { origin = (11u, 0u, 6.5u); size = (4u, 8u, 5u); surface = skin.wheel_back_right; }
+        cube wheel_back_right_round { origin = (11.5u, 1.5u, 5u); size = (3u, 5u, 8u); surface = skin.wheel_back_right_round; }
+        cube wheel_back_right_cap { origin = (15u, 2u, 7u); size = (1u, 4u, 4u); surface = skin.wheel_back_right_cap; }
+      }
+    }
+  }
+}

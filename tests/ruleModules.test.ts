@@ -28,6 +28,12 @@ const SWITCHED_OFF: Partial<Record<RuleModuleId, Partial<MatchSettings>>> = {
   ambush: { ambush: false },
   counterattack: { counterattack: false },
   bounty: { bounty: 0 },
+  elevation: { elevation: false },
+};
+
+/** Los ajustes que encienden los modulos que vienen apagados por defecto (los demas, con los de siempre). */
+const SWITCHED_ON: Partial<Record<RuleModuleId, Partial<MatchSettings>>> = {
+  elevation: { elevation: true },
 };
 
 describe('modulos de reglas (RULE_MODULES)', () => {
@@ -38,8 +44,8 @@ describe('modulos de reglas (RULE_MODULES)', () => {
 
   it('cada interruptor quita su modulo, y solo ese', () => {
     for (const [id, change] of Object.entries(SWITCHED_OFF)) {
-      const on = blankState(DEFAULTS);
-      const off = blankState(settingsWith(defaultContent(), change));
+      const on = blankState(settingsWith(defaultContent(), SWITCHED_ON[id as RuleModuleId] ?? {}));
+      const off = blankState(settingsWith(defaultContent(), { ...SWITCHED_ON[id as RuleModuleId], ...change }));
       expect(isRuleOn(on, id as RuleModuleId), id).toBe(true);
       expect(isRuleOn(off, id as RuleModuleId), id).toBe(false);
       const othersOn = RULE_MODULES.filter((module) => module.id !== id).map((module) => isRuleOn(off, module.id));

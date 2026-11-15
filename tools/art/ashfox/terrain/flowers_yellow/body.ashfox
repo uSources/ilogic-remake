@@ -1,0 +1,53 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube a_leaves { origin = (-6u, 0u, -7u); size = (4u, 1u, 4u); surface = skin.a_leaves; }
+        cube b_leaves { origin = (-0.5u, 0u, -3.5u); size = (3u, 1u, 3u); surface = skin.b_leaves; }
+        cube c_leaves { origin = (-3.5u, 0u, -4.5u); size = (3u, 1u, 3u); surface = skin.c_leaves; }
+        cube f0_stem { origin = (0u, 0u, 5u); size = (1u, 3u, 1u); surface = skin.f0_stem; }
+        cube f0_center { origin = (0u, 3u, 5u); size = (1u, 1u, 1u); surface = skin.f0_center; }
+        cube f0_petal0 { origin = (-1u, 3u, 5u); size = (1u, 1u, 1u); surface = skin.f0_petal0; }
+        cube f0_petal1 { origin = (1u, 3u, 5u); size = (1u, 1u, 1u); surface = skin.f0_petal1; }
+        cube f0_petal2 { origin = (0u, 3u, 4u); size = (1u, 1u, 1u); surface = skin.f0_petal2; }
+        cube f0_petal3 { origin = (0u, 3u, 6u); size = (1u, 1u, 1u); surface = skin.f0_petal3; }
+        cube f1_stem { origin = (4u, 0u, -5u); size = (1u, 3u, 1u); surface = skin.f1_stem; }
+        cube f1_center { origin = (4u, 3u, -5u); size = (1u, 1u, 1u); surface = skin.f1_center; }
+        cube f1_petal0 { origin = (3u, 3u, -5u); size = (1u, 1u, 1u); surface = skin.f1_petal0; }
+        cube f1_petal1 { origin = (5u, 3u, -5u); size = (1u, 1u, 1u); surface = skin.f1_petal1; }
+        cube f1_petal2 { origin = (4u, 3u, -6u); size = (1u, 1u, 1u); surface = skin.f1_petal2; }
+        cube f1_petal3 { origin = (4u, 3u, -4u); size = (1u, 1u, 1u); surface = skin.f1_petal3; }
+        cube f2_stem { origin = (-5u, 0u, 5u); size = (1u, 4u, 1u); surface = skin.f2_stem; }
+        cube f2_center { origin = (-5u, 4u, 5u); size = (1u, 1u, 1u); surface = skin.f2_center; }
+        cube f2_petal0 { origin = (-6u, 4u, 5u); size = (1u, 1u, 1u); surface = skin.f2_petal0; }
+        cube f2_petal1 { origin = (-4u, 4u, 5u); size = (1u, 1u, 1u); surface = skin.f2_petal1; }
+        cube f2_petal2 { origin = (-5u, 4u, 4u); size = (1u, 1u, 1u); surface = skin.f2_petal2; }
+        cube f2_petal3 { origin = (-5u, 4u, 6u); size = (1u, 1u, 1u); surface = skin.f2_petal3; }
+        cube f3_stem { origin = (4u, 0u, 0u); size = (1u, 4u, 1u); surface = skin.f3_stem; }
+        cube f3_center { origin = (4u, 4u, 0u); size = (1u, 1u, 1u); surface = skin.f3_center; }
+        cube f3_petal0 { origin = (3u, 4u, 0u); size = (1u, 1u, 1u); surface = skin.f3_petal0; }
+        cube f3_petal1 { origin = (5u, 4u, 0u); size = (1u, 1u, 1u); surface = skin.f3_petal1; }
+        cube f3_petal2 { origin = (4u, 4u, -1u); size = (1u, 1u, 1u); surface = skin.f3_petal2; }
+        cube f3_petal3 { origin = (4u, 4u, 1u); size = (1u, 1u, 1u); surface = skin.f3_petal3; }
+        cube f4_stem { origin = (-1u, 0u, 2u); size = (1u, 4u, 1u); surface = skin.f4_stem; }
+        cube f4_center { origin = (-1u, 4u, 2u); size = (1u, 1u, 1u); surface = skin.f4_center; }
+        cube f4_petal0 { origin = (-2u, 4u, 2u); size = (1u, 1u, 1u); surface = skin.f4_petal0; }
+        cube f4_petal1 { origin = (0u, 4u, 2u); size = (1u, 1u, 1u); surface = skin.f4_petal1; }
+        cube f4_petal2 { origin = (-1u, 4u, 1u); size = (1u, 1u, 1u); surface = skin.f4_petal2; }
+        cube f4_petal3 { origin = (-1u, 4u, 3u); size = (1u, 1u, 1u); surface = skin.f4_petal3; }
+        cube f5_stem { origin = (-4u, 0u, 2u); size = (1u, 4u, 1u); surface = skin.f5_stem; }
+        cube f5_center { origin = (-4u, 4u, 2u); size = (1u, 1u, 1u); surface = skin.f5_center; }
+        cube f5_petal0 { origin = (-5u, 4u, 2u); size = (1u, 1u, 1u); surface = skin.f5_petal0; }
+        cube f5_petal1 { origin = (-3u, 4u, 2u); size = (1u, 1u, 1u); surface = skin.f5_petal1; }
+        cube f5_petal2 { origin = (-4u, 4u, 1u); size = (1u, 1u, 1u); surface = skin.f5_petal2; }
+        cube f5_petal3 { origin = (-4u, 4u, 3u); size = (1u, 1u, 1u); surface = skin.f5_petal3; }
+      }
+    }
+  }
+}

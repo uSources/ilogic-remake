@@ -1,0 +1,71 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 256px); background = pavement; background-alpha = 255;
+      palette {
+        pavement = (#aea896, #b9b2a0, #c4bdaa);
+        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+        curb28_k = #7a7468;
+        body_red = (#a42424, #b8282a, #c8383a);
+        rim_body_red_18_r = #ee6a60;
+        city_windows_north_w = #14202c;
+        city_windows_north_l = #ffe08a;
+        city_windows_north_f = #e8ecf2;
+        city_windows_south_w = #14202c;
+        city_windows_south_l = #ffe08a;
+        city_windows_south_f = #e8ecf2;
+        city_windows_east_w = #14202c;
+        city_windows_east_l = #ffe08a;
+        city_windows_east_f = #e8ecf2;
+        city_windows_west_w = #14202c;
+        city_windows_west_l = #ffe08a;
+        city_windows_west_f = #e8ecf2;
+        city_door_d = #2a3a48;
+        city_door_g = #9fe3ff;
+        trim_red = (#741416, #86181a, #962420);
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+        asphalt = (#1c2028, #2a2e38, #3c4250);
+        air_grille_k = #3a4050;
+        trunk = (#4a2c18, #6e4224, #8e5a32);
+        tank_hoops_k = #3a2416;
+        warhead = (#c02830, #d8323a, #e8484e);
+        brick = (#8a3a2a, #9e4630, #b05638);
+        leaf = (#25661f, #3c8f2e, #62bd44);
+        leaf_spots = (#4fae3a, #78d055, #a2e670);
+        lamp = (#e8c020, #f8d838, #fff070);
+      }
+      stamp curb28 { pixels = "kkkkkkkkkkkkkkkkkkkkkkkkkkkk"; k = curb28_k; }
+      stamp rim_body_red_18 { pixels = "rrrrrrrrrrrrrrrrrr"; r = rim_body_red_18_r; }
+      stamp city_windows_north { pixels = ".ff.ff.ff.ff.ff./.ll.ww.ww.ww.ww./.ll.ww.ww.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ll.ww.ww.ww./.ww.ll.ww.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ll.ww.ww./.ww.ww.ll.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ww.ll.ww./.ww.ww.ww.ll.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ww.ww.ll./.ww.ww.ww.ww.ll."; w = city_windows_north_w; l = city_windows_north_l; f = city_windows_north_f; }
+      stamp city_windows_south { pixels = ".ff.ff.ff.ff.ff./.ww.ww.ll.ww.ww./.ww.ww.ll.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ww.ll.ww./.ww.ww.ww.ll.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ww.ww.ll./.ww.ww.ww.ww.ll./................/.ff.ff.ff.ff.ff./.ll.ww.ww.ww.ww./.ll.ww.ww.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ll.ww.ww.ww./.ww.ll.ww.ww.ww."; w = city_windows_south_w; l = city_windows_south_l; f = city_windows_south_f; }
+      stamp city_windows_east { pixels = ".ff.ff.ff.ff.ff./.ww.ww.ww.ww.ll./.ww.ww.ww.ww.ll./................/.ff.ff.ff.ff.ff./.ll.ww.ww.ww.ww./.ll.ww.ww.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ll.ww.ww.ww./.ww.ll.ww.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ll.ww.ww./.ww.ww.ll.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ww.ll.ww./.ww.ww.ww.ll.ww."; w = city_windows_east_w; l = city_windows_east_l; f = city_windows_east_f; }
+      stamp city_windows_west { pixels = ".ff.ff.ff.ff.ff./.ww.ll.ww.ww.ww./.ww.ll.ww.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ll.ww.ww./.ww.ww.ll.ww.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ww.ll.ww./.ww.ww.ww.ll.ww./................/.ff.ff.ff.ff.ff./.ww.ww.ww.ww.ll./.ww.ww.ww.ww.ll./................/.ff.ff.ff.ff.ff./.ll.ww.ww.ww.ww./.ll.ww.ww.ww.ww."; w = city_windows_west_w; l = city_windows_west_l; f = city_windows_west_f; }
+      stamp city_door { pixels = "dddddd/dggggd/dggggd/dggggd/dggggd"; d = city_door_d; g = city_door_g; }
+      stamp air_grille { pixels = "k.k./.k.k"; k = air_grille_k; }
+      stamp tank_hoops { pixels = "kkkkk/...../kkkkk"; k = tank_hoops_k; }
+      chart plinth box { origin = (0px, 47px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } face north { stamp curb28 { at = (0px, 1px); } } face south { stamp curb28 { at = (0px, 1px); } } face east { stamp curb28 { at = (0px, 1px); } } face west { stamp curb28 { at = (0px, 1px); } } }
+      chart tower box { origin = (0px, 0px); fill = body_red; face north { stamp rim_body_red_18 { at = (0px, 0px); } stamp city_windows_north { at = (1px, 1px); } stamp city_door { at = (6px, 23px); } } face south { stamp rim_body_red_18 { at = (0px, 0px); } stamp city_windows_south { at = (1px, 1px); } } face east { stamp rim_body_red_18 { at = (0px, 0px); } stamp city_windows_east { at = (1px, 1px); } } face west { stamp rim_body_red_18 { at = (0px, 0px); } stamp city_windows_west { at = (1px, 1px); } } }
+      chart canopy box { origin = (65px, 121px); fill = trim_red; }
+      chart canopy_post_left box { origin = (21px, 121px); fill = metal; }
+      chart canopy_post_right box { origin = (26px, 121px); fill = metal; }
+      chart parapet box { origin = (0px, 78px); fill = trim_red; }
+      chart roof box { origin = (0px, 101px); fill = asphalt; }
+      chart air_unit_0 box { origin = (98px, 121px); fill = metal; face north { stamp air_grille { at = (0px, 0px); } } }
+      chart air_unit_1 box { origin = (113px, 121px); fill = metal; face north { stamp air_grille { at = (0px, 0px); } } }
+      chart water_tank box { origin = (78px, 101px); fill = trunk; face north { stamp tank_hoops { at = (0px, 1px); } } }
+      chart antenna box { origin = (99px, 101px); fill = metal; }
+      chart antenna_light box { origin = (13px, 131px); fill = warhead; }
+      chart planter_left_pot box { origin = (31px, 121px); fill = brick; }
+      chart planter_left_bush box { origin = (104px, 101px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; } }
+      chart planter_right_pot box { origin = (48px, 121px); fill = brick; }
+      chart planter_right_bush box { origin = (0px, 121px); fill = leaf; pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; } }
+      chart lamp_post box { origin = (73px, 101px); fill = metal; }
+      chart lamp_light box { origin = (0px, 131px); fill = lamp; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

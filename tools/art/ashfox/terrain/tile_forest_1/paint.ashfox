@@ -1,0 +1,28 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = earth; background-alpha = 255;
+      palette {
+        earth = (#5a3420, #8a5530, #b47a45);
+        earth_spots = (#4a2a18, #6e4228, #8f5b36);
+        forest_floor = (#2f6f24, #468f2f, #62ae3c);
+        forest_floor_spots = (#255a1d, #357a26, #4e9630);
+        leaves_o = #b06a2a;
+        leaves_y = #c8a030;
+        moss_m = #2a6420;
+        mushroom_r = #e8323a;
+        mushroom_w = #fff2e0;
+      }
+      stamp leaves { pixels = "o.y/.o."; o = leaves_o; y = leaves_y; }
+      stamp moss { pixels = "mm/m."; m = moss_m; }
+      stamp mushroom { pixels = "rw"; r = mushroom_r; w = mushroom_w; }
+      chart base box { origin = (0px, 0px); fill = earth; pattern blotch { paint = earth_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 20; } }
+      chart top box { origin = (0px, 27px); fill = forest_floor; pattern blotch { paint = forest_floor_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 20; } face up { stamp leaves { at = (11px, 12px); } stamp leaves { at = (1px, 11px); } stamp leaves { at = (8px, 1px); } stamp leaves { at = (1px, 10px); } stamp moss { at = (14px, 10px); } stamp moss { at = (3px, 1px); } stamp moss { at = (4px, 11px); } stamp mushroom { at = (7px, 5px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

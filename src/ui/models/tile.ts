@@ -1,4 +1,4 @@
-import type Phaser from 'phaser';
+import type { GameImages } from '../../atlas';
 import type { AbilityDef, MoveType, UnitAttack, UnitType } from '../../core/content';
 import { defaultContent } from '../../core/content/default';
 import type { DeepReadonly } from '../../core/util/freeze';
@@ -115,7 +115,7 @@ export function captureHintText(s: GameState, unit: Unit): string | undefined {
  * ve). `selected` es la unidad que se esta moviendo, que se enseña aunque su sprite este oculto.
  */
 export function tileVM(
-  textures: Phaser.Textures.TextureManager,
+  textures: GameImages,
   s: GameState,
   pos: Pos,
   view: { viewer: TeamId; vis: Grid<boolean>; hidden: ReadonlySet<number>; selected?: Unit | null },

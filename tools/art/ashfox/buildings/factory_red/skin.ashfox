@@ -1,0 +1,24 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 128px; height = 128px; }
+    chart plinth box { width = 112px; height = 30px; coverage = opaque; }
+    chart hall box { width = 88px; height = 30px; coverage = opaque; }
+    chart roller_door box { width = 18px; height = 7px; coverage = opaque; }
+    chart door_stripes box { width = 22px; height = 2px; coverage = opaque; }
+    chart tooth0 box { width = 48px; height = 24px; coverage = opaque; }
+    chart tooth1 box { width = 48px; height = 24px; coverage = opaque; }
+    chart tooth2 box { width = 48px; height = 24px; coverage = opaque; }
+    chart office box { width = 26px; height = 13px; coverage = opaque; }
+    chart stack_0 box { width = 16px; height = 30px; coverage = opaque; }
+    chart stack_cap_0 box { width = 20px; height = 6px; coverage = opaque; }
+    chart stack_1 box { width = 16px; height = 24px; coverage = opaque; }
+    chart stack_cap_1 box { width = 20px; height = 6px; coverage = opaque; }
+    chart silo box { width = 24px; height = 20px; coverage = opaque; }
+    chart silo_top box { width = 16px; height = 6px; coverage = opaque; }
+    chart silo_pipe box { width = 16px; height = 4px; coverage = opaque; }
+    chart lamp_post box { width = 4px; height = 11px; coverage = opaque; }
+    chart lamp_light box { width = 12px; height = 5px; coverage = opaque; }
+    material = opaque;
+  }
+}

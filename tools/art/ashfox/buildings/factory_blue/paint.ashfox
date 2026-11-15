@@ -1,0 +1,82 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (128px, 128px); background = pavement; background-alpha = 255;
+      palette {
+        pavement = (#aea896, #b9b2a0, #c4bdaa);
+        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+        curb28_k = #7a7468;
+        body_blue = (#1a8ea2, #1f9fb4, #2cb0c4);
+        rim_body_blue_26_r = #6ad8e4;
+        rim_body_blue_18_r = #6ad8e4;
+        hall_windows_w = #14202c;
+        hall_windows_l = #ffe08a;
+        hall_windows_f = #e8ecf2;
+        loading_door_k = #126c7e;
+        hall_side_windows_w = #14202c;
+        hall_side_windows_l = #ffe08a;
+        hall_side_windows_f = #e8ecf2;
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+        roller_lines_k = #3a4050;
+        lamp = (#e8c020, #f8d838, #fff070);
+        door_hazard_y = #e8c020;
+        door_hazard_k = #1a1e28;
+        trim_blue = (#126c7e, #16788a, #1f889a);
+        rim_trim_blue_7_r = #2fb4c6;
+        rim_trim_blue_17_r = #2fb4c6;
+        glazing_g = #9fe3ff;
+        rim_trim_blue_8_r = #2fb4c6;
+        rim_trim_blue_5_r = #2fb4c6;
+        office_windows_w = #14202c;
+        office_windows_l = #ffe08a;
+        office_windows_f = #e8ecf2;
+        office_door_d = #14202c;
+        brick = (#8a3a2a, #9e4630, #b05638);
+        stack_bands_w = #e8ecf2;
+        stack_bands_r = #d8323a;
+        oil_black = (#14161c, #1c1f27, #262a34);
+        silo_bands_k = #3a4050;
+        gun = (#2a2e38, #343a46, #3e4554);
+      }
+      stamp curb28 { pixels = "kkkkkkkkkkkkkkkkkkkkkkkkkkkk"; k = curb28_k; }
+      stamp rim_body_blue_26 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrrrr"; r = rim_body_blue_26_r; }
+      stamp rim_body_blue_18 { pixels = "rrrrrrrrrrrrrrrrrr"; r = rim_body_blue_18_r; }
+      stamp hall_windows { pixels = ".ff.ff.ff.ff.ff.ff.ff./.ww.ww.ll.ww.ww.ww.ww./.ww.ww.ll.ww.ww.ww.ww."; w = hall_windows_w; l = hall_windows_l; f = hall_windows_f; }
+      stamp loading_door { pixels = "kkkkkkkkkk/k........k/k........k/k........k/k........k/k........k"; k = loading_door_k; }
+      stamp hall_side_windows { pixels = ".ff.ff.ff.ff.ff./.ww.ww.ww.ww.ll./.ww.ww.ww.ww.ll."; w = hall_side_windows_w; l = hall_side_windows_l; f = hall_side_windows_f; }
+      stamp roller_lines { pixels = "kkkkkkkk/......../kkkkkkkk/......../kkkkkkkk/........"; k = roller_lines_k; }
+      stamp door_hazard { pixels = "ykykykykyk"; y = door_hazard_y; k = door_hazard_k; }
+      stamp rim_trim_blue_7 { pixels = "rrrrrrr"; r = rim_trim_blue_7_r; }
+      stamp rim_trim_blue_17 { pixels = "rrrrrrrrrrrrrrrrr"; r = rim_trim_blue_17_r; }
+      stamp glazing { pixels = "ggggggggggggggggg/ggggggggggggggggg/ggggggggggggggggg"; g = glazing_g; }
+      stamp rim_trim_blue_8 { pixels = "rrrrrrrr"; r = rim_trim_blue_8_r; }
+      stamp rim_trim_blue_5 { pixels = "rrrrr"; r = rim_trim_blue_5_r; }
+      stamp office_windows { pixels = ".ff.ff./.ww.ll./.ww.ll."; w = office_windows_w; l = office_windows_l; f = office_windows_f; }
+      stamp office_door { pixels = "dd/dd/dd"; d = office_door_d; }
+      stamp stack_bands { pixels = "wwww/rrrr/wwww"; w = stack_bands_w; r = stack_bands_r; }
+      stamp silo_bands { pixels = "kkkkkk/....../....../kkkkkk"; k = silo_bands_k; }
+      chart plinth box { origin = (0px, 0px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } face north { stamp curb28 { at = (0px, 1px); } } face south { stamp curb28 { at = (0px, 1px); } } face east { stamp curb28 { at = (0px, 1px); } } face west { stamp curb28 { at = (0px, 1px); } } }
+      chart hall box { origin = (0px, 31px); fill = body_blue; face north { stamp rim_body_blue_26 { at = (0px, 0px); } stamp hall_windows { at = (2px, 1px); } stamp loading_door { at = (8px, 6px); } } face south { stamp rim_body_blue_26 { at = (0px, 0px); } } face east { stamp rim_body_blue_18 { at = (0px, 0px); } stamp hall_side_windows { at = (1px, 1px); } } face west { stamp rim_body_blue_18 { at = (0px, 0px); } stamp hall_side_windows { at = (1px, 1px); } } }
+      chart roller_door box { origin = (0px, 112px); fill = metal; face north { stamp roller_lines { at = (0px, 0px); } } }
+      chart door_stripes box { origin = (0px, 120px); fill = lamp; face north { stamp door_hazard { at = (0px, 0px); } } }
+      chart tooth0 box { origin = (0px, 62px); fill = trim_blue; face north { stamp rim_trim_blue_7 { at = (0px, 0px); } } face south { stamp rim_trim_blue_7 { at = (0px, 0px); } } face east { stamp rim_trim_blue_17 { at = (0px, 0px); } stamp glazing { at = (0px, 2px); } } face west { stamp rim_trim_blue_17 { at = (0px, 0px); } } }
+      chart tooth1 box { origin = (49px, 62px); fill = trim_blue; face north { stamp rim_trim_blue_7 { at = (0px, 0px); } } face south { stamp rim_trim_blue_7 { at = (0px, 0px); } } face east { stamp rim_trim_blue_17 { at = (0px, 0px); } stamp glazing { at = (0px, 2px); } } face west { stamp rim_trim_blue_17 { at = (0px, 0px); } } }
+      chart tooth2 box { origin = (0px, 87px); fill = trim_blue; face north { stamp rim_trim_blue_7 { at = (0px, 0px); } } face south { stamp rim_trim_blue_7 { at = (0px, 0px); } } face east { stamp rim_trim_blue_17 { at = (0px, 0px); } stamp glazing { at = (0px, 2px); } } face west { stamp rim_trim_blue_17 { at = (0px, 0px); } } }
+      chart office box { origin = (91px, 87px); fill = trim_blue; face north { stamp rim_trim_blue_8 { at = (0px, 0px); } stamp office_windows { at = (0px, 1px); } stamp office_door { at = (5px, 5px); } } face south { stamp rim_trim_blue_8 { at = (0px, 0px); } } face east { stamp rim_trim_blue_5 { at = (0px, 0px); } } face west { stamp rim_trim_blue_5 { at = (0px, 0px); } } }
+      chart stack_0 box { origin = (89px, 31px); fill = brick; face north { stamp stack_bands { at = (0px, 1px); } } face south { stamp stack_bands { at = (0px, 1px); } } face east { stamp stack_bands { at = (0px, 1px); } } face west { stamp stack_bands { at = (0px, 1px); } } }
+      chart stack_cap_0 box { origin = (19px, 112px); fill = oil_black; }
+      chart stack_1 box { origin = (49px, 87px); fill = brick; face north { stamp stack_bands { at = (0px, 1px); } } face south { stamp stack_bands { at = (0px, 1px); } } face east { stamp stack_bands { at = (0px, 1px); } } face west { stamp stack_bands { at = (0px, 1px); } } }
+      chart stack_cap_1 box { origin = (40px, 112px); fill = oil_black; }
+      chart silo box { origin = (66px, 87px); fill = metal; face north { stamp silo_bands { at = (0px, 3px); } } }
+      chart silo_top box { origin = (61px, 112px); fill = metal; }
+      chart silo_pipe box { origin = (91px, 112px); fill = gun; }
+      chart lamp_post box { origin = (118px, 87px); fill = metal; }
+      chart lamp_light box { origin = (78px, 112px); fill = lamp; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

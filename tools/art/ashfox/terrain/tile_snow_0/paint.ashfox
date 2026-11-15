@@ -1,0 +1,24 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = ice_rock; background-alpha = 255;
+      palette {
+        ice_rock = (#2c4c7c, #4a72a8, #7aa2d6);
+        ice_rock_spots = (#203a62, #36588a, #56809e);
+        snow = (#bcd3ec, #e6f0fb, #ffffff);
+        snow_spots = (#9fc0e4, #bcd6f0, #d6e8f8);
+        crack_c = #9fc0e4;
+        drift_b = #d6e6f6;
+      }
+      stamp crack { pixels = "c.../.cc./...c"; c = crack_c; }
+      stamp drift { pixels = "bbb"; b = drift_b; }
+      chart base box { origin = (0px, 0px); fill = ice_rock; pattern blotch { paint = ice_rock_spots; scale = (2px, 2px, 2px); density = 0.2ratio; phase = 3; } }
+      chart top box { origin = (0px, 27px); fill = snow; pattern blotch { paint = snow_spots; scale = (3px, 1px, 3px); density = 0.12ratio; phase = 3; } face up { stamp crack { at = (9px, 7px); } stamp crack { at = (5px, 11px); } stamp crack { at = (0px, 5px); } stamp drift { at = (5px, 11px); } stamp drift { at = (13px, 3px); } stamp drift { at = (12px, 7px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

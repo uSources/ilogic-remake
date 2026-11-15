@@ -1,0 +1,12 @@
+ashfox-model 1
+asset flowers_red {
+  import "./flowers_red/rig.ashfox" as rig;
+  import "./flowers_red/paint.ashfox" as paint;
+  import "./flowers_red/body.ashfox" as body;
+  export asset flowers_red {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

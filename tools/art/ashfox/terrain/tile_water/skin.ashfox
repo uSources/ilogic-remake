@@ -1,0 +1,8 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 32px; }
+    chart water box { width = 64px; height = 25px; coverage = opaque; }
+    material = opaque;
+  }
+}

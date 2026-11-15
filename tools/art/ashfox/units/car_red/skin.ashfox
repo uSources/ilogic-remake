@@ -1,0 +1,57 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 128px; height = 128px; }
+    chart wheel_front_left box { width = 20px; height = 16px; coverage = opaque; }
+    chart wheel_front_left_round box { width = 26px; height = 16px; coverage = opaque; }
+    chart wheel_front_left_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart wheel_front_right box { width = 20px; height = 16px; coverage = opaque; }
+    chart wheel_front_right_round box { width = 26px; height = 16px; coverage = opaque; }
+    chart wheel_front_right_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart wheel_back_left box { width = 20px; height = 16px; coverage = opaque; }
+    chart wheel_back_left_round box { width = 26px; height = 16px; coverage = opaque; }
+    chart wheel_back_left_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart wheel_back_right box { width = 20px; height = 16px; coverage = opaque; }
+    chart wheel_back_right_round box { width = 26px; height = 16px; coverage = opaque; }
+    chart wheel_back_right_cap box { width = 10px; height = 8px; coverage = opaque; }
+    chart tub box { width = 88px; height = 33px; coverage = opaque; }
+    chart hood box { width = 50px; height = 11px; coverage = opaque; }
+    chart fender_left box { width = 32px; height = 13px; coverage = opaque; }
+    chart fender_right box { width = 32px; height = 13px; coverage = opaque; }
+    chart rear_fender_left box { width = 32px; height = 13px; coverage = opaque; }
+    chart rear_fender_right box { width = 32px; height = 13px; coverage = opaque; }
+    chart headlight_left box { width = 8px; height = 3px; coverage = opaque; }
+    chart headlight_right box { width = 8px; height = 3px; coverage = opaque; }
+    chart bumper box { width = 42px; height = 3px; coverage = opaque; }
+    chart spare_wheel box { width = 20px; height = 10px; coverage = opaque; }
+    chart jerrycan box { width = 10px; height = 6px; coverage = opaque; }
+    chart windshield_post_left box { width = 4px; height = 7px; coverage = opaque; }
+    chart windshield_post_right box { width = 4px; height = 7px; coverage = opaque; }
+    chart windshield_top box { width = 36px; height = 2px; coverage = opaque; }
+    chart windshield box { width = 32px; height = 7px; coverage = opaque; }
+    chart seat_driver box { width = 18px; height = 7px; coverage = opaque; }
+    chart seat_passenger box { width = 18px; height = 7px; coverage = opaque; }
+    chart steering_wheel box { width = 10px; height = 5px; coverage = opaque; }
+    chart driver_torso box { width = 20px; height = 10px; coverage = opaque; }
+    chart driver_head box { width = 30px; height = 14px; coverage = opaque; }
+    chart driver_helmet box { width = 38px; height = 13px; coverage = opaque; }
+    chart driver_goggles box { width = 18px; height = 3px; coverage = opaque; }
+    chart driver_lens_left box { width = 8px; height = 2px; coverage = opaque; }
+    chart driver_lens_right box { width = 8px; height = 2px; coverage = opaque; }
+    chart driver_arm_left box { width = 12px; height = 6px; coverage = opaque; }
+    chart driver_arm_right box { width = 12px; height = 6px; coverage = opaque; }
+    chart driver_hand_left box { width = 6px; height = 3px; coverage = opaque; }
+    chart driver_hand_right box { width = 6px; height = 3px; coverage = opaque; }
+    chart rollbar_left box { width = 4px; height = 10px; coverage = opaque; }
+    chart rollbar_right box { width = 4px; height = 10px; coverage = opaque; }
+    chart rollbar_top box { width = 38px; height = 2px; coverage = opaque; }
+    chart gun_post box { width = 4px; height = 12px; coverage = opaque; }
+    chart gun_receiver box { width = 18px; height = 9px; coverage = opaque; }
+    chart gun_jacket box { width = 18px; height = 9px; coverage = opaque; }
+    chart gun_barrel box { width = 12px; height = 6px; coverage = opaque; }
+    chart gun_muzzle box { width = 8px; height = 4px; coverage = opaque; }
+    chart gun_ammo box { width = 10px; height = 6px; coverage = opaque; }
+    chart gun_handles box { width = 6px; height = 3px; coverage = opaque; }
+    material = opaque;
+  }
+}

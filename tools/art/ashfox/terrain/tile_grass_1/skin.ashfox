@@ -1,0 +1,9 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart base box { width = 64px; height = 26px; coverage = opaque; }
+    chart top box { width = 64px; height = 18px; coverage = opaque; }
+    material = opaque;
+  }
+}
