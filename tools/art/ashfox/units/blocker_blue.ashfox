@@ -40,7 +40,7 @@ asset blocker_blue {
     atlas { width = 64px; height = 128px; }
     chart track0 box { width = 34px; height = 17px; coverage = opaque; }
     chart track1 box { width = 34px; height = 17px; coverage = opaque; }
-    chart box box { width = 48px; height = 21px; coverage = opaque; }
+    chart box box { width = 48px; height = 22px; coverage = opaque; }
     chart roof box { width = 40px; height = 11px; coverage = opaque; }
     material = opaque;
   }
@@ -49,27 +49,44 @@ asset blocker_blue {
     texture atlas {
       atlas = (64px, 128px); background = tread; background-alpha = 255;
       palette {
-        tread = (#141824, #262c3c, #3c4458);
-        tread_spots = (#3c4458, #5c6474, #7c8494);
-        team_blue = (#1d4fa8, #2f74d6, #5ea8f2);
-        vents_k = #14202c;
-        dark_blue = (#163a7a, #1f56a8, #3f84d8);
+        tread = (#1a1e28, #232836, #2c3242);
+        wheels13_s = #5a6272;
+        wheels13_t = #363d4c;
+        sprocket_s = #6a7282;
+        team_blue = (#2766c4, #2f74d6, #3d84e2);
+        rim_team_blue_12_r = #6fb0f2;
+        slot_k = #141824;
+        seam_d = #1a468e;
+        rivets_r = #1a468e;
+        dark_blue = (#1a468e, #1f56a8, #2a64b8);
       }
-      stamp vents { pixels = "kkkkkkkk"; k = vents_k; }
+      stamp wheels13 { pixels = "ttttttttttttt/.ss.ss.ss.ss./.ss.ss.ss.ss./ttttttttttttt"; s = wheels13_s; t = wheels13_t; }
+      stamp sprocket { pixels = "ss/ss"; s = sprocket_s; }
+      stamp rim_team_blue_12 { pixels = "rrrrrrrrrrrr"; r = rim_team_blue_12_r; }
+      stamp slot { pixels = "kkkkk"; k = slot_k; }
+      stamp seam { pixels = "d/d/d/d/d/d/d/d"; d = seam_d; }
+      stamp rivets { pixels = ".r..r..r..r."; r = rivets_r; }
       chart track0 box {
-        origin = (0px, 22px); fill = tread;
-        pattern blotch { paint = tread_spots; scale = (1px, 1px, 2px); density = 0.3ratio; phase = 7; }
+        origin = (0px, 23px); fill = tread;
+        face west { stamp wheels13 { at = (0px, 0px); } }
+        face north { stamp sprocket { at = (1px, 1px); } }
+        face south { stamp sprocket { at = (1px, 1px); } }
       }
       chart track1 box {
-        origin = (0px, 40px); fill = tread;
-        pattern blotch { paint = tread_spots; scale = (1px, 1px, 2px); density = 0.3ratio; phase = 7; }
+        origin = (0px, 41px); fill = tread;
+        face east { stamp wheels13 { at = (0px, 0px); } }
+        face north { stamp sprocket { at = (1px, 1px); } }
+        face south { stamp sprocket { at = (1px, 1px); } }
       }
       chart box box {
         origin = (0px, 0px); fill = team_blue;
-        face north { stamp vents { at = (2px, 2px); } stamp vents { at = (2px, 4px); } }
+        face north { stamp rim_team_blue_12 { at = (0px, 0px); } stamp slot { at = (5px, 2px); } stamp seam { at = (3px, 1px); } }
+        face south { stamp rim_team_blue_12 { at = (0px, 0px); } stamp rivets { at = (0px, 2px); } }
+        face east { stamp rim_team_blue_12 { at = (0px, 0px); } stamp rivets { at = (0px, 2px); } }
+        face west { stamp rim_team_blue_12 { at = (0px, 0px); } stamp rivets { at = (0px, 2px); } }
       }
       chart roof box {
-        origin = (0px, 58px); fill = dark_blue;
+        origin = (0px, 59px); fill = dark_blue;
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -88,8 +105,8 @@ asset blocker_blue {
         cube track1 { origin = (3u, 0u, -6.5u); size = (4u, 4u, 13u); surface = skin.track1; }
       }
       bone hull {
-        cube box { origin = (-6u, 3u, -6u); size = (12u, 9u, 12u); surface = skin.box; }
-        cube roof { origin = (-5u, 12u, -5u); size = (10u, 1u, 10u); surface = skin.roof; }
+        cube box { origin = (-6u, 3u, -6u); size = (12u, 10u, 12u); surface = skin.box; }
+        cube roof { origin = (-5u, 13u, -5u); size = (10u, 1u, 10u); surface = skin.roof; }
         bone turret {
           bone barrel {
           }

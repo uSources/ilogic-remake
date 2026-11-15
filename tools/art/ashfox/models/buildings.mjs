@@ -7,11 +7,11 @@
 
 import { loopMotion, spin, sway } from './motions.mjs';
 
-/** Los colores de cada lado: el del edificio, el de sus remates y el de las ventanas encendidas. */
+/** Los colores de cada lado: el del edificio y el de sus remates (rampa y borde claro), como en el 2D. */
 const SIDES = {
-  blue: { body: ['#0f5a6e', '#1f9fb4', '#5fd6e0'], trim: ['#0a3c4c', '#16788a', '#2fb4c6'] },
-  red: { body: ['#6e1414', '#b8282a', '#ee5a50'], trim: ['#4a0c0c', '#86181a', '#c23a36'] },
-  neutral: { body: ['#55585e', '#8f949c', '#c8ccd2'], trim: ['#3a3d42', '#62666e', '#8f949c'] },
+  blue: { body: ['#1a8ea2', '#1f9fb4', '#2cb0c4'], bodyRim: '#6ad8e4', trim: ['#126c7e', '#16788a', '#1f889a'], trimRim: '#2fb4c6' },
+  red: { body: ['#a42424', '#b8282a', '#c8383a'], bodyRim: '#ee6a60', trim: ['#741416', '#86181a', '#962420'], trimRim: '#c23a36' },
+  neutral: { body: ['#868a92', '#8f949c', '#9ca0a8'], bodyRim: '#c8ccd2', trim: ['#5a5e66', '#62666e', '#6e727a'], trimRim: '#8f949c' },
 };
 
 const WINDOW = '#14202c';
@@ -19,44 +19,59 @@ const LIT = '#ffe08a';
 
 export const PAINTS = {
   pavement: {
-    ramp: ['#8a857a', '#b9b2a0', '#d6cfbd'],
-    blotch: { ramp: ['#7a756a', '#9a958a', '#b0aa9a'], scale: [2, 1, 2], density: 0.15 },
+    ramp: ['#aea896', '#b9b2a0', '#c4bdaa'],
+    blotch: { ramp: ['#9a958a', '#a8a290', '#b0aa9a'], scale: [2, 1, 2], density: 0.1 },
   },
   asphalt: { ramp: ['#1c2028', '#2a2e38', '#3c4250'] },
-  glass: { ramp: ['#4f9fc8', '#9fe3ff', '#e6f8ff'] },
+  window_glass: { ramp: ['#8ad4f4', '#9fe3ff', '#b8ecff'] },
   metal: { ramp: ['#4e5666', '#8a93a6', '#c3cbd9'] },
   ...Object.fromEntries(
     Object.entries(SIDES).flatMap(([side, colors]) => [
-      [`body_${side}`, { ramp: colors.body }],
-      [`ribbed_${side}`, { ramp: colors.body, blotch: { ramp: colors.trim, scale: [1, 2, 1], density: 0.3 } }],
-      [`trim_${side}`, { ramp: colors.trim }],
+      [`body_${side}`, { ramp: colors.body, rim: colors.bodyRim }],
+      [`trim_${side}`, { ramp: colors.trim, rim: colors.trimRim }],
     ]),
   ),
 };
 
 /** Ventanas en rejilla (w oscura, l encendida) y una puerta. Cada stamp va en las caras que se digan. */
 const windowGrid = (name, face, rows, at) => ({ name, face, pixels: rows.join('/'), colors: { w: WINDOW, l: LIT }, at });
-const door = (face, at) => ({ name: 'door', face, pixels: 'dd/dd/dd', colors: { d: WINDOW }, at: [at] });
+const door = (face, at) => ({ name: 'door', face, pixels: 'ddd/ddd/ddd', colors: { d: WINDOW }, at: [at] });
 
-const TOWER_WINDOWS = ['w.w.l.w.', '........', 'w.l.w.w.', '........', 'w.w.w.l.', '........', 'l.w.w.w.', '........', 'w.w.l.w.'];
+/** La ciudad: cuatro columnas de ventanas (alguna encendida); de frente, la ultima fila es la puerta. */
+const CITY_WINDOWS = [
+  '.w.l.w.w.',
+  '.w.l.w.w.',
+  '.........',
+  '.w.w.w.l.',
+  '.w.w.w.l.',
+  '.........',
+  '.l.w.w.w.',
+  '.l.w.w.w.',
+  '.........',
+  '.w.w.l.w.',
+  '.w.w.l.w.',
+];
+const CITY_SIDE_WINDOWS = [...CITY_WINDOWS, '.........', '.w.w.w.w.', '.w.w.w.w.'];
 const PLINTH = { name: 'plinth', origin: [-7, 0, -7], size: [14, 1, 14], paint: 'pavement' };
 
 function city(side) {
+  const trim = `trim_${side}`;
   return [
     PLINTH,
     {
       name: 'tower',
-      origin: [-4, 1, -4],
-      size: [8, 13, 8],
+      origin: [-4.5, 1, -4.5],
+      size: [9, 15, 9],
       paint: `body_${side}`,
       stamps: [
-        windowGrid('front_windows', 'north', TOWER_WINDOWS, [[0, 1]]),
-        windowGrid('side_windows', 'east', TOWER_WINDOWS, [[0, 1]]),
-        door('north', [3, 10]),
+        windowGrid('front_windows', 'north', CITY_WINDOWS, [[0, 1]]),
+        door('north', [3, 12]),
+        ...['east', 'west', 'south'].map((face) => windowGrid('side_windows', face, CITY_SIDE_WINDOWS, [[0, 1]])),
       ],
     },
-    { name: 'roof', origin: [-4.5, 14, -4.5], size: [9, 1, 9], paint: `trim_${side}` },
-    { name: 'annex', origin: [4, 1, -2], size: [3, 5, 6], paint: `trim_${side}` },
+    { name: 'awning', origin: [-2.5, 4, -6], size: [5, 1, 2], paint: trim },
+    { name: 'parapet', origin: [-5, 16, -5], size: [10, 1, 10], paint: trim },
+    { name: 'skylight', origin: [-2, 17, -2], size: [4, 1, 4], paint: 'window_glass' },
   ];
 }
 
@@ -75,14 +90,14 @@ function base(side) {
       origin: [-6, 3, -3],
       size: [5, 13, 5],
       paint: `body_${side}`,
-      stamps: [windowGrid('tall_windows', 'north', ['w.l.', '....', 'w.w.', '....', 'l.w.', '....', 'w.w.'], [[1, 2]])],
+      stamps: [windowGrid('tall_windows', 'north', ['www', '...', 'wlw', '...', 'www', '...', 'lww', '...', 'www'], [[1, 2]])],
     },
     {
       name: 'short',
       origin: [1, 3, -1],
       size: [5, 9, 5],
       paint: `body_${side}`,
-      stamps: [windowGrid('short_windows', 'north', ['w.w.', '....', 'l.w.', '....', 'w.l.'], [[1, 2]])],
+      stamps: [windowGrid('short_windows', 'north', ['www', '...', 'wwl', '...', 'www'], [[1, 2]])],
     },
     { name: 'antenna', origin: [-4, 16, -1], size: [1, 3, 1], paint: 'metal' },
     { name: 'flag', bone: 'flag', origin: [-3, 17, -0.5], size: [3, 2, 1], paint: `body_${side}` },
@@ -100,11 +115,19 @@ function base(side) {
   };
 }
 
+/** Un diente del tejado de sierra: un prisma a 45 grados medio hundido (un poco por dentro de la nave, para no pelear con su cara), con cristales en una vertiente. */
+const sawTooth = (side, x, index) => ({
+  name: `tooth${index}`,
+  origin: [x, 5, -3.5],
+  size: [4, 4, 8],
+  paint: `trim_${side}`,
+  rotation: [0, 0, 45],
+  pivot: [x + 2, 7, 0.5],
+  stamps: [{ name: 'glazing', face: 'east', pixels: 'gggggggg/gggggggg', colors: { g: '#9fe3ff' }, at: [[0, 1]] }],
+});
+
+/** La fabrica: nave con dos filas de ventanas y puerta, tejado de sierra y chimenea (el humo lo pone el juego). */
 function factory(side) {
-  const teeth = [-6, -2, 2].flatMap((x, index) => [
-    { name: `roof${index}`, origin: [x, 7, -4], size: [4, 1, 9], paint: `trim_${side}` },
-    { name: `skylight${index}`, origin: [x + 2, 8, -4], size: [2, 2, 9], paint: 'glass' },
-  ]);
   return [
     PLINTH,
     {
@@ -112,9 +135,9 @@ function factory(side) {
       origin: [-6, 1, -4],
       size: [12, 6, 9],
       paint: `body_${side}`,
-      stamps: [windowGrid('hall_windows', 'north', ['w.w.w.l.w.w.'], [[0, 1]]), door('north', [5, 3])],
+      stamps: [windowGrid('hall_windows', 'north', ['.ww.ww.wl.ww', '............', '.ww.lw.ww.ww'], [[0, 1]]), door('north', [1, 3])],
     },
-    ...teeth,
+    ...[-6, -2, 2].map((x, index) => sawTooth(side, x, index)),
     { name: 'chimney', origin: [4, 1, 4], size: [2, 11, 2], paint: 'pavement' },
     { name: 'chimney_cap', origin: [3.5, 12, 3.5], size: [3, 1, 3], paint: `trim_${side}` },
   ];
@@ -140,28 +163,41 @@ function oil(side) {
   return { cubes, bones: withBones([{ name: 'pump', pivot: [0, 12, 0] }]), motions: { idle: loopMotion(2, [sway('pump', [0, 0, 9], 2)]) } };
 }
 
+/** El fuerte: una cupula de anillos (escalones cada vez mas estrechos) con dos troneras y la entrada. */
 function stronghold(side) {
-  const ribbed = `ribbed_${side}`;
+  const body = `body_${side}`;
+  const rings = [
+    [13, 3],
+    [12, 3],
+    [10, 2],
+    [8, 1],
+    [6, 1],
+  ];
+  let floor = 1;
+  const dome = rings.map(([width, height], index) => {
+    const ring = { name: `ring${index}`, origin: [-width / 2, floor, -width / 2], size: [width, height, width], paint: body };
+    floor += height;
+    return ring;
+  });
+  dome[1].stamps = [{ name: 'slits', face: 'north', pixels: '.kkk....kkk.', colors: { k: WINDOW }, at: [[0, 1]] }];
   const cubes = [
     PLINTH,
-    {
-      name: 'dome0',
-      origin: [-6, 1, -6],
-      size: [12, 4, 12],
-      paint: ribbed,
-      stamps: [{ name: 'slits', face: 'north', pixels: 'kkk......kkk', colors: { k: WINDOW }, at: [[0, 1]] }],
-    },
-    { name: 'dome1', origin: [-5, 5, -5], size: [10, 3, 10], paint: ribbed },
-    { name: 'dome2', origin: [-4, 8, -4], size: [8, 2, 8], paint: ribbed },
-    { name: 'dome3', origin: [-2.5, 10, -2.5], size: [5, 1, 5], paint: `body_${side}` },
-    { name: 'entrance', origin: [-1.5, 1, -7], size: [3, 3, 1], paint: `trim_${side}` },
-    { name: 'pole', origin: [-0.5, 11, -0.5], size: [1, 4, 1], paint: 'metal' },
-    { name: 'flag', bone: 'flag', origin: [0.5, 13, -0.5], size: [3, 2, 1], paint: `body_${side}` },
+    ...dome,
+    { name: 'entrance', origin: [-2.5, 1, -7.5], size: [5, 3, 1], paint: `trim_${side}`, stamps: [door('north', [1, 0])] },
+    { name: 'pole', origin: [-0.5, floor, -0.5], size: [1, 4, 1], paint: 'metal' },
+    { name: 'flag', bone: 'flag', origin: [0.5, floor + 2, -0.5], size: [3, 2, 1], paint: body },
   ];
-  return { cubes, bones: withBones([{ name: 'flag', pivot: [0.5, 14, 0] }]), motions: { idle: loopMotion(1.4, [flagWave('flag', 1.4)]) } };
+  return {
+    cubes,
+    bones: withBones([{ name: 'flag', pivot: [0.5, floor + 3, 0] }]),
+    motions: { idle: loopMotion(1.4, [flagWave('flag', 1.4)]) },
+  };
 }
 
+/** El aeropuerto: torre de control (cabina de cristal y radar) y hangar de tejado redondo, junto a la pista. */
 function airport(side) {
+  const body = `body_${side}`;
+  const trim = `trim_${side}`;
   const cubes = [
     {
       name: 'runway',
@@ -170,22 +206,24 @@ function airport(side) {
       paint: 'asphalt',
       stamps: [{ name: 'dashes', face: 'up', pixels: 'ww..ww..ww', colors: { w: '#f2f5ff' }, at: [[2, 11]] }],
     },
-    { name: 'tower', origin: [-6, 1, -6], size: [3, 10, 3], paint: `body_${side}` },
-    { name: 'cab', origin: [-6.5, 11, -6.5], size: [4, 2, 4], paint: 'glass' },
-    { name: 'cab_roof', origin: [-6.5, 13, -6.5], size: [4, 1, 4], paint: `trim_${side}` },
+    { name: 'tower', origin: [-6.5, 1, -6.5], size: [4, 9, 4], paint: body },
+    { name: 'cab', origin: [-7, 10, -7], size: [5, 3, 5], paint: 'window_glass' },
+    { name: 'cab_roof', origin: [-7, 13, -7], size: [5, 1, 5], paint: trim },
+    { name: 'cab_top', origin: [-6, 14, -6], size: [3, 1, 3], paint: trim },
+    { name: 'radar_dish', bone: 'radar', origin: [-6.5, 15, -5], size: [4, 1, 1], paint: 'metal' },
     {
       name: 'hangar',
-      origin: [-1, 1, -6],
-      size: [7, 5, 7],
-      paint: `body_${side}`,
-      stamps: [{ name: 'hangar_door', face: 'north', pixels: '.kkkkk./.kkkkk./.kkkkk.', colors: { k: WINDOW }, at: [[0, 2]] }],
+      origin: [-1.5, 1, -6],
+      size: [8, 4, 8],
+      paint: body,
+      stamps: [{ name: 'hangar_door', face: 'north', pixels: '.kkkkkk./.kkkkkk./.kkkkkk.', colors: { k: WINDOW }, at: [[0, 1]] }],
     },
-    { name: 'hangar_roof', origin: [0, 6, -6], size: [5, 1, 7], paint: `trim_${side}` },
-    { name: 'radar_dish', bone: 'radar', origin: [-6.5, 14, -5], size: [4, 1, 1], paint: 'metal' },
+    { name: 'hangar_roof', origin: [-0.5, 5, -6], size: [6, 1, 8], paint: body },
+    { name: 'hangar_ridge', origin: [0.5, 6, -6], size: [4, 1, 8], paint: trim },
   ];
   return {
     cubes,
-    bones: withBones([{ name: 'radar', pivot: [-4.5, 14, -4.5] }]),
+    bones: withBones([{ name: 'radar', pivot: [-4.5, 15, -4.5] }]),
     motions: { idle: loopMotion(2.4, [radarSpin('radar')]) },
   };
 }

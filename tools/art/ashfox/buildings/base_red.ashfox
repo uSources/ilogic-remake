@@ -52,8 +52,10 @@ asset base_red {
     texture atlas {
       atlas = (64px, 64px); background = trim_red; background-alpha = 255;
       palette {
-        trim_red = (#4a0c0c, #86181a, #c23a36);
-        body_red = (#6e1414, #b8282a, #ee5a50);
+        trim_red = (#741416, #86181a, #962420);
+        rim_trim_red_14_r = #c23a36;
+        body_red = (#a42424, #b8282a, #c8383a);
+        rim_body_red_5_r = #ee6a60;
         tall_windows_w = #14202c;
         tall_windows_l = #ffe08a;
         short_windows_w = #14202c;
@@ -61,18 +63,30 @@ asset base_red {
         metal = (#4e5666, #8a93a6, #c3cbd9);
         asphalt = (#1c2028, #2a2e38, #3c4250);
       }
-      stamp tall_windows { pixels = "w.l./..../w.w./..../l.w./..../w.w."; w = tall_windows_w; l = tall_windows_l; }
-      stamp short_windows { pixels = "w.w./..../l.w./..../w.l."; w = short_windows_w; l = short_windows_l; }
+      stamp rim_trim_red_14 { pixels = "rrrrrrrrrrrrrr"; r = rim_trim_red_14_r; }
+      stamp rim_body_red_5 { pixels = "rrrrr"; r = rim_body_red_5_r; }
+      stamp tall_windows { pixels = "www/.../wlw/.../www/.../lww/.../www"; w = tall_windows_w; l = tall_windows_l; }
+      stamp short_windows { pixels = "www/.../wwl/.../www"; w = short_windows_w; l = short_windows_l; }
       chart platform box {
         origin = (0px, 19px); fill = trim_red;
+        face north { stamp rim_trim_red_14 { at = (0px, 0px); } }
+        face south { stamp rim_trim_red_14 { at = (0px, 0px); } }
+        face east { stamp rim_trim_red_14 { at = (0px, 0px); } }
+        face west { stamp rim_trim_red_14 { at = (0px, 0px); } }
       }
       chart tall box {
         origin = (0px, 0px); fill = body_red;
-        face north { stamp tall_windows { at = (1px, 2px); } }
+        face north { stamp rim_body_red_5 { at = (0px, 0px); } stamp tall_windows { at = (1px, 2px); } }
+        face south { stamp rim_body_red_5 { at = (0px, 0px); } }
+        face east { stamp rim_body_red_5 { at = (0px, 0px); } }
+        face west { stamp rim_body_red_5 { at = (0px, 0px); } }
       }
       chart short box {
         origin = (0px, 37px); fill = body_red;
-        face north { stamp short_windows { at = (1px, 2px); } }
+        face north { stamp rim_body_red_5 { at = (0px, 0px); } stamp short_windows { at = (1px, 2px); } }
+        face south { stamp rim_body_red_5 { at = (0px, 0px); } }
+        face east { stamp rim_body_red_5 { at = (0px, 0px); } }
+        face west { stamp rim_body_red_5 { at = (0px, 0px); } }
       }
       chart antenna box {
         origin = (21px, 37px); fill = metal;

@@ -14,7 +14,7 @@ asset artillery_red {
     bind chassis { parent-origin = (0u, 2u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind turret { parent-origin = (0u, 2u, 2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind barrel { parent-origin = (0u, 2u, -2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind barrel { parent-origin = (0u, 2.5u, -2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   motion idle for ModelRig {
     duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
@@ -53,11 +53,13 @@ asset artillery_red {
     atlas { width = 64px; height = 128px; }
     chart track0 box { width = 34px; height = 17px; coverage = opaque; }
     chart track1 box { width = 34px; height = 17px; coverage = opaque; }
-    chart hull box { width = 38px; height = 13px; coverage = opaque; }
-    chart mount box { width = 22px; height = 8px; coverage = opaque; }
-    chart barrel box { width = 26px; height = 13px; coverage = opaque; }
-    chart gunner_head box { width = 12px; height = 6px; coverage = opaque; }
-    chart gunner_helmet box { width = 16px; height = 6px; coverage = opaque; }
+    chart hull box { width = 44px; height = 14px; coverage = opaque; }
+    chart mount box { width = 24px; height = 9px; coverage = opaque; }
+    chart barrel box { width = 28px; height = 14px; coverage = opaque; }
+    chart muzzle box { width = 10px; height = 5px; coverage = opaque; }
+    chart gunner box { width = 14px; height = 6px; coverage = opaque; }
+    chart gunner_head box { width = 16px; height = 8px; coverage = opaque; }
+    chart gunner_helmet box { width = 20px; height = 7px; coverage = opaque; }
     material = opaque;
   }
   surface paint: Skin {
@@ -65,38 +67,80 @@ asset artillery_red {
     texture atlas {
       atlas = (64px, 128px); background = tread; background-alpha = 255;
       palette {
-        tread = (#141824, #262c3c, #3c4458);
-        tread_spots = (#3c4458, #5c6474, #7c8494);
-        camo_red = (#8a1a1a, #c8302a, #f0605a);
-        camo_red_spots = (#601212, #962220, #c84038);
-        team_red = (#8a1a1a, #c8302a, #f0605a);
-        steel = (#4e5666, #8a93a6, #c3cbd9);
-        skin = (#c8946a, #f1c79b, #ffe2c4);
+        tread = (#1a1e28, #232836, #2c3242);
+        wheels13_s = #5a6272;
+        wheels13_t = #363d4c;
+        sprocket_s = #6a7282;
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_6_r = #f2786c;
+        rim_team_red_3_r = #f2786c;
+        rim_team_red_11_r = #f2786c;
+        gun = (#2a2e38, #343a46, #3e4554);
+        rim_team_red_4_r = #f2786c;
+        skin = (#e4b88c, #f1c79b, #f8d4ac);
+        eyes_k = #1d2a4a;
+        strap5_x = #5a3a22;
+        goggles5_b = #5a3a22;
+        goggles5_g = #a8dcec;
       }
-
+      stamp wheels13 { pixels = "ttttttttttttt/.ss.ss.ss.ss./.ss.ss.ss.ss./ttttttttttttt"; s = wheels13_s; t = wheels13_t; }
+      stamp sprocket { pixels = "ss/ss"; s = sprocket_s; }
+      stamp rim_team_red_6 { pixels = "rrrrrr"; r = rim_team_red_6_r; }
+      stamp rim_team_red_3 { pixels = "rrr"; r = rim_team_red_3_r; }
+      stamp rim_team_red_11 { pixels = "rrrrrrrrrrr"; r = rim_team_red_11_r; }
+      stamp rim_team_red_4 { pixels = "rrrr"; r = rim_team_red_4_r; }
+      stamp eyes { pixels = "k..k/k..k"; k = eyes_k; }
+      stamp strap5 { pixels = "xxxxx"; x = strap5_x; }
+      stamp goggles5 { pixels = "bgggb"; b = goggles5_b; g = goggles5_g; }
       chart track0 box {
         origin = (0px, 0px); fill = tread;
-        pattern blotch { paint = tread_spots; scale = (1px, 1px, 2px); density = 0.3ratio; phase = 7; }
+        face west { stamp wheels13 { at = (0px, 0px); } }
+        face north { stamp sprocket { at = (1px, 1px); } }
+        face south { stamp sprocket { at = (1px, 1px); } }
       }
       chart track1 box {
         origin = (0px, 18px); fill = tread;
-        pattern blotch { paint = tread_spots; scale = (1px, 1px, 2px); density = 0.3ratio; phase = 7; }
+        face east { stamp wheels13 { at = (0px, 0px); } }
+        face north { stamp sprocket { at = (1px, 1px); } }
+        face south { stamp sprocket { at = (1px, 1px); } }
       }
       chart hull box {
-        origin = (0px, 36px); fill = camo_red;
-        pattern blotch { paint = camo_red_spots; scale = (3px, 2px, 3px); density = 0.25ratio; phase = 7; }
+        origin = (0px, 36px); fill = team_red;
       }
       chart mount box {
-        origin = (27px, 50px); fill = team_red;
+        origin = (29px, 51px); fill = team_red;
+        face north { stamp rim_team_red_6 { at = (0px, 0px); } }
+        face south { stamp rim_team_red_6 { at = (0px, 0px); } }
+        face east { stamp rim_team_red_6 { at = (0px, 0px); } }
+        face west { stamp rim_team_red_6 { at = (0px, 0px); } }
       }
       chart barrel box {
-        origin = (0px, 50px); fill = steel;
+        origin = (0px, 51px); fill = team_red;
+        face north { stamp rim_team_red_3 { at = (0px, 0px); } }
+        face south { stamp rim_team_red_3 { at = (0px, 0px); } }
+        face east { stamp rim_team_red_11 { at = (0px, 0px); } }
+        face west { stamp rim_team_red_11 { at = (0px, 0px); } }
+      }
+      chart muzzle box {
+        origin = (53px, 66px); fill = gun;
+      }
+      chart gunner box {
+        origin = (38px, 66px); fill = team_red;
+        face north { stamp rim_team_red_4 { at = (0px, 0px); } }
+        face south { stamp rim_team_red_4 { at = (0px, 0px); } }
+        face east { stamp rim_team_red_3 { at = (0px, 0px); } }
+        face west { stamp rim_team_red_3 { at = (0px, 0px); } }
       }
       chart gunner_head box {
-        origin = (50px, 50px); fill = skin;
+        origin = (0px, 66px); fill = skin;
+        face north { stamp eyes { at = (0px, 1px); } }
       }
       chart gunner_helmet box {
-        origin = (0px, 64px); fill = team_red;
+        origin = (17px, 66px); fill = team_red;
+        face south { stamp strap5 { at = (0px, 1px); } }
+        face east { stamp strap5 { at = (0px, 1px); } }
+        face west { stamp strap5 { at = (0px, 1px); } }
+        face north { stamp goggles5 { at = (0px, 1px); } }
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -115,13 +159,15 @@ asset artillery_red {
         cube track1 { origin = (2u, 0u, -6.5u); size = (4u, 4u, 13u); surface = skin.track1; }
       }
       bone hull {
-        cube hull { origin = (-4u, 3u, -5u); size = (8u, 2u, 11u); surface = skin.hull; }
+        cube hull { origin = (-5u, 3u, -6u); size = (10u, 2u, 12u); surface = skin.hull; }
         bone turret {
-          cube mount { origin = (-3u, 5u, 0u); size = (6u, 3u, 5u); surface = skin.mount; }
-          cube gunner_head { origin = (-1.5u, 8u, 2u); size = (3u, 3u, 3u); surface = skin.gunner_head; }
-          cube gunner_helmet { origin = (-2u, 10u, 1.5u); size = (4u, 2u, 4u); surface = skin.gunner_helmet; }
+          cube mount { origin = (-3u, 5u, -1u); size = (6u, 3u, 6u); surface = skin.mount; }
+          cube gunner { origin = (-2u, 8u, 2u); size = (4u, 3u, 3u); surface = skin.gunner; }
+          cube gunner_head { origin = (-2u, 11u, 1.5u); size = (4u, 4u, 4u); surface = skin.gunner_head; }
+          cube gunner_helmet { origin = (-2.5u, 14u, 1u); size = (5u, 2u, 5u); surface = skin.gunner_helmet; }
           bone barrel {
-            cube barrel { origin = (-1u, 6.5u, -10u); size = (2u, 2u, 11u); rotation = (30deg, 0deg, 0deg); pivot = (0u, 7u, 0u); surface = skin.barrel; }
+            cube barrel { origin = (-1.5u, 6u, -10u); size = (3u, 3u, 11u); rotation = (40deg, 0deg, 0deg); pivot = (0u, 7.5u, 0u); surface = skin.barrel; }
+            cube muzzle { origin = (-2u, 5.5u, -11u); size = (4u, 4u, 1u); rotation = (40deg, 0deg, 0deg); pivot = (0u, 7.5u, 0u); surface = skin.muzzle; }
           }
         }
       }

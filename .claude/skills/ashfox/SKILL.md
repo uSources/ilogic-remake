@@ -23,9 +23,14 @@ partir de descripciones cortas en `tools/art/ashfox/models/`. Se edita eso:
 
 Cada modelo es una lista de cubos (`name`, `origin`, `size`, `paint`, y si hace falta `bone`,
 `rotation` + `pivot` y `stamps`); los que se mueven, ademas `bones` y `motions`. Las pinturas son
-rampas de tres tonos (sombra, medio, luz) con manchas opcionales (`blotch`). Hay piezas comunes que
-se reutilizan (el muñeco `chibi`, `tracks`, `axles`, `truckCab`, `land`, `tree`, `mountain`...):
-mirar el fichero antes de escribir cubos sueltos.
+rampas de tres tonos (sombra, medio, luz) con manchas opcionales (`blotch`) y borde claro opcional
+(`rim`: la fila de arriba de cada lado, como el brillo del pixel art). Rampas de tonos cercanos: el
+grano de Ashfox reparte los tres por la cara y, muy separados, la dejan moteada (el 2D es liso). Los
+nombres de pintura son de todos los grupos a la vez: el generador falla si dos grupos usan el mismo
+nombre con colores distintos. Hay piezas comunes que se reutilizan (el muñeco `chibi`, `tracks`,
+`wheel`/`axles`, `truckCab`, `goggles`, `band`, `land`, `tree`, `mountain`...): mirar el fichero antes
+de escribir cubos sueltos. Los detalles pequeños (ojos, gafas, ventanas, faros, remaches) van como
+`stamps`, no como cubos.
 
 **Nunca** se tocan a mano los `.ashfox` generados (`tools/art/ashfox/{units,buildings,terrain}/`)
 ni los GLB (`public/assets/models/`): se regeneran.
@@ -58,7 +63,10 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
 
 - **Que compile no basta** (regla de la skill oficial): mirar cada modelo cambiado con `capture`
   (de frente `--azimuth 20`; de espaldas `--azimuth 200`) y cada animacion cambiada con `replay`,
-  antes de darlo por bueno. Las imagenes, al scratchpad, no al repo.
+  antes de darlo por bueno. Las imagenes, al scratchpad, no al repo (`capture` no sobrescribe: borrar
+  antes la imagen).
+- **Compararlo con el 2D**: de lado, `--azimuth 90 --elevation 18` deja la unidad mirando a la derecha,
+  como los sprites; en una hoja con Pillow, el sprite ampliado (vecino mas cercano) junto a la captura.
 - Exportar todo tarda unos minutos (82 modelos); para probar uno, `ashfox export <fuente> --output
   public/assets/models/<grupo>/<nombre>.glb` (borrando antes el `.glb`: Ashfox no sobrescribe).
 - Despues, **en el juego**: `npm run dev` y `/3d.html` (`?seed=` para elegir mapa, `?seed=2` es
