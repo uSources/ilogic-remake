@@ -7,16 +7,50 @@ module body {
     requires surface skin: surfaces.Skin;
     bind bone body to skeleton.body;
     bind bone pump to skeleton.pump;
+    bind bone bridle to skeleton.bridle;
+    bind bone pitman to skeleton.pitman;
+    bind bone crank to skeleton.crank;
     geometry {
       bone body {
-        cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
-        cube deck { origin = (-6u, 1u, -4u); size = (12u, 2u, 8u); surface = skin.deck; }
-        cube leg_left { origin = (-5u, 3u, -1u); size = (2u, 8u, 2u); surface = skin.leg_left; }
-        cube leg_right { origin = (3u, 3u, -1u); size = (2u, 8u, 2u); surface = skin.leg_right; }
-        cube drill { origin = (-1u, 3u, -0.5u); size = (2u, 8u, 1u); surface = skin.drill; }
+        cube plinth { origin = (-14u, 0u, -14u); size = (28u, 2u, 28u); surface = skin.plinth; }
+        cube skid { origin = (-14u, 2u, -7u); size = (27u, 2u, 8u); surface = skin.skid; }
+        cube samson_front_left { origin = (-5u, 3u, -22u); size = (2u, 2u, 16u); rotation = (101.5deg, -14.5deg, 0deg); pivot = (-4u, 4u, -6u); surface = skin.samson_front_left; }
+        cube samson_front_right { origin = (3u, 3u, -22u); size = (2u, 2u, 16u); rotation = (101.5deg, 14.5deg, 0deg); pivot = (4u, 4u, -6u); surface = skin.samson_front_right; }
+        cube samson_back_left { origin = (-5u, 3u, -16u); size = (2u, 2u, 16u); rotation = (78.5deg, -14.5deg, 0deg); pivot = (-4u, 4u, 0u); surface = skin.samson_back_left; }
+        cube samson_back_right { origin = (3u, 3u, -16u); size = (2u, 2u, 16u); rotation = (78.5deg, 14.5deg, 0deg); pivot = (4u, 4u, 0u); surface = skin.samson_back_right; }
+        cube samson_saddle { origin = (-2u, 17u, -5u); size = (4u, 2u, 4u); surface = skin.samson_saddle; }
+        cube gearbox { origin = (6u, 4u, -5.5u); size = (6u, 7u, 5u); surface = skin.gearbox; }
+        cube motor { origin = (8u, 4u, 2u); size = (5u, 4u, 4u); surface = skin.motor; }
+        cube wellhead { origin = (-18u, 2u, -4.5u); size = (3u, 5u, 3u); surface = skin.wellhead; }
+        cube wellhead_valve { origin = (-18.5u, 5u, -5u); size = (4u, 1u, 4u); surface = skin.wellhead_valve; }
+        cube tank { origin = (-12u, 2u, 4u); size = (12u, 12u, 8u); surface = skin.tank; }
+        cube tank_round { origin = (-10u, 2u, 2u); size = (8u, 12u, 12u); surface = skin.tank_round; }
+        cube tank_top { origin = (-9u, 14u, 3u); size = (6u, 1u, 10u); surface = skin.tank_top; }
+        cube tank_ladder { origin = (0u, 2u, 7u); size = (1u, 12u, 2u); surface = skin.tank_ladder; }
+        cube pipe_to_tank { origin = (-17u, 3u, 0u); size = (2u, 2u, 5u); surface = skin.pipe_to_tank; }
+        cube pipe_along { origin = (-15u, 3u, 3u); size = (3u, 2u, 2u); surface = skin.pipe_along; }
+        cube barrel_0 { origin = (4u, 2u, 9u); size = (3u, 5u, 3u); surface = skin.barrel_0; }
+        cube barrel_1 { origin = (7.5u, 2u, 9u); size = (3u, 5u, 3u); surface = skin.barrel_1; }
+        cube barrel_2 { origin = (11u, 2u, 9u); size = (3u, 5u, 3u); surface = skin.barrel_2; }
         bone pump {
-          cube beam { origin = (-6u, 11u, -2u); size = (12u, 2u, 4u); surface = skin.beam; }
-          cube cap { origin = (-1.5u, 13u, -1.5u); size = (3u, 2u, 3u); surface = skin.cap; }
+          cube samson_bearing { origin = (-1.5u, 19u, -5.5u); size = (3u, 1u, 5u); surface = skin.samson_bearing; }
+          cube equalizer { origin = (9u, 19u, -7u); size = (2u, 1u, 8u); surface = skin.equalizer; }
+          cube walking_beam { origin = (-13u, 20u, -4.5u); size = (25u, 3u, 3u); surface = skin.walking_beam; }
+          cube horse_head { origin = (-16u, 14u, -5u); size = (4u, 11u, 4u); surface = skin.horse_head; }
+          cube horse_head_tip { origin = (-17u, 16u, -4.5u); size = (1u, 7u, 3u); surface = skin.horse_head_tip; }
+          bone bridle {
+            cube bridle { origin = (-16.5u, 4u, -3.5u); size = (1u, 10u, 1u); surface = skin.bridle; }
+          }
+          bone pitman {
+            cube pitman_front { origin = (9.5u, 9u, -6.5u); size = (1u, 10u, 1u); surface = skin.pitman_front; }
+            cube pitman_back { origin = (9.5u, 9u, -0.5u); size = (1u, 10u, 1u); surface = skin.pitman_back; }
+          }
+        }
+        bone crank {
+          cube counterweight_front { origin = (6u, 4u, -8u); size = (6u, 7u, 1u); surface = skin.counterweight_front; }
+          cube counterweight_back { origin = (6u, 4u, 1u); size = (6u, 7u, 1u); surface = skin.counterweight_back; }
+          cube crank_hub_front { origin = (8u, 8u, -7u); size = (2u, 2u, 1u); surface = skin.crank_hub_front; }
+          cube crank_hub_back { origin = (8u, 8u, 0u); size = (2u, 2u, 1u); surface = skin.crank_hub_back; }
         }
       }
     }

@@ -11,10 +11,10 @@ module rig {
   }
   export skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind wheels_front { parent-origin = (0u, 3u, -5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind wheels_back { parent-origin = (0u, 3u, 5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind rider { parent-origin = (0u, 4u, 1u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind hull { parent-origin = (0u, 8u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_front { parent-origin = (0u, 6u, -12u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_back { parent-origin = (0u, 6u, 11u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind rider { parent-origin = (0u, 7u, 2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   export motion idle for ModelRig {
     duration = 1.2s; fps = 20; loop = loop; rest-relative = true;

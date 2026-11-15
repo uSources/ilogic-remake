@@ -9,16 +9,23 @@ module body {
     bind bone flag to skeleton.flag;
     geometry {
       bone body {
-        cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
-        cube ring0 { origin = (-6.5u, 1u, -6.5u); size = (13u, 3u, 13u); surface = skin.ring0; }
-        cube ring1 { origin = (-6u, 4u, -6u); size = (12u, 3u, 12u); surface = skin.ring1; }
-        cube ring2 { origin = (-5u, 7u, -5u); size = (10u, 2u, 10u); surface = skin.ring2; }
-        cube ring3 { origin = (-4u, 9u, -4u); size = (8u, 1u, 8u); surface = skin.ring3; }
-        cube ring4 { origin = (-3u, 10u, -3u); size = (6u, 1u, 6u); surface = skin.ring4; }
-        cube entrance { origin = (-2.5u, 1u, -7.5u); size = (5u, 3u, 1u); surface = skin.entrance; }
-        cube pole { origin = (-0.5u, 11u, -0.5u); size = (1u, 4u, 1u); surface = skin.pole; }
+        cube plinth { origin = (-14u, 0u, -14u); size = (28u, 2u, 28u); surface = skin.plinth; }
+        cube ring0 { origin = (-11u, 2u, -11u); size = (22u, 6u, 22u); surface = skin.ring0; }
+        cube ring1 { origin = (-9.5u, 8u, -9.5u); size = (19u, 5u, 19u); surface = skin.ring1; }
+        cube ring2 { origin = (-8u, 13u, -8u); size = (16u, 4u, 16u); surface = skin.ring2; }
+        cube ring3 { origin = (-6u, 17u, -6u); size = (12u, 3u, 12u); surface = skin.ring3; }
+        cube ring4 { origin = (-4u, 20u, -4u); size = (8u, 2u, 8u); surface = skin.ring4; }
+        cube hatch { origin = (-3u, 22u, -3u); size = (6u, 1u, 6u); surface = skin.hatch; }
+        cube periscope { origin = (3u, 21u, -3u); size = (2u, 4u, 2u); surface = skin.periscope; }
+        cube flag_pole { origin = (-5u, 20u, 2u); size = (1u, 10u, 1u); surface = skin.flag_pole; }
+        cube flag_ball { origin = (-5.5u, 30u, 1.5u); size = (2u, 1u, 2u); surface = skin.flag_ball; }
+        cube entrance { origin = (-5u, 2u, -15u); size = (10u, 8u, 4u); surface = skin.entrance; }
+        cube sandbags_left_0 { origin = (-12u, 2u, -14u); size = (7u, 3u, 3u); surface = skin.sandbags_left_0; }
+        cube sandbags_left_1 { origin = (-11u, 5u, -14u); size = (6u, 3u, 3u); surface = skin.sandbags_left_1; }
+        cube sandbags_right_0 { origin = (5u, 2u, -14u); size = (7u, 3u, 3u); surface = skin.sandbags_right_0; }
+        cube sandbags_right_1 { origin = (5u, 5u, -14u); size = (6u, 3u, 3u); surface = skin.sandbags_right_1; }
         bone flag {
-          cube flag { origin = (0.5u, 13u, -0.5u); size = (3u, 2u, 1u); surface = skin.flag; }
+          cube flag_cloth { origin = (-4u, 25u, 2u); size = (7u, 4u, 1u); surface = skin.flag_cloth; }
         }
       }
     }

@@ -4,39 +4,58 @@ module paint {
   export surface look: skin.Skin {
     material = opaque;
     texture atlas {
-      atlas = (64px, 64px); background = team_blue; background-alpha = 255;
+      atlas = (128px, 128px); background = team_blue; background-alpha = 255;
       palette {
         team_blue = (#2766c4, #2f74d6, #3d84e2);
-        rim_team_blue_7_r = #6fb0f2;
-        rim_team_blue_8_r = #6fb0f2;
-        glass = (#8ad4f4, #9fe3ff, #b8ecff);
-        dark_blue = (#1a468e, #1f56a8, #2a64b8);
-        rim_dark_blue_1_r = #3f7ccc;
-        rim_dark_blue_2_r = #3f7ccc;
+        rim_team_blue_14_r = #6fb0f2;
+        rim_team_blue_16_r = #6fb0f2;
+        heli_windows_g = #9fe3ff;
+        heli_door_d = #1a468e;
+        heli_roundel_t = #6fb0f2;
+        heli_roundel_w = #f2f2ea;
+        heli_roundel_k = #1a468e;
         gun = (#2a2e38, #343a46, #3e4554);
+        engine_grille_k = #141824;
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        bubble_shine_w = #ffffff;
+        bubble_tip_shine_w = #ffffff;
+        dark_blue = (#1a468e, #1f56a8, #2a64b8);
+        rim_dark_blue_2_r = #3f7ccc;
+        rim_dark_blue_4_r = #3f7ccc;
         steel = (#7a8394, #8a93a6, #9aa3b6);
         blur = (#8fb8d8, #a8cce6, #c0dcf0);
       }
-      stamp rim_team_blue_7 { pixels = "rrrrrrr"; r = rim_team_blue_7_r; }
-      stamp rim_team_blue_8 { pixels = "rrrrrrrr"; r = rim_team_blue_8_r; }
-      stamp rim_dark_blue_1 { pixels = "r"; r = rim_dark_blue_1_r; }
+      stamp rim_team_blue_14 { pixels = "rrrrrrrrrrrrrr"; r = rim_team_blue_14_r; }
+      stamp rim_team_blue_16 { pixels = "rrrrrrrrrrrrrrrr"; r = rim_team_blue_16_r; }
+      stamp heli_windows { pixels = "ggg.ggg.ggg/ggg.ggg.ggg"; g = heli_windows_g; }
+      stamp heli_door { pixels = "dddddd/d....d/d....d/d....d/d....d/d....d/d....d/dddddd"; d = heli_door_d; }
+      stamp heli_roundel { pixels = ".ttt./twwwt/twkwt/twwwt/.ttt."; t = heli_roundel_t; w = heli_roundel_w; k = heli_roundel_k; }
+      stamp engine_grille { pixels = "k.k.k.k./.k.k.k.k"; k = engine_grille_k; }
+      stamp bubble_shine { pixels = "ww../w..."; w = bubble_shine_w; }
+      stamp bubble_tip_shine { pixels = "w."; w = bubble_tip_shine_w; }
       stamp rim_dark_blue_2 { pixels = "rr"; r = rim_dark_blue_2_r; }
-      chart cabin box { origin = (0px, 22px); fill = team_blue; face north { stamp rim_team_blue_7 { at = (0px, 0px); } } face south { stamp rim_team_blue_7 { at = (0px, 0px); } } face east { stamp rim_team_blue_8 { at = (0px, 0px); } } face west { stamp rim_team_blue_8 { at = (0px, 0px); } } }
-      chart cabin_top box { origin = (0px, 49px); fill = team_blue; }
-      chart bubble box { origin = (44px, 37px); fill = glass; }
-      chart boom box { origin = (23px, 37px); fill = dark_blue; }
-      chart tail_fin box { origin = (23px, 49px); fill = dark_blue; face north { stamp rim_dark_blue_1 { at = (0px, 0px); } } face south { stamp rim_dark_blue_1 { at = (0px, 0px); } } face east { stamp rim_dark_blue_2 { at = (0px, 0px); } } face west { stamp rim_dark_blue_2 { at = (0px, 0px); } } }
-      chart skid0 box { origin = (31px, 22px); fill = gun; }
-      chart strut_front0 box { origin = (46px, 49px); fill = gun; }
-      chart strut_back0 box { origin = (51px, 49px); fill = gun; }
-      chart skid1 box { origin = (0px, 37px); fill = gun; }
-      chart strut_front1 box { origin = (56px, 49px); fill = gun; }
-      chart strut_back1 box { origin = (0px, 57px); fill = gun; }
-      chart mast box { origin = (5px, 57px); fill = steel; }
-      chart blade_a box { origin = (10px, 57px); fill = blur; }
+      stamp rim_dark_blue_4 { pixels = "rrrr"; r = rim_dark_blue_4_r; }
+      chart cabin box { origin = (0px, 42px); fill = team_blue; face north { stamp rim_team_blue_14 { at = (0px, 0px); } } face south { stamp rim_team_blue_14 { at = (0px, 0px); } } face east { stamp rim_team_blue_16 { at = (0px, 0px); } stamp heli_windows { at = (3px, 2px); } stamp heli_door { at = (5px, 3px); } stamp heli_roundel { at = (1px, 6px); } } face west { stamp rim_team_blue_16 { at = (0px, 0px); } stamp heli_windows { at = (3px, 2px); } stamp heli_door { at = (5px, 3px); } stamp heli_roundel { at = (1px, 6px); } } }
+      chart cabin_top box { origin = (0px, 96px); fill = team_blue; }
+      chart engine box { origin = (78px, 96px); fill = gun; face east { stamp engine_grille { at = (0px, 0px); } } face west { stamp engine_grille { at = (0px, 0px); } } }
+      chart bubble box { origin = (45px, 96px); fill = glass; face north { stamp bubble_shine { at = (1px, 1px); } } }
+      chart bubble_mid box { origin = (0px, 111px); fill = glass; }
+      chart bubble_tip box { origin = (62px, 111px); fill = glass; face north { stamp bubble_tip_shine { at = (1px, 1px); } } }
+      chart boom box { origin = (49px, 71px); fill = dark_blue; }
+      chart tail_fin box { origin = (25px, 111px); fill = dark_blue; face north { stamp rim_dark_blue_2 { at = (0px, 0px); } } face south { stamp rim_dark_blue_2 { at = (0px, 0px); } } face east { stamp rim_dark_blue_4 { at = (0px, 0px); } } face west { stamp rim_dark_blue_4 { at = (0px, 0px); } } }
+      chart tail_plane box { origin = (0px, 122px); fill = dark_blue; }
+      chart skid_left box { origin = (61px, 42px); fill = gun; }
+      chart strut_front_left box { origin = (81px, 111px); fill = gun; }
+      chart strut_back_left box { origin = (88px, 111px); fill = gun; }
+      chart skid_right box { origin = (0px, 71px); fill = gun; }
+      chart strut_front_right box { origin = (95px, 111px); fill = gun; }
+      chart strut_back_right box { origin = (102px, 111px); fill = gun; }
+      chart mast box { origin = (27px, 122px); fill = steel; }
+      chart rotor_hub box { origin = (109px, 111px); fill = gun; }
+      chart blade_a box { origin = (36px, 122px); fill = blur; }
       chart blade_b box { origin = (0px, 0px); fill = blur; }
-      chart tail_blade_a box { origin = (30px, 49px); fill = steel; }
-      chart tail_blade_b box { origin = (35px, 49px); fill = steel; }
+      chart tail_blade_a box { origin = (38px, 111px); fill = steel; }
+      chart tail_blade_b box { origin = (43px, 111px); fill = steel; }
       grain clustered { seed = 2013; }
       tone voxel;
     }

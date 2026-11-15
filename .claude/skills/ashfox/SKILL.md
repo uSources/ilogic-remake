@@ -121,7 +121,7 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
 - Toda la geometria cuelga de un hueso, y cada cubo de un hueso que existe (el generador avisa).
 - Tamaños de cubo enteros (el trozo de textura de una caja mide `2·ancho + 2·fondo` × `alto + fondo`);
   las posiciones pueden llevar `.5`.
-- Ningun cubo tapado del todo por otro (`cube.fully_occluded`): ojos, ventanas y rayas van como
+- Ningun cubo tapado del todo por otro (`cube.fully_occluded`; **`check` no lo ve, falla al exportar**): ojos, ventanas y rayas van como
   `stamps` en una cara, no como cubos dentro de otros. Las piezas repartidas al azar, con separacion.
 - Un `stamp` tiene que caber entero en su cara.
 - En una pista de animacion, todas las claves con la misma interpolacion; un bucle acaba como empieza

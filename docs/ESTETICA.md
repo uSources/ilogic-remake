@@ -69,6 +69,18 @@ Lo que vale para todo muñeco; la referencia es el soldado.
   derecha; la otra, libre. Al principio iba a la altura de la cara y desde arriba parecía que
   apuntaba al suelo: «si lo lanza así, sale volando».
 
+- **El del mortero:** como en la foto de referencia: en zancada (una pierna adelantada y doblada,
+  la otra estirada atrás), inclinado sobre el mortero y soltando la granada en la boca del tubo con
+  las dos manos; casco de camuflaje con gafas; el mortero (placa, tubo, bípode) delante a su
+  derecha, para que se vea desde arriba, y la caja de granadas.
+- **El de la moto** (`biker`): el motorista es **el muñeco de los soldados sentado** (cabeza grande,
+  casco con gafas, cinturón), **inclinado hacia delante** como en el 2D; el tripulante pequeño se
+  veía diminuto. Muslos sobre el depósito, espinillas rectas a los pedales y brazos con codo hasta el manillar (`limb`: cada tramo va de un punto a otro), y la
+  bufanda oscura caída hacia atrás. La moto, de motocross y **oscura** (que contraste con el
+  motorista, del color del equipo, como en el 2D): motor con aletas, depósito con la franja del
+  equipo, tapa del número, guardabarros y faro blancos, escape con silenciador, ruedas finas con
+  tapacubos. Las versiones toda azul y con el motorista pequeño no gustaron.
+
 ### La pose
 
 - **En guardia, con el arma en las dos manos.** Nunca el arma colgando de una mano a un lado ni
@@ -129,9 +141,51 @@ casilla, el color del equipo en la carrocería y el detalle dibujado.
   remaches, un cañón gordo a cada lado por fuera en su afuste (camisa y freno de boca), el radar de
   búsqueda arriba que gira en reposo y el de tiro delante. (La primera versión, torreta baja con
   cuatro cañones finos como palos, no gustó.)
+- **El anfibio** (`amphibiousTank`): un aerodeslizador: falda de goma negra con costuras, casco del
+  equipo, la torreta del tanque ligero y, detrás, el ventilador **integrado**: una carcasa cuadrada
+  del color del equipo apoyada en el casco, con el hueco redondeado a escalones, las aspas dentro
+  (giran) y dos timones en los bordes. (Suelto encima, en un aro o en un marco gris, era un pegote.)
 - **El transporte** (`transport`): camión con la cabina del equipo delante (parabrisas en 3D con su
   barra, ventanillas, rejilla, faros, retrovisores) y la caja con la lona (costillas, la abertura
   oscura de detrás con la lona enrollada) y pilotos rojos.
+
+## Edificios
+
+`tools/art/ashfox/models/buildings.mjs`, también a 32 por casilla. Del color de su dueño (turquesa,
+rojo o gris, como en el 2D), sobre una losa de acera con bordillo, con ventanas en rejilla (marco
+claro y algunas encendidas) y mucho detalle alrededor: farolas, macetas, sacos, franjas de peligro.
+
+- **Ciudad:** torre de oficinas con ventanas en las cuatro caras, entrada de cristal con marquesina
+  y, en el tejado, aparatos de aire, depósito de agua y antena con luz roja.
+- **Petróleo:** **bomba de balancín** (el «caballito»): caballete en A, balancín que cabecea con la
+  cabeza curva y el cable al pozo (siempre recto), las bielas de la cola a la manivela, contrapesos
+  que giran y motor (las piezas que cuelgan van en su hueso y giran al revés que el balancín, para
+  no despegarse); al lado, el depósito de crudo con
+  su escalera, la tubería y los bidones.
+- **Fábrica:** nave con tejado de sierra acristalado, portón con franjas de peligro, oficina pegada,
+  dos chimeneas de ladrillo con franjas blancas y rojas, y el silo.
+- **Fuerte:** búnker en cúpula de anillos con troneras, escotilla, periscopio y bandera; la entrada
+  blindada con franjas y sacos terreros a los lados.
+- **Aeropuerto:** pista con línea y luces, torre de control con cabina de cristal y radar que gira,
+  hangar con tejado redondeado y portón, y la manga de viento que ondea.
+- **Base:** cuartel con un edificio alto y otro bajo unidos por una pasarela de cristal, radar que
+  gira, antena, garita con barrera y bandera.
+
+## Aviones
+
+Vuelan (todo cuelga de `body`, subido); a 32 unidades por casilla, como el resto. Escarapelas en las
+alas (aro del equipo, blanco y centro oscuro: lo que se ve desde arriba).
+
+- **Caza ligero:** de hélice (dos palas en cruz con el cono rojo), capó gris con escapes, ala baja,
+  cabina abierta con el piloto (cara, gorro de cuero y gafas) y el tren de aterrizaje.
+- **Caza:** reactor del equipo, morro gris, cúpula con su marco, tomas de aire, alas con misiles en
+  las puntas, dos derivas y la tobera.
+- **Cristales grandes** (el morro del bombardero, la burbuja del helicóptero): escalonados para que se
+  vean redondeados, con un brillo y **sin marco pintado** (las rayas del marco parecían una cara).
+- **Bombardero:** gordo, morro de cristal, cabina, torreta de cristal arriba, dos
+  motores con hélice en las alas, bombas debajo, compuertas pintadas en la panza y dos derivas.
+- **Helicóptero:** cabina grande con ventanillas, puerta y escarapela, burbuja de cristal delante,
+  motor con rejillas, cola con su rotor, patines y el rotor grande que gira.
 
 ## Materiales (pinturas compartidas)
 

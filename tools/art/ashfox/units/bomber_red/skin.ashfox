@@ -1,19 +1,30 @@
 ashfox-model 1
 module skin {
   export surface contract Skin {
-    atlas { width = 64px; height = 64px; }
-    chart fuselage box { width = 40px; height = 20px; coverage = opaque; }
-    chart nose box { width = 12px; height = 6px; coverage = opaque; }
-    chart windscreen box { width = 12px; height = 3px; coverage = opaque; }
-    chart wing box { width = 56px; height = 7px; coverage = opaque; }
-    chart engine_left box { width = 16px; height = 8px; coverage = opaque; }
-    chart engine_right box { width = 16px; height = 8px; coverage = opaque; }
-    chart prop_left_a box { width = 12px; height = 2px; coverage = opaque; }
-    chart prop_left_b box { width = 4px; height = 6px; coverage = opaque; }
-    chart prop_right_a box { width = 12px; height = 2px; coverage = opaque; }
-    chart prop_right_b box { width = 4px; height = 6px; coverage = opaque; }
-    chart fin box { width = 10px; height = 9px; coverage = opaque; }
-    chart tailplane box { width = 26px; height = 4px; coverage = opaque; }
+    atlas { width = 128px; height = 128px; }
+    chart fuselage box { width = 80px; height = 39px; coverage = opaque; }
+    chart glass_nose box { width = 24px; height = 11px; coverage = opaque; }
+    chart glass_nose_mid box { width = 20px; height = 9px; coverage = opaque; }
+    chart glass_nose_tip box { width = 14px; height = 6px; coverage = opaque; }
+    chart cockpit box { width = 26px; height = 7px; coverage = opaque; }
+    chart dorsal_turret box { width = 16px; height = 7px; coverage = opaque; }
+    chart dorsal_guns box { width = 12px; height = 5px; coverage = opaque; }
+    chart wing box { width = 112px; height = 14px; coverage = opaque; }
+    chart engine_left box { width = 32px; height = 16px; coverage = opaque; }
+    chart bomb_left box { width = 16px; height = 9px; coverage = opaque; }
+    chart bomb_tip_left box { width = 8px; height = 5px; coverage = opaque; }
+    chart engine_right box { width = 32px; height = 16px; coverage = opaque; }
+    chart bomb_right box { width = 16px; height = 9px; coverage = opaque; }
+    chart bomb_tip_right box { width = 8px; height = 5px; coverage = opaque; }
+    chart prop_left_a box { width = 22px; height = 2px; coverage = opaque; }
+    chart prop_left_b box { width = 4px; height = 11px; coverage = opaque; }
+    chart prop_left_spinner box { width = 10px; height = 5px; coverage = opaque; }
+    chart prop_right_a box { width = 22px; height = 2px; coverage = opaque; }
+    chart prop_right_b box { width = 4px; height = 11px; coverage = opaque; }
+    chart prop_right_spinner box { width = 10px; height = 5px; coverage = opaque; }
+    chart tailplane box { width = 54px; height = 6px; coverage = opaque; }
+    chart fin_left box { width = 12px; height = 12px; coverage = opaque; }
+    chart fin_right box { width = 12px; height = 12px; coverage = opaque; }
     material = opaque;
   }
 }

@@ -8,13 +8,21 @@ module body {
     bind bone body to skeleton.body;
     geometry {
       bone body {
-        cube fuselage { origin = (-2.5u, 10u, -6u); size = (5u, 5u, 12u); surface = skin.fuselage; }
-        cube nose { origin = (-1.5u, 11u, -8u); size = (3u, 3u, 2u); surface = skin.nose; }
-        cube canopy { origin = (-1.5u, 15u, -4u); size = (3u, 2u, 5u); surface = skin.canopy; }
-        cube wing { origin = (-6u, 11u, -1u); size = (12u, 1u, 5u); surface = skin.wing; }
-        cube tailplane { origin = (-4u, 12u, 5u); size = (8u, 1u, 2u); surface = skin.tailplane; }
-        cube fin { origin = (-0.5u, 15u, 3u); size = (1u, 4u, 3u); surface = skin.fin; }
-        cube nozzle { origin = (-1.5u, 11u, 6u); size = (3u, 3u, 1u); surface = skin.nozzle; }
+        cube fuselage { origin = (-4u, 20u, -12u); size = (8u, 8u, 24u); surface = skin.fuselage; }
+        cube nose { origin = (-3u, 21u, -16u); size = (6u, 6u, 4u); surface = skin.nose; }
+        cube nose_tip { origin = (-1.5u, 22.5u, -18u); size = (3u, 3u, 2u); surface = skin.nose_tip; }
+        cube canopy { origin = (-2.5u, 28u, -10u); size = (5u, 3u, 8u); surface = skin.canopy; }
+        cube intake_left { origin = (-6u, 22u, -7u); size = (2u, 4u, 7u); surface = skin.intake_left; }
+        cube intake_right { origin = (4u, 22u, -7u); size = (2u, 4u, 7u); surface = skin.intake_right; }
+        cube wing { origin = (-14u, 22u, -3u); size = (28u, 2u, 10u); surface = skin.wing; }
+        cube wingtip_missile_left { origin = (-16u, 21u, -4u); size = (2u, 2u, 10u); surface = skin.wingtip_missile_left; }
+        cube wingtip_missile_tip_left { origin = (-16u, 21u, -6u); size = (2u, 2u, 2u); surface = skin.wingtip_missile_tip_left; }
+        cube wingtip_missile_right { origin = (14u, 21u, -4u); size = (2u, 2u, 10u); surface = skin.wingtip_missile_right; }
+        cube wingtip_missile_tip_right { origin = (14u, 21u, -6u); size = (2u, 2u, 2u); surface = skin.wingtip_missile_tip_right; }
+        cube tailplane { origin = (-9u, 23u, 9u); size = (18u, 1u, 4u); surface = skin.tailplane; }
+        cube fin_left { origin = (-3u, 28u, 7u); size = (1u, 7u, 5u); surface = skin.fin_left; }
+        cube fin_right { origin = (2u, 28u, 7u); size = (1u, 7u, 5u); surface = skin.fin_right; }
+        cube nozzle { origin = (-3u, 21u, 12u); size = (6u, 6u, 2u); surface = skin.nozzle; }
       }
     }
   }

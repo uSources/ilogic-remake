@@ -8,13 +8,23 @@ module body {
     bind bone body to skeleton.body;
     geometry {
       bone body {
-        cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
-        cube hall { origin = (-6u, 1u, -4u); size = (12u, 6u, 9u); surface = skin.hall; }
-        cube tooth0 { origin = (-6u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (-4u, 7u, 0.5u); surface = skin.tooth0; }
-        cube tooth1 { origin = (-2u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (0u, 7u, 0.5u); surface = skin.tooth1; }
-        cube tooth2 { origin = (2u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (4u, 7u, 0.5u); surface = skin.tooth2; }
-        cube chimney { origin = (4u, 1u, 4u); size = (2u, 11u, 2u); surface = skin.chimney; }
-        cube chimney_cap { origin = (3.5u, 12u, 3.5u); size = (3u, 1u, 3u); surface = skin.chimney_cap; }
+        cube plinth { origin = (-14u, 0u, -14u); size = (28u, 2u, 28u); surface = skin.plinth; }
+        cube hall { origin = (-13u, 2u, -9u); size = (26u, 12u, 18u); surface = skin.hall; }
+        cube roller_door { origin = (-4u, 2u, -10u); size = (8u, 6u, 1u); surface = skin.roller_door; }
+        cube door_stripes { origin = (-5u, 8u, -10.5u); size = (10u, 1u, 1u); surface = skin.door_stripes; }
+        cube tooth0 { origin = (-11.5u, 10.5u, -8.5u); size = (7u, 7u, 17u); rotation = (0deg, 0deg, 45deg); pivot = (-8u, 14u, 0u); surface = skin.tooth0; }
+        cube tooth1 { origin = (-3.5u, 10.5u, -8.5u); size = (7u, 7u, 17u); rotation = (0deg, 0deg, 45deg); pivot = (0u, 14u, 0u); surface = skin.tooth1; }
+        cube tooth2 { origin = (4.5u, 10.5u, -8.5u); size = (7u, 7u, 17u); rotation = (0deg, 0deg, 45deg); pivot = (8u, 14u, 0u); surface = skin.tooth2; }
+        cube office { origin = (-14u, 2u, -14u); size = (8u, 8u, 5u); surface = skin.office; }
+        cube stack_0 { origin = (3u, 2u, 10u); size = (4u, 26u, 4u); surface = skin.stack_0; }
+        cube stack_cap_0 { origin = (2.5u, 28u, 9.5u); size = (5u, 1u, 5u); surface = skin.stack_cap_0; }
+        cube stack_1 { origin = (9u, 2u, 10u); size = (4u, 20u, 4u); surface = skin.stack_1; }
+        cube stack_cap_1 { origin = (8.5u, 22u, 9.5u); size = (5u, 1u, 5u); surface = skin.stack_cap_1; }
+        cube silo { origin = (-13u, 2u, 9u); size = (6u, 14u, 6u); surface = skin.silo; }
+        cube silo_top { origin = (-12u, 16u, 10u); size = (4u, 2u, 4u); surface = skin.silo_top; }
+        cube silo_pipe { origin = (-7u, 12u, 11u); size = (6u, 2u, 2u); surface = skin.silo_pipe; }
+        cube lamp_post { origin = (12u, 2u, -13u); size = (1u, 10u, 1u); surface = skin.lamp_post; }
+        cube lamp_light { origin = (11u, 12u, -14u); size = (3u, 2u, 3u); surface = skin.lamp_light; }
       }
     }
   }

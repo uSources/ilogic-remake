@@ -1,21 +1,26 @@
 ashfox-model 1
 module skin {
   export surface contract Skin {
-    atlas { width = 64px; height = 32px; }
-    chart fuselage box { width = 30px; height = 15px; coverage = opaque; }
-    chart cowl box { width = 10px; height = 5px; coverage = opaque; }
-    chart tail box { width = 12px; height = 6px; coverage = opaque; }
-    chart fin box { width = 8px; height = 7px; coverage = opaque; }
-    chart tailplane box { width = 20px; height = 3px; coverage = opaque; }
-    chart wing box { width = 38px; height = 6px; coverage = opaque; }
-    chart windscreen box { width = 10px; height = 2px; coverage = opaque; }
-    chart pilot box { width = 8px; height = 4px; coverage = opaque; }
-    chart pilot_helmet box { width = 12px; height = 4px; coverage = opaque; }
-    chart wheel_left box { width = 6px; height = 4px; coverage = opaque; }
-    chart wheel_right box { width = 6px; height = 4px; coverage = opaque; }
-    chart prop_hub box { width = 6px; height = 3px; coverage = opaque; }
-    chart prop_a box { width = 16px; height = 2px; coverage = opaque; }
-    chart prop_b box { width = 4px; height = 8px; coverage = opaque; }
+    atlas { width = 128px; height = 64px; }
+    chart fuselage box { width = 60px; height = 29px; coverage = opaque; }
+    chart cowl box { width = 22px; height = 10px; coverage = opaque; }
+    chart tail_cone box { width = 22px; height = 11px; coverage = opaque; }
+    chart fin box { width = 12px; height = 12px; coverage = opaque; }
+    chart tailplane box { width = 36px; height = 5px; coverage = opaque; }
+    chart wing box { width = 78px; height = 11px; coverage = opaque; }
+    chart windscreen box { width = 14px; height = 4px; coverage = opaque; }
+    chart cockpit_rim box { width = 28px; height = 8px; coverage = opaque; }
+    chart pilot_head box { width = 20px; height = 9px; coverage = opaque; }
+    chart pilot_cap box { width = 24px; height = 8px; coverage = opaque; }
+    chart pilot_goggles box { width = 12px; height = 2px; coverage = opaque; }
+    chart gear_strut_left box { width = 4px; height = 5px; coverage = opaque; }
+    chart gear_wheel_left box { width = 12px; height = 8px; coverage = opaque; }
+    chart gear_strut_right box { width = 4px; height = 5px; coverage = opaque; }
+    chart gear_wheel_right box { width = 12px; height = 8px; coverage = opaque; }
+    chart prop_hub box { width = 8px; height = 4px; coverage = opaque; }
+    chart prop_a box { width = 30px; height = 2px; coverage = opaque; }
+    chart prop_b box { width = 4px; height = 15px; coverage = opaque; }
+    chart prop_spinner box { width = 10px; height = 5px; coverage = opaque; }
     material = opaque;
   }
 }

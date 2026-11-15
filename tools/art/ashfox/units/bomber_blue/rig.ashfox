@@ -10,9 +10,9 @@ module rig {
   }
   export skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind body { parent-origin = (0u, 10u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind prop_left { parent-origin = (-5.5u, 2.5u, -5.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind prop_right { parent-origin = (5.5u, 2.5u, -5.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 20u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind prop_left { parent-origin = (-12u, 5u, -12.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind prop_right { parent-origin = (12u, 5u, -12.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   export motion idle for ModelRig {
     duration = 2s; fps = 20; loop = loop; rest-relative = true;

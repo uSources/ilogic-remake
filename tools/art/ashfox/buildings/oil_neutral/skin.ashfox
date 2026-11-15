@@ -1,14 +1,39 @@
 ashfox-model 1
 module skin {
   export surface contract Skin {
-    atlas { width = 64px; height = 64px; }
-    chart plinth box { width = 56px; height = 15px; coverage = opaque; }
-    chart deck box { width = 40px; height = 10px; coverage = opaque; }
-    chart leg_left box { width = 8px; height = 10px; coverage = opaque; }
-    chart leg_right box { width = 8px; height = 10px; coverage = opaque; }
-    chart beam box { width = 32px; height = 6px; coverage = opaque; }
-    chart cap box { width = 12px; height = 5px; coverage = opaque; }
-    chart drill box { width = 6px; height = 9px; coverage = opaque; }
+    atlas { width = 128px; height = 128px; }
+    chart plinth box { width = 112px; height = 30px; coverage = opaque; }
+    chart skid box { width = 70px; height = 10px; coverage = opaque; }
+    chart samson_front_left box { width = 36px; height = 18px; coverage = opaque; }
+    chart samson_front_right box { width = 36px; height = 18px; coverage = opaque; }
+    chart samson_back_left box { width = 36px; height = 18px; coverage = opaque; }
+    chart samson_back_right box { width = 36px; height = 18px; coverage = opaque; }
+    chart samson_saddle box { width = 16px; height = 6px; coverage = opaque; }
+    chart samson_bearing box { width = 16px; height = 6px; coverage = opaque; }
+    chart equalizer box { width = 20px; height = 9px; coverage = opaque; }
+    chart pitman_front box { width = 4px; height = 11px; coverage = opaque; }
+    chart pitman_back box { width = 4px; height = 11px; coverage = opaque; }
+    chart walking_beam box { width = 56px; height = 6px; coverage = opaque; }
+    chart horse_head box { width = 16px; height = 15px; coverage = opaque; }
+    chart horse_head_tip box { width = 8px; height = 10px; coverage = opaque; }
+    chart bridle box { width = 4px; height = 11px; coverage = opaque; }
+    chart gearbox box { width = 22px; height = 12px; coverage = opaque; }
+    chart counterweight_front box { width = 14px; height = 8px; coverage = opaque; }
+    chart counterweight_back box { width = 14px; height = 8px; coverage = opaque; }
+    chart crank_hub_front box { width = 6px; height = 3px; coverage = opaque; }
+    chart crank_hub_back box { width = 6px; height = 3px; coverage = opaque; }
+    chart motor box { width = 18px; height = 8px; coverage = opaque; }
+    chart wellhead box { width = 12px; height = 8px; coverage = opaque; }
+    chart wellhead_valve box { width = 16px; height = 5px; coverage = opaque; }
+    chart tank box { width = 40px; height = 20px; coverage = opaque; }
+    chart tank_round box { width = 40px; height = 24px; coverage = opaque; }
+    chart tank_top box { width = 32px; height = 11px; coverage = opaque; }
+    chart tank_ladder box { width = 6px; height = 14px; coverage = opaque; }
+    chart pipe_to_tank box { width = 14px; height = 7px; coverage = opaque; }
+    chart pipe_along box { width = 10px; height = 4px; coverage = opaque; }
+    chart barrel_0 box { width = 12px; height = 8px; coverage = opaque; }
+    chart barrel_1 box { width = 12px; height = 8px; coverage = opaque; }
+    chart barrel_2 box { width = 12px; height = 8px; coverage = opaque; }
     material = opaque;
   }
 }

@@ -1,27 +1,55 @@
 ashfox-model 1
 module skin {
   export surface contract Skin {
-    atlas { width = 64px; height = 64px; }
-    chart wheel_front box { width = 12px; height = 10px; coverage = opaque; }
-    chart wheel_front_round box { width = 14px; height = 10px; coverage = opaque; }
-    chart wheel_back box { width = 12px; height = 10px; coverage = opaque; }
-    chart wheel_back_round box { width = 14px; height = 10px; coverage = opaque; }
-    chart fork box { width = 4px; height = 6px; coverage = opaque; }
-    chart engine box { width = 14px; height = 7px; coverage = opaque; }
-    chart tank box { width = 16px; height = 8px; coverage = opaque; }
-    chart headlight box { width = 6px; height = 3px; coverage = opaque; }
-    chart seat box { width = 14px; height = 5px; coverage = opaque; }
-    chart fender box { width = 14px; height = 5px; coverage = opaque; }
-    chart exhaust box { width = 14px; height = 7px; coverage = opaque; }
-    chart handlebar box { width = 14px; height = 2px; coverage = opaque; }
-    chart leg_left box { width = 14px; height = 7px; coverage = opaque; }
-    chart leg_right box { width = 14px; height = 7px; coverage = opaque; }
-    chart rider_body box { width = 16px; height = 7px; coverage = opaque; }
-    chart arm_left box { width = 10px; height = 5px; coverage = opaque; }
-    chart arm_right box { width = 10px; height = 5px; coverage = opaque; }
-    chart rider_head box { width = 20px; height = 9px; coverage = opaque; }
-    chart rider_helmet box { width = 24px; height = 8px; coverage = opaque; }
-    chart scarf box { width = 18px; height = 6px; coverage = opaque; }
+    atlas { width = 64px; height = 256px; }
+    chart wheel_front box { width = 20px; height = 19px; coverage = opaque; }
+    chart wheel_front_round box { width = 30px; height = 19px; coverage = opaque; }
+    chart wheel_front_hub_left box { width = 12px; height = 10px; coverage = opaque; }
+    chart wheel_front_hub_right box { width = 12px; height = 10px; coverage = opaque; }
+    chart wheel_back box { width = 20px; height = 19px; coverage = opaque; }
+    chart wheel_back_round box { width = 30px; height = 19px; coverage = opaque; }
+    chart wheel_back_hub_left box { width = 12px; height = 10px; coverage = opaque; }
+    chart wheel_back_hub_right box { width = 12px; height = 10px; coverage = opaque; }
+    chart fork_left box { width = 26px; height = 13px; coverage = opaque; }
+    chart fork_right box { width = 26px; height = 13px; coverage = opaque; }
+    chart swingarm box { width = 24px; height = 12px; coverage = opaque; }
+    chart engine box { width = 34px; height = 17px; coverage = opaque; }
+    chart fuel_tank box { width = 34px; height = 14px; coverage = opaque; }
+    chart side_cover box { width = 28px; height = 10px; coverage = opaque; }
+    chart seat box { width = 28px; height = 10px; coverage = opaque; }
+    chart rear_fender box { width = 26px; height = 9px; coverage = opaque; }
+    chart front_fender box { width = 24px; height = 8px; coverage = opaque; }
+    chart headlight box { width = 16px; height = 7px; coverage = opaque; }
+    chart handlebar box { width = 28px; height = 2px; coverage = opaque; }
+    chart exhaust box { width = 20px; height = 10px; coverage = opaque; }
+    chart muffler box { width = 24px; height = 12px; coverage = opaque; }
+    chart tail_light box { width = 6px; height = 2px; coverage = opaque; }
+    chart torso box { width = 32px; height = 14px; coverage = opaque; }
+    chart buckle box { width = 8px; height = 3px; coverage = opaque; }
+    chart pouch_left box { width = 6px; height = 3px; coverage = opaque; }
+    chart pouch_right box { width = 6px; height = 3px; coverage = opaque; }
+    chart head box { width = 46px; height = 20px; coverage = opaque; }
+    chart helmet box { width = 54px; height = 19px; coverage = opaque; }
+    chart helmet_top box { width = 38px; height = 11px; coverage = opaque; }
+    chart neck_guard box { width = 32px; height = 5px; coverage = opaque; }
+    chart goggles box { width = 26px; height = 5px; coverage = opaque; }
+    chart lens_left box { width = 10px; height = 3px; coverage = opaque; }
+    chart lens_right box { width = 10px; height = 3px; coverage = opaque; }
+    chart rider_thigh_left box { width = 20px; height = 10px; coverage = opaque; }
+    chart rider_shin_left box { width = 22px; height = 11px; coverage = opaque; }
+    chart rider_boot_left box { width = 16px; height = 8px; coverage = opaque; }
+    chart rider_upper_arm_left box { width = 18px; height = 9px; coverage = opaque; }
+    chart rider_forearm_left box { width = 20px; height = 10px; coverage = opaque; }
+    chart rider_glove_left box { width = 12px; height = 6px; coverage = opaque; }
+    chart rider_thigh_right box { width = 20px; height = 10px; coverage = opaque; }
+    chart rider_shin_right box { width = 22px; height = 11px; coverage = opaque; }
+    chart rider_boot_right box { width = 16px; height = 8px; coverage = opaque; }
+    chart rider_upper_arm_right box { width = 18px; height = 9px; coverage = opaque; }
+    chart rider_forearm_right box { width = 20px; height = 10px; coverage = opaque; }
+    chart rider_glove_right box { width = 12px; height = 6px; coverage = opaque; }
+    chart scarf_knot box { width = 18px; height = 5px; coverage = opaque; }
+    chart scarf_tail box { width = 20px; height = 7px; coverage = opaque; }
+    chart scarf_end box { width = 16px; height = 6px; coverage = opaque; }
     material = opaque;
   }
 }

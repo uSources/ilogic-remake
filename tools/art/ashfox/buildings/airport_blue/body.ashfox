@@ -7,18 +7,29 @@ module body {
     requires surface skin: surfaces.Skin;
     bind bone body to skeleton.body;
     bind bone radar to skeleton.radar;
+    bind bone windsock to skeleton.windsock;
     geometry {
       bone body {
-        cube runway { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.runway; }
-        cube tower { origin = (-6.5u, 1u, -6.5u); size = (4u, 9u, 4u); surface = skin.tower; }
-        cube cab { origin = (-7u, 10u, -7u); size = (5u, 3u, 5u); surface = skin.cab; }
-        cube cab_roof { origin = (-7u, 13u, -7u); size = (5u, 1u, 5u); surface = skin.cab_roof; }
-        cube cab_top { origin = (-6u, 14u, -6u); size = (3u, 1u, 3u); surface = skin.cab_top; }
-        cube hangar { origin = (-1.5u, 1u, -6u); size = (8u, 4u, 8u); surface = skin.hangar; }
-        cube hangar_roof { origin = (-0.5u, 5u, -6u); size = (6u, 1u, 8u); surface = skin.hangar_roof; }
-        cube hangar_ridge { origin = (0.5u, 6u, -6u); size = (4u, 1u, 8u); surface = skin.hangar_ridge; }
+        cube runway { origin = (-16u, 0u, -16u); size = (32u, 2u, 32u); surface = skin.runway; }
+        cube runway_light_0 { origin = (-14u, 2u, 13u); size = (1u, 1u, 1u); surface = skin.runway_light_0; }
+        cube runway_light_1 { origin = (-6u, 2u, 13u); size = (1u, 1u, 1u); surface = skin.runway_light_1; }
+        cube runway_light_2 { origin = (2u, 2u, 13u); size = (1u, 1u, 1u); surface = skin.runway_light_2; }
+        cube runway_light_3 { origin = (10u, 2u, 13u); size = (1u, 1u, 1u); surface = skin.runway_light_3; }
+        cube tower { origin = (-14u, 2u, -14u); size = (8u, 18u, 8u); surface = skin.tower; }
+        cube cab_floor { origin = (-15u, 20u, -15u); size = (10u, 1u, 10u); surface = skin.cab_floor; }
+        cube cab { origin = (-15u, 21u, -15u); size = (10u, 5u, 10u); surface = skin.cab; }
+        cube cab_roof { origin = (-15.5u, 26u, -15.5u); size = (11u, 1u, 11u); surface = skin.cab_roof; }
+        cube radar_mast { origin = (-11u, 27u, -11u); size = (2u, 2u, 2u); surface = skin.radar_mast; }
+        cube hangar { origin = (-3u, 2u, -10u); size = (18u, 9u, 16u); surface = skin.hangar; }
+        cube hangar_roof_1 { origin = (-2u, 11u, -10u); size = (16u, 2u, 16u); surface = skin.hangar_roof_1; }
+        cube hangar_roof_2 { origin = (0u, 13u, -10u); size = (12u, 2u, 16u); surface = skin.hangar_roof_2; }
+        cube hangar_roof_3 { origin = (3u, 15u, -10u); size = (6u, 1u, 16u); surface = skin.hangar_roof_3; }
+        cube windsock_pole { origin = (12u, 2u, 9u); size = (1u, 12u, 1u); surface = skin.windsock_pole; }
         bone radar {
-          cube radar_dish { origin = (-6.5u, 15u, -5u); size = (4u, 1u, 1u); surface = skin.radar_dish; }
+          cube radar_dish { origin = (-14u, 29u, -10.5u); size = (8u, 3u, 1u); surface = skin.radar_dish; }
+        }
+        bone windsock {
+          cube windsock { origin = (13u, 12u, 8.5u); size = (6u, 2u, 2u); surface = skin.windsock; }
         }
       }
     }

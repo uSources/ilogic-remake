@@ -4,29 +4,55 @@ module paint {
   export surface look: skin.Skin {
     material = opaque;
     texture atlas {
-      atlas = (64px, 32px); background = team_red; background-alpha = 255;
+      atlas = (128px, 64px); background = team_red; background-alpha = 255;
       palette {
         team_red = (#b02824, #c8302a, #d84038);
-        rim_team_red_5_r = #f2786c;
-        rim_team_red_12_r = #f2786c;
+        rim_team_red_8_r = #f2786c;
+        rim_team_red_24_r = #f2786c;
         steel = (#7a8394, #8a93a6, #9aa3b6);
-        glass = (#8ad4f4, #9fe3ff, #b8ecff);
-        dark_red = (#80181a, #962220, #a82c28);
-        rim_dark_red_1_r = #c04a40;
-        rim_dark_red_3_r = #c04a40;
         gun = (#2a2e38, #343a46, #3e4554);
+        glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        canopy_frame_k = #2a3a48;
+        canopy_shine_w = #ffffff;
+        dark_red = (#80181a, #962220, #a82c28);
+        intake_mouth_k = #141824;
+        wing_roundel_left_t = #f2786c;
+        wing_roundel_left_w = #f2f2ea;
+        wing_roundel_left_k = #80181a;
+        wing_roundel_right_t = #f2786c;
+        wing_roundel_right_w = #f2f2ea;
+        wing_roundel_right_k = #80181a;
+        missile = (#e2e6ee, #eef2fa, #f8faff);
+        warhead = (#c02830, #d8323a, #e8484e);
+        rim_dark_red_1_r = #c04a40;
+        rim_dark_red_5_r = #c04a40;
+        nozzle_bore_k = #141824;
       }
-      stamp rim_team_red_5 { pixels = "rrrrr"; r = rim_team_red_5_r; }
-      stamp rim_team_red_12 { pixels = "rrrrrrrrrrrr"; r = rim_team_red_12_r; }
+      stamp rim_team_red_8 { pixels = "rrrrrrrr"; r = rim_team_red_8_r; }
+      stamp rim_team_red_24 { pixels = "rrrrrrrrrrrrrrrrrrrrrrrr"; r = rim_team_red_24_r; }
+      stamp canopy_frame { pixels = "kkkkk/...../...../kkkkk"; k = canopy_frame_k; }
+      stamp canopy_shine { pixels = "w...../.w...."; w = canopy_shine_w; }
+      stamp intake_mouth { pixels = "kk/kk/kk/kk"; k = intake_mouth_k; }
+      stamp wing_roundel_left { pixels = ".ttt./twwwt/twkwt/twwwt/.ttt."; t = wing_roundel_left_t; w = wing_roundel_left_w; k = wing_roundel_left_k; }
+      stamp wing_roundel_right { pixels = ".ttt./twwwt/twkwt/twwwt/.ttt."; t = wing_roundel_right_t; w = wing_roundel_right_w; k = wing_roundel_right_k; }
       stamp rim_dark_red_1 { pixels = "r"; r = rim_dark_red_1_r; }
-      stamp rim_dark_red_3 { pixels = "rrr"; r = rim_dark_red_3_r; }
-      chart fuselage box { origin = (0px, 0px); fill = team_red; face north { stamp rim_team_red_5 { at = (0px, 0px); } } face south { stamp rim_team_red_5 { at = (0px, 0px); } } face east { stamp rim_team_red_12 { at = (0px, 0px); } } face west { stamp rim_team_red_12 { at = (0px, 0px); } } }
-      chart nose box { origin = (35px, 18px); fill = steel; }
-      chart canopy box { origin = (35px, 0px); fill = glass; }
-      chart wing box { origin = (0px, 18px); fill = dark_red; }
-      chart tailplane box { origin = (0px, 25px); fill = dark_red; }
-      chart fin box { origin = (52px, 0px); fill = dark_red; face north { stamp rim_dark_red_1 { at = (0px, 0px); } } face south { stamp rim_dark_red_1 { at = (0px, 0px); } } face east { stamp rim_dark_red_3 { at = (0px, 0px); } } face west { stamp rim_dark_red_3 { at = (0px, 0px); } } }
-      chart nozzle box { origin = (46px, 18px); fill = gun; }
+      stamp rim_dark_red_5 { pixels = "rrrrr"; r = rim_dark_red_5_r; }
+      stamp nozzle_bore { pixels = ".kk./kkkk/kkkk/.kk."; k = nozzle_bore_k; }
+      chart fuselage box { origin = (0px, 0px); fill = team_red; face north { stamp rim_team_red_8 { at = (0px, 0px); } } face south { stamp rim_team_red_8 { at = (0px, 0px); } } face east { stamp rim_team_red_24 { at = (0px, 0px); } } face west { stamp rim_team_red_24 { at = (0px, 0px); } } }
+      chart nose box { origin = (91px, 46px); fill = steel; }
+      chart nose_tip box { origin = (0px, 59px); fill = gun; }
+      chart canopy box { origin = (26px, 46px); fill = glass; face up { stamp canopy_frame { at = (0px, 2px); } } face east { stamp canopy_shine { at = (1px, 0px); } } }
+      chart intake_left box { origin = (53px, 46px); fill = dark_red; face north { stamp intake_mouth { at = (0px, 0px); } } }
+      chart intake_right box { origin = (72px, 46px); fill = dark_red; face north { stamp intake_mouth { at = (0px, 0px); } } }
+      chart wing box { origin = (0px, 33px); fill = dark_red; face up { stamp wing_roundel_left { at = (2px, 3px); } stamp wing_roundel_right { at = (21px, 3px); } } }
+      chart wingtip_missile_left box { origin = (77px, 33px); fill = missile; }
+      chart wingtip_missile_tip_left box { origin = (56px, 59px); fill = warhead; }
+      chart wingtip_missile_right box { origin = (102px, 33px); fill = missile; }
+      chart wingtip_missile_tip_right box { origin = (65px, 59px); fill = warhead; }
+      chart tailplane box { origin = (11px, 59px); fill = dark_red; }
+      chart fin_left box { origin = (0px, 46px); fill = dark_red; face north { stamp rim_dark_red_1 { at = (0px, 0px); } } face south { stamp rim_dark_red_1 { at = (0px, 0px); } } face east { stamp rim_dark_red_5 { at = (0px, 0px); } } face west { stamp rim_dark_red_5 { at = (0px, 0px); } } }
+      chart fin_right box { origin = (13px, 46px); fill = dark_red; face north { stamp rim_dark_red_1 { at = (0px, 0px); } } face south { stamp rim_dark_red_1 { at = (0px, 0px); } } face east { stamp rim_dark_red_5 { at = (0px, 0px); } } face west { stamp rim_dark_red_5 { at = (0px, 0px); } } }
+      chart nozzle box { origin = (112px, 46px); fill = gun; face south { stamp nozzle_bore { at = (1px, 1px); } } }
       grain clustered { seed = 2013; }
       tone voxel;
     }

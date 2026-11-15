@@ -1,15 +1,26 @@
 ashfox-model 1
 module skin {
   export surface contract Skin {
-    atlas { width = 64px; height = 64px; }
-    chart platform box { width = 56px; height = 17px; coverage = opaque; }
-    chart tall box { width = 20px; height = 18px; coverage = opaque; }
-    chart short box { width = 20px; height = 14px; coverage = opaque; }
-    chart antenna box { width = 4px; height = 4px; coverage = opaque; }
-    chart flag box { width = 8px; height = 3px; coverage = opaque; }
-    chart gate box { width = 8px; height = 3px; coverage = opaque; }
-    chart radar_post box { width = 4px; height = 2px; coverage = opaque; }
-    chart radar_dish box { width = 10px; height = 3px; coverage = opaque; }
+    atlas { width = 128px; height = 128px; }
+    chart platform box { width = 104px; height = 27px; coverage = opaque; }
+    chart tall box { width = 40px; height = 34px; coverage = opaque; }
+    chart tall_roof box { width = 44px; height = 12px; coverage = opaque; }
+    chart short box { width = 40px; height = 24px; coverage = opaque; }
+    chart short_roof box { width = 44px; height = 12px; coverage = opaque; }
+    chart skybridge box { width = 16px; height = 8px; coverage = opaque; }
+    chart radar_mast box { width = 8px; height = 5px; coverage = opaque; }
+    chart radar_dish box { width = 18px; height = 5px; coverage = opaque; }
+    chart antenna box { width = 4px; height = 9px; coverage = opaque; }
+    chart antenna_light box { width = 4px; height = 2px; coverage = opaque; }
+    chart guard_box box { width = 18px; height = 10px; coverage = opaque; }
+    chart guard_roof box { width = 22px; height = 6px; coverage = opaque; }
+    chart barrier box { width = 26px; height = 2px; coverage = opaque; }
+    chart barrier_post box { width = 4px; height = 5px; coverage = opaque; }
+    chart base_sandbags_0 box { width = 14px; height = 6px; coverage = opaque; }
+    chart base_sandbags_1 box { width = 14px; height = 6px; coverage = opaque; }
+    chart flag_pole box { width = 4px; height = 15px; coverage = opaque; }
+    chart flag_ball box { width = 8px; height = 3px; coverage = opaque; }
+    chart flag_cloth box { width = 16px; height = 5px; coverage = opaque; }
     material = opaque;
   }
 }

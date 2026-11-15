@@ -1,12 +1,25 @@
 ashfox-model 1
 module skin {
   export surface contract Skin {
-    atlas { width = 64px; height = 64px; }
-    chart plinth box { width = 56px; height = 15px; coverage = opaque; }
-    chart tower box { width = 36px; height = 24px; coverage = opaque; }
-    chart awning box { width = 14px; height = 3px; coverage = opaque; }
-    chart parapet box { width = 40px; height = 11px; coverage = opaque; }
-    chart skylight box { width = 16px; height = 5px; coverage = opaque; }
+    atlas { width = 128px; height = 256px; }
+    chart plinth box { width = 112px; height = 30px; coverage = opaque; }
+    chart tower box { width = 72px; height = 46px; coverage = opaque; }
+    chart canopy box { width = 32px; height = 5px; coverage = opaque; }
+    chart canopy_post_left box { width = 4px; height = 8px; coverage = opaque; }
+    chart canopy_post_right box { width = 4px; height = 8px; coverage = opaque; }
+    chart parapet box { width = 80px; height = 22px; coverage = opaque; }
+    chart roof box { width = 72px; height = 19px; coverage = opaque; }
+    chart air_unit_0 box { width = 14px; height = 5px; coverage = opaque; }
+    chart air_unit_1 box { width = 14px; height = 5px; coverage = opaque; }
+    chart water_tank box { width = 20px; height = 10px; coverage = opaque; }
+    chart antenna box { width = 4px; height = 10px; coverage = opaque; }
+    chart antenna_light box { width = 4px; height = 2px; coverage = opaque; }
+    chart planter_left_pot box { width = 16px; height = 6px; coverage = opaque; }
+    chart planter_left_bush box { width = 20px; height = 9px; coverage = opaque; }
+    chart planter_right_pot box { width = 16px; height = 6px; coverage = opaque; }
+    chart planter_right_bush box { width = 20px; height = 9px; coverage = opaque; }
+    chart lamp_post box { width = 4px; height = 11px; coverage = opaque; }
+    chart lamp_light box { width = 12px; height = 5px; coverage = opaque; }
     material = opaque;
   }
 }
