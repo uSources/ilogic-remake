@@ -56,3 +56,14 @@ Lo que Ashfox exige (el generador ya lo cumple o avisa):
 - Ningun cubo puede quedar tapado del todo por otro.
 - Los nombres de exportacion van en minusculas y los numeros sin restos de coma flotante.
 - No sobrescribe: el generador borra cada `.glb` antes de exportarlo.
+
+## Sonidos
+
+Los efectos de sonido tambien salen de aqui: `models/sounds.mjs` los describe, `sounds.mjs` escribe
+los `.ashfox` en `sounds/` y la lista `src/audio/soundList.ts`, y con `--export` los WAV en
+`public/assets/sfx/` (uno por variante). Detalles en la skill `ashfox`, "Sonidos".
+
+```sh
+node tools/art/ashfox/sounds.mjs
+ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/sounds.mjs --export
+```

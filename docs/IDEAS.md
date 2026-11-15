@@ -77,7 +77,7 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 
 13. **Unidades comunes y exclusivas por general.** Cada general cambia 2-3 unidades del catálogo común
     por variantes suyas, con otro estilo y no más fuertes. Ejemplos: Brisa, un caza explorador (ve
-    más, pega menos); Roca, un tanque pesado (lento, muy duro, no entra en bosque); Ámbar, un camión de
+    más, pega menos); Ámbar, un camión de
     campaña (repara más y lleva infantería). Medir con `npm run generals` que ninguno se aleje del 50 %.
 
 ## PvP (más adelante: primero un núcleo PvE bueno)

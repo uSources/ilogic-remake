@@ -1,5 +1,5 @@
 /**
- * Configuracion del jugador (idioma, autoguardado, musica, teclas).
+ * Configuracion del jugador (idioma, autoguardado, musica, efectos, teclas).
  * En el original se guardaba en data/config al cerrar la ventana;
  * aqui se guarda en localStorage en cada cambio.
  */
@@ -17,6 +17,8 @@ export interface Settings {
   lang: Lang;
   autosave: boolean;
   music: boolean;
+  /** Efectos de sonido (disparos, pasos, menus). */
+  sfx: boolean;
   /** Al soltar una unidad donde no tiene nada mas que hacer, espera sola. */
   autoWait: boolean;
   /** Tras terminar con una unidad, el cursor salta a la siguiente sin mover. */
@@ -45,6 +47,7 @@ const DEFAULTS: Settings = {
   lang: 'es',
   autosave: false,
   music: false,
+  sfx: true,
   autoWait: true,
   autoNext: false,
   speedOwn: 'normal',
@@ -73,6 +76,7 @@ export function parseSaved(saved: Partial<Settings>): Settings {
     lang: oneOf(saved.lang, LANGS, DEFAULTS.lang),
     autosave: !!saved.autosave,
     music: !!saved.music,
+    sfx: saved.sfx !== false,
     autoWait: saved.autoWait !== false,
     autoNext: !!saved.autoNext,
     speedOwn: oneOf(saved.speedOwn, SPEEDS, DEFAULTS.speedOwn),

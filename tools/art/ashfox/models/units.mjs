@@ -746,31 +746,6 @@ const VEHICLE_MOTIONS = {
   fire: onceMotion(0.5, [recoil('barrel'), kick('hull', 5)]),
 };
 
-/** De lado, una oruga: las ruedas (cuadros grises con hueco) y los eslabones de arriba y abajo. */
-function trackSide(length) {
-  const wheels = `.${'ss.'.repeat(Math.floor((length - 1) / 3))}`;
-  const pixels = ['t'.repeat(length), wheels.padEnd(length, '.'), wheels.padEnd(length, '.'), 't'.repeat(length)].join('/');
-  return { pixels, colors: { s: '#5a6272', t: '#363d4c' } };
-}
-
-/** Orugas a los lados, de ese ancho total y largo, con sus ruedas por fuera y la rueda dentada delante y detras. */
-const tracks = (width, length) =>
-  [-1, 1].map((sideSign, index) => {
-    const side = trackSide(length);
-    return {
-      name: `track${index}`,
-      bone: 'chassis',
-      origin: [sideSign < 0 ? -width / 2 : width / 2 - 4, 0, -length / 2],
-      size: [4, 4, length],
-      paint: 'tread',
-      stamps: [
-        mark(`wheels${length}`, sideSign < 0 ? 'west' : 'east', side.pixels, side.colors, [0, 0]),
-        mark('sprocket', 'north', 'ss/ss', { s: '#6a7282' }, [1, 1]),
-        mark('sprocket', 'south', 'ss/ss', { s: '#6a7282' }, [1, 1]),
-      ],
-    };
-  });
-
 // ---- El tanque con detalle (32 unidades por casilla) ----
 
 const TRACK_LINK = '#3a4050';
@@ -909,24 +884,6 @@ const tank = (side) => ({
   motions: VEHICLE_MOTIONS,
   cubes: [...bigTracks(), ...bigTankHull(side), ...bigTankTurret(side), ...BIG_TANK_GUNS],
 });
-
-function heavyTank(side) {
-  const team = `team_${side}`;
-  return {
-    bones: VEHICLE_BONES([0, 7, 0.5], [0, 8.5, -3.5]),
-    motions: VEHICLE_MOTIONS,
-    cubes: [
-      ...tracks(16, 16),
-      { name: 'hull', bone: 'hull', origin: [-7, 4, -8], size: [14, 4, 16], paint: team },
-      { name: 'turret', bone: 'turret', origin: [-5, 8, -4], size: [10, 4, 8], paint: team },
-      { name: 'turret_top', bone: 'turret', origin: [-4, 12, -3], size: [8, 2, 5], paint: team },
-      { name: 'hatch', bone: 'turret', origin: [-2, 13, 1], size: [2, 1, 2], paint: `dark_${side}` },
-      { name: 'mantlet', bone: 'turret', origin: [-3, 8, -12], size: [6, 2, 1], paint: `dark_${side}` },
-      { name: 'barrel_left', bone: 'barrel', origin: [-2.5, 8.5, -12], size: [2, 2, 10], paint: 'steel' },
-      { name: 'barrel_right', bone: 'barrel', origin: [0.5, 8.5, -12], size: [2, 2, 10], paint: 'steel' },
-    ],
-  };
-}
 
 /** El tanque ligero: orugas y casco mas cortos, torreta redondeada y un solo cañon gordo del color del equipo. */
 function lightTankTurret(side) {
@@ -2515,7 +2472,6 @@ const UNITS = {
   MSoldier: mortar,
   FSoldier: biker,
   Tank: tank,
-  HeavyTank: heavyTank,
   LTank: lightTank,
   WTank: amphibiousTank,
   Artillery: artillery,

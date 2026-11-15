@@ -3,6 +3,7 @@ import type { Translation } from '../translation';
 
 export const options: Translation<typeof es> = {
   music: 'Music',
+  sfx: 'Sound effects',
   autosave: 'Autosave',
   language: 'Language',
   on: 'ON',
