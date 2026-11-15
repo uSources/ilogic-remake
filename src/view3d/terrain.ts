@@ -13,6 +13,7 @@ import { mapGrid } from '../core/mapGrid';
 import type { GameState, Pos } from '../core/model';
 import type { Grid } from '../core/util/grid';
 import type { GlbLibrary } from './glbModels';
+import { shoreSides, waterClock, waterMaterial } from './water';
 
 /** Las casillas de Ashfox y la altura de su cara de arriba (en unidades de Ashfox: 16 = una casilla). */
 const TILE_TOPS = {
@@ -83,6 +84,9 @@ function pieceAt(s: GameState, pos: Pos): TerrainPiece {
   return THEME_PIECES[themeOf(s).id]?.[terrain.id] ?? TERRAIN_PIECES[terrain.id] ?? fallbackPiece(terrain);
 }
 
+/** Las casillas de agua que se mueven (el hielo no). */
+const MOVING_WATER: ReadonlySet<TileModel> = new Set<TileModel>(['tile_water', 'tile_deep', 'tile_shallow']);
+
 const tileTop = (tile: TileModel): number => TILE_TOPS[tile] / ASHFOX_UNITS_PER_TILE;
 
 /** Un numero entre 0 y 1 que sale siempre igual para la misma casilla (para variar sin azar). */
@@ -107,6 +111,8 @@ export interface TerrainView {
   heightAt(pos: Pos): number;
   /** Oscurece lo que no se ve (la niebla) y aclara lo que si. */
   showSeen(seen: Grid<boolean>): void;
+  /** Lo que se mueve solo (el agua). */
+  update(seconds: number): void;
 }
 
 /** Copias de un modelo de Ashfox, una por sitio (`places`: donde va y como gira cada una). */
@@ -145,9 +151,20 @@ function decorPlace(pos: Pos, top: number): THREE.Matrix4 {
   return new THREE.Matrix4().compose(at, turn, new THREE.Vector3(1, 1, 1));
 }
 
-/** Las casillas de cada clase de modelo. */
-function tileMeshes(library: GlbLibrary, byTile: ReadonlyMap<TileModel, Pos[]>): PlacedMesh[] {
-  return [...byTile].flatMap(([tile, positions]) => instanced(library, tile, positions, positions.map(tilePlace)));
+/** Las casillas de cada clase de modelo; las de agua, con el agua que se mueve (water.ts). */
+function tileMeshes(library: GlbLibrary, s: GameState, byTile: ReadonlyMap<TileModel, Pos[]>): PlacedMesh[] {
+  return [...byTile].flatMap(([tile, positions]) => {
+    const placed = instanced(library, tile, positions, positions.map(tilePlace));
+    if (MOVING_WATER.has(tile)) for (const { mesh } of placed) makeWater(mesh, s, positions);
+    return placed;
+  });
+}
+
+/** Le pone a las casillas de agua su material que se mueve y, a cada copia, sus orillas. */
+function makeWater(mesh: THREE.InstancedMesh, s: GameState, positions: readonly Pos[]): void {
+  mesh.material = waterMaterial(mesh.material as THREE.Material);
+  mesh.geometry = mesh.geometry.clone();
+  mesh.geometry.setAttribute('aShore', shoreSides(s, positions));
 }
 
 /** El decorado de cada clase (cada casilla con varios posibles elige uno, siempre el mismo). */
@@ -178,7 +195,7 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   const grid = mapGrid(s);
   const positions = [...grid.cells()].map((cell) => cell.pos);
   const byTile = groupBy(positions, (pos) => pieceAt(s, pos).tile);
-  const tiles = tileMeshes(library, byTile);
+  const tiles = tileMeshes(library, s, byTile);
   const decor = decorMeshes(library, s, positions);
   const object = new THREE.Group();
   object.add(...[...tiles, ...decor].map((placed) => placed.mesh));
@@ -191,5 +208,8 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
     tileOfHit: (hit) => (hit.instanceId === undefined ? null : (placedOf.get(hit.object)?.positions[hit.instanceId] ?? null)),
     heightAt: (pos) => heights.at(pos),
     showSeen: (seen) => shade([...tiles, ...decor], seen),
+    update: (seconds) => {
+      waterClock.value += seconds;
+    },
   };
 }

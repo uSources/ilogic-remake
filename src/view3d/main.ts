@@ -137,6 +137,7 @@ world.onFrame((seconds) => {
   rig.update(seconds);
   highlights.update(seconds);
   board.update(seconds);
+  terrain.update(seconds);
   // Los bocadillos (menu, prevision) siguen a su casilla mientras la camara se mueve.
   if (controls.menu() || (cursor && controls.forecastAt(cursor))) publish();
 });
