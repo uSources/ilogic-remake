@@ -11,18 +11,21 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import * as buildings from './models/buildings.mjs';
 import * as terrain from './models/terrain.mjs';
+import * as units from './models/units.mjs';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;
 /** Cada grupo: sus modelos y la carpeta de sus fuentes (tools/art/ashfox/<grupo>) y de sus GLB. */
-const GROUPS = { terrain: terrain.MODELS, buildings: buildings.MODELS };
-const PAINTS = { ...terrain.PAINTS, ...buildings.PAINTS };
+const GROUPS = { terrain: terrain.MODELS, buildings: buildings.MODELS, units: units.MODELS };
+const PAINTS = { ...terrain.PAINTS, ...buildings.PAINTS, ...units.PAINTS };
 const sourcesOf = (group) => join(ROOT, 'tools/art/ashfox', group);
 const outputOf = (group) => join(ROOT, 'public/assets/models', group);
 /** Separacion entre trozos del atlas (texeles): que no se mezclen al filtrar. */
 const GAP = 1;
 const IDENTITY_FRAME = 'frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }';
 
-const vec = (values, unit) => `(${values.map((value) => `${value}${unit}`).join(', ')})`;
+/** Un numero sin los restos de la coma flotante (0.30000000000000004): Ashfox no los acepta. */
+const tidy = (value) => Number(value.toFixed(4));
+const vec = (values, unit) => `(${values.map((value) => `${tidy(value)}${unit}`).join(', ')})`;
 const nextPowerOfTwo = (value) => 2 ** Math.ceil(Math.log2(Math.max(value, 1)));
 
 /** El trozo de textura de una caja: su desarrollo (2·ancho + 2·fondo) × (alto + fondo). */
@@ -88,22 +91,86 @@ function chartRecipe({ cube, origin }) {
   return lines.join('\n');
 }
 
-function source(name, model) {
-  const cubes = model.cubes;
-  const { charts, atlas } = packCharts(cubes);
-  const palette = [...paletteOf(cubes)].map(([role, colors]) => `        ${role} = ${colorList(colors)};`);
-  return `ashfox-model 1
-asset ${name} {
-  rig contract StaticRig {
+/** Sin huesos propios, el modelo es un solo hueso fijo (`body`) colgado de la raiz. */
+const DEFAULT_BONES = [{ name: 'body', parent: 'root', pivot: [0, 0, 0] }];
+const ROOT_PIVOT = [0, 0, 0];
+
+const bonesOf = (model) => model.bones ?? DEFAULT_BONES;
+const pivotOf = (bones, name) => (name === 'root' ? ROOT_PIVOT : bones.find((bone) => bone.name === name).pivot);
+
+/** Los huesos: la raiz y los del modelo, todos con giro y escala (las animaciones usan los dos). */
+function rigDeclarations(bones) {
+  const joints = bones.map(
+    (bone) =>
+      `    joint ${bone.name} { parent = ${bone.parent}; role = body; ${IDENTITY_FRAME} channels = (rotation, scale); mirror = none; }`,
+  );
+  const binds = bones.map((bone) => {
+    const offset = bone.pivot.map((value, axis) => value - pivotOf(bones, bone.parent)[axis]);
+    return `    bind ${bone.name} { parent-origin = ${vec(offset, 'u')}; ${IDENTITY_FRAME} }`;
+  });
+  return `  rig contract ModelRig {
     handedness = right;
     ${IDENTITY_FRAME}
-    joint root { parent = none; role = root; ${IDENTITY_FRAME} channels = rotation; mirror = none; }
-    joint body { parent = root; role = body; ${IDENTITY_FRAME} channels = rotation; mirror = none; }
+    joint root { parent = none; role = root; ${IDENTITY_FRAME} channels = (rotation, scale); mirror = none; }
+${joints.join('\n')}
   }
-  skeleton StaticSkeleton implements StaticRig {
+  skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); ${IDENTITY_FRAME} }
-    bind body { parent-origin = (0u, 0u, 0u); ${IDENTITY_FRAME} }
-  }
+${binds.join('\n')}
+  }`;
+}
+
+function cubeLine(cube, indent) {
+  const turn = cube.rotation ? ` rotation = ${vec(cube.rotation, 'deg')}; pivot = ${vec(cube.pivot ?? cube.origin, 'u')};` : '';
+  return `${indent}cube ${cube.name} { origin = ${vec(cube.origin, 'u')}; size = ${vec(cube.size, 'u')};${turn} surface = skin.${cube.name}; }`;
+}
+
+/** La geometria por huesos: cada hueso con sus cubos y, dentro, sus hijos. */
+function boneGeometry(model, boneName, depth) {
+  const indent = '  '.repeat(depth);
+  const cubes = model.cubes.filter((cube) => (cube.bone ?? 'body') === boneName).map((cube) => cubeLine(cube, `${indent}  `));
+  const children = bonesOf(model)
+    .filter((bone) => bone.parent === boneName)
+    .map((bone) => boneGeometry(model, bone.name, depth + 1));
+  return [`${indent}bone ${boneName} {`, ...cubes, ...children, `${indent}}`].join('\n');
+}
+
+const trackValue = (channel, values) => (channel === 'rotation' ? vec(values, 'deg') : `(${values.map(tidy).join(', ')})`);
+
+/** Una animacion: sus pistas (hueso, giro o escala) con sus claves (segundos y valor), todas con la misma interpolacion. */
+function motionDeclaration(name, motion) {
+  const tracks = motion.tracks.map((track) => {
+    const keys = track.keys.map(
+      ([time, values]) => `      key ${tidy(time)}s = ${trackValue(track.channel, values)} ${track.interp ?? 'linear'};`,
+    );
+    return `    track ${track.bone}.${track.channel} {\n${keys.join('\n')}\n    }`;
+  });
+  return `  motion ${name} for ModelRig {
+    duration = ${motion.duration}s; fps = ${motion.fps ?? 20}; loop = ${motion.loop ?? 'loop'}; rest-relative = true;
+${tracks.join('\n')}
+  }`;
+}
+
+/** Cada cubo cuelga de un hueso que existe (si no, Ashfox dejaria su textura sin usar y no diria por que). */
+function checkBones(name, model) {
+  const names = new Set(bonesOf(model).map((bone) => bone.name));
+  for (const cube of model.cubes)
+    if (!names.has(cube.bone ?? 'body'))
+      throw new Error(`${name}: el cubo ${cube.name} cuelga de ${cube.bone ?? 'body'}, que no es un hueso del modelo`);
+}
+
+function source(name, model) {
+  checkBones(name, model);
+  const cubes = model.cubes;
+  const bones = bonesOf(model);
+  const motions = Object.entries(model.motions ?? {});
+  const { charts, atlas } = packCharts(cubes);
+  const palette = [...paletteOf(cubes)].map(([role, colors]) => `        ${role} = ${colorList(colors)};`);
+  const topBones = bones.filter((bone) => bone.parent === 'root');
+  return `ashfox-model 1
+asset ${name} {
+${rigDeclarations(bones)}
+${motions.map(([motion, spec]) => motionDeclaration(motion, spec)).join('\n')}
   surface contract Skin {
     atlas { width = ${atlas[0]}px; height = ${atlas[1]}px; }
 ${charts.map(({ cube, size }) => `    chart ${cube.name} box { width = ${size[0]}px; height = ${size[1]}px; coverage = opaque; }`).join('\n')}
@@ -123,19 +190,18 @@ ${charts.map(chartRecipe).join('\n')}
     }
   }
   component Body {
-    requires rig skeleton: StaticRig;
+    requires rig skeleton: ModelRig;
     requires surface skin: Skin;
-    bind bone body to skeleton.body;
+${bones.map((bone) => `    bind bone ${bone.name} to skeleton.${bone.name};`).join('\n')}
     geometry {
-      bone body {
-${cubes.map((cube) => `        cube ${cube.name} { origin = ${vec(cube.origin, 'u')}; size = ${vec(cube.size, 'u')}; surface = skin.${cube.name}; }`).join('\n')}
-      }
+${topBones.map((bone) => boneGeometry(model, bone.name, 3)).join('\n')}
     }
   }
   export asset ${name} {
     settings { density = 16; forward = north; }
-    skeleton = StaticSkeleton;
-    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+    skeleton = ModelSkeleton;
+${motions.map(([motion]) => `    motion = ${motion};`).join('\n')}
+    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
   }
 }
 `;

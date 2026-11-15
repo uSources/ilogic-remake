@@ -34,6 +34,11 @@ interface TerrainPiece {
   tile: TileModel;
   /** El decorado de encima; con varios, cada casilla elige uno (siempre el mismo). */
   decor?: readonly string[];
+  /**
+   * Si el decorado es una montaña, lo alto de su cima (unidades de Ashfox sobre la casilla): quien
+   * esta en ella se pone ahi, como en 2D, que se dibuja encima (si no, la montaña lo taparia).
+   */
+  summit?: number;
 }
 
 const GRASS: TerrainPiece = { tile: 'tile_grass' };
@@ -44,23 +49,23 @@ const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
   Grass: GRASS,
   Flowers: { tile: 'tile_grass', decor: ['flowers_red', 'flowers_yellow', 'flowers_purple', 'flowers_mixed'] },
   Woods: WOODS,
-  GrassCliff: { tile: 'tile_grass', decor: ['mount_grass'] },
+  GrassCliff: { tile: 'tile_grass', decor: ['mount_grass'], summit: 16 },
   Water: WATER,
   SWater: { tile: 'tile_shallow' },
   DWater: { tile: 'tile_deep' },
   Sand: { tile: 'tile_sand' },
   Cactus: { tile: 'tile_sand', decor: ['cactus'] },
-  SandCliff: { tile: 'tile_sand', decor: ['mount_mesa'] },
+  SandCliff: { tile: 'tile_sand', decor: ['mount_mesa'], summit: 12 },
   Snow: { tile: 'tile_snow' },
   Frosty: { tile: 'tile_snow', decor: ['snowman'] },
-  SnowCliff: { tile: 'tile_snow', decor: ['mount_snow'] },
+  SnowCliff: { tile: 'tile_snow', decor: ['mount_snow'], summit: 16 },
   SnowWood: { tile: 'tile_snow', decor: ['pines'] },
   Ice: { tile: 'tile_ice' },
 };
 
 /** Lo que cambia un tema (id de themes.json): en el nevado, las montañas de hierba son nevadas (como en 2D). */
 const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece>>>> = {
-  Snowy: { GrassCliff: { tile: 'tile_snow', decor: ['mount_snow'] } },
+  Snowy: { GrassCliff: { tile: 'tile_snow', decor: ['mount_snow'], summit: 16 } },
 };
 
 /**
@@ -98,6 +103,9 @@ function pieceAt(s: GameState, pos: Pos): TerrainPiece {
 
 /** Las casillas de agua que se mueven (el hielo no). */
 const MOVING_WATER: ReadonlySet<TileModel> = new Set<TileModel>(['tile_water', 'tile_deep', 'tile_shallow']);
+
+/** Donde se pone lo que hay en la casilla: encima del suelo o, en una montaña, en su cima. */
+const standHeight = (piece: TerrainPiece): number => tileTop(piece.tile) + (piece.summit ?? 0) / ASHFOX_UNITS_PER_TILE;
 
 const tileTop = (tile: TileModel): number => TILE_TOPS[tile] / ASHFOX_UNITS_PER_TILE;
 
@@ -231,7 +239,7 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   const object = new THREE.Group();
   object.add(...[...tiles, ...decor].map((placed) => placed.mesh));
   const heights = grid.createLayer(0);
-  for (const pos of positions) heights.set(pos, tileTop(pieceAt(s, pos).tile));
+  for (const pos of positions) heights.set(pos, standHeight(pieceAt(s, pos)));
   const placedOf = new Map(tiles.map((placed) => [placed.mesh as THREE.Object3D, placed]));
   return {
     object,

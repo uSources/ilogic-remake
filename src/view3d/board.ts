@@ -32,6 +32,8 @@ const CAPTURE_COLOR: Readonly<Record<OwnerSide, string>> = { own: '#3aa8ff', all
 const SPENT_TINT = 0.5;
 /** Altura de la barra de vida sobre el suelo de la unidad (por encima de su modelo y de su vuelo). */
 const BADGE_HEIGHT = 0.7;
+/** Lo que queda la barra de vida por encima de lo mas alto de un modelo de Ashfox. */
+const BADGE_GAP = 0.12;
 const BUILDING_BADGE_HEIGHT = 1.0;
 /** Vueltas por segundo del rotor de los helicopteros. */
 const ROTOR_SPEED = 14;
@@ -174,18 +176,21 @@ export class BoardView {
   }
 
   /** La pieza de una unidad: su modelo GLB si su tipo lo tiene, si no el de bloques. */
-  private unitModel(unit: Unit): { object: THREE.Group; body: THREE.Object3D; hover: number; glb: GlbUnit | null } {
+  private unitModel(unit: Unit): { object: THREE.Group; body: THREE.Object3D; badgeHeight: number; glb: GlbUnit | null } {
     const side = sideOf(this.s, this.viewer, unit.team);
     const glb = this.glbModels.unit(unit.type, side);
-    if (glb) return { object: glb.object, body: glb.object.children[0]!, hover: 0, glb };
+    if (glb) {
+      const top = new THREE.Box3().setFromObject(glb.object).max.y;
+      return { object: glb.object, body: glb.object.children[0]!, badgeHeight: top + BADGE_GAP, glb };
+    }
     const model = unitModelOf(unit.type);
     const object = buildModel(model, SIDE_PAINT[side]);
-    return { object, body: object.getObjectByName('body')!, hover: model.hover ?? 0, glb: null };
+    return { object, body: object.getObjectByName('body')!, badgeHeight: BADGE_HEIGHT + (model.hover ?? 0), glb: null };
   }
 
   private addUnit(unit: Unit): UnitPiece {
-    const { object, body, hover, glb } = this.unitModel(unit);
-    const lifeBar = newBadge(BADGE_HEIGHT + hover);
+    const { object, body, badgeHeight, glb } = this.unitModel(unit);
+    const lifeBar = newBadge(badgeHeight);
     object.add(lifeBar);
     object.scale.setScalar(0.01);
     const piece: UnitPiece = {

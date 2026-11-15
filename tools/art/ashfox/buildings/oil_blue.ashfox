@@ -1,15 +1,16 @@
 ashfox-model 1
 asset oil_blue {
-  rig contract StaticRig {
+  rig contract ModelRig {
     handedness = right;
     frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
-    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
   }
-  skeleton StaticSkeleton implements StaticRig {
+  skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
+
   surface contract Skin {
     atlas { width = 64px; height = 64px; }
     chart plinth box { width = 56px; height = 15px; coverage = opaque; }
@@ -62,7 +63,7 @@ asset oil_blue {
     }
   }
   component Body {
-    requires rig skeleton: StaticRig;
+    requires rig skeleton: ModelRig;
     requires surface skin: Skin;
     bind bone body to skeleton.body;
     geometry {
@@ -79,7 +80,8 @@ asset oil_blue {
   }
   export asset oil_blue {
     settings { density = 16; forward = north; }
-    skeleton = StaticSkeleton;
-    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+    skeleton = ModelSkeleton;
+
+    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
   }
 }

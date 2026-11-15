@@ -1,0 +1,202 @@
+ashfox-model 1
+asset soldier_red {
+  rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint leg_left { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint leg_right { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint torso { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint head { parent = torso; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint arm_left { parent = torso; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint arm_right { parent = torso; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint gear { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind leg_left { parent-origin = (-1.5u, 5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind leg_right { parent-origin = (1.5u, 5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind torso { parent-origin = (0u, 5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind head { parent-origin = (0u, 4u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind arm_left { parent-origin = (-4u, 3.5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind arm_right { parent-origin = (4u, 3.5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind gear { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  motion idle for ModelRig {
+    duration = 1.6s; fps = 20; loop = loop; rest-relative = true;
+    track torso.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.4s = (0deg, 4deg, 0deg) catmullrom;
+      key 0.8s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.2s = (0deg, -4deg, 0deg) catmullrom;
+      key 1.6s = (0deg, 0deg, 0deg) catmullrom;
+    }
+    track head.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.4s = (3deg, 0deg, 2deg) catmullrom;
+      key 0.8s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.2s = (-3deg, 0deg, -2deg) catmullrom;
+      key 1.6s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+  motion drive for ModelRig {
+    duration = 0.5s; fps = 20; loop = loop; rest-relative = true;
+    track leg_left.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.125s = (30deg, 0deg, 0deg) linear;
+      key 0.25s = (0deg, 0deg, 0deg) linear;
+      key 0.375s = (-30deg, 0deg, 0deg) linear;
+      key 0.5s = (0deg, 0deg, 0deg) linear;
+    }
+    track leg_right.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.125s = (-30deg, 0deg, 0deg) linear;
+      key 0.25s = (0deg, 0deg, 0deg) linear;
+      key 0.375s = (30deg, 0deg, 0deg) linear;
+      key 0.5s = (0deg, 0deg, 0deg) linear;
+    }
+    track arm_left.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.125s = (-25deg, 0deg, 0deg) linear;
+      key 0.25s = (0deg, 0deg, 0deg) linear;
+      key 0.375s = (25deg, 0deg, 0deg) linear;
+      key 0.5s = (0deg, 0deg, 0deg) linear;
+    }
+    track torso.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.125s = (0deg, 0deg, 3deg) linear;
+      key 0.25s = (0deg, 0deg, 0deg) linear;
+      key 0.375s = (0deg, 0deg, -3deg) linear;
+      key 0.5s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+  motion fire for ModelRig {
+    duration = 0.4s; fps = 30; loop = once; rest-relative = true;
+    track arm_right.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (18deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+    track torso.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (6deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 32px; }
+    chart boot_left box { width = 10px; height = 4px; coverage = opaque; }
+    chart leg_left box { width = 8px; height = 6px; coverage = opaque; }
+    chart boot_right box { width = 10px; height = 4px; coverage = opaque; }
+    chart leg_right box { width = 8px; height = 6px; coverage = opaque; }
+    chart torso box { width = 18px; height = 7px; coverage = opaque; }
+    chart head box { width = 24px; height = 10px; coverage = opaque; }
+    chart helmet box { width = 28px; height = 10px; coverage = opaque; }
+    chart arm_left box { width = 8px; height = 5px; coverage = opaque; }
+    chart arm_right box { width = 8px; height = 5px; coverage = opaque; }
+    chart rifle box { width = 14px; height = 7px; coverage = opaque; }
+    chart backpack box { width = 14px; height = 5px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = boot; background-alpha = 255;
+      palette {
+        boot = (#141824, #262c3c, #3c4458);
+        dark_red = (#601212, #962220, #c84038);
+        team_red = (#8a1a1a, #c8302a, #f0605a);
+        skin = (#c8946a, #f1c79b, #ffe2c4);
+        eyes_k = #141824;
+        goggles_g = #9fe3ff;
+        gun = (#20242e, #3a404e, #5c6474);
+        pack = (#5a3a22, #7e5432, #a8744a);
+      }
+      stamp eyes { pixels = "k..k"; k = eyes_k; }
+      stamp goggles { pixels = "gg.gg"; g = goggles_g; }
+      chart boot_left box {
+        origin = (24px, 19px); fill = boot;
+      }
+      chart leg_left box {
+        origin = (34px, 11px); fill = dark_red;
+      }
+      chart boot_right box {
+        origin = (35px, 19px); fill = boot;
+      }
+      chart leg_right box {
+        origin = (43px, 11px); fill = dark_red;
+      }
+      chart torso box {
+        origin = (0px, 11px); fill = team_red;
+      }
+      chart head box {
+        origin = (0px, 0px); fill = skin;
+        face north { stamp eyes { at = (1px, 2px); } }
+      }
+      chart helmet box {
+        origin = (25px, 0px); fill = team_red;
+        face north { stamp goggles { at = (1px, 0px); } }
+      }
+      chart arm_left box {
+        origin = (52px, 11px); fill = team_red;
+      }
+      chart arm_right box {
+        origin = (0px, 19px); fill = team_red;
+      }
+      chart rifle box {
+        origin = (19px, 11px); fill = gun;
+      }
+      chart backpack box {
+        origin = (9px, 19px); fill = pack;
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: ModelRig;
+    requires surface skin: Skin;
+    bind bone leg_left to skeleton.leg_left;
+    bind bone leg_right to skeleton.leg_right;
+    bind bone torso to skeleton.torso;
+    bind bone head to skeleton.head;
+    bind bone arm_left to skeleton.arm_left;
+    bind bone arm_right to skeleton.arm_right;
+    bind bone gear to skeleton.gear;
+    geometry {
+      bone leg_left {
+        cube boot_left { origin = (-2.5u, 0u, -1.5u); size = (2u, 1u, 3u); surface = skin.boot_left; }
+        cube leg_left { origin = (-2.5u, 1u, -1u); size = (2u, 4u, 2u); surface = skin.leg_left; }
+      }
+      bone leg_right {
+        cube boot_right { origin = (0.5u, 0u, -1.5u); size = (2u, 1u, 3u); surface = skin.boot_right; }
+        cube leg_right { origin = (0.5u, 1u, -1u); size = (2u, 4u, 2u); surface = skin.leg_right; }
+      }
+      bone torso {
+        cube torso { origin = (-3u, 5u, -1.5u); size = (6u, 4u, 3u); surface = skin.torso; }
+        cube backpack { origin = (-2.5u, 5.5u, 1.5u); size = (5u, 3u, 2u); surface = skin.backpack; }
+        bone head {
+          cube head { origin = (-3u, 9u, -3u); size = (6u, 4u, 6u); surface = skin.head; }
+          cube helmet { origin = (-3.5u, 12u, -3.5u); size = (7u, 3u, 7u); surface = skin.helmet; }
+        }
+        bone arm_left {
+          cube arm_left { origin = (-5u, 6u, -1u); size = (2u, 3u, 2u); surface = skin.arm_left; }
+        }
+        bone arm_right {
+          cube arm_right { origin = (3u, 6u, -1u); size = (2u, 3u, 2u); surface = skin.arm_right; }
+          cube rifle { origin = (3.5u, 6u, -6u); size = (1u, 1u, 6u); surface = skin.rifle; }
+        }
+      }
+      bone gear {
+      }
+    }
+  }
+  export asset soldier_red {
+    settings { density = 16; forward = north; }
+    skeleton = ModelSkeleton;
+    motion = idle;
+    motion = drive;
+    motion = fire;
+    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
+  }
+}

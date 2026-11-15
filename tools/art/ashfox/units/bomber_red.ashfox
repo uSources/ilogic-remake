@@ -1,0 +1,112 @@
+ashfox-model 1
+asset bomber_red {
+  rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 10u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  motion idle for ModelRig {
+    duration = 2s; fps = 20; loop = loop; rest-relative = true;
+    track body.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.5s = (3deg, 0deg, 5deg) catmullrom;
+      key 1s = (0deg, 0deg, 0deg) catmullrom;
+      key 1.5s = (-3deg, 0deg, -5deg) catmullrom;
+      key 2s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+  motion drive for ModelRig {
+    duration = 1s; fps = 20; loop = loop; rest-relative = true;
+    track body.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.25s = (-4deg, 0deg, 6deg) catmullrom;
+      key 0.5s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.75s = (4deg, 0deg, -6deg) catmullrom;
+      key 1s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+  motion fire for ModelRig {
+    duration = 0.4s; fps = 30; loop = once; rest-relative = true;
+    track body.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (-5deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart fuselage box { width = 44px; height = 21px; coverage = opaque; }
+    chart cockpit box { width = 12px; height = 4px; coverage = opaque; }
+    chart wing box { width = 52px; height = 7px; coverage = opaque; }
+    chart engine_left box { width = 14px; height = 6px; coverage = opaque; }
+    chart engine_right box { width = 14px; height = 6px; coverage = opaque; }
+    chart tailplane box { width = 26px; height = 4px; coverage = opaque; }
+    chart bomb box { width = 14px; height = 7px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = team_red; background-alpha = 255;
+      palette {
+        team_red = (#8a1a1a, #c8302a, #f0605a);
+        glass = (#4f9fc8, #9fe3ff, #e6f8ff);
+        dark_red = (#601212, #962220, #c84038);
+        gun = (#20242e, #3a404e, #5c6474);
+      }
+
+      chart fuselage box {
+        origin = (0px, 0px); fill = team_red;
+      }
+      chart cockpit box {
+        origin = (45px, 30px); fill = glass;
+      }
+      chart wing box {
+        origin = (0px, 22px); fill = dark_red;
+      }
+      chart engine_left box {
+        origin = (15px, 30px); fill = gun;
+      }
+      chart engine_right box {
+        origin = (30px, 30px); fill = gun;
+      }
+      chart tailplane box {
+        origin = (0px, 38px); fill = dark_red;
+      }
+      chart bomb box {
+        origin = (0px, 30px); fill = gun;
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: ModelRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube fuselage { origin = (-3u, 10u, -8u); size = (6u, 5u, 16u); surface = skin.fuselage; }
+        cube cockpit { origin = (-2u, 13u, -9u); size = (4u, 2u, 2u); surface = skin.cockpit; }
+        cube wing { origin = (-10u, 12u, -3u); size = (20u, 1u, 6u); surface = skin.wing; }
+        cube engine_left { origin = (-7u, 10u, -4u); size = (3u, 2u, 4u); surface = skin.engine_left; }
+        cube engine_right { origin = (4u, 10u, -4u); size = (3u, 2u, 4u); surface = skin.engine_right; }
+        cube tailplane { origin = (-5u, 14u, 6u); size = (10u, 1u, 3u); surface = skin.tailplane; }
+        cube bomb { origin = (-1u, 8u, -2u); size = (2u, 2u, 5u); surface = skin.bomb; }
+      }
+    }
+  }
+  export asset bomber_red {
+    settings { density = 16; forward = north; }
+    skeleton = ModelSkeleton;
+    motion = idle;
+    motion = drive;
+    motion = fire;
+    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
+  }
+}

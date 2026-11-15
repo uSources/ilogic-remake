@@ -1,0 +1,162 @@
+ashfox-model 1
+asset supplier_red {
+  rig contract ModelRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint hull { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint wheels_front { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint wheels_back { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint turret { parent = hull; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+    joint barrel { parent = turret; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+  }
+  skeleton ModelSkeleton implements ModelRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_front { parent-origin = (0u, 2u, -4.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind wheels_back { parent-origin = (0u, 2u, 4.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind turret { parent-origin = (0u, 4u, 2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind barrel { parent-origin = (0u, 1u, -2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  motion idle for ModelRig {
+    duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
+    track hull.rotation {
+      key 0s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.3s = (0.5deg, 0deg, 0.5deg) catmullrom;
+      key 0.6s = (0deg, 0deg, 0deg) catmullrom;
+      key 0.9s = (-0.5deg, 0deg, -0.5deg) catmullrom;
+      key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+    }
+  }
+  motion drive for ModelRig {
+    duration = 0.4s; fps = 20; loop = loop; rest-relative = true;
+    track wheels_front.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.1s = (-22.5deg, 0deg, 0deg) step;
+      key 0.2s = (-45deg, 0deg, 0deg) step;
+      key 0.3s = (-67.5deg, 0deg, 0deg) step;
+      key 0.4s = (0deg, 0deg, 0deg) step;
+    }
+    track wheels_back.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.1s = (-22.5deg, 0deg, 0deg) step;
+      key 0.2s = (-45deg, 0deg, 0deg) step;
+      key 0.3s = (-67.5deg, 0deg, 0deg) step;
+      key 0.4s = (0deg, 0deg, 0deg) step;
+    }
+    track hull.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.1s = (-1.5deg, 0deg, 1deg) linear;
+      key 0.2s = (0deg, 0deg, 0deg) linear;
+      key 0.3s = (1.5deg, 0deg, -1deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+  motion fire for ModelRig {
+    duration = 0.5s; fps = 30; loop = once; rest-relative = true;
+    track hull.rotation {
+      key 0s = (0deg, 0deg, 0deg) linear;
+      key 0.06s = (4deg, 0deg, 0deg) linear;
+      key 0.4s = (0deg, 0deg, 0deg) linear;
+    }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart wheel_front_left box { width = 12px; height = 8px; coverage = opaque; }
+    chart wheel_front_right box { width = 12px; height = 8px; coverage = opaque; }
+    chart wheel_back_left box { width = 12px; height = 8px; coverage = opaque; }
+    chart wheel_back_right box { width = 12px; height = 8px; coverage = opaque; }
+    chart cab box { width = 28px; height = 11px; coverage = opaque; }
+    chart bed box { width = 42px; height = 13px; coverage = opaque; }
+    chart crate_a box { width = 16px; height = 8px; coverage = opaque; }
+    chart crate_b box { width = 16px; height = 8px; coverage = opaque; }
+    chart crate_c box { width = 12px; height = 6px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = tire; background-alpha = 255;
+      palette {
+        tire = (#101318, #1e222c, #333a48);
+        team_red = (#8a1a1a, #c8302a, #f0605a);
+        windshield_g = #9fe3ff;
+        dark_red = (#601212, #962220, #c84038);
+        crate = (#7a4a22, #a8692f, #cf8f4a);
+        crate_spots = (#5a3418, #7a4a22, #9a5e2c);
+      }
+      stamp windshield { pixels = "ggggggg/ggggggg"; g = windshield_g; }
+      chart wheel_front_left box {
+        origin = (29px, 14px); fill = tire;
+      }
+      chart wheel_front_right box {
+        origin = (42px, 14px); fill = tire;
+      }
+      chart wheel_back_left box {
+        origin = (0px, 26px); fill = tire;
+      }
+      chart wheel_back_right box {
+        origin = (13px, 26px); fill = tire;
+      }
+      chart cab box {
+        origin = (0px, 14px); fill = team_red;
+        face north { stamp windshield { at = (1px, 1px); } }
+      }
+      chart bed box {
+        origin = (0px, 0px); fill = dark_red;
+      }
+      chart crate_a box {
+        origin = (26px, 26px); fill = crate;
+        pattern blotch { paint = crate_spots; scale = (1px, 3px, 1px); density = 0.25ratio; phase = 7; }
+      }
+      chart crate_b box {
+        origin = (43px, 26px); fill = crate;
+        pattern blotch { paint = crate_spots; scale = (1px, 3px, 1px); density = 0.25ratio; phase = 7; }
+      }
+      chart crate_c box {
+        origin = (0px, 35px); fill = crate;
+        pattern blotch { paint = crate_spots; scale = (1px, 3px, 1px); density = 0.25ratio; phase = 7; }
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: ModelRig;
+    requires surface skin: Skin;
+    bind bone hull to skeleton.hull;
+    bind bone wheels_front to skeleton.wheels_front;
+    bind bone wheels_back to skeleton.wheels_back;
+    bind bone turret to skeleton.turret;
+    bind bone barrel to skeleton.barrel;
+    geometry {
+      bone hull {
+        cube cab { origin = (-4.5u, 3u, -8u); size = (9u, 6u, 5u); surface = skin.cab; }
+        cube bed { origin = (-5u, 3u, -3u); size = (10u, 2u, 11u); surface = skin.bed; }
+        cube crate_a { origin = (-4u, 5u, -2u); size = (4u, 4u, 4u); surface = skin.crate_a; }
+        cube crate_b { origin = (0.5u, 5u, 2u); size = (4u, 4u, 4u); surface = skin.crate_b; }
+        cube crate_c { origin = (-3u, 5u, 3u); size = (3u, 3u, 3u); surface = skin.crate_c; }
+        bone turret {
+          bone barrel {
+          }
+        }
+      }
+      bone wheels_front {
+        cube wheel_front_left { origin = (-5.5u, 0u, -6.5u); size = (2u, 4u, 4u); surface = skin.wheel_front_left; }
+        cube wheel_front_right { origin = (3.5u, 0u, -6.5u); size = (2u, 4u, 4u); surface = skin.wheel_front_right; }
+      }
+      bone wheels_back {
+        cube wheel_back_left { origin = (-5.5u, 0u, 2.5u); size = (2u, 4u, 4u); surface = skin.wheel_back_left; }
+        cube wheel_back_right { origin = (3.5u, 0u, 2.5u); size = (2u, 4u, 4u); surface = skin.wheel_back_right; }
+      }
+    }
+  }
+  export asset supplier_red {
+    settings { density = 16; forward = north; }
+    skeleton = ModelSkeleton;
+    motion = idle;
+    motion = drive;
+    motion = fire;
+    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
+  }
+}
