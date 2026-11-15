@@ -28,6 +28,8 @@ const buildingFile = (buildingType: string, side: keyof typeof BUILDING_SIDES): 
 /** Las animaciones que se repiten (las demas suenan una vez y vuelven a 'idle'). */
 const LOOPING: ReadonlySet<UnitClip> = new Set<UnitClip>(['idle', 'drive']);
 const FADE_SECONDS = 0.15;
+/** Cuanto mas rapido o mas despacio que el modelo va el reposo de cada copia (en tanto por uno). */
+const IDLE_SPEED_SPREAD = 0.15;
 
 interface LoadedModel {
   scene: THREE.Group;
@@ -152,5 +154,13 @@ function animatedCopy(model: LoadedModel): GlbUnit {
   };
   mixer.addEventListener('finished', () => play('idle'));
   play('idle');
+  startOutOfStep(actions.get('idle'));
   return { object, play, update: (seconds) => mixer.update(seconds) };
+}
+
+/** Cada copia empieza su reposo en otro momento y lo lleva a su ritmo: que no se mezan todas a la vez. */
+function startOutOfStep(idle: THREE.AnimationAction | undefined): void {
+  if (!idle) return;
+  idle.time = Math.random() * idle.getClip().duration;
+  idle.timeScale = 1 + (Math.random() * 2 - 1) * IDLE_SPEED_SPREAD;
 }

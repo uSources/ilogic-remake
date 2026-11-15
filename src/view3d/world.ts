@@ -20,6 +20,35 @@ export const SUN_DIRECTION: Readonly<THREE.Vector3> = new THREE.Vector3(-0.6, 1,
 /** Resolucion del mapa de sombras: con la rampa de tres tonos no hace falta mas. */
 const SHADOW_MAP_SIZE = 2048;
 
+/** La luz de un clima: el sol (color y fuerza), el relleno del cielo y el fondo. */
+interface Mood {
+  sun: number;
+  sunIntensity: number;
+  sky: number;
+  skyIntensity: number;
+  background: number;
+}
+
+const CLEAR_MOOD: Mood = {
+  sun: SUN_COLOR,
+  sunIntensity: SUN_INTENSITY,
+  sky: SKY_FILL,
+  skyIntensity: SKY_INTENSITY,
+  background: BACKGROUND_COLOR,
+};
+/**
+ * La luz de cada clima (id de weather.json); el que no esta, la de un dia despejado. Con lluvia y
+ * tormenta el sol se apaga y enfria; con nieve, blanco; con la tormenta de arena, naranja.
+ */
+const WEATHER_MOODS: Readonly<Record<string, Mood>> = {
+  Rain: { sun: 0xc8d6ec, sunIntensity: 1.7, sky: 0x8094c4, skyIntensity: 1.1, background: 0x93a8c0 },
+  Snow: { sun: 0xf2f6ff, sunIntensity: 2.3, sky: 0xa4b8ec, skyIntensity: 1.2, background: 0xdce8f4 },
+  Storm: { sun: 0xa8b4d0, sunIntensity: 1.2, sky: 0x60709e, skyIntensity: 1.0, background: 0x5e6c84 },
+  Sandstorm: { sun: 0xffc98a, sunIntensity: 2.3, sky: 0xb0906e, skyIntensity: 1.0, background: 0xd8b888 },
+};
+/** Lo que tarda (mas o menos, en segundos) en pasar la luz de un clima a la de otro. */
+const MOOD_SECONDS = 1.5;
+
 export type FrameListener = (seconds: number) => void;
 
 export class World {
@@ -27,6 +56,9 @@ export class World {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(32, 1, 0.1, 400);
   private readonly sun = new THREE.DirectionalLight(SUN_COLOR, SUN_INTENSITY);
+  private readonly sky = new THREE.HemisphereLight(SKY_FILL, GROUND_FILL, SKY_INTENSITY);
+  private readonly background = new THREE.Color(BACKGROUND_COLOR);
+  private mood = CLEAR_MOOD;
   private readonly listeners = new Set<FrameListener>();
   private readonly clock = new THREE.Clock();
 
@@ -37,18 +69,34 @@ export class World {
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     parent.appendChild(this.renderer.domElement);
     this.addLights();
-    this.scene.background = new THREE.Color(BACKGROUND_COLOR);
+    this.scene.background = this.background;
     this.fit();
     window.addEventListener('resize', () => this.fit());
   }
 
   private addLights(): void {
-    this.scene.add(new THREE.HemisphereLight(SKY_FILL, GROUND_FILL, SKY_INTENSITY));
+    this.scene.add(this.sky);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
     this.sun.shadow.bias = -0.0005;
     this.sun.shadow.normalBias = 0.02;
     this.scene.add(this.sun, this.sun.target);
+  }
+
+  /** La luz del clima de hoy (id de weather.json; null: despejado): se pasa a ella poco a poco. */
+  setWeather(kind: string | null): void {
+    this.mood = (kind && WEATHER_MOODS[kind]) || CLEAR_MOOD;
+  }
+
+  /** Acerca la luz a la del clima, un poco en cada fotograma. */
+  private blendMood(seconds: number): void {
+    const blend = Math.min(seconds / MOOD_SECONDS, 1);
+    const { mood } = this;
+    this.sun.color.lerp(new THREE.Color(mood.sun), blend);
+    this.sun.intensity += (mood.sunIntensity - this.sun.intensity) * blend;
+    this.sky.color.lerp(new THREE.Color(mood.sky), blend);
+    this.sky.intensity += (mood.skyIntensity - this.sky.intensity) * blend;
+    this.background.lerp(new THREE.Color(mood.background), blend);
   }
 
   /** Coloca el sol para que su sombra cubra un mapa de ese centro y ese radio. */
@@ -93,6 +141,7 @@ export class World {
   start(): void {
     this.renderer.setAnimationLoop(() => {
       const delta = Math.min(this.clock.getDelta(), 0.1);
+      this.blendMood(delta);
       for (const listener of this.listeners) listener(delta);
       this.renderer.render(this.scene, this.camera);
     });

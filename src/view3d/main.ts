@@ -30,6 +30,7 @@ import { GroundMarks } from './groundMarks';
 import { ParticleSystem, type PuffKind } from './particles';
 import { SandDust } from './sandDust';
 import { WeatherView } from './weather3d';
+import { Wrecks } from './wrecks';
 
 const START_DISTANCE = 16;
 const START_YAW = Math.PI / 4;
@@ -90,6 +91,7 @@ function publish(): void {
 function refresh(): void {
   board.sync();
   weather.set(state.weather?.kind ?? null);
+  world.setWeather(state.weather?.kind ?? null);
   publish();
 }
 
@@ -98,13 +100,16 @@ const WEATHER_REACH = 0.9;
 
 const particles = new ParticleSystem();
 const marks = new GroundMarks();
-world.scene.add(particles.object, marks.mesh);
+const wrecks = new Wrecks();
+world.scene.add(particles.object, marks.mesh, wrecks.object);
 const animations = {
   board,
   layer: effects,
   animate: (seconds: number, step: (progress: number) => void) => world.animate(seconds, step),
   puff: (kind: PuffKind, at: THREE.Vector3, count?: number) => particles.emit(kind, at, count),
   mark: (at: THREE.Vector3, heading: number, motion: MovementMotion) => marks.leave(at, heading, motion),
+  scorch: (at: THREE.Vector3) => marks.scorch(at),
+  wreck: (model: THREE.Object3D) => wrecks.leave(model),
 };
 const controls = new TurnControls({ session, viewer, highlights, animations, refresh });
 
@@ -167,7 +172,8 @@ world.onFrame((seconds) => {
   const viewportHeight = world.renderer.domElement.clientHeight;
   weather.update(seconds, target, distance * WEATHER_REACH, world.camera, viewportHeight);
   sandDust.update(seconds, target, distance * WEATHER_REACH, world.camera, viewportHeight);
-  particles.keepEmitting(board.smokeSources(), seconds);
+  wrecks.update(seconds);
+  particles.keepEmitting([...board.smokeSources(), ...wrecks.smokeSources()], seconds);
   particles.update(seconds, world.camera, viewportHeight);
   marks.update(seconds);
   // Los bocadillos (menu, prevision) siguen a su casilla mientras la camara se mueve.
@@ -177,4 +183,4 @@ world.start();
 void controls.runUntilInput();
 
 // Para mirar y probar desde la consola (y los agentes): la sesion y las piezas.
-(window as unknown as { ilogic3d: object }).ilogic3d = { session, board, controls, rig, world, weather, sandDust };
+(window as unknown as { ilogic3d: object }).ilogic3d = { session, board, controls, rig, world, weather, sandDust, animations, wrecks };
