@@ -98,7 +98,9 @@ export function endViewer(result: MatchResult, viewer: TeamId, people: readonly 
 }
 
 /** Botones del final: en una mision, siguiente (si se gana y la hay), repetir y menu; si no, revancha, nueva y menu. */
-export function endButtonsFor(mission: Mission | undefined, outcome: EndOutcome): EndButton[] {
+export function endButtonsFor(mission: Mission | undefined, outcome: EndOutcome, isOnline = false): EndButton[] {
+  // Por la red la revancha seria otra sala: solo volver al menu.
+  if (isOnline) return ['menu'];
   if (!mission) return ['rematch', 'new', 'menu'];
   if (outcome !== 'won') return ['retry', 'menu'];
   return nextMission(mission) ? ['next', 'retry', 'menu'] : ['retry', 'menu'];
@@ -133,6 +135,8 @@ export interface EndHost {
   readonly ended: boolean;
   /** Ultima casilla con un combate o una captura. */
   readonly lastAt: Pos | null;
+  /** Es una partida por la red (sin revancha desde aqui). */
+  readonly isOnline: boolean;
   /** Da la partida por terminada: sin entrada, sin zona de amenaza y sin su guardado. */
   closeMatch(): void;
   refresh(): void;
@@ -217,7 +221,7 @@ export class EndOfMatch {
     const { outcome } = end;
     const s = this.host.state;
     const won = outcome === 'won';
-    this.buttons = endButtonsFor(mission, outcome);
+    this.buttons = endButtonsFor(mission, outcome, this.host.isOnline);
     this.selected = 0;
     const viewer = this.host.viewer;
     ui.set({

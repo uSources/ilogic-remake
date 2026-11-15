@@ -90,13 +90,20 @@ export function quitWhileWatching(state: WatchState, choices: GameMenuChoices): 
   if (watchesOthers(state)) choices.choose('quit');
 }
 
+/** Lo que no tiene sentido en una partida por la red: se guarda en el servidor y los turnos ajenos llegan una vez. */
+const NOT_ONLINE: readonly GameMenuKey[] = ['save', 'replay'];
+
 /**
- * Las opciones del menu de pausa en esta partida: guardar solo si su modo se guarda y rendirse solo si
- * se puede perder (la partida para mirar, el laboratorio, no tiene ninguna de las dos).
+ * Las opciones del menu de pausa en esta partida: guardar solo si su modo se guarda (y no es por la
+ * red: entonces tampoco repetir) y rendirse solo si se puede perder (la partida para mirar, el
+ * laboratorio, no tiene ninguna de las dos).
  */
-export function gameMenuOf(s: GameState): GameMenuKey[] {
+export function gameMenuOf(s: GameState, isOnline = false): GameMenuKey[] {
   const mode = gameModeOf(s);
-  return GAME_MENU.filter((choice) => (choice !== 'save' || mode.saves) && (choice !== 'surrender' || canBeLost(mode)));
+  return GAME_MENU.filter(
+    (choice) =>
+      (choice !== 'save' || mode.saves) && (choice !== 'surrender' || canBeLost(mode)) && !(isOnline && NOT_ONLINE.includes(choice)),
+  );
 }
 
 export const gameMenuPhase: PhaseHandler = {
@@ -107,7 +114,7 @@ export const gameMenuPhase: PhaseHandler = {
     host.refresh();
   },
   accept: (host) => {
-    const choice = gameMenuOf(host.state)[host.menuSel];
+    const choice = gameMenuOf(host.state, host.isOnline)[host.menuSel];
     if (choice) host.gameMenu.choose(choice);
   },
   back: (host) => host.toMap(),
@@ -116,7 +123,7 @@ export const gameMenuPhase: PhaseHandler = {
 
 function gameMenuModel(input: MenuInput): MenuModel {
   const s = input.s;
-  const items: MenuItemVM[] = gameMenuOf(s).map((choice) => ({
+  const items: MenuItemVM[] = gameMenuOf(s, input.isOnline).map((choice) => ({
     id: choice,
     label: t(choice as TextKey),
     hint: MENU_KEY_HINT[choice],

@@ -24,6 +24,8 @@ export interface PhaseHost extends ActionHost {
   /** El equipo que juega la persona en esta pantalla (el que mira). */
   readonly viewer: TeamId;
   readonly view: MapView;
+  /** Es una partida por la red (no se guarda aqui ni se repiten los turnos ajenos). */
+  readonly isOnline: boolean;
   phase: Phase;
   /** Opcion señalada del menu de bocadillo, y las opciones que se enseñan. */
   menuSel: number;

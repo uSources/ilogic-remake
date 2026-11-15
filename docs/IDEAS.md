@@ -69,8 +69,11 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     `docs/ARQUITECTURA.md`, "Red": el protocolo como datos, la sala `Room` sobre una `GameSession`,
     la niebla de los sucesos y la vista del cliente); (2) el servidor, en Cloudflare Workers con un
     Durable Object por sala, que guarda la sala (`snapshot`/`restore`), lleva los tiempos y manda a
-    cada uno solo lo que ve; (3) la pantalla: crear una sala, el enlace de invitación y jugar desde
-    la vista y los sucesos que llegan. Decidido: el servidor manda (las acciones pasan por la sesión
+    cada uno solo lo que ve (hecho: `server/`); (3) la pantalla: crear una sala, el enlace de
+    invitación y jugar desde la vista y los sucesos que llegan (hecho: `src/net`, «Jugar en línea»;
+    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"). Queda: que cada uno elija su general al entrar,
+    la cuenta atrás del reloj por turno en la pantalla y avisos fuera de la pestaña (notificaciones
+    del navegador). Decidido: el servidor manda (las acciones pasan por la sesión
     como las de cualquiera, la IA rival y los dados juegan allí) y un cliente nunca recibe más que la
     vista de su equipo (si no, se puede mirar a través de la niebla). Las clasificatorias, después.
 16. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.

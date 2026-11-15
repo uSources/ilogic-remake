@@ -63,9 +63,9 @@ function ContinueCard({ save, focus }: { save: NonNullable<HomeVM['save']>; focu
   );
 }
 
-function NewGameCard({ quickSummary, focus }: { quickSummary: string; focus: Focus }) {
+function NewGameCard({ quickSummary, online, focus }: { quickSummary: string; online: boolean; focus: Focus }) {
   return (
-    <div class={`px card card-new ${cardSelClass(focus, 'quick', 'custom')}`}>
+    <div class={`px card card-new ${cardSelClass(focus, 'quick', 'custom', 'online')}`}>
       <span class="label">{t('newGame')}</span>
       <div class="card-art" aria-hidden="true">
         <img class="px-icon" src={imgUrl('b_Soldier')} alt="" />
@@ -80,6 +80,11 @@ function NewGameCard({ quickSummary, focus }: { quickSummary: string; focus: Foc
         <Btn sel={isFocused(focus, 'custom')} cls="px-btn plain" onHover={focus.hover('custom')} onPick={focus.pick('custom')}>
           {t('customGame')}
         </Btn>
+        {online && (
+          <Btn sel={isFocused(focus, 'online')} cls="px-btn plain" onHover={focus.hover('online')} onPick={focus.pick('online')}>
+            {t('online')}
+          </Btn>
+        )}
       </div>
     </div>
   );
@@ -155,7 +160,7 @@ export function Home({ s }: { s: UIState }) {
       <img class="px-icon logo" src={imgUrl('logoilogic')} alt="Ilogic" />
       <div class="home-cards">
         {home.save && <ContinueCard save={home.save} focus={focus} />}
-        <NewGameCard quickSummary={home.quick} focus={focus} />
+        <NewGameCard quickSummary={home.quick} online={home.online} focus={focus} />
         <CampaignCard campaign={home.campaign} focus={focus} />
       </div>
       <FootLinks s={s} focus={focus} />

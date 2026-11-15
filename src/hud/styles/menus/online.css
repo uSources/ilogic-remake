@@ -1,0 +1,99 @@
+/* Jugar en línea: el menu, crear sala, entrar con enlace y el vestibulo */
+.online .on-main {
+  justify-content: center;
+}
+.on-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.on-room,
+.on-lobby-seat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+}
+.on-room .muted,
+.on-seat-name {
+  flex: 1;
+  min-width: 0;
+}
+.on-lobby-seat.out {
+  opacity: 0.75;
+}
+.on-code {
+  font-family: var(--display);
+  letter-spacing: 2px;
+  color: var(--gold);
+}
+.on-code.big {
+  font-size: 28px;
+}
+.on-lobby {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.on-lobby-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.on-join {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.on-join .ng-code {
+  width: 100%;
+  letter-spacing: 0;
+}
+.on-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 6px;
+}
+.on-error {
+  word-break: break-all;
+}
+
+/* En la partida: la conexion y a quien se espera */
+.netline {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid var(--ink);
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 5;
+}
+.netline i {
+  width: 8px;
+  height: 8px;
+  background: var(--green, #5fd36b);
+}
+.netline.reconnecting i {
+  background: var(--gold);
+}
+.netline.offline i {
+  background: var(--red-soft);
+}
+
+/* Por la red no se sabe la carga del general enemigo */
+.gp-charge.unknown .gp-unknown {
+  font-family: var(--display);
+  color: var(--gold);
+  font-size: 16px;
+  line-height: 1;
+}

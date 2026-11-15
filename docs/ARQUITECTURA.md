@@ -882,8 +882,11 @@ sequenceDiagram
 
 ## Red (`core/net`)
 
-Una partida por la red, en el nucleo y sin red: el servidor (PR 2: un Durable Object en Cloudflare
-Workers) y la pantalla (PR 3) solo tienen que mover mensajes. Las decisiones que no conviene deshacer:
+Una partida por la red, en el nucleo y sin red: el servidor (un Durable Object en Cloudflare
+Workers) y la pantalla solo tienen que mover mensajes. **El recorrido entero** (que garantiza, el
+glosario, el viaje de una jugada funcion a funcion, los mensajes, los estados de la sala y en que
+orden leer los archivos) esta en [`docs/RED.md`](RED.md); aqui, las decisiones que no conviene
+deshacer y el porque:
 
 - **El servidor manda.** La partida de verdad vive en el servidor, en una `GameSession` como la de la
   pantalla: cada persona es un `remoteController` (la sesion espera sus acciones), cada equipo de la IA
@@ -899,24 +902,30 @@ Workers) y la pantalla (PR 3) solo tienen que mover mensajes. Las decisiones que
   verdad (que diria lo que el equipo no ve: 'notTarget' o 'notYours' de una unidad escondida, o
   'unreachable' de una casilla ocupada por alguien que no se ve; probando uids o casillas se contaria
   el ejercito escondido). Un edificio que cambia de dueño si se ve: los dueños son publicos, como en
-  la pantalla compartida. El resultado de
-  su propia accion lleva los sucesos tal como el los ve (un ataque aereo no nombra a quien no ve); y
-  los pasos de los demas van juntos en un solo `events` (courier.ts), que no sale si no trae nada
-  (ni sucesos ni cambio en su vista): asi no se cuenta cuantas cosas han hecho los enemigos donde no
-  ve. Las semillas (dados, decisiones, la del mapa) tampoco salen del servidor.
+  la pantalla compartida. El resultado de su propia accion lleva los sucesos tal como el los ve (un
+  ataque aereo no nombra a quien no ve); y los pasos de los demas van juntos en un solo `events`
+  (courier.ts), que no sale si no trae nada (ni sucesos ni cambio en su vista): asi no se cuenta
+  cuantas cosas han hecho los enemigos donde no ve. Las semillas (dados, decisiones, la del mapa)
+  tampoco salen del servidor.
 - **Amigos por enlace.** Una sala (`Room`) da una ficha (`token`) por asiento de persona, que no se
   puede adivinar (192 bits de azar que pone el servidor: `RoomContext.newToken`; el nucleo no tira de
   ningun azar; comparar fichas en tiempo constante, `sameToken`, tambien lo da el servidor). El enlace
   de invitacion lleva la ficha; con ella se entra y se vuelve a entrar.
-
-| Modulo | Que va |
-|---|---|
-| `net/protocol` | los mensajes como datos: `ClientMessage` (hello, act, endTurn, surrender, resync) y `ServerMessage` (welcome, view, events, result, turn, ended, error); `PROTOCOL_VERSION` (la forma de los mensajes) con `SAVE_VERSION` (la de la vista) en el saludo: otra version no entra; `isValidMessage` comprueba lo que llega campo a campo (`CLIENT_MESSAGE_SHAPES`, como `ACTION_SHAPES`) y con topes de tamaño (`isWithinBounds`: listas de hasta `MAX_LIST`, textos de hasta `MAX_TEXT`, nada hondo); lo que cambia de una vista (`viewChangeOf`, `mergeView`) |
-| `net/room` | `Room`: `create(config, context)` prepara la partida (`buildMatch`) y sus asientos; `join(hello)` y `handle(asiento, mensaje)` devuelven los mensajes que salen y para quien (`Outgoing`); `snapshot()`/`restore()` la guardan y la recuperan como JSON; `leave`, `abandon` (abandonar es rendirse), `replaceWithAi` (el asiento pasa a la IA), `endTurnOf` (se le acabo el tiempo); estados 'waiting' → 'playing' → 'ended' (se decide la partida, o ya no juega ninguna persona: `ended.abandoned`); la partida avanza de `ADVANCE_STEP_BUDGET` pasos en pasos (`pending()`, `continueMatch()`: el servidor sigue desde una alarma, su tiempo esta contado); `rejectionsOf` (cuantos mensajes se le han rechazado a cada asiento, para que el servidor frene a quien insiste). Sin relojes: los tiempos los lleva el servidor |
-| `net/seats` | los asientos (`Seat`): una persona con su ficha, su conexion, su ultimo numero de orden y su ultimo mensaje (`PersonSeat`), o la IA con su perfil (`AiSeat`); cada asiento tiene su numero (`SeatId`) y su equipo (hoy uno por equipo; manana, espectadores o dos personas por equipo) |
-| `net/courier` | `Courier`: lo que se lleva a cada persona (su vista entera, los lotes de sucesos, el turno), con lo que sabia tras lo ultimo que se le mando y el numero de cada mensaje; `Outbox`, lo que sale en lo que va de mensaje |
-| `net/eventFog` | la niebla de los sucesos: `eventsSeenBy(sucesos, { before, after })`, con lo que sabe el equipo antes y despues del paso (`Knowledge` = `knowledgeOf(s, equipo)`: su `foggedCopy` y lo que ve) |
-| `net/clientState` | `viewSnapshotOf(s, equipo)` (lo que se manda) y `loadView(vista, contenido)` (la partida del cliente, comprobada con `readSaved` como una guardada) |
+- **Orden y repeticiones.** Lo que tiene efecto (`act`, `endTurn`, `surrender`) lleva un numero de
+  orden del cliente (`seq`, creciente por asiento; `welcome` dice el ultimo atendido, para seguir
+  contando tras un corte): la sala contesta con el en `result` y no repite uno ya atendido
+  (`'stale'`), asi un mensaje reenviado tras un corte no compra dos veces ni acaba el turno
+  siguiente. Cada `view`, `events` y `turn` que se manda a un asiento lleva su `step` (creciente por
+  asiento): si al cliente le falta uno, pide su vista (`resync`), que es el punto de partida nuevo.
+- **La sala guardada** (`snapshot`, con su propia version `ROOM_SNAPSHOT_VERSION`) es la partida, sus
+  asientos (con sus numeros de orden y de mensaje) y su estado; el registro de la sesion no hace
+  falta: la partida decide igual al recuperarla (los dados y la semilla de las decisiones van en ella;
+  `tests/room.test.ts` lo comprueba jugando la misma partida seguida y a trozos). Al recuperarla nadie
+  esta dentro: cada cliente vuelve a saludar y recibe su vista entera.
+- **Sin relojes ni azar en el nucleo.** Los tiempos (caducar, el turno, la espera a los que faltan)
+  los lleva el servidor y le dice a la sala que hacer (`endTurnOf`, `replaceWithAi`, `abandon`). La
+  partida avanza de `ADVANCE_STEP_BUDGET` pasos en pasos (`isMidway()`, `continueMatch()`): una
+  llamada del servidor tiene su tiempo contado, y un turno largo de la IA se reparte en varias.
 
 **La niebla de los sucesos.** La regla: un suceso se ve si el equipo conoce lo que nombra **antes o
 despues del paso**. Hace falta el antes porque el paso puede dejar sin rastro a quien lo protagoniza
@@ -950,44 +959,103 @@ nombra cada tipo), y `tests/room.test.ts` prueba por mensajes que ningun cliente
 escondida y que, para cada tipo de accion, una unidad o escuadra escondida se rechaza igual que una
 que no existe.
 
-**La sala, paso a paso.** Al entrar todas las personas (o rendirse las que abandonan antes), la sala
-lleva la sesion con `runMatch` hasta que hay que esperar a una persona (y anuncia `turn`) o la
-partida se decide (`ended`). Cada vez que para, cada persona que esta dentro recibe en un solo
-`events` lo que ve de los pasos desde lo ultimo que se le mando y lo que cambia de su vista
-(`ViewChange`: lo fijo —mapa, reglas— llego con su vista entera, `view`, y el cliente lo junta con
-`mergeView`); lo de su propia alianza le llega al momento, con su `result` delante (que lleva sus
-sucesos tal como los ve). Fuera de turno solo vale rendirse (`error: 'notYourTurn'`); antes de empezar
-o despues de acabar, nada (`'notPlaying'`); una ficha que no es de la sala, `'badToken'`; lo que no
-tiene forma de mensaje, `'badMessage'`; un asiento que no es de una persona, `'noSeat'`.
-
-- **Orden y repeticiones.** Lo que tiene efecto (`act`, `endTurn`, `surrender`) lleva un numero de
-  orden del cliente (`seq`, creciente por asiento; `welcome` dice el ultimo atendido, para seguir
-  contando tras un corte): la sala contesta con el en `result` y no repite uno ya atendido
-  (`'stale'`), asi un mensaje reenviado tras un corte no compra dos veces ni acaba el turno
-  siguiente. Cada `view`, `events` y `turn` que se manda a un asiento lleva su `step` (creciente por
-  asiento): si al cliente le falta uno, pide su vista (`resync`), que es el punto de partida nuevo.
-- **Conexiones.** `join` da una conexion nueva (`connection`); un segundo saludo con la misma ficha
-  (otra pestaña) sustituye a la conexion de antes, y `leave(asiento, conexion)` con una conexion que
-  ya no es la suya no hace nada.
-- **La sala guardada** (`snapshot`, con su propia version `ROOM_SNAPSHOT_VERSION`) es la partida, sus
-  asientos (con sus numeros de orden y de mensaje) y su estado; el registro de la sesion no hace
-  falta: la partida decide igual al recuperarla (los dados y la semilla de las decisiones van en ella;
-  `tests/room.test.ts` lo comprueba jugando la misma partida seguida y a trozos). Al recuperarla nadie
-  esta dentro: cada cliente vuelve a saludar y recibe su vista entera.
-- La vista de un cliente se lee con `loadView` (`readSaved` con origen 'view': las caidas son las
-  apuntadas, nunca se deducen de lo que se ve) y `cloneState`, `serialize` y la pantalla la tratan
-  como cualquier partida. Para la PR 3: un `events` no trae la accion (el suceso de rendirse ya lo
-  cuenta), trae un lote (varios pasos y la vista del final: una unidad que se metio en la niebla por
-  el camino se anima contra la vista de antes, no contra la del final), el `attacker` de un ataque
-  puede ser null (la escena ya dibuja un combate sin atacante a la vista), y el dinero y la carga
-  del general de los demas equipos llegan a 0 (la barra del general enemigo tiene que enseñar «?»).
-- El servidor tiene que acotar los bytes de cada mensaje antes de convertirlo de JSON (los topes de
-  `isValidMessage` miran lo que ya es un objeto) y puede frenar a quien insiste (`rejectionsOf`).
+La vista de un cliente se lee con `loadView` (`readSaved` con origen 'view': las caidas son las
+apuntadas, nunca se deducen de lo que se ve) y `cloneState`, `serialize` y la pantalla la tratan como
+cualquier partida. Un `events` no trae la accion (el suceso de rendirse ya lo cuenta), trae un lote
+(varios pasos y la vista del final: una unidad que se metio en la niebla por el camino se anima
+contra la vista de antes, no contra la del final), el `attacker` de un ataque puede ser null (la
+escena ya dibuja un combate sin atacante a la vista), y el dinero y la carga del general de los
+demas equipos llegan a 0 (la barra del general enemigo enseña «?»).
 
 ESLint pone la red encima de todo (`NO_NET`, eslint.config.js): ni la IA, ni las ordenes, ni la
 sesion, ni las reglas, ni la vista la importan (una partida se juega igual con red que sin ella), y la
 red no cambia la partida a mano (`APPLY_STEPS`) ni manda con `dispatch` (`NO_DIRECT_DISPATCH`): pasa
 por la sesion. `tests/layers.test.ts` y `tests/lintImports.test.ts` lo comprueban.
+
+### Servidor (`server/`)
+
+Un Worker de Cloudflare con un Durable Object por sala (el como se publica, `server/README.md`; el
+recorrido de cada mensaje y las rutas, `docs/RED.md`). Es un adaptador fino sobre `Room`: no sabe de
+la partida, solo mueve lo que la sala devuelve para cada asiento (`Outgoing`), la guarda y lleva los
+relojes. Es un paquete aparte (`server/package.json`, workspace de npm) que importa el nucleo tal cual
+(`@core/...` → `src/core`): el mismo codigo que la pantalla, sin compilar nada aparte; `npm run check`
+de la raiz acaba con sus tipos y sus tests. Las decisiones:
+
+- **La ficha no viaja en la URL.** El saludo (`hello`) va como primer mensaje del WebSocket, asi la
+  ficha no queda en registros de acceso ni en el historial. Lo que una conexion necesita saber
+  (asiento, conexion, ficha) va pegado al socket (`Attachment`, WebSocket Hibernation API) y
+  sobrevive a que el objeto duerma: al despertar, la sala recuperada no conoce a nadie y el objeto
+  vuelve a meter a cada socket con su ficha (reciben su vista entera otra vez).
+- **Todo guardado tras cada mensaje.** La sala entera (`snapshot`) y los relojes (`meta`) van al
+  almacen del objeto despues de cada mensaje atendido; asi nada se pierde si el objeto muere.
+- **Una alarma, varios relojes** (`timers.ts`, datos puros; el objeto pone la alarma del primero que
+  vence, `nextAlarm`): caducar a los 30 dias sin actividad (se borra todo y se cierran las
+  conexiones), el turno de quien se espera (`endTurnOf`; otro dia u otro asiento es otro reloj),
+  la espera a los que no llegan (`replaceWithAi` a cada asiento vacio y la partida empieza) y seguir
+  una partida a medias (`isMidway()` tras cada paso → alarma ya → `continueMatch()` desde ella: cada
+  llamada tiene su tiempo de CPU, y un turno largo de la IA se reparte en varias).
+- **Topes antes de leer.** Los bytes de cada mensaje y del cuerpo de `POST /rooms` se acotan antes
+  de leer el JSON (`MAX_MESSAGE_BYTES`; los topes de la forma los pone `isValidMessage`); a quien la
+  sala le rechaza mas de `MAX_REJECTIONS_PER_WINDOW` mensajes en un minuto (`rateLimit.ts`) se le
+  corta; lo que no entra se despide con un codigo de cierre propio (`CLOSE_CODES`).
+- **CORS** (`cors.ts`): la web del juego y lo que diga `ALLOWED_ORIGINS` (wrangler.toml), mas
+  `localhost`, `127.0.0.1` y `null` (el HTML abierto desde un fichero). Sin origen (otro servidor)
+  pasa: no es un navegador.
+- **Lo que hay que configurar** (una vez, `server/README.md`): una cuenta de Cloudflare (vale el plan
+  gratuito: las salas son Durable Objects con SQLite, `new_sqlite_classes`; los clasicos piden el de
+  pago), los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` en GitHub (con ellos,
+  `.github/workflows/server.yml` publica con cada push a `main` que toque el servidor o el nucleo;
+  sin ellos no hace nada) y la variable `VITE_SERVER_URL` con la URL del Worker (los workflows de
+  la web y de las previews la pasan al `vite build`; en local, `.env` a partir de `.env.example`).
+- **Tests**: `server/test/unit` (las piezas puras con la sala de verdad) y `server/test/workers`
+  (`@cloudflare/vitest-plugin`: el Worker y el objeto de verdad dentro de workerd; dos personas por
+  WebSocket y la IA juegan varios dias con el cliente simulado de `tests/sim/netClient.ts`, que
+  comprueba cada mensaje; volver a entrar, despertar el objeto (`evictDurableObject`), un `seq`
+  repetido, el tope de bytes, y las alarmas adelantando los relojes guardados y sonando con
+  `runDurableObjectAlarm`).
+
+### Cliente (`src/net/`, el menu y la escena)
+
+La pantalla de una partida por la red. Lo de fuera del nucleo que habla con el servidor esta en
+`src/net/` (sin Phaser: se prueba con un socket falso, `tests/onlineClient.test.ts`); el menu y la
+escena solo lo enchufan. Que hay en cada archivo y por donde pasa cada cosa, en `docs/RED.md`. Las
+decisiones:
+
+- **La partida de la pantalla es la vista del servidor**, en una sesion espejo (`mirrorSession`,
+  matchSetup.ts): la persona juega su equipo (`humanController`) y los demas son remotos
+  (`remoteController`: la sesion los espera y no juega nada por ellos). Asi todo lo de la escena
+  funciona igual que en una partida de esta pantalla.
+- **El turno propio se juega como en la hotseat**: cada accion pasa por la sesion espejo (`act`,
+  que la comprueba con lo que el equipo sabe, igual que la sala antes de preguntar a la partida de
+  verdad) y, si vale, se manda a la sala. Si la sala la rechaza (algo escondido lo impedia), se avisa
+  y se pide la vista (`resync`), que vuelve a ser la partida. Lo que se anima (atacar, capturar,
+  comprar, unirse, subir, poderes) lo decide el servidor —los dados y lo escondido estan alli—: se
+  espera su `result` y su eco (la vista al dia), la vista pasa a ser la partida (`adoptView`: sesion
+  espejo nueva) y sus sucesos, tal como los ve el equipo, se animan como siempre.
+- **Los demas llegan por lotes** y cada lote se anima por turnos contra `animationView(antes,
+  despues)`: la vista de despues mas las unidades que solo estan en la de antes (cayeron o se
+  metieron en la niebla por el camino: sin ellas no habria dibujo que animar). Al acabar el lote,
+  la de despues es la partida. Un `ended` deja la ultima vista y el final lo decide la pantalla como
+  siempre (`checkEnd`).
+- **El enlace aguanta los cortes solo** (`ServerLink`): vuelve con esperas crecientes, saluda otra
+  vez y reenvia lo que mando sin contestar; el `seq` se guarda en localStorage por sala y asiento,
+  asi otra pestaña o una recarga siguen contando. Un cierre sin arreglo (ficha mala, otra version,
+  otra pestaña con la misma ficha, la sala ya no existe) no se reintenta: se avisa y se sale al menu.
+- **Donde esta el servidor** (`serverUrl.ts`): `VITE_SERVER_URL` al compilar o, por encima,
+  `ilogic.server` en localStorage (el propio servidor de quien juega, o uno local en los tests); sin
+  ninguna, el juego no ofrece «Jugar en línea».
+- **Lo que no vale por la red**: guardar y repetir el turno enemigo no estan en el menu de pausa
+  (`gameMenuOf(s, isOnline)`; la partida sigue desde el servidor: «Mis partidas en línea» o el
+  enlace), el final solo ofrece volver al menu (la revancha seria otra sala), la barra del general
+  enemigo enseña «?» (su carga no llega: `GeneralVM.chargeKnown`) y no hay autoguardado.
+- **Limites de hoy**: el general de cada asiento lo elige quien crea la sala; los enemigos que se
+  rinden en el turno propio no se anuncian hasta que llega su lote; el reloj por turno corre en el
+  servidor sin cuenta atras en la pantalla.
+
+`tests/visual/online.mjs` (`npm run online`) lo prueba de punta a punta: arranca `wrangler dev` en
+un puerto libre, dos navegadores por `file://` con el servidor en `ilogic.server`, A crea la sala, B
+entra por el enlace, juegan dos turnos cada uno, B pierde la conexion y vuelve sola, recarga por el
+enlace, y los dos ven lo mismo. Esta en el workflow de capturas (informativo).
 
 ## Graficos
 
@@ -1080,7 +1148,8 @@ los modulos de `src/scenes/game/`, cada uno con una responsabilidad:
 | `orders.ts`, `actionRunners.ts` | elegir y cumplir las acciones del registro (`ACTION_RUNNERS`: una entrada por accion) y las ordenes con destino; puntero del raton | solo tipos |
 | `powers.ts`, `labMode.ts` | poderes del general (apuntar y usar); laboratorio de animaciones | poco |
 | `playback.ts` | animar los `GameEvent` (mover, combate, captura, compra, poder del general) | si |
-| `turns.ts` | fin de turno y lo que juega la sesion hasta la persona (`playMatch`), cambio de persona, repetir los turnos ajenos | si |
+| `turns.ts`, `turnSummary.ts` | fin de turno y lo que juega la sesion hasta la persona (`playMatch`), cambio de persona, repetir los turnos ajenos; lo que se cuenta al volver (`TurnSummary`) | si |
+| `onlinePlay.ts`, `turnNotice.ts` | la partida por la red: lo que la escena hace distinto cuando la partida vive en el servidor (`OnlinePlay`; ver "Cliente" y `docs/RED.md`); el aviso de «Tu turno» en el titulo de la pestaña | poco |
 | `endOfMatch.ts` | final de la partida y su pantalla | si |
 
 - **La partida cambia con acciones**: los modulos que hacen algo en ella piden `ActionHost`
@@ -1200,5 +1269,5 @@ mando puede jugar una partida entera sin raton.
 | Las flechas de lo que haran las ordenes permanentes | `src/core/autopilot/preview.ts` (`previewStandingOrders`) |
 | El azar de cada turno de quien decide | `src/core/turnSeeds.ts` (`turnSeedOf`) y `decisionRngOf` en `src/core/playerView.ts` |
 | Las opciones de una herramienta (`npm run fuzz -- --games 50`) | `tools/cliArgs.ts` (`commandLine`) |
-| La partida por la red (mensajes, sala, lo que ve cada equipo de un paso) | `src/core/net/` (ver "Red"): `protocol.ts`, `room.ts`, `seats.ts`, `courier.ts`, `eventFog.ts`, `clientState.ts` |
+| La partida por la red (mensajes, sala, lo que ve cada equipo de un paso, el servidor, la pantalla) | `docs/RED.md` (el recorrido entero y en que orden leer); el nucleo en `src/core/net/`, el servidor en `server/src/`, el cliente en `src/net/` |
 | Misiones | `src/core/content/missions.json` (contenido, con su esquema); la partida de una, `src/core/missions/build.ts`, y lo que se mira de su mapa, `missions/check.ts` (+ skill `nueva-mision`); un tipo de objetivo nuevo, una entrada en `OBJECTIVES` (`src/core/objectives.ts`, con su `isValid` para las partidas guardadas) y su frase en `OBJECTIVE_TEXT` (`src/campaign.ts`) |

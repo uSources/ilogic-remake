@@ -33,6 +33,9 @@ jobs:
       # Sin compilar los graficos: van ya compilados en el repo (npm run assets antes del commit,
       # y tests/assets.test.ts comprueba que esten completos). Asi no hace falta Python.
       - run: npm run build:ci
+        env:
+          # La URL del servidor de partidas por la red (variable del repositorio; sin ella, sin red).
+          VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
       - run: touch dist/.nojekyll
       - uses: JamesIves/github-pages-deploy-action@v4
         with:

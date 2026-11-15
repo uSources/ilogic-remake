@@ -26,6 +26,8 @@ export interface GeneralVM {
   stars: number;
   max: number;
   fraction: number;
+  /** Se sabe cuanta carga lleva (por la red, la de los enemigos no: la barra enseña «?»). */
+  chargeKnown: boolean;
   powers: GeneralPowerVM[];
   /** Poder que se esta apuntando (fase de elegir casilla). */
   targeting: string | null;

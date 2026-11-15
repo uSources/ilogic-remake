@@ -11,8 +11,9 @@ import { weather } from './weather';
 import { options } from './options';
 import { menu } from './menu';
 import { newGame } from './newGame';
+import { online } from './online';
 
-export const EN_BY_FEATURE = { turn, actions, cards, combat, economy, orders, general, weather, options, menu, newGame };
+export const EN_BY_FEATURE = { turn, actions, cards, combat, economy, orders, general, weather, options, menu, newGame, online };
 
 export const EN: Translation<typeof ES> = {
   ...turn,
@@ -26,4 +27,5 @@ export const EN: Translation<typeof ES> = {
   ...options,
   ...menu,
   ...newGame,
+  ...online,
 };

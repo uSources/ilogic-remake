@@ -2,7 +2,8 @@
  * La partida: raiz de composicion. Tiene el ciclo de Phaser (init, create, update, SHUTDOWN), el estado
  * de la partida y la entrada de los mandos, y lo reparte a los modulos de src/scenes/game: que hace
  * cada fase del turno (phases/), mover (unitMoves), acciones y ordenes (orders), seleccion, arrastrar,
- * animar, turno enemigo, final... Cada modulo ve solo lo que pide su `...Host` (al final del fichero).
+ * animar, turno enemigo, final, la partida por la red (onlinePlay)... Cada modulo ve solo lo que pide su
+ * `...Host` (al final del fichero).
  */
 import Phaser from 'phaser';
 import { turnEndOrderOf } from '../core/squads';
@@ -53,6 +54,8 @@ import { menuModel, stepMenuRow } from './game/menuModel';
 import { forecastFor, hintText, labPanel, moveTipFor, selectionPanel, teamIncome } from './game/hudParts';
 import { captureBars, controlPointMarks, escortMarks, intentLines, orderMarks } from './game/mapOverlays';
 import { startMatch } from './game/matchSetup';
+import { OnlinePlay, type OnlinePlayHost } from './game/onlinePlay';
+import { notifyTurn, restoreTitle } from './game/turnNotice';
 import { TutorialTracker } from './game/tutorial';
 import { StandingOrderPreview } from './game/standingOrderPreview';
 import { EventPlayer, showFallNotice, type PlaybackHost } from './game/playback';
@@ -117,6 +120,8 @@ export class GameScene extends Phaser.Scene {
   private fastForward = false;
   /** Ultima casilla con un combate o una captura (para enfocar el final). */
   private lastAt: Pos | null = null;
+  /** La partida por la red (game/onlinePlay.ts; null en una de esta pantalla). */
+  private online: OnlinePlay | null = null;
 
   // --- Lo que se ve -----------------------------------------------------------
   private vis: Grid<boolean> = NOTHING_SEEN;
@@ -230,6 +235,8 @@ export class GameScene extends Phaser.Scene {
     this.anchorAt = {};
     this.endScreen.reset();
     this.handoffDone = null;
+    this.online?.close();
+    this.online = null;
   }
 
   init(data: GameStartData): void {
@@ -242,6 +249,8 @@ export class GameScene extends Phaser.Scene {
     this.lab = start.lab;
     this.fromSave = start.fromSave;
     this.corruptSave = start.corruptSave;
+    this.online = start.online ? new OnlinePlay(start.online, this.onlinePlayHost()) : null;
+    this.online?.listen();
   }
 
   create(): void {
@@ -296,6 +305,9 @@ export class GameScene extends Phaser.Scene {
       this.view.destroy();
       setEndFilter(null);
       resetActions();
+      this.online?.close();
+      this.online = null;
+      restoreTitle();
       // Lo de la partida que se cierra (tambien de quien sale mientras juegan los demas: ocupada, turno ajeno).
       ui.set({
         menu: null,
@@ -308,6 +320,7 @@ export class GameScene extends Phaser.Scene {
         busy: false,
         watching: false,
         turn: 'own',
+        net: null,
       });
     });
   }
@@ -525,7 +538,7 @@ export class GameScene extends Phaser.Scene {
   private openOptions(): void {
     if (this.phase !== 'map' && this.phase !== 'gameMenu') return;
     if (this.phase === 'map') this.openGameMenu();
-    this.menuSel = gameMenuOf(this.s).indexOf('options');
+    this.menuSel = gameMenuOf(this.s, !!this.online).indexOf('options');
     this.refreshHud();
     this.optionsPanel.open();
   }
@@ -748,6 +761,10 @@ export class GameScene extends Phaser.Scene {
 
   /** Guarda la partida (si su modo se guarda: la partida para mirar, no). */
   private saveGame(): boolean {
+    if (this.online) {
+      showToast(t('onlineNoSave'));
+      return false;
+    }
     if (!gameModeOf(this.s).saves || !writeSave(serialize(this.s))) return false;
     this.savedThisGame = true;
     return true;
@@ -808,11 +825,13 @@ export class GameScene extends Phaser.Scene {
    */
   private act(action: GameAction): GameEvent[] | null {
     const result = this.session.act(this.viewer, action);
+    if (result.ok && this.online) this.online.send(action);
     return result.ok ? result.events : null;
   }
 
   /** La hace y anima sus sucesos (ver ActionHost). */
   private async perform(action: GameAction, ghostKey?: string | null): Promise<boolean> {
+    if (this.online) return this.online.perform(action, ghostKey);
     const events = this.act(action);
     if (events) await this.playEvents(events, ghostKey);
     return !!events;
@@ -823,6 +842,16 @@ export class GameScene extends Phaser.Scene {
     for (const event of step.events) this.noteEvent(event, step.team === this.viewer);
     // Una rendicion no se deshace al cargar: el guardado de esta partida, si lo hay, la recoge ya.
     if (step.action.kind === 'surrender') this.refreshSave();
+  }
+
+  /** La partida que se ve pasa a ser esta, con su sesion (por la red: la vista que manda el servidor); la de antes ya no vale. */
+  private replaceMatch(state: GameState, session: GameSession): void {
+    if (this.phase !== 'map' && this.phase !== 'busy') this.abandonSelection();
+    this.s = state;
+    this.session = session;
+    this.session.subscribe((step) => this.record(step));
+    this.standingOrderPreview.reset();
+    this.refresh();
   }
 
   /** Vuelve a guardar la partida si ya tenia guardado (no crea uno que no habia). */
@@ -955,7 +984,8 @@ export class GameScene extends Phaser.Scene {
       dayInfo: dayInfoVM(s, viewer),
       lab: labPanel(this.s, this.lab),
       general: generalVM(s, viewer, viewer, this.phase === 'target' ? this.powers.targeting : null),
-      enemyGeneral: enemyWithGeneral === undefined ? null : generalVM(s, viewer, enemyWithGeneral, null),
+      // Por la red, la carga del general enemigo no se sabe (llega a 0): la barra enseña «?».
+      enemyGeneral: enemyWithGeneral === undefined ? null : generalVM(s, viewer, enemyWithGeneral, null, { chargeKnown: !this.online }),
       buildings: buildingsOf(s, viewer).length,
       day: s.day,
       dayLimit: s.settings.dayLimit,
@@ -1044,6 +1074,7 @@ export class GameScene extends Phaser.Scene {
       groupCtx: () => this.orders.ctx(null),
       orderMenu: this.orders.menu,
       canReplay: this.turns.canReplay,
+      isOnline: !!this.online,
     });
     this.menuItems = items;
     return { kind, title, subtitle, info, items, selected: this.menuSel, anchor: this.anchor('menu', at) };
@@ -1095,7 +1126,11 @@ export class GameScene extends Phaser.Scene {
       act: (action) => this.act(action),
       perform: (action, ghostKey) => this.perform(action, ghostKey),
       // La sesion cambia con cada partida: se pide la suya al mandar.
-      dispatcher: (s, team, action) => this.session.dispatcher(s, team, action),
+      dispatcher: (s, team, action) => {
+        const result = this.session.dispatcher(s, team, action);
+        if (result.ok && this.online) this.online.send(action);
+        return result;
+      },
     };
   }
 
@@ -1104,6 +1139,7 @@ export class GameScene extends Phaser.Scene {
       state: { get: () => this.s },
       viewer: { get: () => this.viewer },
       view: { get: () => this.view },
+      isOnline: { get: () => !!this.online },
       phase: rw(
         () => this.phase,
         (kind) => (this.phase = kind),
@@ -1389,7 +1425,32 @@ export class GameScene extends Phaser.Scene {
       },
       handOver: (team) => this.handOver(team),
       centerOnHq: () => this.centerOnHq(),
+      online: { get: () => this.online },
       ...this.actionHost(),
+    });
+  }
+
+  private onlinePlayHost(): OnlinePlayHost {
+    return live<OnlinePlayHost>({
+      scene: { get: () => this },
+      state: rw(
+        () => this.s,
+        (state) => (this.s = state),
+      ),
+      viewer: { get: () => this.viewer },
+      match: { get: () => this.match },
+      ended: { get: () => this.ended },
+      fastForward: rw(
+        () => this.fastForward,
+        (flag) => (this.fastForward = flag),
+      ),
+      turns: { get: () => this.turns },
+      replaceMatch: (state, session) => this.replaceMatch(state, session),
+      play: (events, ghostKey) => this.playEvents(events, ghostKey),
+      refresh: () => this.refresh(),
+      checkEnd: () => this.checkEnd(),
+      notifyTurn: () => notifyTurn(this),
+      quitToMenu: () => this.quitToMenu(),
     });
   }
 
@@ -1402,6 +1463,7 @@ export class GameScene extends Phaser.Scene {
       match: { get: () => this.match },
       ended: { get: () => this.ended },
       lastAt: { get: () => this.lastAt },
+      isOnline: { get: () => !!this.online },
       closeMatch: () => this.closeMatch(),
       refresh: () => this.refresh(),
       wait: (ms) => this.player.wait(ms),

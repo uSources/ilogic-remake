@@ -9,7 +9,7 @@ import { startsTurn } from '../../core/actions';
 import { cloneState, unitTypeOf } from '../../core/gameContent';
 import type Phaser from 'phaser';
 import { posOf } from '../../core/geom';
-import { autoCapturers, fallenSince, lastFallOrder, roundReport, unitById, isOnMap, type RoundReport } from '../../core/rules';
+import { autoCapturers, fallenSince, lastFallOrder, unitById, isOnMap, type RoundReport } from '../../core/rules';
 import { serialize } from '../../core/save';
 import {
   isAutosaveMoment,
@@ -30,6 +30,8 @@ import { center, floatText } from '../../ui/fx';
 import { weatherEffectsText } from '../../ui/hudModels';
 import type { MapView } from '../../ui/mapView';
 import { PAL_CSS } from '../../ui/palette';
+import type { OnlinePlay, TurnHooks } from './onlinePlay';
+import { addToSummary, newTurnSummary, type TurnSummary } from './turnSummary';
 import { CONFIRM_MS, INPUT_LOCK_MS, type ActionHost, type Phase } from './types';
 
 /** Donde estaba mirando el jugador antes del turno enemigo. */
@@ -77,16 +79,8 @@ export interface TurnHost extends ActionHost {
   handOver(team: TeamId): Promise<void>;
   /** Camara y cursor sobre la Base del equipo que mira (la primera vez que mira). */
   centerOnHq(): void;
-}
-
-/** Lo que se cuenta al volver el turno al jugador: lo que ha pasado mientras jugaban los demas. */
-interface TurnSummary {
-  /** El fin de ronda (si ha acabado una por medio). */
-  report: RoundReport | null;
-  /** Unidades propias que han cumplido su orden al acabar el turno (ahora esperan otra). */
-  ordersDone: number[];
-  /** Unidades propias de viaje que ya llegan este turno (el ultimo trozo lo hace el jugador). */
-  arrived: number[];
+  /** La partida por la red (null en una de esta pantalla): los turnos de los demas llegan por ella (onlinePlay.ts). */
+  readonly online: OnlinePlay | null;
 }
 
 /** Instante de "sin armar" del boton de fin de turno (muy atras: nunca cuenta como reciente). */
@@ -101,18 +95,6 @@ const ARRIVED_MARGIN = 3;
 /** "+vida" de las unidades curadas: empieza cuando ya se ha leido el resumen, uno detras de otro. */
 const HEAL_TEXT_DELAY_MS = 1100;
 const HEAL_TEXT_STAGGER_MS = 90;
-
-/** Lo que es de un equipo en lo que pasa mientras juegan los demas (para el resumen al volver). */
-function addToSummary(summary: TurnSummary, s: GameState, team: TeamId, step: ActedStep): void {
-  if (step.events.some((event) => event.kind === 'newDay')) summary.report = roundReport(s, step.events);
-  for (const event of step.events) {
-    if (event.actor !== team) continue;
-    if (event.kind !== 'standingOrderDone') continue;
-    // La de ir alli que ya llega: la acaba quien juega (se le avisa); las demas, cumplidas.
-    if (event.end === 'withinReach') summary.arrived.push(event.uid);
-    else if (event.end === 'fulfilled') summary.ordersDone.push(event.uid);
-  }
-}
 
 /** Nombre de una unidad para el resumen, con su escuadra si la tiene: "Tanque (Alfa)". */
 function unitWithSquad(s: GameState, unit: Unit): string {
@@ -131,7 +113,7 @@ export function fallsNoticeFor(s: GameState, viewer: TeamId, seen: number): { ke
   return { key: fallen.length === 1 ? 'teamOut' : 'teamsOut', numbers };
 }
 
-export class TurnFlow {
+export class TurnFlow implements TurnHooks {
   /** Esta jugando (o repitiendose) el turno de otro equipo. */
   othersPlaying = false;
   /** Se estan repitiendo los ultimos turnos ajenos (no cuentan en el tutorial). */
@@ -213,7 +195,7 @@ export class TurnFlow {
     const host = this.host;
     const match = host.match;
     host.phase = 'busy';
-    const summary = await this.playUntilInput(match);
+    const summary = host.online ? await host.online.watchUntilMyTurn(match) : await this.playUntilInput(match);
     if (!summary) return;
     host.phase = 'map';
     if (!host.lab) showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
@@ -234,14 +216,20 @@ export class TurnFlow {
     this.cameras.set(host.viewer, this.saveCamera());
     this.markFallsSeen(host.viewer);
     host.phase = 'busy';
-    this.replays.set(host.viewer, { before: cloneState(host.session.state), from: host.session.log.length });
-    host.session.finishInput(host.viewer);
-    const summary = await this.playUntilInput(match);
+    const summary = host.online ? await host.online.endTurn(match) : await this.endLocalTurn(match);
     if (!summary) return;
     this.backToPlayer(this.cameras.get(host.viewer));
     showBanner(`${t('day')} ${host.state.day}`, t('yourTurn'), 'blue');
     this.showReport(summary);
     this.showArrivals(summary);
+  }
+
+  /** En esta pantalla: la sesion acaba el turno y juega a los demas (se apunta desde donde repetirlos). */
+  private endLocalTurn(match: number): Promise<TurnSummary | null> {
+    const host = this.host;
+    this.replays.set(host.viewer, { before: cloneState(host.session.state), from: host.session.log.length });
+    host.session.finishInput(host.viewer);
+    return this.playUntilInput(match);
   }
 
   /** La partida sigue: no se ha cambiado por otra ni acaba de terminar (si termina, empieza el final). */
@@ -255,11 +243,11 @@ export class TurnFlow {
    */
   private async playUntilInput(match: number): Promise<TurnSummary | null> {
     const host = this.host;
-    const summary: TurnSummary = { report: null, ordersDone: [], arrived: [] };
+    const summary = newTurnSummary();
     const last: SessionStep = await playMatch(host.session, async (step) => {
       if (this.startsTurnOfAnotherPerson(step)) await this.switchPerson(step.team, summary);
       if (match !== host.match) return false;
-      addToSummary(summary, host.session.state, host.viewer, step);
+      addToSummary(summary, host.session.state, host.viewer, step.events);
       this.autosave(step);
       await this.show(step);
       // Quien mira ha visto el aviso de los que caen en este paso.
@@ -303,7 +291,7 @@ export class TurnFlow {
   }
 
   /** `viewer` ha visto las caidas hasta la ultima apuntada. */
-  private markFallsSeen(viewer: TeamId): void {
+  markFallsSeen(viewer: TeamId): void {
     this.seenFalls.set(viewer, lastFallOrder(this.host.session.state));
   }
 
@@ -324,10 +312,15 @@ export class TurnFlow {
   }
 
   /** Empieza el turno de un equipo: el propio (ya no juegan otros) o el de otro, con su aviso. */
-  private async turnStarts(team: TeamId): Promise<void> {
+  async turnStarts(team: TeamId): Promise<void> {
     if (team !== this.host.viewer) return this.announceTurnOf(team);
-    this.otherTeam = null;
-    this.othersPlaying = false;
+    this.othersPlay(null);
+  }
+
+  /** Por la red: se espera a otro equipo (o la IA juega en el servidor), o ya no (null: vuelve a tocar a la persona). */
+  othersPlay(team: TeamId | null): void {
+    this.otherTeam = team;
+    this.othersPlaying = team !== null;
   }
 
   /** El turno de otro equipo empieza: su aviso (rojo si es enemigo, azul si es aliado). */

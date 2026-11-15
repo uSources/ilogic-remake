@@ -174,6 +174,8 @@ describe('escena: final de la partida (game/endOfMatch.ts)', () => {
     const MISSIONS = defaultContent().missions.list;
     expect(endButtonsFor(MISSIONS[0], 'won')).toEqual(['next', 'retry', 'menu']);
     expect(endButtonsFor(MISSIONS[MISSIONS.length - 1], 'won')).toEqual(['retry', 'menu']);
+    // Por la red la revancha seria otra sala: solo volver al menu.
+    expect(endButtonsFor(undefined, 'won', true)).toEqual(['menu']);
     expect(endButtonsFor(MISSIONS[0], 'lost')).toEqual(['retry', 'menu']);
     expect(endButtonsFor(MISSIONS[0], 'draw')).toEqual(['retry', 'menu']);
     expect(endButtonsFor(undefined, 'won')).toEqual(['rematch', 'new', 'menu']);
@@ -382,6 +384,8 @@ describe('escena: rendirse sin personas en juego y salir mientras juegan los dem
     expect(gameMenuOf(skirmish)).toEqual(['resume', 'endTurn', 'save', 'replay', 'options', 'help', 'surrender', 'quit']);
     const lab = createMatch(labMatch(defaultLab(), null));
     expect(gameMenuOf(lab)).toEqual(['resume', 'endTurn', 'replay', 'options', 'help', 'quit']);
+    // Por la red no se guarda aqui ni se repiten los turnos ajenos.
+    expect(gameMenuOf(skirmish, true)).toEqual(['resume', 'endTurn', 'options', 'help', 'surrender', 'quit']);
     // Y el nucleo tampoco lo deja.
     expect(dispatch(lab, 0, { kind: 'surrender' })).toEqual({ ok: false, reason: 'cannotLose' });
   });
