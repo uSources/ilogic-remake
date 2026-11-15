@@ -1,6 +1,7 @@
 /**
- * Las marcas sobre el tablero: a donde puede ir la unidad elegida, la casilla bajo el puntero y el
- * anillo de la unidad elegida. Solo dibujan lo que se les dice (no saben de reglas).
+ * Las marcas sobre el tablero: a donde puede ir la unidad elegida (azul), a quien puede atacar (rojo),
+ * la casilla bajo el puntero y el anillo de la unidad elegida. Solo dibujan lo que se les dice (no
+ * saben de reglas).
  */
 import * as THREE from 'three';
 import type { Pos } from '../core/model';
@@ -8,7 +9,8 @@ import type { Pos } from '../core/model';
 /** Lo justo por encima del suelo para no parpadear con el (z-fighting). */
 const LIFT = 0.012;
 const REACH_COLOR = 0x4fc3ff;
-const REACH_OPACITY = 0.6;
+const ATTACK_COLOR = 0xff4d45;
+const MARK_OPACITY = 0.6;
 const CURSOR_COLOR = 0xffd447;
 /** Las marcas de alcance son algo menores que la casilla: se ve la cuadricula entre ellas. */
 const REACH_INSET = 0.86;
@@ -19,26 +21,36 @@ const RING_PULSE_SPEED = 4;
 export class Highlights {
   readonly object = new THREE.Group();
   private readonly reach: THREE.InstancedMesh;
+  private readonly attack: THREE.InstancedMesh;
   private readonly cursor: THREE.LineSegments;
   private readonly ring: THREE.Mesh;
   private time = 0;
 
   constructor(private readonly groundOf: (pos: Pos) => THREE.Vector3) {
-    this.reach = reachMesh();
+    this.reach = marksMesh(REACH_COLOR);
+    this.attack = marksMesh(ATTACK_COLOR);
     this.cursor = cursorMesh();
     this.ring = ringMesh();
-    this.object.add(this.reach, this.cursor, this.ring);
+    this.object.add(this.reach, this.attack, this.cursor, this.ring);
   }
 
   showReach(tiles: readonly Pos[]): void {
+    this.mark(this.reach, tiles);
+  }
+
+  showTargets(tiles: readonly Pos[]): void {
+    this.mark(this.attack, tiles);
+  }
+
+  private mark(marks: THREE.InstancedMesh, tiles: readonly Pos[]): void {
     const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
     const size = new THREE.Vector3(REACH_INSET, REACH_INSET, 1);
     tiles.slice(0, MAX_REACH_TILES).forEach((pos, index) => {
       const at = this.groundOf(pos).add(new THREE.Vector3(0, LIFT, 0));
-      this.reach.setMatrixAt(index, new THREE.Matrix4().compose(at, flat, size));
+      marks.setMatrixAt(index, new THREE.Matrix4().compose(at, flat, size));
     });
-    this.reach.count = Math.min(tiles.length, MAX_REACH_TILES);
-    this.reach.instanceMatrix.needsUpdate = true;
+    marks.count = Math.min(tiles.length, MAX_REACH_TILES);
+    marks.instanceMatrix.needsUpdate = true;
   }
 
   hover(pos: Pos | null): void {
@@ -59,8 +71,8 @@ export class Highlights {
   }
 }
 
-function reachMesh(): THREE.InstancedMesh {
-  const material = new THREE.MeshBasicMaterial({ color: REACH_COLOR, transparent: true, opacity: REACH_OPACITY, depthWrite: false });
+function marksMesh(color: number): THREE.InstancedMesh {
+  const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: MARK_OPACITY, depthWrite: false });
   const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), material, MAX_REACH_TILES);
   mesh.count = 0;
   // Su esfera de recorte se calcula una vez, con el alcance vacio: sin esto no se veria nunca.

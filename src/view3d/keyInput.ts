@@ -19,6 +19,8 @@ export interface KeyHost {
   endTurn(): void;
   nextUnit(): void;
   cancel(): void;
+  /** Intro: elegir la opcion señalada del menu abierto. */
+  accept(): void;
 }
 
 type CommandOf<K extends InputCommandKind> = Extract<InputCommand, { kind: K }>;
@@ -29,6 +31,7 @@ const KEY_ACTIONS: KeyActions = {
   endTurn: (_command, host) => host.endTurn(),
   nextUnit: (_command, host) => host.nextUnit(),
   cancel: (_command, host) => host.cancel(),
+  accept: (_command, host) => host.accept(),
   zoom: (command, host) => host.rig.zoom(-command.dir * KEY_ZOOM_STEP),
 };
 

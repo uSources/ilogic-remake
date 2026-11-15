@@ -4,14 +4,8 @@
  * sitio. Asi un mapa grande lleno de decorado cuesta casi lo mismo que uno pequeño.
  */
 import * as THREE from 'three';
-import { colorOf, type Block, type BlockModel, type TeamPaint } from './blocks';
+import { blockMatrix, colorOf, type Block, type BlockModel, type TeamPaint } from './blocks';
 import { toonMaterial } from './toon';
-
-/** Donde va el bloque dentro del modelo (la base del bloque en `at`). */
-function blockOffset(block: Block): THREE.Matrix4 {
-  const [x, y, z] = block.at;
-  return new THREE.Matrix4().makeTranslation(x, y + block.size[1] / 2, z);
-}
 
 function instancedMesh(geometry: THREE.BufferGeometry, material: THREE.Material, offset: THREE.Matrix4, places: readonly THREE.Matrix4[]) {
   const mesh = new THREE.InstancedMesh(geometry, material, places.length);
@@ -22,7 +16,7 @@ function instancedMesh(geometry: THREE.BufferGeometry, material: THREE.Material,
 
 function blockCopies(block: Block, teamPaint: TeamPaint, places: readonly THREE.Matrix4[]): THREE.InstancedMesh {
   const material = toonMaterial(colorOf(block.paint, teamPaint));
-  const copies = instancedMesh(new THREE.BoxGeometry(...block.size), material, blockOffset(block), places);
+  const copies = instancedMesh(new THREE.BoxGeometry(...block.size), material, blockMatrix(block), places);
   copies.castShadow = true;
   copies.receiveShadow = true;
   return copies;

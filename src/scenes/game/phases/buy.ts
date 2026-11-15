@@ -49,8 +49,8 @@ export const buyPhase: PhaseHandler = {
   },
 };
 
-/** Una unidad que se puede comprar: precio y, al señalarla, sus datos (y por que no, si no se puede). */
-function buyItem(s: GameState, option: BuyOption): MenuItemVM {
+/** Una unidad que se puede comprar: precio y, al señalarla, sus datos (y por que no, si no se puede). Tambien la usa la vista 3D. */
+export function buyItem(s: GameState, option: BuyOption): MenuItemVM {
   return {
     id: `buy${option.unitType.id}`,
     label: nameOf(option.unitType),

@@ -1,52 +1,139 @@
 /**
  * Como se anima en 3D cada suceso de la partida (los `events` que devuelve una accion). Uno nuevo es
  * una entrada mas en EVENT_ANIMATIONS; los sucesos sin entrada no se animan (la pieza salta a donde
- * diga la partida con el siguiente `sync`).
+ * diga la partida con el siguiente `sync`). Lo que la niebla tapa no se anima: no se delata.
  */
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import type { GameEvent, Pos } from '../core/model';
-import type { BoardView } from './board';
+import type { BoardView, UnitPiece } from './board';
+import { floatingText, projectile, sparks, type FxHost } from './fx';
 import { facingAngle } from './space';
 
 /** Segundos por casilla al moverse. */
-const STEP_SECONDS = 0.2;
+const STEP_SECONDS = 0.18;
 /** Lo que se levanta la pieza a mitad de cada paso (un saltito de juguete). */
 const STEP_HOP = 0.08;
+const AIM_SECONDS = 0.18;
+const RECOIL_SECONDS = 0.12;
+const RECOIL = 0.12;
+const SHAKE_SECONDS = 0.25;
+const FALL_SECONDS = 0.5;
+/** De lejos (mas de una casilla) el disparo va en arco. */
+const ARC_FROM = 1.5;
+/** Altura (sobre la pieza) de donde sale y a donde llega un disparo. */
+const MUZZLE_HEIGHT = 0.3;
+const DAMAGE_COLOR = '#ff7a73';
 
-/** Lo que necesita una animacion: las piezas y el reloj del mundo. */
-export interface AnimationHost {
+/** Lo que necesita una animacion: las piezas, la capa de efectos y el reloj del mundo. */
+export interface AnimationHost extends FxHost {
   board: BoardView;
-  animate(seconds: number, step: (progress: number) => void): Promise<void>;
 }
 
 type EventOf<K extends GameEvent['kind']> = Extract<GameEvent, { kind: K }>;
 type EventAnimations = { readonly [K in GameEvent['kind']]?: (event: EventOf<K>, host: AnimationHost) => Promise<void> };
 
-/** Gira la pieza hacia el paso con el camino mas corto (sin dar la vuelta entera). */
-function turnToward(object: THREE.Object3D, angle: number, progress: number, from: number): void {
-  const delta = Math.atan2(Math.sin(angle - from), Math.cos(angle - from));
-  object.rotation.y = from + delta * Math.min(progress * 3, 1);
-}
+/** El giro mas corto de `from` a `to` (sin dar la vuelta entera). */
+const shortestTurn = (from: number, to: number): number => Math.atan2(Math.sin(to - from), Math.cos(to - from));
 
 async function stepTo(object: THREE.Object3D, from: Pos, to: Pos, host: AnimationHost): Promise<void> {
   const start = host.board.groundOf(from);
   const end = host.board.groundOf(to);
   const startAngle = object.rotation.y;
-  const angle = facingAngle(from, to);
+  const turn = shortestTurn(startAngle, facingAngle(from, to));
   await host.animate(STEP_SECONDS, (progress) => {
     object.position.lerpVectors(start, end, progress);
     object.position.y += Math.sin(progress * Math.PI) * STEP_HOP;
-    turnToward(object, angle, progress, startAngle);
+    object.rotation.y = startAngle + turn * Math.min(progress * 3, 1);
   });
 }
 
 async function animateMove(event: EventOf<'move'>, host: AnimationHost): Promise<void> {
   const piece = host.board.pieceOf(event.uid);
-  if (!piece) return;
+  if (!piece?.object.visible) return;
   for (let index = 1; index < event.path.length; index++) await stepTo(piece.object, event.path[index - 1]!, event.path[index]!, host);
 }
 
-const EVENT_ANIMATIONS: EventAnimations = { move: animateMove };
+/** Gira la torreta (o la pieza entera si no tiene) hacia un punto del mundo. */
+async function aimAt(piece: UnitPiece, target: THREE.Vector3, host: AnimationHost): Promise<void> {
+  const turning = piece.turret ?? piece.object;
+  const delta = target.clone().sub(piece.object.position);
+  const worldAngle = Math.atan2(delta.x, delta.z);
+  const goal = piece.turret ? worldAngle - piece.object.rotation.y : worldAngle;
+  const start = turning.rotation.y;
+  const turn = shortestTurn(start, goal);
+  await host.animate(AIM_SECONDS, (progress) => (turning.rotation.y = start + turn * progress));
+}
+
+/** El golpe de vuelta al disparar: el cuerpo se echa atras y vuelve. */
+async function recoil(piece: UnitPiece, host: AnimationHost): Promise<void> {
+  const back = new THREE.Vector3(0, 0, -RECOIL).applyAxisAngle(new THREE.Vector3(0, 1, 0), piece.turret?.rotation.y ?? 0);
+  const rest = piece.body.position.clone();
+  await host.animate(RECOIL_SECONDS, (progress) => piece.body.position.copy(rest).addScaledVector(back, Math.sin(progress * Math.PI)));
+}
+
+const muzzleOf = (piece: UnitPiece): THREE.Vector3 =>
+  piece.body.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0, MUZZLE_HEIGHT, 0));
+
+/** Un disparo de `shooter` a `target`: apunta, dispara y el proyectil vuela. */
+async function shoot(shooter: UnitPiece, target: UnitPiece, host: AnimationHost): Promise<void> {
+  await aimAt(shooter, target.object.position, host);
+  const from = muzzleOf(shooter);
+  const to = muzzleOf(target);
+  await Promise.all([recoil(shooter, host), projectile(host, from, to, from.distanceTo(to) > ARC_FROM)]);
+}
+
+/** Lo que pasa al que recibe: chispas, una sacudida y el daño que sube. */
+async function takeHit(piece: UnitPiece, damage: number, host: AnimationHost): Promise<void> {
+  const at = muzzleOf(piece);
+  const rest = piece.body.position.clone();
+  const shake = host.animate(SHAKE_SECONDS, (progress) => {
+    piece.body.position.copy(rest);
+    piece.body.position.x += Math.sin(progress * Math.PI * 6) * 0.05 * (1 - progress);
+  });
+  await Promise.all([sparks(host, at), shake, floatingText(host, at, `-${damage}`, DAMAGE_COLOR)]);
+}
+
+/** Una unidad destruida vuelca, se encoge y desaparece (despues `sync` quita su pieza). */
+async function fall(piece: UnitPiece, host: AnimationHost): Promise<void> {
+  void sparks(host, muzzleOf(piece), 1.6);
+  await host.animate(FALL_SECONDS, (progress) => {
+    piece.body.rotation.z = progress * 1.4;
+    piece.object.scale.setScalar(1 - progress * 0.9);
+  });
+  piece.object.visible = false;
+}
+
+/** Un golpe de un lado al otro (si se ve alguno de los dos) y, si cae el que lo recibe, su caida. */
+async function exchange(
+  shooter: UnitPiece | undefined,
+  target: UnitPiece | undefined,
+  hit: { damage: number; killed: boolean },
+  host: AnimationHost,
+): Promise<void> {
+  if (!target) return;
+  if (shooter?.object.visible) await shoot(shooter, target, host);
+  if (!target.object.visible) return;
+  await takeHit(target, hit.damage, host);
+  if (hit.killed) await fall(target, host);
+}
+
+async function animateAttack(event: EventOf<'attack'>, host: AnimationHost): Promise<void> {
+  const attacker = event.attacker === null ? undefined : host.board.pieceOf(event.attacker);
+  const target = host.board.pieceOf(event.target);
+  await exchange(attacker, target, { damage: event.damage, killed: event.killed }, host);
+  if (event.counter <= 0 || event.killed) return;
+  await exchange(target, attacker, { damage: event.counter, killed: event.attackerKilled }, host);
+}
+
+/** Capturar: la unidad da dos saltitos en el edificio (la barra la pone `sync`). */
+async function animateCapture(event: EventOf<'capture'>, host: AnimationHost): Promise<void> {
+  const piece = host.board.pieceOf(event.uid);
+  if (!piece?.object.visible) return;
+  const rest = piece.body.position.y;
+  await host.animate(0.4, (progress) => (piece.body.position.y = rest + Math.abs(Math.sin(progress * Math.PI * 2)) * 0.12));
+}
+
+const EVENT_ANIMATIONS: EventAnimations = { move: animateMove, attack: animateAttack, capture: animateCapture };
 
 type AnyEventAnimation = (event: GameEvent, host: AnimationHost) => Promise<void>;
 

@@ -7,7 +7,7 @@ import { unitTypeOf } from '../../../core/gameContent';
 import { posKey, posOf } from '../../../core/geom';
 import { attackTargets, unitById, unloadTiles } from '../../../core/rules';
 import { availableActions, type UnitMenuOption } from '../../../core/actions';
-import type { TurnEndOrderKind, Unit } from '../../../core/model';
+import type { GameState, TurnEndOrderKind, Unit } from '../../../core/model';
 import { showToast, type MenuItemVM } from '../../../hud/store';
 import { t, nameOf, type TextKey } from '../../../settings';
 import { captureHintText } from '../../../ui/hudModels';
@@ -120,14 +120,19 @@ export function captureNow(host: PhaseHost): void {
 
 function unitMenuModel(input: MenuInput): MenuModel {
   const unit = input.selected;
-  const items: MenuItemVM[] = input.actions.map((action) => ({
+  const items = unitMenuItems(input.s, unit, input.actions);
+  return { kind: 'unit', title: unit ? nameOf(unitTypeOf(input.s, unit)) : undefined, items, at: unit ?? input.cursor };
+}
+
+/** Las opciones del menu de la unidad, con su texto (tambien las usa la vista 3D). */
+export function unitMenuItems(s: GameState, unit: Unit | null, actions: readonly ActionKey[]): MenuItemVM[] {
+  return actions.map((action) => ({
     id: action,
     label: t(action as TextKey),
     danger: action === 'delete',
     // "20→10": puntos del edificio antes y despues de capturar este turno (reglas nuevas).
-    hint: action === 'capture' && unit ? captureHintText(input.s, unit) : undefined,
+    hint: action === 'capture' && unit ? captureHintText(s, unit) : undefined,
   }));
-  return { kind: 'unit', title: unit ? nameOf(unitTypeOf(input.s, unit)) : undefined, items, at: unit ?? input.cursor };
 }
 
 export const attackPhase: PhaseHandler = {

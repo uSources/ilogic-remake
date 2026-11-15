@@ -10,6 +10,7 @@ import type { GameState, Pos } from '../core/model';
 import { mapGrid } from '../core/mapGrid';
 import { terrainAt } from '../core/gameContent';
 import type { TerrainType } from '../core/content';
+import type { Grid } from '../core/util/grid';
 import type { BlockModel, TeamPaint } from './blocks';
 import { instancedModel } from './instancedBlocks';
 import { toonMaterial } from './toon';
@@ -92,6 +93,8 @@ const NO_TEAM: TeamPaint = { team: 0xffffff, teamDark: 0xffffff };
 
 /** Hasta donde bajan los bloques del terreno: se ven sus lados en los bordes y en los cortados. */
 const TERRAIN_BOTTOM = -0.5;
+/** Las casillas en la niebla: mas oscuras y algo azuladas (como de noche), sin dejar de leerse. */
+const FOG_TINT = new THREE.Color(0.52, 0.56, 0.72);
 /** Cuanto cambia el tono de una casilla a otra (en ajedrezado), para que se lea la cuadricula. */
 const CHECKER_SHADE = 0.05;
 /** Lo que se desplaza y gira el decorado en su casilla, para que no parezca copiado. */
@@ -105,6 +108,8 @@ export interface TerrainView {
   /** La casilla de cada copia de `tiles`, por su numero. */
   readonly tileOfInstance: readonly Pos[];
   heightAt(pos: Pos): number;
+  /** Oscurece las casillas que no se ven (la niebla) y aclara las que si. */
+  showSeen(seen: Grid<boolean>): void;
 }
 
 /** Un numero entre 0 y 1 que sale siempre igual para la misma casilla (para variar sin azar). */
@@ -154,6 +159,15 @@ function decorObjects(s: GameState, positions: readonly Pos[]): THREE.Group[] {
   });
 }
 
+/** Pinta cada casilla con su color, oscurecido si la niebla la tapa. */
+function shadeTiles(s: GameState, tiles: THREE.InstancedMesh, positions: readonly Pos[], seen: Grid<boolean>): void {
+  positions.forEach((pos, index) => {
+    const color = tileColor(pos, lookOf(terrainAt(s, pos)));
+    tiles.setColorAt(index, seen.at(pos) ? color : color.multiply(FOG_TINT));
+  });
+  if (tiles.instanceColor) tiles.instanceColor.needsUpdate = true;
+}
+
 export function buildTerrain(s: GameState): TerrainView {
   const grid = mapGrid(s);
   const positions = [...grid.cells()].map((cell) => cell.pos);
@@ -162,5 +176,11 @@ export function buildTerrain(s: GameState): TerrainView {
   object.add(tiles, ...decorObjects(s, positions));
   const heights = grid.createLayer(0);
   for (const pos of positions) heights.set(pos, lookOf(terrainAt(s, pos)).height);
-  return { object, tiles, tileOfInstance: positions, heightAt: (pos) => heights.at(pos) };
+  return {
+    object,
+    tiles,
+    tileOfInstance: positions,
+    heightAt: (pos) => heights.at(pos),
+    showSeen: (seen) => shadeTiles(s, tiles, positions, seen),
+  };
 }
