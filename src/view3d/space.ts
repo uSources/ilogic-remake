@@ -9,3 +9,6 @@ export const tileToWorld = (pos: Pos, height: number): THREE.Vector3 => new THRE
 
 /** El giro (alrededor del eje vertical) para mirar de una casilla a la de al lado: los modelos miran hacia +z. */
 export const facingAngle = (from: Pos, to: Pos): number => Math.atan2(to.x - from.x, to.y - from.y);
+
+/** Hacia donde sopla el viento (en el suelo), igual para el clima y el polvo: hacia la derecha de la camara de partida, algo de lado. */
+export const WIND_DIRECTION: Readonly<THREE.Vector3> = new THREE.Vector3(1, 0, -0.35).normalize();

@@ -53,6 +53,11 @@ export class CameraRig {
     this.goal.target.z = THREE.MathUtils.clamp(this.goal.target.z, this.bounds.min.y, this.bounds.max.y);
   }
 
+  /** El punto del suelo que se mira ahora y a que distancia (para lo que se dibuja solo cerca: el clima). */
+  get focus(): { target: THREE.Vector3; distance: number } {
+    return { target: this.current.target, distance: this.current.distance };
+  }
+
   /** Lleva la camara a mirar ese punto del suelo. */
   lookAt(target: THREE.Vector3): void {
     this.goal.target.copy(target);

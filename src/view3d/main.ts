@@ -25,6 +25,8 @@ import { startPrototype } from './prototypeMatch';
 import { buildTerrain, TERRAIN_MODEL_FILES } from './terrain';
 import { TurnControls } from './turnControls';
 import { World } from './world';
+import { SandDust } from './sandDust';
+import { WeatherView } from './weather3d';
 
 const START_DISTANCE = 16;
 const START_YAW = Math.PI / 4;
@@ -40,7 +42,9 @@ const terrain = buildTerrain(state, glbModels);
 const board = new BoardView(state, viewer, terrain, glbModels);
 const highlights = new Highlights((pos) => board.groundOf(pos));
 const effects = new THREE.Group();
-world.scene.add(terrain.object, board.object, highlights.object, effects);
+const weather = new WeatherView(document.getElementById('game')!);
+const sandDust = new SandDust(terrain.sandTiles, (pos) => board.groundOf(pos));
+world.scene.add(terrain.object, board.object, highlights.object, effects, weather.object, sandDust.object);
 
 const grid = mapGrid(state);
 const center = new THREE.Vector3((grid.width - 1) / 2, 0, (grid.height - 1) / 2);
@@ -77,8 +81,12 @@ function publish(): void {
 }
 function refresh(): void {
   board.sync();
+  weather.set(state.weather?.kind ?? null);
   publish();
 }
+
+/** Cuanto alrededor de lo que se mira hay clima y polvo: un poco mas que lo que se ve. */
+const WEATHER_REACH = 0.9;
 
 const animations = { board, layer: effects, animate: (seconds: number, step: (progress: number) => void) => world.animate(seconds, step) };
 const controls = new TurnControls({ session, viewer, highlights, animations, refresh });
@@ -138,6 +146,10 @@ world.onFrame((seconds) => {
   highlights.update(seconds);
   board.update(seconds);
   terrain.update(seconds);
+  const { target, distance } = rig.focus;
+  const viewportHeight = world.renderer.domElement.clientHeight;
+  weather.update(seconds, target, distance * WEATHER_REACH, world.camera, viewportHeight);
+  sandDust.update(seconds, target, distance * WEATHER_REACH, world.camera, viewportHeight);
   // Los bocadillos (menu, prevision) siguen a su casilla mientras la camara se mueve.
   if (controls.menu() || (cursor && controls.forecastAt(cursor))) publish();
 });
@@ -145,4 +157,4 @@ world.start();
 void controls.runUntilInput();
 
 // Para mirar y probar desde la consola (y los agentes): la sesion y las piezas.
-(window as unknown as { ilogic3d: object }).ilogic3d = { session, board, controls, rig, world };
+(window as unknown as { ilogic3d: object }).ilogic3d = { session, board, controls, rig, world, weather, sandDust };

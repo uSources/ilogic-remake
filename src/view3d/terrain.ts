@@ -113,6 +113,8 @@ export interface TerrainView {
   showSeen(seen: Grid<boolean>): void;
   /** Lo que se mueve solo (el agua). */
   update(seconds: number): void;
+  /** Las casillas de arena (de ahi sale el polvo que levanta el viento). */
+  readonly sandTiles: readonly Pos[];
 }
 
 /** Copias de un modelo de Ashfox, una por sitio (`places`: donde va y como gira cada una). */
@@ -211,5 +213,6 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
     update: (seconds) => {
       waterClock.value += seconds;
     },
+    sandTiles: byTile.get('tile_sand') ?? [],
   };
 }
