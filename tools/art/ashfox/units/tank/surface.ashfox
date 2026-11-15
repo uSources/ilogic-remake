@@ -1,0 +1,83 @@
+ashfox-model 1
+module surface {
+  export surface contract Armor {
+    atlas { width = 64px; height = 64px; }
+    chart track box { width = 36px; height = 18px; coverage = opaque; }
+    chart turret box { width = 28px; height = 10px; coverage = opaque; }
+    chart hatch box { width = 12px; height = 4px; coverage = opaque; }
+    chart muzzle box { width = 8px; height = 4px; coverage = opaque; }
+    chart hull box { width = 44px; height = 15px; coverage = opaque; }
+    chart barrel box { width = 20px; height = 10px; coverage = opaque; }
+    chart plate box { width = 18px; height = 3px; coverage = opaque; }
+    material = opaque;
+  }
+
+  export surface blue: Armor {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = deep; background-alpha = 255;
+      palette {
+        deep = #0b1220;
+        paint = (#134a8f, #2c7fd6, #5eb3ff);
+        paint_dark = (#0d2f5c, #1a5aa6, #3a8be0);
+        tread = (#141824, #262c3c, #3c4458);
+        steel = (#3e4658, #7d879c, #c3cbd9);
+        star = #f2f5ff;
+      }
+      stamp emblem { pixels = ".s./sss/.s."; s = star; }
+      stamp tread_marks { pixels = "t.t.t.t.t.t.t.t.t.t.t.t.t.t.t.t.t.t"; t = deep; }
+      chart track box {
+        origin = (0px, 0px); fill = tread;
+        pattern blotch { paint = steel; scale = (1px, 1px, 2px); density = 0.12ratio; phase = 5; }
+      }
+      chart turret box {
+        origin = (36px, 0px); fill = paint;
+        face up { stamp emblem { at = (2px, 2px); } }
+      }
+      chart hatch box { origin = (36px, 10px); fill = paint_dark; }
+      chart muzzle box { origin = (48px, 10px); fill = tread; }
+      chart hull box {
+        origin = (0px, 18px); fill = paint;
+        pattern blotch { paint = paint_dark; scale = (3px, 2px, 3px); density = 0.2ratio; phase = 19; }
+      }
+      chart barrel box { origin = (44px, 18px); fill = steel; }
+      chart plate box { origin = (0px, 33px); fill = paint_dark; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+
+  export surface red: Armor {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = deep; background-alpha = 255;
+      palette {
+        deep = #1a0b0b;
+        paint = (#7a1d19, #c93a33, #ff6a62);
+        paint_dark = (#4d1210, #922823, #d64a42);
+        tread = (#141824, #262c3c, #3c4458);
+        steel = (#3e4658, #7d879c, #c3cbd9);
+        star = #f2f5ff;
+      }
+      stamp emblem { pixels = ".s./sss/.s."; s = star; }
+      chart track box {
+        origin = (0px, 0px); fill = tread;
+        pattern blotch { paint = steel; scale = (1px, 1px, 2px); density = 0.12ratio; phase = 5; }
+      }
+      chart turret box {
+        origin = (36px, 0px); fill = paint;
+        face up { stamp emblem { at = (2px, 2px); } }
+      }
+      chart hatch box { origin = (36px, 10px); fill = paint_dark; }
+      chart muzzle box { origin = (48px, 10px); fill = tread; }
+      chart hull box {
+        origin = (0px, 18px); fill = paint;
+        pattern blotch { paint = paint_dark; scale = (3px, 2px, 3px); density = 0.2ratio; phase = 19; }
+      }
+      chart barrel box { origin = (44px, 18px); fill = steel; }
+      chart plate box { origin = (0px, 33px); fill = paint_dark; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

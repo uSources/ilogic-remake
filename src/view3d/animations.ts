@@ -50,7 +50,9 @@ async function stepTo(object: THREE.Object3D, from: Pos, to: Pos, host: Animatio
 async function animateMove(event: EventOf<'move'>, host: AnimationHost): Promise<void> {
   const piece = host.board.pieceOf(event.uid);
   if (!piece?.object.visible) return;
+  piece.glb?.play('drive');
   for (let index = 1; index < event.path.length; index++) await stepTo(piece.object, event.path[index - 1]!, event.path[index]!, host);
+  piece.glb?.play('idle');
 }
 
 /** Gira la torreta (o la pieza entera si no tiene) hacia un punto del mundo. */
@@ -64,8 +66,12 @@ async function aimAt(piece: UnitPiece, target: THREE.Vector3, host: AnimationHos
   await host.animate(AIM_SECONDS, (progress) => (turning.rotation.y = start + turn * progress));
 }
 
-/** El golpe de vuelta al disparar: el cuerpo se echa atras y vuelve. */
+/** El golpe de vuelta al disparar: la animacion 'fire' del modelo si la tiene; si no, el cuerpo se echa atras y vuelve. */
 async function recoil(piece: UnitPiece, host: AnimationHost): Promise<void> {
+  if (piece.glb) {
+    piece.glb.play('fire');
+    return host.animate(RECOIL_SECONDS, () => undefined);
+  }
   const back = new THREE.Vector3(0, 0, -RECOIL).applyAxisAngle(new THREE.Vector3(0, 1, 0), piece.turret?.rotation.y ?? 0);
   const rest = piece.body.position.clone();
   await host.animate(RECOIL_SECONDS, (progress) => piece.body.position.copy(rest).addScaledVector(back, Math.sin(progress * Math.PI)));

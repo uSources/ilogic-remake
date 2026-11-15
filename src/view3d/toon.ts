@@ -42,3 +42,13 @@ export function toonBox(size: THREE.Vector3Tuple, color: THREE.ColorRepresentati
   block.receiveShadow = true;
   return block;
 }
+
+/**
+ * El material cartoon con una textura (los modelos GLB de Ashfox, con su pixel art). Uno por pieza:
+ * se oscurece cuando la unidad ya ha jugado (su `color`), sin tocar las demas.
+ */
+export function toonTextured(map: THREE.Texture): THREE.MeshToonMaterial {
+  map.magFilter = THREE.NearestFilter;
+  map.minFilter = THREE.NearestFilter;
+  return new THREE.MeshToonMaterial({ map, gradientMap: ramp });
+}

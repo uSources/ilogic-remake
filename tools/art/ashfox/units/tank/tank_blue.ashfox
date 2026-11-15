@@ -1,0 +1,14 @@
+ashfox-model 1
+asset tank_blue {
+  import "./rig.ashfox" as rig;
+  import "./surface.ashfox" as surface;
+  import "./body.ashfox" as body;
+  export asset tank_blue {
+    settings { density = 16; forward = north; }
+    skeleton = rig.TankSkeleton;
+    motion = rig.idle;
+    motion = rig.drive;
+    motion = rig.fire;
+    use body.TankBody as tank { bind skeleton = rig.TankRig; bind skin = surface.blue; };
+  }
+}

@@ -12,6 +12,7 @@ import type { Grid } from '../core/util/grid';
 import { isFriendly, ownerSideOf, sideOf, type OwnerSide } from '../ui/sides';
 import { newBadge, showBar } from './badges';
 import { buildModel, type TeamPaint } from './blocks';
+import type { GlbLibrary, GlbUnit } from './glbModels';
 import { buildingModelOf, unitModelOf } from './models';
 import { tileToWorld } from './space';
 import { toonMaterial } from './toon';
@@ -46,6 +47,8 @@ export interface UnitPiece {
   readonly turret: THREE.Object3D | null;
   readonly rotor: THREE.Object3D | null;
   readonly lifeBar: THREE.Sprite;
+  /** El modelo GLB animado (Ashfox), si su tipo lo tiene; si no, es de bloques. */
+  readonly glb: GlbUnit | null;
   /** Segundos que lleva apareciendo (null: ya esta). */
   popping: number | null;
 }
@@ -67,6 +70,7 @@ export class BoardView {
     private readonly s: GameState,
     private readonly viewer: TeamId,
     private readonly terrain: TerrainView,
+    private readonly glbModels: GlbLibrary,
   ) {
     this.seen = visibility(s, viewer);
   }
@@ -102,6 +106,7 @@ export class BoardView {
   update(seconds: number): void {
     for (const piece of this.units.values()) {
       if (piece.rotor) piece.rotor.rotation.y += ROTOR_SPEED * seconds;
+      piece.glb?.update(seconds);
       if (piece.popping !== null) growIn(piece, seconds);
     }
   }
@@ -168,11 +173,19 @@ export class BoardView {
     showBar(piece.lifeBar, unit.life < 100 ? unit.life / 100 : null);
   }
 
-  private addUnit(unit: Unit): UnitPiece {
+  /** La pieza de una unidad: su modelo GLB si su tipo lo tiene, si no el de bloques. */
+  private unitModel(unit: Unit): { object: THREE.Group; body: THREE.Object3D; hover: number; glb: GlbUnit | null } {
+    const side = sideOf(this.s, this.viewer, unit.team);
+    const glb = this.glbModels.unit(unit.type, side);
+    if (glb) return { object: glb.object, body: glb.object.children[0]!, hover: 0, glb };
     const model = unitModelOf(unit.type);
-    const object = buildModel(model, SIDE_PAINT[sideOf(this.s, this.viewer, unit.team)]);
-    const body = object.getObjectByName('body')!;
-    const lifeBar = newBadge(BADGE_HEIGHT + (model.hover ?? 0));
+    const object = buildModel(model, SIDE_PAINT[side]);
+    return { object, body: object.getObjectByName('body')!, hover: model.hover ?? 0, glb: null };
+  }
+
+  private addUnit(unit: Unit): UnitPiece {
+    const { object, body, hover, glb } = this.unitModel(unit);
+    const lifeBar = newBadge(BADGE_HEIGHT + hover);
     object.add(lifeBar);
     object.scale.setScalar(0.01);
     const piece: UnitPiece = {
@@ -182,6 +195,7 @@ export class BoardView {
       turret: object.getObjectByName('turret') ?? null,
       rotor: object.getObjectByName('rotor') ?? null,
       lifeBar,
+      glb,
       popping: 0,
     };
     this.units.set(unit.uid, piece);
@@ -223,6 +237,8 @@ function tintSpent(object: THREE.Object3D, isSpent: boolean): void {
     if (!(node instanceof THREE.Mesh)) return;
     const mesh = node as THREE.Mesh;
     if (!(mesh.material instanceof THREE.MeshToonMaterial)) return;
+    // Con textura (GLB) el material es solo de esta pieza: basta con oscurecer su color.
+    if (mesh.material.map) return void mesh.material.color.setScalar(scale);
     mesh.material = toonMaterial(baseColorOf(mesh, mesh.material).clone().multiplyScalar(scale));
   });
 }

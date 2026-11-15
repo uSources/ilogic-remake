@@ -16,6 +16,7 @@ import { applySettings } from '../settings';
 import { BoardView } from './board';
 import { CameraRig } from './cameraRig';
 import { loadGameAtlas } from './gameAtlas';
+import { GlbLibrary } from './glbModels';
 import { Highlights } from './highlights';
 import { installHudActions, publishHud } from './hudBridge';
 import { installKeys } from './keyInput';
@@ -30,13 +31,13 @@ const START_YAW = Math.PI / 4;
 
 render(h(Hud, {}), document.getElementById('hud')!);
 applySettings();
-const textures = await loadGameAtlas();
+const [textures, glbModels] = await Promise.all([loadGameAtlas(), GlbLibrary.load()]);
 
 const { session, viewer } = startPrototype();
 const state = session.state;
 const world = new World(document.getElementById('game')!);
 const terrain = buildTerrain(state);
-const board = new BoardView(state, viewer, terrain);
+const board = new BoardView(state, viewer, terrain, glbModels);
 const highlights = new Highlights((pos) => board.groundOf(pos));
 const effects = new THREE.Group();
 world.scene.add(terrain.object, board.object, highlights.object, effects);

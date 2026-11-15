@@ -1,0 +1,31 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./surface.ashfox" as surface;
+  export component TankBody {
+    requires rig skeleton: rig.TankRig;
+    requires surface skin: surface.Armor;
+    bind bone chassis to skeleton.chassis;
+    bind bone hull to skeleton.hull;
+    bind bone turret to skeleton.turret;
+    bind bone barrel to skeleton.barrel;
+    geometry {
+      bone chassis {
+        cube track_left { origin = (-7u, 0u, -7u); size = (4u, 4u, 14u); surface = skin.track; }
+        cube track_right { origin = (3u, 0u, -7u); size = (4u, 4u, 14u); surface = skin.track; }
+      }
+      bone hull {
+        cube hull { origin = (-5u, 2u, -6u); size = (10u, 3u, 12u); surface = skin.hull; }
+        cube front_plate { origin = (-4u, 2u, -7u); size = (8u, 2u, 1u); surface = skin.plate; }
+        bone turret {
+          cube turret { origin = (-3.5u, 5u, -2.5u); size = (7u, 3u, 7u); surface = skin.turret; }
+          cube hatch { origin = (-2.5u, 8u, 0u); size = (3u, 1u, 3u); surface = skin.hatch; }
+          bone barrel {
+            cube barrel { origin = (-1u, 5.5u, -10.5u); size = (2u, 2u, 8u); surface = skin.barrel; }
+            cube muzzle { origin = (-1.5u, 5u, -11.5u); size = (3u, 3u, 1u); surface = skin.muzzle; }
+          }
+        }
+      }
+    }
+  }
+}
