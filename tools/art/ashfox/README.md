@@ -5,7 +5,21 @@ describe un modelo como datos: cubos colgados de huesos, una textura de pixel ar
 patrones y «stamps», y animaciones por fotogramas clave. Sale un GLB con su textura y sus animaciones,
 que carga `src/view3d/glbModels.ts`.
 
-Cada unidad va en su carpeta (`units/<tipo>/`):
+Hay dos maneras de escribirlos:
+
+- **A mano** (las unidades, con huesos y animaciones): cada una en su carpeta (`units/<tipo>/`), ver abajo.
+- **Generados** (el terreno y su decorado, modelos fijos): `models/terrain.mjs` describe cada modelo
+  en pocas lineas (cubos y su pintura: rampa de tres tonos y manchas) a semejanza del terreno 2D, y
+  `generate.mjs` escribe los `.ashfox` completos en `terrain/` (calcula y coloca en el atlas el trozo
+  de textura de cada cubo, que Ashfox no coloca solo). Un modelo nuevo es una entrada en `MODELS`;
+  que terreno lo usa, `TERRAIN_PIECES` en `src/view3d/terrain.ts`.
+
+```sh
+node tools/art/ashfox/generate.mjs                                   # escribe los .ashfox
+ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --export   # y los GLB
+```
+
+Cada unidad hecha a mano va en su carpeta (`units/<tipo>/`):
 
 - `rig.ashfox`: los huesos y las animaciones (`idle`, `drive`, `fire`; las que pide el juego, `UnitClip`).
 - `body.ashfox`: los cubos, en unidades de 1/16 de casilla, mirando al norte (-z).

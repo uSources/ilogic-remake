@@ -1,0 +1,96 @@
+ashfox-model 1
+asset trees {
+  rig contract StaticRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+  }
+  skeleton StaticSkeleton implements StaticRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart a_trunk box { width = 8px; height = 5px; coverage = opaque; }
+    chart a_crown0 box { width = 28px; height = 11px; coverage = opaque; }
+    chart a_crown1 box { width = 20px; height = 8px; coverage = opaque; }
+    chart b_trunk box { width = 8px; height = 5px; coverage = opaque; }
+    chart b_crown0 box { width = 24px; height = 10px; coverage = opaque; }
+    chart b_crown1 box { width = 16px; height = 7px; coverage = opaque; }
+    chart c_trunk box { width = 8px; height = 5px; coverage = opaque; }
+    chart c_crown0 box { width = 32px; height = 13px; coverage = opaque; }
+    chart c_crown1 box { width = 20px; height = 8px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = trunk; background-alpha = 255;
+      palette {
+        trunk = (#4a2c18, #6e4224, #8e5a32);
+        leaf = (#25661f, #3c8f2e, #62bd44);
+        leaf_spots = (#4fae3a, #78d055, #a2e670);
+      }
+
+      chart a_trunk box {
+        origin = (38px, 25px); fill = trunk;
+      }
+      chart a_crown0 box {
+        origin = (33px, 0px); fill = leaf;
+        pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 4; }
+      }
+      chart a_crown1 box {
+        origin = (25px, 14px); fill = leaf;
+        pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 17; }
+      }
+      chart b_trunk box {
+        origin = (47px, 25px); fill = trunk;
+      }
+      chart b_crown0 box {
+        origin = (0px, 14px); fill = leaf;
+        pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 4; }
+      }
+      chart b_crown1 box {
+        origin = (21px, 25px); fill = leaf;
+        pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 17; }
+      }
+      chart c_trunk box {
+        origin = (56px, 25px); fill = trunk;
+      }
+      chart c_crown0 box {
+        origin = (0px, 0px); fill = leaf;
+        pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 0; }
+      }
+      chart c_crown1 box {
+        origin = (0px, 25px); fill = leaf;
+        pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 13; }
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: StaticRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube a_trunk { origin = (-5u, 0u, -4u); size = (2u, 3u, 2u); surface = skin.a_trunk; }
+        cube a_crown0 { origin = (-7.5u, 2u, -6.5u); size = (7u, 4u, 7u); surface = skin.a_crown0; }
+        cube a_crown1 { origin = (-6.5u, 6u, -5.5u); size = (5u, 3u, 5u); surface = skin.a_crown1; }
+        cube b_trunk { origin = (3u, 0u, -3u); size = (2u, 3u, 2u); surface = skin.b_trunk; }
+        cube b_crown0 { origin = (1u, 2u, -5u); size = (6u, 4u, 6u); surface = skin.b_crown0; }
+        cube b_crown1 { origin = (2u, 6u, -4u); size = (4u, 3u, 4u); surface = skin.b_crown1; }
+        cube c_trunk { origin = (-1u, 0u, 3u); size = (2u, 3u, 2u); surface = skin.c_trunk; }
+        cube c_crown0 { origin = (-4u, 2u, 0u); size = (8u, 5u, 8u); surface = skin.c_crown0; }
+        cube c_crown1 { origin = (-2.5u, 7u, 1.5u); size = (5u, 3u, 5u); surface = skin.c_crown1; }
+      }
+    }
+  }
+  export asset trees {
+    settings { density = 16; forward = north; }
+    skeleton = StaticSkeleton;
+    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+  }
+}

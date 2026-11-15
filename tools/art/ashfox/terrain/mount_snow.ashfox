@@ -1,0 +1,67 @@
+ashfox-model 1
+asset mount_snow {
+  rig contract StaticRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+  }
+  skeleton StaticSkeleton implements StaticRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart layer0 box { width = 56px; height = 19px; coverage = opaque; }
+    chart layer1 box { width = 40px; height = 15px; coverage = opaque; }
+    chart layer2 box { width = 24px; height = 10px; coverage = opaque; }
+    chart layer3 box { width = 12px; height = 5px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = snowrock; background-alpha = 255;
+      palette {
+        snowrock = (#55657e, #7a8ca8, #a6b6cc);
+        snowrock_spots = (#cfdef0, #e6f0fa, #ffffff);
+        snowcap = (#d6e6f6, #f0f6ff, #ffffff);
+      }
+
+      chart layer0 box {
+        origin = (0px, 0px); fill = snowrock;
+        pattern blotch { paint = snowrock_spots; scale = (3px, 2px, 3px); density = 0.3ratio; phase = 0; }
+      }
+      chart layer1 box {
+        origin = (0px, 20px); fill = snowrock;
+        pattern blotch { paint = snowrock_spots; scale = (3px, 2px, 3px); density = 0.3ratio; phase = 31; }
+      }
+      chart layer2 box {
+        origin = (0px, 36px); fill = snowcap;
+      }
+      chart layer3 box {
+        origin = (25px, 36px); fill = snowcap;
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: StaticRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube layer0 { origin = (-7u, 0u, -7u); size = (14u, 5u, 14u); surface = skin.layer0; }
+        cube layer1 { origin = (-5u, 5u, -5u); size = (10u, 5u, 10u); surface = skin.layer1; }
+        cube layer2 { origin = (-3u, 10u, -3u); size = (6u, 4u, 6u); surface = skin.layer2; }
+        cube layer3 { origin = (-1.5u, 14u, -1.5u); size = (3u, 2u, 3u); surface = skin.layer3; }
+      }
+    }
+  }
+  export asset mount_snow {
+    settings { density = 16; forward = north; }
+    skeleton = StaticSkeleton;
+    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+  }
+}

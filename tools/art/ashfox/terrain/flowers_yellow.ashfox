@@ -1,0 +1,97 @@
+ashfox-model 1
+asset flowers_yellow {
+  rig contract StaticRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+  }
+  skeleton StaticSkeleton implements StaticRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 16px; }
+    chart a_leaves box { width = 24px; height = 8px; coverage = opaque; }
+    chart a_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart a_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart a_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart a_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart b_leaves box { width = 24px; height = 8px; coverage = opaque; }
+    chart b_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart b_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart b_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart b_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = leaf; background-alpha = 255;
+      palette {
+        leaf = (#25661f, #3c8f2e, #62bd44);
+        leaf_spots = (#4fae3a, #78d055, #a2e670);
+        petal_yellow = (#c89a10, #f2c81e, #ffe866);
+      }
+
+      chart a_leaves box {
+        origin = (0px, 0px); fill = leaf;
+        pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; }
+      }
+      chart a_petal0 box {
+        origin = (50px, 0px); fill = petal_yellow;
+      }
+      chart a_petal1 box {
+        origin = (55px, 0px); fill = petal_yellow;
+      }
+      chart a_petal2 box {
+        origin = (60px, 0px); fill = petal_yellow;
+      }
+      chart a_petal3 box {
+        origin = (0px, 9px); fill = petal_yellow;
+      }
+      chart b_leaves box {
+        origin = (25px, 0px); fill = leaf;
+        pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; }
+      }
+      chart b_petal0 box {
+        origin = (5px, 9px); fill = petal_yellow;
+      }
+      chart b_petal1 box {
+        origin = (10px, 9px); fill = petal_yellow;
+      }
+      chart b_petal2 box {
+        origin = (15px, 9px); fill = petal_yellow;
+      }
+      chart b_petal3 box {
+        origin = (20px, 9px); fill = petal_yellow;
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: StaticRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube a_leaves { origin = (-6u, 0u, -5u); size = (6u, 2u, 6u); surface = skin.a_leaves; }
+        cube a_petal0 { origin = (-5u, 2u, -4u); size = (1u, 1u, 1u); surface = skin.a_petal0; }
+        cube a_petal1 { origin = (-2u, 2u, -3u); size = (1u, 1u, 1u); surface = skin.a_petal1; }
+        cube a_petal2 { origin = (-4u, 2u, -1u); size = (1u, 1u, 1u); surface = skin.a_petal2; }
+        cube a_petal3 { origin = (-2u, 2u, -1u); size = (1u, 1u, 1u); surface = skin.a_petal3; }
+        cube b_leaves { origin = (0u, 0u, 0u); size = (6u, 2u, 6u); surface = skin.b_leaves; }
+        cube b_petal0 { origin = (1u, 2u, 1u); size = (1u, 1u, 1u); surface = skin.b_petal0; }
+        cube b_petal1 { origin = (4u, 2u, 2u); size = (1u, 1u, 1u); surface = skin.b_petal1; }
+        cube b_petal2 { origin = (2u, 2u, 4u); size = (1u, 1u, 1u); surface = skin.b_petal2; }
+        cube b_petal3 { origin = (4u, 2u, 4u); size = (1u, 1u, 1u); surface = skin.b_petal3; }
+      }
+    }
+  }
+  export asset flowers_yellow {
+    settings { density = 16; forward = north; }
+    skeleton = StaticSkeleton;
+    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+  }
+}

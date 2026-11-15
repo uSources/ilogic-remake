@@ -22,7 +22,7 @@ import { installHudActions, publishHud } from './hudBridge';
 import { installKeys } from './keyInput';
 import { installPointer } from './pointerInput';
 import { startPrototype } from './prototypeMatch';
-import { buildTerrain } from './terrain';
+import { buildTerrain, TERRAIN_MODEL_FILES } from './terrain';
 import { TurnControls } from './turnControls';
 import { World } from './world';
 
@@ -31,12 +31,12 @@ const START_YAW = Math.PI / 4;
 
 render(h(Hud, {}), document.getElementById('hud')!);
 applySettings();
-const [textures, glbModels] = await Promise.all([loadGameAtlas(), GlbLibrary.load()]);
+const [textures, glbModels] = await Promise.all([loadGameAtlas(), GlbLibrary.load(TERRAIN_MODEL_FILES)]);
 
 const { session, viewer } = startPrototype();
 const state = session.state;
 const world = new World(document.getElementById('game')!);
-const terrain = buildTerrain(state);
+const terrain = buildTerrain(state, glbModels);
 const board = new BoardView(state, viewer, terrain, glbModels);
 const highlights = new Highlights((pos) => board.groundOf(pos));
 const effects = new THREE.Group();
@@ -105,12 +105,11 @@ function tileAt(clientX: number, clientY: number): Pos | null {
   const pointer = new THREE.Vector2(((clientX - canvas.left) / canvas.width) * 2 - 1, -((clientY - canvas.top) / canvas.height) * 2 + 1);
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(pointer, world.camera);
-  const [hit] = raycaster.intersectObjects([board.object, terrain.tiles], true);
+  const [hit] = raycaster.intersectObjects([board.object, ...terrain.pickables], true);
   if (!hit) return null;
   const uid = board.unitHit(hit.object);
   if (uid !== null) return state.units.find((unit) => unit.uid === uid) ?? null;
-  if (hit.object === terrain.tiles && hit.instanceId !== undefined) return terrain.tileOfInstance[hit.instanceId] ?? null;
-  return { x: Math.round(hit.point.x), y: Math.round(hit.point.z) };
+  return terrain.tileOfHit(hit) ?? { x: Math.round(hit.point.x), y: Math.round(hit.point.z) };
 }
 
 /** La casilla señalada: el cuadro amarillo, la ficha y la prevision de combate. */

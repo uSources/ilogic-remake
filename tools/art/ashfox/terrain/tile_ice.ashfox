@@ -1,0 +1,50 @@
+ashfox-model 1
+asset tile_ice {
+  rig contract StaticRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+  }
+  skeleton StaticSkeleton implements StaticRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 32px; }
+    chart water box { width = 64px; height = 26px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = ice; background-alpha = 255;
+      palette {
+        ice = (#9ad6ee, #cdeffa, #f2fcff);
+        ice_spots = (#6fb8dc, #86c8e6, #a8dcf0);
+      }
+
+      chart water box {
+        origin = (0px, 0px); fill = ice;
+        pattern blotch { paint = ice_spots; scale = (4px, 1px, 1px); density = 0.12ratio; phase = 7; }
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: StaticRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube water { origin = (-8u, -8u, -8u); size = (16u, 10u, 16u); surface = skin.water; }
+      }
+    }
+  }
+  export asset tile_ice {
+    settings { density = 16; forward = north; }
+    skeleton = StaticSkeleton;
+    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+  }
+}

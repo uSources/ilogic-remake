@@ -1,116 +1,89 @@
 /**
- * El terreno en 3D: cada casilla es un bloque de la altura y el color de su terreno (TERRAIN_LOOKS,
- * por id de terrain.json), con su decorado encima (arboles, cactus, flores). Todas las casillas son
- * una sola malla instanciada y cada decorado otra, asi el coste no crece con el tamaño del mapa.
- * Un terreno sin aspecto propio se ve segun lo que es (agua, esconde, llano): cualquier contenido se
- * puede mirar.
+ * El terreno en 3D, con los modelos de Ashfox (tools/art/ashfox/models/terrain.mjs, a semejanza del
+ * terreno 2D): cada casilla es el bloque de su clase (hierba, arena, agua...) y, si lleva, su decorado
+ * encima (arboles, montaña, cactus, flores, muñeco de nieve). Que lleva cada terreno lo dice
+ * TERRAIN_PIECES, por id de terrain.json; uno sin entrada se ve segun lo que es (agua, esconde,
+ * llano), asi cualquier contenido se puede mirar. Cada clase de casilla y de decorado es una malla
+ * instanciada: el coste no crece con el tamaño del mapa.
  */
 import * as THREE from 'three';
-import type { GameState, Pos } from '../core/model';
-import { mapGrid } from '../core/mapGrid';
-import { terrainAt } from '../core/gameContent';
 import type { TerrainType } from '../core/content';
+import { terrainAt, themeOf } from '../core/gameContent';
+import { mapGrid } from '../core/mapGrid';
+import type { GameState, Pos } from '../core/model';
 import type { Grid } from '../core/util/grid';
-import type { BlockModel, TeamPaint } from './blocks';
-import { instancedModel } from './instancedBlocks';
-import { toonMaterial } from './toon';
-import { tileToWorld } from './space';
+import type { GlbLibrary } from './glbModels';
 
-type DecorKind = 'tree' | 'pine' | 'cactus' | 'flowers';
+/** Las casillas de Ashfox y la altura de su cara de arriba (en unidades de Ashfox: 16 = una casilla). */
+const TILE_TOPS = {
+  tile_grass: 4,
+  tile_forest: 4,
+  tile_sand: 4,
+  tile_snow: 4,
+  tile_water: 1,
+  tile_deep: 0,
+  tile_shallow: 2,
+  tile_ice: 2,
+} as const;
+type TileModel = keyof typeof TILE_TOPS;
+const ASHFOX_UNITS_PER_TILE = 16;
 
-interface TerrainLook {
-  color: number;
-  /** Altura de la cara de arriba (donde se pone lo que hay en la casilla). */
-  height: number;
-  decor?: DecorKind;
+interface TerrainPiece {
+  tile: TileModel;
+  /** El decorado de encima; con varios, cada casilla elige uno (siempre el mismo). */
+  decor?: readonly string[];
 }
 
-const PLAIN_LOOK: TerrainLook = { color: 0x8fd16a, height: 0.2 };
-const WATER_LOOK: TerrainLook = { color: 0x3fa7e0, height: 0.04 };
-const WOODS_LOOK: TerrainLook = { color: 0x6fbf55, height: 0.22, decor: 'tree' };
+const GRASS: TerrainPiece = { tile: 'tile_grass' };
+const WATER: TerrainPiece = { tile: 'tile_water' };
+const WOODS: TerrainPiece = { tile: 'tile_forest', decor: ['trees'] };
 
-const TERRAIN_LOOKS: Readonly<Record<string, TerrainLook>> = {
-  Grass: PLAIN_LOOK,
-  Flowers: { color: 0x98d873, height: 0.2, decor: 'flowers' },
-  Woods: WOODS_LOOK,
-  GrassCliff: { color: 0x7cb85c, height: 0.75 },
-  Water: WATER_LOOK,
-  SWater: { color: 0x67c6e8, height: 0.08 },
-  DWater: { color: 0x2f7fc4, height: 0.0 },
-  Sand: { color: 0xf0d58c, height: 0.18 },
-  Cactus: { color: 0xeccb7a, height: 0.18, decor: 'cactus' },
-  SandCliff: { color: 0xd9b56a, height: 0.75 },
-  Snow: { color: 0xeef3f8, height: 0.22 },
-  Frosty: { color: 0xd6e6ef, height: 0.2 },
-  SnowCliff: { color: 0xcfdbe6, height: 0.8 },
-  SnowWood: { color: 0xe3ecf3, height: 0.22, decor: 'pine' },
-  Ice: { color: 0xb8e4f2, height: 0.1 },
+const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
+  Grass: GRASS,
+  Flowers: { tile: 'tile_grass', decor: ['flowers_red', 'flowers_yellow', 'flowers_purple'] },
+  Woods: WOODS,
+  GrassCliff: { tile: 'tile_grass', decor: ['mount_grass'] },
+  Water: WATER,
+  SWater: { tile: 'tile_shallow' },
+  DWater: { tile: 'tile_deep' },
+  Sand: { tile: 'tile_sand' },
+  Cactus: { tile: 'tile_sand', decor: ['cactus'] },
+  SandCliff: { tile: 'tile_sand', decor: ['mount_mesa'] },
+  Snow: { tile: 'tile_snow' },
+  Frosty: { tile: 'tile_snow', decor: ['snowman'] },
+  SnowCliff: { tile: 'tile_snow', decor: ['mount_snow'] },
+  SnowWood: { tile: 'tile_snow', decor: ['pines'] },
+  Ice: { tile: 'tile_ice' },
 };
 
-/** Lo que no tiene aspecto propio se ve como lo que es. */
-function fallbackLook(terrain: TerrainType): TerrainLook {
-  if (terrain.isWater) return WATER_LOOK;
-  return terrain.hides ? WOODS_LOOK : PLAIN_LOOK;
-}
-
-const lookOf = (terrain: TerrainType): TerrainLook => TERRAIN_LOOKS[terrain.id] ?? fallbackLook(terrain);
-
-const DECOR_MODELS: Readonly<Record<DecorKind, BlockModel>> = {
-  tree: {
-    blocks: [
-      { size: [0.12, 0.25, 0.12], at: [0, 0, 0], paint: 'wood' },
-      { size: [0.42, 0.26, 0.42], at: [0, 0.22, 0], paint: 'leafDark' },
-      { size: [0.28, 0.2, 0.28], at: [0, 0.46, 0], paint: 'leaf' },
-    ],
-  },
-  pine: {
-    blocks: [
-      { size: [0.1, 0.18, 0.1], at: [0, 0, 0], paint: 'wood' },
-      { size: [0.4, 0.2, 0.4], at: [0, 0.16, 0], paint: 'pine' },
-      { size: [0.28, 0.2, 0.28], at: [0, 0.34, 0], paint: 'pine' },
-      { size: [0.16, 0.14, 0.16], at: [0, 0.52, 0], paint: 'snow' },
-    ],
-  },
-  cactus: {
-    blocks: [
-      { size: [0.12, 0.42, 0.12], at: [0, 0, 0], paint: 'cactus' },
-      { size: [0.18, 0.07, 0.07], at: [0.12, 0.16, 0], paint: 'cactus' },
-      { size: [0.07, 0.14, 0.07], at: [0.18, 0.2, 0], paint: 'cactus' },
-    ],
-  },
-  flowers: {
-    blocks: [
-      { size: [0.08, 0.06, 0.08], at: [-0.2, 0, 0.15], paint: 'petal' },
-      { size: [0.08, 0.06, 0.08], at: [0.18, 0, -0.1], paint: 'light' },
-      { size: [0.08, 0.06, 0.08], at: [0.05, 0, 0.25], paint: 'petal' },
-    ],
-  },
+/** Lo que cambia un tema (id de themes.json): en el nevado, las montañas de hierba son nevadas (como en 2D). */
+const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece>>>> = {
+  Snowy: { GrassCliff: { tile: 'tile_snow', decor: ['mount_snow'] } },
 };
-const DECOR_KINDS = Object.keys(DECOR_MODELS) as DecorKind[];
 
-/** El decorado no es de nadie: su modelo no usa los colores de equipo. */
-const NO_TEAM: TeamPaint = { team: 0xffffff, teamDark: 0xffffff };
+/** Los modelos que hay que cargar (rutas dentro de assets/models). */
+export const TERRAIN_MODEL_FILES: readonly string[] = [
+  ...new Set(Object.values(TERRAIN_PIECES).flatMap((piece) => [piece.tile, ...(piece.decor ?? [])])),
+].map((model) => `terrain/${model}`);
 
-/** Hasta donde bajan los bloques del terreno: se ven sus lados en los bordes y en los cortados. */
-const TERRAIN_BOTTOM = -0.5;
 /** Las casillas en la niebla: mas oscuras y algo azuladas (como de noche), sin dejar de leerse. */
 const FOG_TINT = new THREE.Color(0.52, 0.56, 0.72);
-/** Cuanto cambia el tono de una casilla a otra (en ajedrezado), para que se lea la cuadricula. */
-const CHECKER_SHADE = 0.05;
-/** Lo que se desplaza y gira el decorado en su casilla, para que no parezca copiado. */
-const DECOR_JITTER = 0.18;
+const SEEN = new THREE.Color(1, 1, 1);
+/** Lo que se desplaza el decorado en su casilla, para que no parezca copiado. */
+const DECOR_JITTER = 0.12;
 
-/** El terreno ya construido: su objeto 3D y lo que preguntan los demas (alturas, que casilla se toca). */
-export interface TerrainView {
-  readonly object: THREE.Group;
-  /** La malla de las casillas (para saber que casilla se toca: su `instanceId`). */
-  readonly tiles: THREE.InstancedMesh;
-  /** La casilla de cada copia de `tiles`, por su numero. */
-  readonly tileOfInstance: readonly Pos[];
-  heightAt(pos: Pos): number;
-  /** Oscurece las casillas que no se ven (la niebla) y aclara las que si. */
-  showSeen(seen: Grid<boolean>): void;
+/** Lo que no tiene pieza propia se ve como lo que es. */
+function fallbackPiece(terrain: TerrainType): TerrainPiece {
+  if (terrain.isWater) return WATER;
+  return terrain.hides ? WOODS : GRASS;
 }
+
+function pieceAt(s: GameState, pos: Pos): TerrainPiece {
+  const terrain = terrainAt(s, pos);
+  return THEME_PIECES[themeOf(s).id]?.[terrain.id] ?? TERRAIN_PIECES[terrain.id] ?? fallbackPiece(terrain);
+}
+
+const tileTop = (tile: TileModel): number => TILE_TOPS[tile] / ASHFOX_UNITS_PER_TILE;
 
 /** Un numero entre 0 y 1 que sale siempre igual para la misma casilla (para variar sin azar). */
 function tileNoise(pos: Pos, salt: number): number {
@@ -118,69 +91,105 @@ function tileNoise(pos: Pos, salt: number): number {
   return value - Math.floor(value);
 }
 
-function tileMatrix(pos: Pos, height: number): THREE.Matrix4 {
-  const depth = height - TERRAIN_BOTTOM;
-  const center = tileToWorld(pos, TERRAIN_BOTTOM + depth / 2);
-  return new THREE.Matrix4().compose(center, new THREE.Quaternion(), new THREE.Vector3(1, depth, 1));
+/** Una malla instanciada con las casillas a las que pertenece cada copia (para la niebla y para tocar). */
+interface PlacedMesh {
+  mesh: THREE.InstancedMesh;
+  positions: readonly Pos[];
 }
 
-function tileColor(pos: Pos, look: TerrainLook): THREE.Color {
-  const isDarkSquare = (pos.x + pos.y) % 2 === 1;
-  return new THREE.Color(look.color).multiplyScalar(isDarkSquare ? 1 - CHECKER_SHADE : 1);
+/** El terreno ya construido: su objeto 3D y lo que preguntan los demas (alturas, que casilla se toca). */
+export interface TerrainView {
+  readonly object: THREE.Group;
+  /** Lo que se puede tocar (las casillas). */
+  readonly pickables: readonly THREE.Object3D[];
+  /** La casilla de un toque sobre `pickables` (null si no es una casilla). */
+  tileOfHit(hit: THREE.Intersection): Pos | null;
+  heightAt(pos: Pos): number;
+  /** Oscurece lo que no se ve (la niebla) y aclara lo que si. */
+  showSeen(seen: Grid<boolean>): void;
 }
 
-function decorMatrix(pos: Pos, height: number): THREE.Matrix4 {
+/** Copias de un modelo de Ashfox, una por sitio (`places`: donde va y como gira cada una). */
+function instanced(library: GlbLibrary, file: string, positions: readonly Pos[], places: readonly THREE.Matrix4[]): PlacedMesh[] {
+  return library.staticParts(`terrain/${file}`).map((part) => {
+    const mesh = new THREE.InstancedMesh(part.geometry, part.material, places.length);
+    places.forEach((place, index) => {
+      mesh.setMatrixAt(index, place.clone().multiply(part.matrix));
+      mesh.setColorAt(index, SEEN);
+    });
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    return { mesh, positions };
+  });
+}
+
+/** Las casillas agrupadas por lo que dice `keyOf` (en el orden en que salen). */
+function groupBy<K>(positions: readonly Pos[], keyOf: (pos: Pos) => K): Map<K, Pos[]> {
+  const groups = new Map<K, Pos[]>();
+  for (const pos of positions) {
+    const key = keyOf(pos);
+    const group = groups.get(key) ?? [];
+    group.push(pos);
+    groups.set(key, group);
+  }
+  return groups;
+}
+
+const tilePlace = (pos: Pos): THREE.Matrix4 => new THREE.Matrix4().makeTranslation(pos.x, 0, pos.y);
+
+/** Donde va el decorado de una casilla: encima, algo movido y girado (siempre igual para la misma casilla). */
+function decorPlace(pos: Pos, top: number): THREE.Matrix4 {
   const shift = (salt: number) => (tileNoise(pos, salt) - 0.5) * DECOR_JITTER;
-  const at = tileToWorld(pos, height).add(new THREE.Vector3(shift(1), 0, shift(2)));
-  const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), tileNoise(pos, 3) * Math.PI * 2);
+  const at = new THREE.Vector3(pos.x + shift(1), top, pos.y + shift(2));
+  const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.floor(tileNoise(pos, 3) * 4) * (Math.PI / 2));
   return new THREE.Matrix4().compose(at, turn, new THREE.Vector3(1, 1, 1));
 }
 
-/** Las casillas, todas en una malla instanciada (cada una con su altura y su color). */
-function tilesMesh(s: GameState, positions: readonly Pos[]): THREE.InstancedMesh {
-  const tiles = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), toonMaterial(0xffffff), positions.length);
-  positions.forEach((pos, index) => {
-    const look = lookOf(terrainAt(s, pos));
-    tiles.setMatrixAt(index, tileMatrix(pos, look.height));
-    tiles.setColorAt(index, tileColor(pos, look));
-  });
-  tiles.receiveShadow = true;
-  return tiles;
+/** Las casillas de cada clase de modelo. */
+function tileMeshes(library: GlbLibrary, byTile: ReadonlyMap<TileModel, Pos[]>): PlacedMesh[] {
+  return [...byTile].flatMap(([tile, positions]) => instanced(library, tile, positions, positions.map(tilePlace)));
 }
 
-/** El decorado de todo el mapa: un grupo instanciado por clase de decorado. */
-function decorObjects(s: GameState, positions: readonly Pos[]): THREE.Group[] {
-  return DECOR_KINDS.map((kind) => {
-    const places = positions
-      .map((pos) => ({ pos, look: lookOf(terrainAt(s, pos)) }))
-      .filter(({ look }) => look.decor === kind)
-      .map(({ pos, look }) => decorMatrix(pos, look.height));
-    return instancedModel(DECOR_MODELS[kind], NO_TEAM, places);
+/** El decorado de cada clase (cada casilla con varios posibles elige uno, siempre el mismo). */
+function decorMeshes(library: GlbLibrary, s: GameState, positions: readonly Pos[]): PlacedMesh[] {
+  const decorated = positions.filter((pos) => pieceAt(s, pos).decor?.length);
+  const byDecor = groupBy(decorated, (pos) => {
+    const variants = pieceAt(s, pos).decor!;
+    return variants[Math.floor(tileNoise(pos, 4) * variants.length)]!;
   });
+  return [...byDecor].flatMap(([decor, at]) =>
+    instanced(
+      library,
+      decor,
+      at,
+      at.map((pos) => decorPlace(pos, tileTop(pieceAt(s, pos).tile))),
+    ),
+  );
 }
 
-/** Pinta cada casilla con su color, oscurecido si la niebla la tapa. */
-function shadeTiles(s: GameState, tiles: THREE.InstancedMesh, positions: readonly Pos[], seen: Grid<boolean>): void {
-  positions.forEach((pos, index) => {
-    const color = tileColor(pos, lookOf(terrainAt(s, pos)));
-    tiles.setColorAt(index, seen.at(pos) ? color : color.multiply(FOG_TINT));
-  });
-  if (tiles.instanceColor) tiles.instanceColor.needsUpdate = true;
+function shade(placed: readonly PlacedMesh[], seen: Grid<boolean>): void {
+  for (const { mesh, positions } of placed) {
+    positions.forEach((pos, index) => mesh.setColorAt(index, seen.at(pos) ? SEEN : FOG_TINT));
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  }
 }
 
-export function buildTerrain(s: GameState): TerrainView {
+export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   const grid = mapGrid(s);
   const positions = [...grid.cells()].map((cell) => cell.pos);
-  const tiles = tilesMesh(s, positions);
+  const byTile = groupBy(positions, (pos) => pieceAt(s, pos).tile);
+  const tiles = tileMeshes(library, byTile);
+  const decor = decorMeshes(library, s, positions);
   const object = new THREE.Group();
-  object.add(tiles, ...decorObjects(s, positions));
+  object.add(...[...tiles, ...decor].map((placed) => placed.mesh));
   const heights = grid.createLayer(0);
-  for (const pos of positions) heights.set(pos, lookOf(terrainAt(s, pos)).height);
+  for (const pos of positions) heights.set(pos, tileTop(pieceAt(s, pos).tile));
+  const placedOf = new Map(tiles.map((placed) => [placed.mesh as THREE.Object3D, placed]));
   return {
     object,
-    tiles,
-    tileOfInstance: positions,
+    pickables: tiles.map((placed) => placed.mesh),
+    tileOfHit: (hit) => (hit.instanceId === undefined ? null : (placedOf.get(hit.object)?.positions[hit.instanceId] ?? null)),
     heightAt: (pos) => heights.at(pos),
-    showSeen: (seen) => shadeTiles(s, tiles, positions, seen),
+    showSeen: (seen) => shade([...tiles, ...decor], seen),
   };
 }

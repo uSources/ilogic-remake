@@ -1,8 +1,8 @@
 /**
- * Modelos GLB animados (hechos con Ashfox: fuentes en tools/art/ashfox, salida en
- * public/assets/models) para los tipos que ya tienen uno: se cargan al empezar y cada unidad lleva
- * su copia con sus animaciones ('idle', 'drive', 'fire'). Un tipo sin GLB sigue con su modelo de
- * bloques (models/), asi se pueden ir pasando unidad a unidad.
+ * Modelos GLB hechos con Ashfox (fuentes en tools/art/ashfox, salida en public/assets/models): los
+ * de las unidades que ya tienen uno, animados ('idle', 'drive', 'fire'; cada unidad lleva su copia),
+ * y los fijos del terreno (casillas y decorado), que se dibujan instanciados (`staticParts`). Un tipo
+ * de unidad sin GLB sigue con su modelo de bloques (models/), asi se pueden ir pasando una a una.
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
@@ -25,6 +25,13 @@ const FADE_SECONDS = 0.15;
 interface LoadedModel {
   scene: THREE.Group;
   clips: THREE.AnimationClip[];
+}
+
+/** Una malla de un modelo fijo, con donde va dentro del modelo (para copiarla muchas veces instanciada). */
+export interface StaticPart {
+  geometry: THREE.BufferGeometry;
+  material: THREE.Material;
+  matrix: THREE.Matrix4;
 }
 
 /** Una unidad con modelo GLB: su objeto (ya mirando hacia +z, como los de bloques) y como animarla. */
@@ -59,9 +66,10 @@ function ownMaterials(object: THREE.Object3D): void {
 export class GlbLibrary {
   private constructor(private readonly models: ReadonlyMap<string, LoadedModel>) {}
 
-  static async load(): Promise<GlbLibrary> {
+  /** Carga los de las unidades y los fijos que se piden (`staticFiles`, rutas dentro de assets/models). */
+  static async load(staticFiles: readonly string[] = []): Promise<GlbLibrary> {
     const loader = new GLTFLoader();
-    const files = Object.values(GLB_UNITS).flatMap((sides) => [sides.friendly, sides.enemy]);
+    const files = [...Object.values(GLB_UNITS).flatMap((sides) => [sides.friendly, sides.enemy]), ...staticFiles];
     const loaded = await Promise.all(
       files.map(async (file) => {
         const gltf = await loader.loadAsync(modelUrl(file));
@@ -70,6 +78,20 @@ export class GlbLibrary {
       }),
     );
     return new GlbLibrary(new Map(loaded));
+  }
+
+  /** Las mallas de un modelo fijo (vacio si no esta cargado). */
+  staticParts(file: string): StaticPart[] {
+    const model = this.models.get(file);
+    if (!model) return [];
+    model.scene.updateMatrixWorld(true);
+    const parts: StaticPart[] = [];
+    model.scene.traverse((node) => {
+      if (!(node instanceof THREE.Mesh)) return;
+      const mesh = node as THREE.Mesh;
+      parts.push({ geometry: mesh.geometry, material: mesh.material as THREE.Material, matrix: mesh.matrixWorld.clone() });
+    });
+    return parts;
   }
 
   /** Una copia animada del modelo de ese tipo para ese lado (null si el tipo no tiene GLB). */

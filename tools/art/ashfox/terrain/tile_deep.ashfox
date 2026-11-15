@@ -1,0 +1,50 @@
+ashfox-model 1
+asset tile_deep {
+  rig contract StaticRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+  }
+  skeleton StaticSkeleton implements StaticRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 32px; }
+    chart water box { width = 64px; height = 24px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = deep; background-alpha = 255;
+      palette {
+        deep = (#0b3480, #1048a6, #1c5ec4);
+        deep_spots = (#1c5ec4, #2a72d8, #3e88ea);
+      }
+
+      chart water box {
+        origin = (0px, 0px); fill = deep;
+        pattern blotch { paint = deep_spots; scale = (5px, 1px, 1px); density = 0.1ratio; phase = 7; }
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: StaticRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube water { origin = (-8u, -8u, -8u); size = (16u, 8u, 16u); surface = skin.water; }
+      }
+    }
+  }
+  export asset tile_deep {
+    settings { density = 16; forward = north; }
+    skeleton = StaticSkeleton;
+    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+  }
+}
