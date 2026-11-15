@@ -16,7 +16,7 @@ const SKY_INTENSITY = 0.9;
 const SUN_COLOR = 0xffe6b8;
 const SUN_INTENSITY = 2.8;
 /** De donde viene el sol (relativo al centro del mapa): alto y de lado, para que los bloques se lean. */
-const SUN_DIRECTION = new THREE.Vector3(-0.6, 1, 0.45).normalize();
+export const SUN_DIRECTION: Readonly<THREE.Vector3> = new THREE.Vector3(-0.6, 1, 0.45).normalize();
 /** Resolucion del mapa de sombras: con la rampa de tres tonos no hace falta mas. */
 const SHADOW_MAP_SIZE = 2048;
 

@@ -13,6 +13,7 @@ import { mapGrid } from '../core/mapGrid';
 import type { GameState, Pos } from '../core/model';
 import type { Grid } from '../core/util/grid';
 import type { GlbLibrary } from './glbModels';
+import { sandClock, sandMaterial } from './sand';
 import { shoreSides, waterClock, waterMaterial } from './water';
 
 /** Las casillas de Ashfox y la altura de su cara de arriba (en unidades de Ashfox: 16 = una casilla). */
@@ -66,7 +67,7 @@ const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece
  * Cuantas variantes tiene cada suelo (`<casilla>_<n>`: los mismos colores con otros detalles, ver
  * tools/art/ashfox/models/terrain.mjs). Cada casilla elige una y un giro: asi no se ven todas iguales.
  */
-const TILE_VARIANTS: Readonly<Partial<Record<TileModel, number>>> = { tile_grass: 4, tile_forest: 3, tile_sand: 4, tile_snow: 3 };
+const TILE_VARIANTS: Readonly<Partial<Record<TileModel, number>>> = { tile_grass: 4, tile_forest: 3, tile_sand: 1, tile_snow: 3 };
 
 const variantFiles = (tile: TileModel): string[] => {
   const count = TILE_VARIANTS[tile];
@@ -179,7 +180,10 @@ function decorPlace(pos: Pos, top: number): THREE.Matrix4 {
 function tileMeshes(library: GlbLibrary, s: GameState, byFile: ReadonlyMap<string, Pos[]>): PlacedMesh[] {
   return [...byFile].flatMap(([file, positions]) => {
     const placed = instanced(library, file, positions, positions.map(tilePlace));
-    if (MOVING_WATER.has(pieceAt(s, positions[0]!).tile)) for (const { mesh } of placed) makeWater(mesh, s, positions);
+    const tile = pieceAt(s, positions[0]!).tile;
+    if (MOVING_WATER.has(tile)) for (const { mesh } of placed) makeWater(mesh, s, positions);
+    // La cara de arriba de la arena la dibuja su shader (dunas que siguen de casilla a casilla).
+    if (tile === 'tile_sand') for (const { mesh } of placed) mesh.material = sandMaterial(mesh.material as THREE.Material);
     return placed;
   });
 }
@@ -237,6 +241,7 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
     showSeen: (seen) => shade([...tiles, ...decor], seen),
     update: (seconds) => {
       waterClock.value += seconds;
+      sandClock.value += seconds;
     },
     sandTiles: positions.filter((pos) => pieceAt(s, pos).tile === 'tile_sand'),
   };

@@ -227,7 +227,8 @@ function flowerPatch(petals, seed) {
 export const MODELS = {
   ...groundVariants('grass', 'grass', 'earth', 4),
   ...groundVariants('forest', 'forest_floor', 'earth', 3),
-  ...groundVariants('sand', 'sand', 'sandstone', 4),
+  // La cara de arriba de la arena la dibuja un shader en el juego (src/view3d/sand.ts): basta una.
+  ...groundVariants('sand', 'sand', 'sandstone', 1),
   ...groundVariants('snow', 'snow', 'ice_rock', 3),
   tile_water: liquid('water', 1),
   tile_deep: liquid('deep', 0),
