@@ -1099,6 +1099,33 @@ modulo:
   guardado automatico, tutorial, laboratorio de animaciones y campaña online.
 - Colores de los lienzos de la interfaz: `PAL_CSS` en `ui/palette.ts` (los mismos que `hud.css`).
 
+### La regla: sistemas agnosticos, solo el motor dibuja
+
+La vista se divide en dos clases de piezas, y la frontera es una regla, no una costumbre:
+
+- **El motor** (three.js) es lo unico que representa: crea y mueve mallas, materiales, luz,
+  camara, particulas, el bucle de dibujo. No decide nada de la partida.
+- **Los sistemas** deciden: el turno (que se puede tocar, que pasa al tocarlo), la entrada (de teclas
+  y punteros a ordenes), que se anima con cada suceso y en que orden, la logica de la camara
+  (a donde mirar, limites), lo que enseña la interfaz y los menus. **No importan three.js** y no
+  conocen las clases del motor: le piden lo que necesitan por **interfaces pequeñas (puertos)**
+  —«enseña estas casillas», «mueve esta pieza por este camino», «lanza este efecto aqui»— que el
+  motor implementa. Asi un sistema se prueba sin navegador ni WebGL, y el motor se podria cambiar
+  sin tocar ningun sistema.
+- **La raiz de composicion** (`match3d.ts`, `main.ts`) es el unico sitio que junta un sistema con
+  su motor.
+
+SOLID en la practica: una responsabilidad por modulo (un sistema no dibuja; el motor no decide),
+abierto a ampliar con datos (un suceso nuevo, una entrada en una tabla; un efecto nuevo, una entrada
+en `PUFFS`), interfaces pequeñas por quien las usa (`...Host`, `...Port`) y depender de ellas, no de
+las clases concretas. Cada sistema, en su subcarpeta.
+
+**Lo vigila ESLint**: fuera de la capa del motor no se puede importar `three`. Hoy la capa del motor
+es la lista `ENGINE_FILES` de `eslint.config.js` (los ficheros que ya lo importaban); la
+reorganizacion (`docs/PLAN-VISTA3D.md`) la lleva a `src/view3d/engine/`, saca de ella la logica que
+aun mezclan (`animations.ts`, `board.ts`, `match3d.ts`) y vacia la lista. Un fichero nuevo que dibuje
+va al motor; uno que decida, a su sistema.
+
 ## Decisiones (y por que)
 
 | Decision | Por que | Que romperia deshacerla |
@@ -1111,6 +1138,7 @@ modulo:
 | Semillas para mapas y para la IA | Mapas compartibles por codigo; partidas reproducibles | Codigo de mapa, tests de referencia |
 | Imagenes compiladas antes (`npm run assets`) en un atlas; modelos 3D ya exportados a GLB | Carga rapida, nada se dibuja ni se genera al jugar | Rendimiento, HTML de un fichero |
 | Color de bando por giro de tono desde un dibujo magenta | Una generacion por unidad (coste en RD) y bandos identicos | Arte y presupuesto de RD |
+| Sistemas de la vista sin three.js; solo el motor dibuja, por interfaces (puertos) | Probar la logica de la vista sin navegador; cambiar o mejorar el motor sin tocar el juego; modulos con una sola responsabilidad que escalan | Tests de la vista, `ENGINE_FILES` y la reorganizacion de `PLAN-VISTA3D.md` |
 | Cada partida en su propia carga de pagina (`view3d/gameStart.ts`) | No hay que deshacer a mano la escena 3D ni sus escuchas | Fallos al volver a jugar |
 | Version en un solo fichero HTML | Jugar sin servidor (file://), compartir por correo | Releases, pruebas por file:// |
 | Releases y web por GitHub Actions | La sesion de Claude no puede crear Releases; asi no hace falta | Novedades y aviso de version |

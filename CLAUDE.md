@@ -6,6 +6,8 @@ En la rama `3d` ya no hay 2D: de aquel juego solo quedan las imagenes (iconos de
 - Codigo: skill `ilogic-code` (capas, convenciones y comprobaciones). Arquitectura: `docs/ARQUITECTURA.md`.
 - Estilo (obligatorio en todo codigo nuevo o tocado): `docs/ESTILO.md`. Nombres claros, funciones cortas,
   piezas comunes en vez de bucles a mano. Al reescribir, `npm run huella` igual antes y despues.
+- Vista 3D: los sistemas no dependen del motor; solo el motor (three.js) dibuja, con interfaces entre
+  ambos y SOLID: `docs/ARQUITECTURA.md`, "Vista 3D" (plan: `docs/PLAN-VISTA3D.md`).
 - La partida solo cambia con acciones (`dispatch`, `src/core/actions.ts`): ver `docs/ARQUITECTURA.md`, "Acciones".
 - Ideas pendientes y descartadas (con el porque): `docs/IDEAS.md`; quitar de ahi lo que se haga.
 - Estetica del juego (como se ven los modelos 3D, decidida con el usuario): `docs/ESTETICA.md` y skill
