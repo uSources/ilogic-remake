@@ -12,16 +12,45 @@ asset flowers_red {
   }
   surface contract Skin {
     atlas { width = 64px; height = 16px; }
-    chart a_leaves box { width = 24px; height = 8px; coverage = opaque; }
-    chart a_petal0 box { width = 4px; height = 2px; coverage = opaque; }
-    chart a_petal1 box { width = 4px; height = 2px; coverage = opaque; }
-    chart a_petal2 box { width = 4px; height = 2px; coverage = opaque; }
-    chart a_petal3 box { width = 4px; height = 2px; coverage = opaque; }
-    chart b_leaves box { width = 24px; height = 8px; coverage = opaque; }
-    chart b_petal0 box { width = 4px; height = 2px; coverage = opaque; }
-    chart b_petal1 box { width = 4px; height = 2px; coverage = opaque; }
-    chart b_petal2 box { width = 4px; height = 2px; coverage = opaque; }
-    chart b_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart a_leaves box { width = 16px; height = 5px; coverage = opaque; }
+    chart b_leaves box { width = 12px; height = 4px; coverage = opaque; }
+    chart c_leaves box { width = 12px; height = 4px; coverage = opaque; }
+    chart f0_stem box { width = 4px; height = 3px; coverage = opaque; }
+    chart f0_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f0_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f0_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f0_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f0_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_stem box { width = 4px; height = 3px; coverage = opaque; }
+    chart f1_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f1_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_stem box { width = 4px; height = 5px; coverage = opaque; }
+    chart f2_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f2_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_stem box { width = 4px; height = 5px; coverage = opaque; }
+    chart f3_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f3_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_stem box { width = 4px; height = 3px; coverage = opaque; }
+    chart f4_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f4_petal3 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_stem box { width = 4px; height = 3px; coverage = opaque; }
+    chart f5_center box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_petal0 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_petal1 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_petal2 box { width = 4px; height = 2px; coverage = opaque; }
+    chart f5_petal3 box { width = 4px; height = 2px; coverage = opaque; }
     material = opaque;
   }
   surface paint: Skin {
@@ -31,40 +60,131 @@ asset flowers_red {
       palette {
         leaf = (#25661f, #3c8f2e, #62bd44);
         leaf_spots = (#4fae3a, #78d055, #a2e670);
+        stem = (#2f7a2a, #3f9a34, #5cbf4a);
+        flower_center = (#c89a10, #f2c81e, #ffe866);
         petal_red = (#b02030, #e83a48, #ff7a80);
+        petal_white = (#c8ccd8, #eef2fa, #ffffff);
       }
 
       chart a_leaves box {
         origin = (0px, 0px); fill = leaf;
         pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; }
       }
-      chart a_petal0 box {
-        origin = (50px, 0px); fill = petal_red;
-      }
-      chart a_petal1 box {
-        origin = (55px, 0px); fill = petal_red;
-      }
-      chart a_petal2 box {
-        origin = (60px, 0px); fill = petal_red;
-      }
-      chart a_petal3 box {
-        origin = (0px, 9px); fill = petal_red;
-      }
       chart b_leaves box {
-        origin = (25px, 0px); fill = leaf;
+        origin = (27px, 0px); fill = leaf;
         pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; }
       }
-      chart b_petal0 box {
-        origin = (5px, 9px); fill = petal_red;
+      chart c_leaves box {
+        origin = (40px, 0px); fill = leaf;
+        pattern blotch { paint = leaf_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 7; }
       }
-      chart b_petal1 box {
-        origin = (10px, 9px); fill = petal_red;
+      chart f0_stem box {
+        origin = (53px, 0px); fill = stem;
       }
-      chart b_petal2 box {
-        origin = (15px, 9px); fill = petal_red;
+      chart f0_center box {
+        origin = (10px, 6px); fill = flower_center;
       }
-      chart b_petal3 box {
-        origin = (20px, 9px); fill = petal_red;
+      chart f0_petal0 box {
+        origin = (15px, 6px); fill = petal_red;
+      }
+      chart f0_petal1 box {
+        origin = (20px, 6px); fill = petal_red;
+      }
+      chart f0_petal2 box {
+        origin = (25px, 6px); fill = petal_red;
+      }
+      chart f0_petal3 box {
+        origin = (30px, 6px); fill = petal_red;
+      }
+      chart f1_stem box {
+        origin = (58px, 0px); fill = stem;
+      }
+      chart f1_center box {
+        origin = (35px, 6px); fill = flower_center;
+      }
+      chart f1_petal0 box {
+        origin = (40px, 6px); fill = petal_red;
+      }
+      chart f1_petal1 box {
+        origin = (45px, 6px); fill = petal_red;
+      }
+      chart f1_petal2 box {
+        origin = (50px, 6px); fill = petal_red;
+      }
+      chart f1_petal3 box {
+        origin = (55px, 6px); fill = petal_red;
+      }
+      chart f2_stem box {
+        origin = (17px, 0px); fill = stem;
+      }
+      chart f2_center box {
+        origin = (60px, 6px); fill = flower_center;
+      }
+      chart f2_petal0 box {
+        origin = (0px, 10px); fill = petal_white;
+      }
+      chart f2_petal1 box {
+        origin = (5px, 10px); fill = petal_white;
+      }
+      chart f2_petal2 box {
+        origin = (10px, 10px); fill = petal_white;
+      }
+      chart f2_petal3 box {
+        origin = (15px, 10px); fill = petal_white;
+      }
+      chart f3_stem box {
+        origin = (22px, 0px); fill = stem;
+      }
+      chart f3_center box {
+        origin = (20px, 10px); fill = flower_center;
+      }
+      chart f3_petal0 box {
+        origin = (25px, 10px); fill = petal_red;
+      }
+      chart f3_petal1 box {
+        origin = (30px, 10px); fill = petal_red;
+      }
+      chart f3_petal2 box {
+        origin = (35px, 10px); fill = petal_red;
+      }
+      chart f3_petal3 box {
+        origin = (40px, 10px); fill = petal_red;
+      }
+      chart f4_stem box {
+        origin = (0px, 6px); fill = stem;
+      }
+      chart f4_center box {
+        origin = (45px, 10px); fill = flower_center;
+      }
+      chart f4_petal0 box {
+        origin = (50px, 10px); fill = petal_red;
+      }
+      chart f4_petal1 box {
+        origin = (55px, 10px); fill = petal_red;
+      }
+      chart f4_petal2 box {
+        origin = (60px, 10px); fill = petal_red;
+      }
+      chart f4_petal3 box {
+        origin = (0px, 13px); fill = petal_red;
+      }
+      chart f5_stem box {
+        origin = (5px, 6px); fill = stem;
+      }
+      chart f5_center box {
+        origin = (5px, 13px); fill = flower_center;
+      }
+      chart f5_petal0 box {
+        origin = (10px, 13px); fill = petal_white;
+      }
+      chart f5_petal1 box {
+        origin = (15px, 13px); fill = petal_white;
+      }
+      chart f5_petal2 box {
+        origin = (20px, 13px); fill = petal_white;
+      }
+      chart f5_petal3 box {
+        origin = (25px, 13px); fill = petal_white;
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -76,16 +196,45 @@ asset flowers_red {
     bind bone body to skeleton.body;
     geometry {
       bone body {
-        cube a_leaves { origin = (-6u, 0u, -5u); size = (6u, 2u, 6u); surface = skin.a_leaves; }
-        cube a_petal0 { origin = (-5u, 2u, -4u); size = (1u, 1u, 1u); surface = skin.a_petal0; }
-        cube a_petal1 { origin = (-2u, 2u, -3u); size = (1u, 1u, 1u); surface = skin.a_petal1; }
-        cube a_petal2 { origin = (-4u, 2u, -1u); size = (1u, 1u, 1u); surface = skin.a_petal2; }
-        cube a_petal3 { origin = (-2u, 2u, -1u); size = (1u, 1u, 1u); surface = skin.a_petal3; }
-        cube b_leaves { origin = (0u, 0u, 0u); size = (6u, 2u, 6u); surface = skin.b_leaves; }
-        cube b_petal0 { origin = (1u, 2u, 1u); size = (1u, 1u, 1u); surface = skin.b_petal0; }
-        cube b_petal1 { origin = (4u, 2u, 2u); size = (1u, 1u, 1u); surface = skin.b_petal1; }
-        cube b_petal2 { origin = (2u, 2u, 4u); size = (1u, 1u, 1u); surface = skin.b_petal2; }
-        cube b_petal3 { origin = (4u, 2u, 4u); size = (1u, 1u, 1u); surface = skin.b_petal3; }
+        cube a_leaves { origin = (-2u, 0u, -2u); size = (4u, 1u, 4u); surface = skin.a_leaves; }
+        cube b_leaves { origin = (-0.5u, 0u, -0.5u); size = (3u, 1u, 3u); surface = skin.b_leaves; }
+        cube c_leaves { origin = (2.5u, 0u, -1.5u); size = (3u, 1u, 3u); surface = skin.c_leaves; }
+        cube f0_stem { origin = (-5u, 0u, 0u); size = (1u, 2u, 1u); surface = skin.f0_stem; }
+        cube f0_center { origin = (-5u, 2u, 0u); size = (1u, 1u, 1u); surface = skin.f0_center; }
+        cube f0_petal0 { origin = (-6u, 2u, 0u); size = (1u, 1u, 1u); surface = skin.f0_petal0; }
+        cube f0_petal1 { origin = (-4u, 2u, 0u); size = (1u, 1u, 1u); surface = skin.f0_petal1; }
+        cube f0_petal2 { origin = (-5u, 2u, -1u); size = (1u, 1u, 1u); surface = skin.f0_petal2; }
+        cube f0_petal3 { origin = (-5u, 2u, 1u); size = (1u, 1u, 1u); surface = skin.f0_petal3; }
+        cube f1_stem { origin = (1u, 0u, -1u); size = (1u, 2u, 1u); surface = skin.f1_stem; }
+        cube f1_center { origin = (1u, 2u, -1u); size = (1u, 1u, 1u); surface = skin.f1_center; }
+        cube f1_petal0 { origin = (0u, 2u, -1u); size = (1u, 1u, 1u); surface = skin.f1_petal0; }
+        cube f1_petal1 { origin = (2u, 2u, -1u); size = (1u, 1u, 1u); surface = skin.f1_petal1; }
+        cube f1_petal2 { origin = (1u, 2u, -2u); size = (1u, 1u, 1u); surface = skin.f1_petal2; }
+        cube f1_petal3 { origin = (1u, 2u, 0u); size = (1u, 1u, 1u); surface = skin.f1_petal3; }
+        cube f2_stem { origin = (0u, 0u, 4u); size = (1u, 4u, 1u); surface = skin.f2_stem; }
+        cube f2_center { origin = (0u, 4u, 4u); size = (1u, 1u, 1u); surface = skin.f2_center; }
+        cube f2_petal0 { origin = (-1u, 4u, 4u); size = (1u, 1u, 1u); surface = skin.f2_petal0; }
+        cube f2_petal1 { origin = (1u, 4u, 4u); size = (1u, 1u, 1u); surface = skin.f2_petal1; }
+        cube f2_petal2 { origin = (0u, 4u, 3u); size = (1u, 1u, 1u); surface = skin.f2_petal2; }
+        cube f2_petal3 { origin = (0u, 4u, 5u); size = (1u, 1u, 1u); surface = skin.f2_petal3; }
+        cube f3_stem { origin = (2u, 0u, -4u); size = (1u, 4u, 1u); surface = skin.f3_stem; }
+        cube f3_center { origin = (2u, 4u, -4u); size = (1u, 1u, 1u); surface = skin.f3_center; }
+        cube f3_petal0 { origin = (1u, 4u, -4u); size = (1u, 1u, 1u); surface = skin.f3_petal0; }
+        cube f3_petal1 { origin = (3u, 4u, -4u); size = (1u, 1u, 1u); surface = skin.f3_petal1; }
+        cube f3_petal2 { origin = (2u, 4u, -5u); size = (1u, 1u, 1u); surface = skin.f3_petal2; }
+        cube f3_petal3 { origin = (2u, 4u, -3u); size = (1u, 1u, 1u); surface = skin.f3_petal3; }
+        cube f4_stem { origin = (3u, 0u, 3u); size = (1u, 2u, 1u); surface = skin.f4_stem; }
+        cube f4_center { origin = (3u, 2u, 3u); size = (1u, 1u, 1u); surface = skin.f4_center; }
+        cube f4_petal0 { origin = (2u, 2u, 3u); size = (1u, 1u, 1u); surface = skin.f4_petal0; }
+        cube f4_petal1 { origin = (4u, 2u, 3u); size = (1u, 1u, 1u); surface = skin.f4_petal1; }
+        cube f4_petal2 { origin = (3u, 2u, 2u); size = (1u, 1u, 1u); surface = skin.f4_petal2; }
+        cube f4_petal3 { origin = (3u, 2u, 4u); size = (1u, 1u, 1u); surface = skin.f4_petal3; }
+        cube f5_stem { origin = (-2u, 0u, 1u); size = (1u, 2u, 1u); surface = skin.f5_stem; }
+        cube f5_center { origin = (-2u, 2u, 1u); size = (1u, 1u, 1u); surface = skin.f5_center; }
+        cube f5_petal0 { origin = (-3u, 2u, 1u); size = (1u, 1u, 1u); surface = skin.f5_petal0; }
+        cube f5_petal1 { origin = (-1u, 2u, 1u); size = (1u, 1u, 1u); surface = skin.f5_petal1; }
+        cube f5_petal2 { origin = (-2u, 2u, 0u); size = (1u, 1u, 1u); surface = skin.f5_petal2; }
+        cube f5_petal3 { origin = (-2u, 2u, 2u); size = (1u, 1u, 1u); surface = skin.f5_petal3; }
       }
     }
   }

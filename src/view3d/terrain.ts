@@ -41,7 +41,7 @@ const WOODS: TerrainPiece = { tile: 'tile_forest', decor: ['trees'] };
 
 const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
   Grass: GRASS,
-  Flowers: { tile: 'tile_grass', decor: ['flowers_red', 'flowers_yellow', 'flowers_purple'] },
+  Flowers: { tile: 'tile_grass', decor: ['flowers_red', 'flowers_yellow', 'flowers_purple', 'flowers_mixed'] },
   Woods: WOODS,
   GrassCliff: { tile: 'tile_grass', decor: ['mount_grass'] },
   Water: WATER,
@@ -62,9 +62,20 @@ const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece
   Snowy: { GrassCliff: { tile: 'tile_snow', decor: ['mount_snow'] } },
 };
 
+/**
+ * Cuantas variantes tiene cada suelo (`<casilla>_<n>`: los mismos colores con otros detalles, ver
+ * tools/art/ashfox/models/terrain.mjs). Cada casilla elige una y un giro: asi no se ven todas iguales.
+ */
+const TILE_VARIANTS: Readonly<Partial<Record<TileModel, number>>> = { tile_grass: 4, tile_forest: 3, tile_sand: 4, tile_snow: 3 };
+
+const variantFiles = (tile: TileModel): string[] => {
+  const count = TILE_VARIANTS[tile];
+  return count ? Array.from({ length: count }, (_, index) => `${tile}_${index}`) : [tile];
+};
+
 /** Los modelos que hay que cargar (rutas dentro de assets/models). */
 export const TERRAIN_MODEL_FILES: readonly string[] = [
-  ...new Set(Object.values(TERRAIN_PIECES).flatMap((piece) => [piece.tile, ...(piece.decor ?? [])])),
+  ...new Set(Object.values(TERRAIN_PIECES).flatMap((piece) => [...variantFiles(piece.tile), ...(piece.decor ?? [])])),
 ].map((model) => `terrain/${model}`);
 
 /** Las casillas en la niebla: mas oscuras y algo azuladas (como de noche), sin dejar de leerse. */
@@ -143,21 +154,32 @@ function groupBy<K>(positions: readonly Pos[], keyOf: (pos: Pos) => K): Map<K, P
   return groups;
 }
 
-const tilePlace = (pos: Pos): THREE.Matrix4 => new THREE.Matrix4().makeTranslation(pos.x, 0, pos.y);
+/** Un giro de un cuarto de vuelta (0 a 3) que sale siempre igual para la misma casilla. */
+const quarterTurn = (pos: Pos, salt: number): THREE.Quaternion =>
+  new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.floor(tileNoise(pos, salt) * 4) * (Math.PI / 2));
+
+/** Donde va una casilla, girada (los suelos son cuadrados: girarlos los varia sin que se note el corte). */
+const tilePlace = (pos: Pos): THREE.Matrix4 =>
+  new THREE.Matrix4().compose(new THREE.Vector3(pos.x, 0, pos.y), quarterTurn(pos, 5), new THREE.Vector3(1, 1, 1));
+
+/** El modelo de la casilla: su clase y, si tiene variantes, una (siempre la misma). */
+function tileFile(s: GameState, pos: Pos): string {
+  const files = variantFiles(pieceAt(s, pos).tile);
+  return files[Math.floor(tileNoise(pos, 6) * files.length)]!;
+}
 
 /** Donde va el decorado de una casilla: encima, algo movido y girado (siempre igual para la misma casilla). */
 function decorPlace(pos: Pos, top: number): THREE.Matrix4 {
   const shift = (salt: number) => (tileNoise(pos, salt) - 0.5) * DECOR_JITTER;
   const at = new THREE.Vector3(pos.x + shift(1), top, pos.y + shift(2));
-  const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.floor(tileNoise(pos, 3) * 4) * (Math.PI / 2));
-  return new THREE.Matrix4().compose(at, turn, new THREE.Vector3(1, 1, 1));
+  return new THREE.Matrix4().compose(at, quarterTurn(pos, 3), new THREE.Vector3(1, 1, 1));
 }
 
 /** Las casillas de cada clase de modelo; las de agua, con el agua que se mueve (water.ts). */
-function tileMeshes(library: GlbLibrary, s: GameState, byTile: ReadonlyMap<TileModel, Pos[]>): PlacedMesh[] {
-  return [...byTile].flatMap(([tile, positions]) => {
-    const placed = instanced(library, tile, positions, positions.map(tilePlace));
-    if (MOVING_WATER.has(tile)) for (const { mesh } of placed) makeWater(mesh, s, positions);
+function tileMeshes(library: GlbLibrary, s: GameState, byFile: ReadonlyMap<string, Pos[]>): PlacedMesh[] {
+  return [...byFile].flatMap(([file, positions]) => {
+    const placed = instanced(library, file, positions, positions.map(tilePlace));
+    if (MOVING_WATER.has(pieceAt(s, positions[0]!).tile)) for (const { mesh } of placed) makeWater(mesh, s, positions);
     return placed;
   });
 }
@@ -196,8 +218,11 @@ function shade(placed: readonly PlacedMesh[], seen: Grid<boolean>): void {
 export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   const grid = mapGrid(s);
   const positions = [...grid.cells()].map((cell) => cell.pos);
-  const byTile = groupBy(positions, (pos) => pieceAt(s, pos).tile);
-  const tiles = tileMeshes(library, s, byTile);
+  const tiles = tileMeshes(
+    library,
+    s,
+    groupBy(positions, (pos) => tileFile(s, pos)),
+  );
   const decor = decorMeshes(library, s, positions);
   const object = new THREE.Group();
   object.add(...[...tiles, ...decor].map((placed) => placed.mesh));
@@ -213,6 +238,6 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
     update: (seconds) => {
       waterClock.value += seconds;
     },
-    sandTiles: byTile.get('tile_sand') ?? [],
+    sandTiles: positions.filter((pos) => pieceAt(s, pos).tile === 'tile_sand'),
   };
 }

@@ -1,0 +1,64 @@
+ashfox-model 1
+asset tile_sand_0 {
+  rig contract StaticRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+  }
+  skeleton StaticSkeleton implements StaticRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart base box { width = 64px; height = 26px; coverage = opaque; }
+    chart top box { width = 64px; height = 18px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = sandstone; background-alpha = 255;
+      palette {
+        sandstone = (#9a5a2a, #c47a3c, #e29b55);
+        sandstone_spots = (#7e4620, #a2602e, #c47a3c);
+        sand = (#d99a3c, #f2c262, #ffe08e);
+        sand_spots = (#c4842e, #dca24a, #f0bd62);
+        ripple_d = #d29540;
+        dune_d = #d29540;
+        shine_l = #ffeab0;
+      }
+      stamp ripple { pixels = "ddddd"; d = ripple_d; }
+      stamp dune { pixels = "..ddd/dd..."; d = dune_d; }
+      stamp shine { pixels = "ll"; l = shine_l; }
+      chart base box {
+        origin = (0px, 0px); fill = sandstone;
+        pattern blotch { paint = sandstone_spots; scale = (4px, 1px, 4px); density = 0.3ratio; phase = 3; }
+      }
+      chart top box {
+        origin = (0px, 27px); fill = sand;
+        pattern blotch { paint = sand_spots; scale = (3px, 2px, 3px); density = 0.18ratio; phase = 3; }
+        face up { stamp ripple { at = (9px, 8px); } stamp ripple { at = (4px, 12px); } stamp ripple { at = (0px, 6px); } stamp ripple { at = (2px, 12px); } stamp dune { at = (10px, 7px); } stamp shine { at = (5px, 11px); } stamp shine { at = (14px, 3px); } }
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: StaticRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube base { origin = (-8u, -8u, -8u); size = (16u, 10u, 16u); surface = skin.base; }
+        cube top { origin = (-8u, 2u, -8u); size = (16u, 2u, 16u); surface = skin.top; }
+      }
+    }
+  }
+  export asset tile_sand_0 {
+    settings { density = 16; forward = north; }
+    skeleton = StaticSkeleton;
+    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+  }
+}

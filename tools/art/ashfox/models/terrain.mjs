@@ -46,30 +46,96 @@ export const PAINTS = {
   petal_purple: { ramp: ['#6a2a9a', '#9a46d0', '#c48af0'] },
   hat: { ramp: ['#141824', '#262c3c', '#3c4458'] },
   scarf: { ramp: ['#9a1c22', '#d8323a', '#ff6a62'] },
+  stem: { ramp: ['#2f7a2a', '#3f9a34', '#5cbf4a'] },
+  flower_center: { ramp: ['#c89a10', '#f2c81e', '#ffe866'] },
+  petal_white: { ramp: ['#c8ccd8', '#eef2fa', '#ffffff'] },
+  petal_pink: { ramp: ['#b8487a', '#ee6aa0', '#ffa0c8'] },
   carrot: { ramp: ['#c85a10', '#ee7a20', '#ff9a40'] },
 };
 
-/** Puntitos de flores en la hierba (como las del 2D). */
-const MEADOW_DOTS = {
-  name: 'meadow',
-  face: 'up',
-  pixels: 'y...r/.....',
-  colors: { y: '#ffe866', r: '#ff6a62' },
-  at: [
-    [2, 3],
-    [9, 11],
-    [10, 2],
-    [4, 12],
+/**
+ * Detalles de pixel que salpican la cara de arriba de cada suelo (como en el 2D): cada uno es un
+ * «stamp» de Ashfox. Cada variante de un suelo los reparte en otros sitios (con su semilla), asi las
+ * casillas no se ven todas iguales.
+ */
+const GROUND_DETAILS = {
+  grass: [
+    { name: 'tuft', pixels: 'd.d/.d.', colors: { d: '#3f8526' }, weight: 4 },
+    { name: 'daisy', pixels: '.w./wyw/.w.', colors: { w: '#f2f5ff', y: '#ffd447' }, weight: 2 },
+    { name: 'poppy', pixels: 'r', colors: { r: '#ff5a50' }, weight: 2 },
+    { name: 'buttercup', pixels: 'y', colors: { y: '#ffe866' }, weight: 3 },
+    { name: 'clearing', pixels: 'll./lll', colors: { l: '#a8e05a' }, weight: 2 },
+  ],
+  sand: [
+    { name: 'ripple', pixels: 'ddddd', colors: { d: '#d29540' }, weight: 4 },
+    { name: 'dune', pixels: '..ddd/dd...', colors: { d: '#d29540' }, weight: 3 },
+    { name: 'shine', pixels: 'll', colors: { l: '#ffeab0' }, weight: 3 },
+    { name: 'pebble', pixels: 'pq', colors: { p: '#8a7a66', q: '#b8a68c' }, weight: 2 },
+  ],
+  snow: [
+    { name: 'crack', pixels: 'c.../.cc./...c', colors: { c: '#9fc0e4' }, weight: 3 },
+    { name: 'drift', pixels: 'bbb', colors: { b: '#d6e6f6' }, weight: 4 },
+    { name: 'sparkle', pixels: 's', colors: { s: '#bcd6f0' }, weight: 3 },
+  ],
+  forest_floor: [
+    { name: 'leaves', pixels: 'o.y/.o.', colors: { o: '#b06a2a', y: '#c8a030' }, weight: 3 },
+    { name: 'moss', pixels: 'mm/m.', colors: { m: '#2a6420' }, weight: 4 },
+    { name: 'mushroom', pixels: 'rw', colors: { r: '#e8323a', w: '#fff2e0' }, weight: 1 },
   ],
 };
+/** Cuantos detalles lleva una casilla de cada suelo. */
+const DETAILS_PER_TILE = { grass: 9, sand: 7, snow: 6, forest_floor: 8 };
+
+/** Azar con semilla (mulberry32): la misma variante sale siempre igual. */
+function seeded(seed) {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let mixed = Math.imul(state ^ (state >>> 15), 1 | state);
+    mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed);
+    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const stampSize = (pixels) => {
+  const rows = pixels.split('/');
+  return [rows[0].length, rows.length];
+};
+
+/** Los detalles de una variante: de cada clase, en que sitios de la cara de arriba (16 x 16) va. */
+function groundStamps(ground, seed) {
+  const random = seeded(seed);
+  const details = GROUND_DETAILS[ground];
+  const bag = details.flatMap((detail) => Array.from({ length: detail.weight }, () => detail));
+  const spots = new Map(details.map((detail) => [detail.name, []]));
+  for (let count = 0; count < DETAILS_PER_TILE[ground]; count++) {
+    const detail = bag[Math.floor(random() * bag.length)];
+    const [width, height] = stampSize(detail.pixels);
+    spots.get(detail.name).push([Math.floor(random() * (17 - width)), Math.floor(random() * (17 - height))]);
+  }
+  return details
+    .filter((detail) => spots.get(detail.name).length > 0)
+    .map(({ name, pixels, colors }) => ({ name, face: 'up', pixels, colors, at: spots.get(name) }));
+}
+
+/** Las variantes de un suelo: `tile_<nombre>_<n>`, cada una con sus detalles y sus manchas en otro sitio. */
+function groundVariants(name, ground, side, count) {
+  return Object.fromEntries(
+    Array.from({ length: count }, (_, index) => [
+      `tile_${name}_${index}`,
+      land(ground, side, groundStamps(ground, 101 + index * 37), index * 17 + 3),
+    ]),
+  );
+}
+
 const EYES = { name: 'eyes', face: 'north', pixels: 'k..k', colors: { k: '#141824' }, at: [[0, 1]] };
 
 /** Una casilla de tierra: el bloque de abajo (sus lados se ven en las orillas) y la capa de arriba. */
-function land(top, side, stamps = []) {
+function land(top, side, stamps = [], phase = 7) {
   return {
     cubes: [
-      { name: 'base', origin: [-8, -8, -8], size: [16, 10, 16], paint: side },
-      { name: 'top', origin: [-8, 2, -8], size: [16, 2, 16], paint: top, stamps },
+      { name: 'base', origin: [-8, -8, -8], size: [16, 10, 16], paint: side, phase },
+      { name: 'top', origin: [-8, 2, -8], size: [16, 2, 16], paint: top, stamps, phase },
     ],
   };
 }
@@ -107,27 +173,62 @@ function mountain(layers) {
   };
 }
 
-/** Una mata de flores en (x, z): hojas y unos petalos encima. */
-function bush(id, [x, z], petal) {
+/**
+ * Una flor en (x, z): tallo y, arriba, cuatro petalos en cruz alrededor del centro amarillo (vista
+ * desde arriba, una flor de pixel como las del 2D).
+ */
+function flower(id, [x, z], height, petal) {
+  const top = height;
   const petals = [
-    [x - 2, z - 2],
-    [x + 1, z - 1],
-    [x - 1, z + 1],
-    [x + 1, z + 1],
+    [x - 1, z],
+    [x + 1, z],
+    [x, z - 1],
+    [x, z + 1],
   ];
   return [
-    { name: `${id}_leaves`, origin: [x - 3, 0, z - 3], size: [6, 2, 6], paint: 'leaf' },
-    ...petals.map(([px, pz], index) => ({ name: `${id}_petal${index}`, origin: [px, 2, pz], size: [1, 1, 1], paint: petal })),
+    { name: `${id}_stem`, origin: [x, 0, z], size: [1, height, 1], paint: 'stem' },
+    { name: `${id}_center`, origin: [x, top, z], size: [1, 1, 1], paint: 'flower_center' },
+    ...petals.map(([px, pz], index) => ({ name: `${id}_petal${index}`, origin: [px, top, pz], size: [1, 1, 1], paint: petal })),
   ];
 }
 
-const flowers = (petal) => ({ cubes: [...bush('a', [-3, -2], petal), ...bush('b', [3, 3], petal)] });
+/** Una mata baja de hojas en (x, z). */
+const leaves = (id, [x, z], width) => ({
+  name: `${id}_leaves`,
+  origin: [x - width / 2, 0, z - width / 2],
+  size: [width, 1, width],
+  paint: 'leaf',
+});
+
+/** Separacion minima entre flores (en las dos direcciones): si no, sus petalos se tapan. */
+const FLOWER_SPACING = 3;
+
+/** Hasta `count` sitios de `spot()` separados al menos `spacing` entre si (los que no caben se dejan). */
+function spreadSpots(spot, count, spacing) {
+  const chosen = [];
+  for (let tries = 0; tries < count * 20 && chosen.length < count; tries++) {
+    const [x, z] = spot();
+    if (chosen.every(([cx, cz]) => Math.max(Math.abs(cx - x), Math.abs(cz - z)) >= spacing)) chosen.push([x, z]);
+  }
+  return chosen;
+}
+
+/** Un macizo de flores: unas matas de hojas y flores de distintas alturas repartidas (con su semilla). */
+function flowerPatch(petals, seed) {
+  const random = seeded(seed);
+  const spot = () => [Math.floor(random() * 11) - 5, Math.floor(random() * 11) - 5];
+  const clumps = [leaves('a', spot(), 4), leaves('b', spot(), 3), leaves('c', spot(), 3)];
+  const blooms = spreadSpots(spot, 6, FLOWER_SPACING).map((at, index) =>
+    flower(`f${index}`, at, 2 + Math.floor(random() * 3), petals[index % petals.length]),
+  );
+  return { cubes: [...clumps, ...blooms.flat()] };
+}
 
 export const MODELS = {
-  tile_grass: land('grass', 'earth', [MEADOW_DOTS]),
-  tile_forest: land('forest_floor', 'earth'),
-  tile_sand: land('sand', 'sandstone'),
-  tile_snow: land('snow', 'ice_rock'),
+  ...groundVariants('grass', 'grass', 'earth', 4),
+  ...groundVariants('forest', 'forest_floor', 'earth', 3),
+  ...groundVariants('sand', 'sand', 'sandstone', 4),
+  ...groundVariants('snow', 'snow', 'ice_rock', 3),
   tile_water: liquid('water', 1),
   tile_deep: liquid('deep', 0),
   tile_shallow: liquid('shallow', 2),
@@ -219,9 +320,10 @@ export const MODELS = {
       { name: 'bloom', origin: [3, 3, 2], size: [2, 1, 2], paint: 'petal_red' },
     ],
   },
-  flowers_red: flowers('petal_red'),
-  flowers_yellow: flowers('petal_yellow'),
-  flowers_purple: flowers('petal_purple'),
+  flowers_red: flowerPatch(['petal_red', 'petal_red', 'petal_white'], 11),
+  flowers_yellow: flowerPatch(['petal_yellow', 'petal_yellow', 'petal_white'], 23),
+  flowers_purple: flowerPatch(['petal_purple', 'petal_pink'], 37),
+  flowers_mixed: flowerPatch(['petal_red', 'petal_yellow', 'petal_purple', 'petal_white', 'petal_pink'], 53),
   snowman: {
     cubes: [
       { name: 'body', origin: [-3, 0, -3], size: [6, 5, 6], paint: 'snowcap' },

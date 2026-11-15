@@ -1,5 +1,5 @@
 ashfox-model 1
-asset tile_grass {
+asset tile_forest_1 {
   rig contract StaticRig {
     handedness = right;
     frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
@@ -23,20 +23,25 @@ asset tile_grass {
       palette {
         earth = (#5a3420, #8a5530, #b47a45);
         earth_spots = (#4a2a18, #6e4228, #8f5b36);
-        grass = (#4f9a2e, #7cc63e, #a8e05a);
-        grass_spots = (#3f8526, #5fae34, #8fd14f);
-        meadow_y = #ffe866;
-        meadow_r = #ff6a62;
+        forest_floor = (#2f6f24, #468f2f, #62ae3c);
+        forest_floor_spots = (#255a1d, #357a26, #4e9630);
+        leaves_o = #b06a2a;
+        leaves_y = #c8a030;
+        moss_m = #2a6420;
+        mushroom_r = #e8323a;
+        mushroom_w = #fff2e0;
       }
-      stamp meadow { pixels = "y...r/....."; y = meadow_y; r = meadow_r; }
+      stamp leaves { pixels = "o.y/.o."; o = leaves_o; y = leaves_y; }
+      stamp moss { pixels = "mm/m."; m = moss_m; }
+      stamp mushroom { pixels = "rw"; r = mushroom_r; w = mushroom_w; }
       chart base box {
         origin = (0px, 0px); fill = earth;
-        pattern blotch { paint = earth_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 7; }
+        pattern blotch { paint = earth_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 20; }
       }
       chart top box {
-        origin = (0px, 27px); fill = grass;
-        pattern blotch { paint = grass_spots; scale = (2px, 2px, 2px); density = 0.18ratio; phase = 7; }
-        face up { stamp meadow { at = (2px, 3px); } stamp meadow { at = (9px, 11px); } stamp meadow { at = (10px, 2px); } stamp meadow { at = (4px, 12px); } }
+        origin = (0px, 27px); fill = forest_floor;
+        pattern blotch { paint = forest_floor_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 20; }
+        face up { stamp leaves { at = (11px, 12px); } stamp leaves { at = (1px, 11px); } stamp leaves { at = (8px, 1px); } stamp leaves { at = (1px, 10px); } stamp moss { at = (14px, 10px); } stamp moss { at = (3px, 1px); } stamp moss { at = (4px, 11px); } stamp mushroom { at = (7px, 5px); } }
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -53,7 +58,7 @@ asset tile_grass {
       }
     }
   }
-  export asset tile_grass {
+  export asset tile_forest_1 {
     settings { density = 16; forward = north; }
     skeleton = StaticSkeleton;
     use Body as model { bind skeleton = StaticRig; bind skin = paint; };
