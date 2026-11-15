@@ -50,6 +50,11 @@ export const PAINTS = {
   missile: { ramp: ['#e2e6ee', '#eef2fa', '#f8faff'] },
   warhead: { ramp: ['#c02830', '#d8323a', '#e8484e'] },
   lamp: { ramp: ['#e8c020', '#f8d838', '#fff070'] },
+  brass: { ramp: ['#c09a30', '#d8b040', '#ecc858'] },
+  leather: { ramp: ['#4a2e1a', '#5a3a22', '#6a4630'] },
+  canteen: { ramp: ['#4e5a3a', '#5c6a44', '#6a7a4e'] },
+  bedroll: { ramp: ['#5e5a36', '#6a6640', '#76724a'] },
+  boot_grey: { ramp: ['#7a726a', '#8a8279', '#9d958d'] },
   blur: { ramp: ['#8fb8d8', '#a8cce6', '#c0dcf0'] },
   ...Object.fromEntries(
     Object.entries(SIDES).flatMap(([side, colors]) => [
@@ -66,11 +71,12 @@ export const PAINTS = {
 const FACES_AROUND = ['north', 'south', 'east', 'west'];
 const widthOn = (face, [width, , depth]) => (face === 'north' || face === 'south' ? width : depth);
 
-/** Una banda de un color en la fila `row` de los cuatro lados de un cubo de ese tamaño (cinturones, correas). */
-const band = (name, size, row, color) =>
+/** Una banda de un color, de `rows` filas desde la fila `row`, en los cuatro lados de un cubo de ese tamaño (cinturones, correas). */
+const band = (name, size, row, color, rows = 1) =>
   FACES_AROUND.map((face) => {
     const width = widthOn(face, size);
-    return { name: `${name}${width}`, face, pixels: 'x'.repeat(width), colors: { x: color }, at: [[0, row]] };
+    const pixels = Array(rows).fill('x'.repeat(width)).join('/');
+    return { name: `${name}${width}${rows > 1 ? `x${rows}` : ''}`, face, pixels, colors: { x: color }, at: [[0, row]] };
   });
 
 /** Una sola pieza en una cara (`pixels` con filas separadas por /), en (x, y) desde arriba a la izquierda. */
@@ -181,20 +187,305 @@ const infantry = (side, look, gear) => ({
   motions: CHIBI_MOTIONS,
 });
 
-/** El fusilero: fusil a la cintura, al frente (culata marron), y mochila. */
-const rifleman = (side) =>
-  infantry(side, { goggles: true }, () => [
-    { name: 'stock', bone: 'arm_right', origin: [1, 6, -3.5], size: [1, 2, 2], paint: 'pack' },
-    { name: 'rifle', bone: 'arm_right', origin: [1, 7, -9.5], size: [1, 1, 6], paint: 'gun' },
+// ---- Infanteria con detalle: el muñeco a 32 unidades por casilla (`detail: 2`) ----
+//
+// El doble de pixeles por lado que el chibi de arriba: cara de soldado (ojos y boca seria), casco
+// con gafas de verdad (marco y cristales que sobresalen) y su correa, cinturon con hebilla y
+// cartucheras, tirantes, mochila con solapa, bolsillos, cantimplora y manta, y botas con suela. En
+// guardia: piernas abiertas, una adelantada, y el fusil cruzado por delante con las dos manos. Cada
+// brazo es hombro y antebrazo, y el antebrazo apunta a su mano en el fusil (`grip`). Ashfox no deja
+// girar los huesos en reposo, asi que la pose son cubos girados. Fusil y brazos cuelgan del cuerpo y
+// se mueven con el.
+
+const DETAIL = 2;
+const HAIR = '#4a2c1c';
+const EAR = '#e0a47e';
+const MOUTH = '#8a4a3a';
+const SOLE = '#3a3430';
+const SHINE = '#ffffff';
+
+const TROOPER_BONES = [
+  { name: 'leg_left', parent: 'root', pivot: [-2.5, 9, 0] },
+  { name: 'leg_right', parent: 'root', pivot: [2.5, 9, 0] },
+  { name: 'torso', parent: 'root', pivot: [0, 9, 0] },
+  { name: 'head', parent: 'torso', pivot: [0, 17, 0] },
+  { name: 'arm_left', parent: 'torso', pivot: [-7, 16, 0] },
+  { name: 'arm_right', parent: 'torso', pivot: [7, 16, 0] },
+];
+const shoulderOf = (bone) => TROOPER_BONES.find((joint) => joint.name === bone).pivot;
+
+const TROOPER_TORSO = [10, 8, 6];
+const TROOPER_HEAD = [12, 9, 11];
+const TROOPER_HELMET = [14, 6, 13];
+const TROOPER_BOOT = [4, 3, 6];
+const TROOPER_LEG = [4, 6, 4];
+
+/** Una pierna con su bota, desde `[x, z]` (abiertas y una adelantada: en guardia). */
+const trooperLeg = (side, bone, [x, z]) => [
+  {
+    name: `boot_${bone}`,
+    bone,
+    origin: [x, 0, z - 1.5],
+    size: TROOPER_BOOT,
+    paint: 'boot_grey',
+    stamps: band('sole', TROOPER_BOOT, 2, SOLE),
+  },
+  {
+    name: bone,
+    bone,
+    origin: [x, 3, z],
+    size: TROOPER_LEG,
+    paint: `dark_${side}`,
+    stamps: [mark('knee', 'north', 'kk/kk', { k: SIDES[side].dark[0] }, [1, 2])],
+  },
+];
+
+/** El cuerpo: cinturon de dos filas, los tirantes de la mochila por delante y, encima, hebilla y cartucheras. */
+function trooperTorso(side) {
+  const straps = mark('straps', 'north', Array(6).fill('..s....s..').join('/'), { s: BROWN }, [0, 0]);
+  return [
     {
-      name: 'backpack',
+      name: 'torso',
       bone: 'torso',
-      origin: [-2.5, 5, 1.5],
-      size: [5, 4, 2],
-      paint: 'pack',
-      stamps: [mark('flap', 'south', 'ddddd', { d: BROWN }, [0, 1])],
+      origin: [-5, 9, -3],
+      size: TROOPER_TORSO,
+      paint: `team_${side}`,
+      stamps: [...band('belt', TROOPER_TORSO, 6, BROWN, 2), straps],
     },
+    {
+      name: 'buckle',
+      bone: 'torso',
+      origin: [-1.5, 9, -4],
+      size: [3, 2, 1],
+      paint: 'brass',
+      stamps: [mark('prong', 'north', '.k./.k.', { k: BROWN }, [0, 0])],
+    },
+    { name: 'pouch_left', bone: 'torso', origin: [-4.5, 9, -4], size: [2, 2, 1], paint: 'pack' },
+    { name: 'pouch_right', bone: 'torso', origin: [2.5, 9, -4], size: [2, 2, 1], paint: 'pack' },
+  ];
+}
+
+/** La cara (bajo el casco, que tapa las tres filas de arriba): ojos y la boca seria. */
+const TROOPER_FACE = ['............', '..kk....kk..', '..kk....kk..', '............', '....mmmm....'].join('/');
+
+/** La cabeza: cara delante, orejas y patillas a los lados y pelo detras. */
+const trooperHead = () => ({
+  name: 'head',
+  bone: 'head',
+  origin: [-6, 17, -6],
+  size: TROOPER_HEAD,
+  paint: 'skin',
+  stamps: [
+    mark('face', 'north', TROOPER_FACE, { k: EYE, m: MOUTH }, [0, 3]),
+    ...['east', 'west'].map((face) => mark('ear', face, 'hhhhhhhhhhh/....ee...../....ee.....', { h: HAIR, e: EAR }, [0, 3])),
+    mark('hair', 'south', Array(3).fill('h'.repeat(12)).join('/'), { h: HAIR }, [0, 3]),
+  ],
+});
+
+/** Un cristal de las gafas, que sobresale del marco, con su brillo arriba a la izquierda. */
+const lens = (name, x) => ({
+  name,
+  bone: 'head',
+  origin: [x, 25, -9],
+  size: [4, 2, 1],
+  paint: 'glass',
+  stamps: [mark('lens_shine', 'north', 'w', { w: SHINE }, [0, 0])],
+});
+
+/** El casco: las gafas delante (marco y cristales) con su correa por los lados, la copa y la nuca. */
+function trooperHelmet(side) {
+  const team = `team_${side}`;
+  const strap = band('helmet_strap', TROOPER_HELMET, 2, BROWN, 2).filter((stamp) => stamp.face === 'east' || stamp.face === 'west');
+  return [
+    { name: 'helmet', bone: 'head', origin: [-7, 23, -7], size: TROOPER_HELMET, paint: team, stamps: strap },
+    { name: 'helmet_top', bone: 'head', origin: [-5, 29, -5], size: [10, 2, 9], paint: team },
+    { name: 'neck_guard', bone: 'head', origin: [-7, 20, 4], size: [14, 3, 2], paint: team },
+    { name: 'goggles', bone: 'head', origin: [-6, 24, -8], size: [12, 4, 1], paint: 'leather' },
+    lens('lens_left', -5),
+    lens('lens_right', 1),
+  ];
+}
+
+const toRadians = (degrees) => (degrees * Math.PI) / 180;
+const toDegrees = (radians) => (radians * 180) / Math.PI;
+const roundToHalf = (value) => Math.round(value * 2) / 2;
+const plus = (a, b) => a.map((value, axis) => value + b[axis]);
+const minus = (a, b) => a.map((value, axis) => value - b[axis]);
+
+/** Un vector girado como gira Ashfox un cubo (`rotation` en grados, orden xyz: primero z, luego y, luego x). */
+function rotated([x, y, z], [aroundX, aroundY, aroundZ]) {
+  const [cx, sx, cy, sy, cz, sz] = [aroundX, aroundY, aroundZ].flatMap((degrees) => [
+    Math.cos(toRadians(degrees)),
+    Math.sin(toRadians(degrees)),
   ]);
+  const [x1, y1] = [x * cz - y * sz, x * sz + y * cz];
+  const [x2, z2] = [x1 * cy + z * sy, -x1 * sy + z * cy];
+  return [x2, y1 * cx - z2 * sx, y1 * sx + z2 * cx];
+}
+/** Un punto girado alrededor de `pivot`. */
+const turnedAround = (point, pivot, rotation) => plus(pivot, rotated(minus(point, pivot), rotation));
+
+const UPPER_ARM = [3, 5, 3];
+const FOREARM_SECTION = 3;
+const HAND = [3, 3, 3];
+/** Desde el hombro hasta el codo, con el brazo colgando (el antebrazo sale de ahi). */
+const ELBOW_DROP = 3.5;
+
+/** El giro (grados en x y en y) que deja un cubo que apunta al frente (-z) apuntando hacia `direction`. */
+function aimedAt([dx, dy, dz]) {
+  const length = Math.hypot(dx, dy, dz);
+  return [toDegrees(Math.atan2(dy, -dz)), toDegrees(Math.asin(-dx / length)), 0].map(roundToHalf);
+}
+
+/**
+ * Un brazo que coge el fusil: el hombro girado (`shoulder`, grados en x hacia delante y en z hacia
+ * dentro o fuera) y el antebrazo, recto desde el codo, apuntando a `grip` (donde va el centro de la
+ * mano), con el largo que haga falta.
+ */
+function trooperArm(side, bone, { shoulder: shoulderTurn, grip }) {
+  const shoulder = shoulderOf(bone);
+  const elbow = turnedAround(plus(shoulder, [0, -ELBOW_DROP, 0]), shoulder, shoulderTurn).map(roundToHalf);
+  const toGrip = minus(grip, elbow);
+  const forearm = Math.max(1, Math.round(Math.hypot(...toGrip) - HAND[2] / 2));
+  const aim = { rotation: aimedAt(toGrip), pivot: elbow };
+  const [x, y, z] = elbow;
+  return [
+    {
+      name: `upper_${bone}`,
+      bone,
+      origin: [shoulder[0] - 1.5, 12, -1.5],
+      size: UPPER_ARM,
+      paint: `team_${side}`,
+      rotation: shoulderTurn,
+      pivot: shoulder,
+    },
+    {
+      name: `fore_${bone}`,
+      bone,
+      origin: [x - 1.5, y - 1.5, z - forearm],
+      size: [FOREARM_SECTION, FOREARM_SECTION, forearm],
+      paint: `team_${side}`,
+      ...aim,
+    },
+    { name: `hand_${bone}`, bone, origin: [x - 1.5, y - 1.5, z - forearm - HAND[2]], size: HAND, paint: 'skin', ...aim },
+  ];
+}
+
+/**
+ * El fusil, en guardia: cruzado por delante a la altura del pecho, la culata a la derecha y la boca
+ * hacia delante, a la izquierda y algo alzada (`RIFLE_TURN` grados). Sus piezas se describen como si apuntara al frente desde la
+ * empuñadura (`RIGHT_GRIP`) y se giran todas juntas alrededor de ella.
+ */
+const RIGHT_GRIP = [3.5, 13, -5];
+const RIFLE_TURN = [10, 30, 0];
+/** Donde coge la mano izquierda el guardamanos, contado desde la empuñadura. */
+const LEFT_GRIP_ON_RIFLE = [0, 0.5, -6];
+const LEFT_GRIP = turnedAround(plus(RIGHT_GRIP, LEFT_GRIP_ON_RIFLE), RIGHT_GRIP, RIFLE_TURN);
+const RIFLE_PARTS = [
+  { name: 'stock', origin: [-1, -1.5, 0.5], size: [2, 3, 4], paint: 'pack' },
+  {
+    name: 'receiver',
+    origin: [-1, -1.5, -5],
+    size: [2, 4, 5],
+    paint: 'gun',
+    stamps: ['east', 'west'].map((face) => mark('receiver_side', face, '.ss.k', { s: '#6a7282', k: SLOT }, [0, 1])),
+  },
+  { name: 'magazine', origin: [-1, -5, -4], size: [2, 4, 2], paint: 'gun' },
+  { name: 'sight', origin: [-0.5, 2.5, -4], size: [1, 1, 2], paint: 'steel' },
+  { name: 'handguard', origin: [-1, -1, -11], size: [2, 3, 6], paint: 'pack' },
+  { name: 'barrel', origin: [-0.5, 0, -15], size: [1, 1, 4], paint: 'steel' },
+  { name: 'muzzle', origin: [-1, -0.5, -17], size: [2, 2, 2], paint: 'gun' },
+];
+const RIFLE = RIFLE_PARTS.map((part) => ({
+  ...part,
+  bone: 'torso',
+  origin: plus(RIGHT_GRIP, part.origin),
+  rotation: RIFLE_TURN,
+  pivot: RIGHT_GRIP,
+}));
+
+/** La mochila: el cuerpo con sus correas, la solapa de arriba con hebilla, el bolsillo de detras, la cantimplora y una funda a los lados y la manta enrollada encima. */
+const BACKPACK = [
+  {
+    name: 'backpack',
+    bone: 'torso',
+    origin: [-4.5, 9, 3],
+    size: [9, 8, 4],
+    paint: 'pack',
+    stamps: ['east', 'west'].map((face) => mark('pack_strap', face, 'd..d/d..d/d..d/d..d/d..d', { d: BROWN }, [0, 1])),
+  },
+  {
+    name: 'pack_flap',
+    bone: 'torso',
+    origin: [-5, 14, 2.5],
+    size: [10, 3, 5],
+    paint: 'leather',
+    stamps: [mark('flap_buckle', 'south', 'yy/yy', { y: '#e8c040' }, [4, 1])],
+  },
+  {
+    name: 'pack_pocket',
+    bone: 'torso',
+    origin: [-3, 9.5, 7],
+    size: [6, 4, 1],
+    paint: 'pack',
+    stamps: [mark('pocket_flap', 'south', 'dddddd/..yy..', { d: BROWN, y: '#e8c040' }, [0, 0])],
+  },
+  {
+    name: 'canteen',
+    bone: 'torso',
+    origin: [-6.5, 9.5, 3.5],
+    size: [2, 4, 3],
+    paint: 'canteen',
+    stamps: [mark('canteen_cap', 'west', '.k.', { k: SLOT }, [0, 0])],
+  },
+  {
+    name: 'side_pouch',
+    bone: 'torso',
+    origin: [4.5, 10, 3.5],
+    size: [2, 3, 3],
+    paint: 'leather',
+    stamps: [mark('pouch_flap', 'east', 'ddd', { d: '#3a2416' }, [0, 0])],
+  },
+  {
+    name: 'bedroll',
+    bone: 'torso',
+    origin: [-5, 17, 4],
+    size: [10, 3, 3],
+    paint: 'bedroll',
+    stamps: ['north', 'south'].map((face) => mark('ties', face, '..t....t../..t....t../..t....t..', { t: BROWN }, [0, 0])),
+  },
+];
+
+/** El muñeco con detalle de un equipo, con el fusil en las manos (sin lo que lleva a la espalda). */
+const trooper = (side) => [
+  ...trooperLeg(side, 'leg_left', [-5, -3]),
+  ...trooperLeg(side, 'leg_right', [1, -0.5]),
+  ...trooperTorso(side),
+  trooperHead(),
+  ...trooperHelmet(side),
+  ...trooperArm(side, 'arm_right', { shoulder: [15, 0, 15], grip: RIGHT_GRIP }),
+  ...trooperArm(side, 'arm_left', { shoulder: [65, 0, 20], grip: LEFT_GRIP }),
+  ...RIFLE,
+];
+
+/** Las manos no sueltan el fusil: al andar solo se mueven las piernas y el cuerpo; al disparar, el cuerpo se echa atras. */
+const TROOPER_MOTIONS = {
+  idle: loopMotion(1.6, [sway('torso', [0, 3, 0], 1.6), sway('head', [3, 0, 2], 1.6)]),
+  drive: loopMotion(
+    0.5,
+    [sway('leg_left', [30, 0, 0], 0.5), sway('leg_right', [-30, 0, 0], 0.5), sway('torso', [0, 0, 3], 0.5), sway('head', [2, 0, 0], 0.5)],
+    'linear',
+  ),
+  fire: onceMotion(0.4, [kick('torso', 8), kick('head', -4)]),
+};
+
+/** El fusilero: fusil al frente en las dos manos, y mochila con manta. */
+const rifleman = (side) => ({
+  detail: DETAIL,
+  bones: TROOPER_BONES,
+  cubes: [...trooper(side), ...BACKPACK],
+  motions: TROOPER_MOTIONS,
+});
 
 /** El del bazuca: el tubo al hombro, largo, con sus bocas y la mira. */
 const bazooka = (side) =>
@@ -283,6 +574,24 @@ function tank(side) {
       { name: 'mantlet', bone: 'turret', origin: [-2.5, 6.5, -4], size: [5, 2, 1], paint: `dark_${side}` },
       { name: 'barrel_left', bone: 'barrel', origin: [-2, 7, -11], size: [1, 1, 8], paint: 'steel' },
       { name: 'barrel_right', bone: 'barrel', origin: [1, 7, -11], size: [1, 1, 8], paint: 'steel' },
+    ],
+  };
+}
+
+function heavyTank(side) {
+  const team = `team_${side}`;
+  return {
+    bones: VEHICLE_BONES([0, 6.5, 0.5], [0, 8, -3.5]),
+    motions: VEHICLE_MOTIONS,
+    cubes: [
+      ...tracks(16, 16),
+      { name: 'hull', bone: 'hull', origin: [-7, 3.5, -8], size: [14, 3.5, 16], paint: team },
+      { name: 'turret', bone: 'turret', origin: [-5, 7, -4], size: [10, 3.5, 8], paint: team },
+      { name: 'turret_top', bone: 'turret', origin: [-4, 10.5, -3], size: [8, 1.5, 5], paint: team },
+      { name: 'hatch', bone: 'turret', origin: [-2, 11.5, 1], size: [2.5, 1, 2], paint: `dark_${side}` },
+      { name: 'mantlet', bone: 'turret', origin: [-3, 7.5, -4], size: [6, 2.5, 1], paint: `dark_${side}` },
+      { name: 'barrel_left', bone: 'barrel', origin: [-2.5, 8, -12], size: [1.5, 1.5, 10], paint: 'steel' },
+      { name: 'barrel_right', bone: 'barrel', origin: [0.5, 8, -12], size: [1.5, 1.5, 10], paint: 'steel' },
     ],
   };
 }
@@ -725,6 +1034,7 @@ const UNITS = {
   MSoldier: mortar,
   FSoldier: biker,
   Tank: tank,
+  HeavyTank: heavyTank,
   LTank: lightTank,
   WTank: amphibiousTank,
   Artillery: artillery,
