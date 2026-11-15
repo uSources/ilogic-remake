@@ -1,7 +1,7 @@
 /**
  * La partida del prototipo 3D: una escaramuza normal (el mismo generador de mapas, las mismas reglas
- * y la misma IA que el juego), una persona contra la IA. La semilla del mapa se puede elegir con
- * `?seed=` en la direccion, para comparar el mismo mapa en 2D y en 3D.
+ * y la misma IA que el juego), una persona contra la IA, con la regla de elevacion. La semilla del mapa
+ * se puede elegir con `?seed=` en la direccion, para comparar el mismo mapa en 2D y en 3D.
  */
 import { screenControllers } from '../core/controllers';
 import { createMatch } from '../core/defaultGames';
@@ -25,9 +25,13 @@ function seedFromAddress(): number {
   return Number.isInteger(asked) && asked > 0 ? asked : DEFAULT_SEED;
 }
 
+/** La regla de elevacion, encendida salvo con `?elevation=0` (para comparar con el mapa llano). */
+const elevationFromAddress = (): boolean => new URLSearchParams(window.location.search).get('elevation') !== '0';
+
 /** La escaramuza del prototipo en juego: la persona contra la IA. */
 export function startPrototype(): PrototypeStart {
-  const state = createMatch(skirmishConfig({ seed: seedFromAddress(), teams: duel('human', 'ai') }));
+  const settingChanges = { elevation: elevationFromAddress() };
+  const state = createMatch(skirmishConfig({ seed: seedFromAddress(), teams: duel('human', 'ai'), settingChanges }));
   const session = new GameSession(state, screenControllers(state));
   return { session, viewer: playerTeam(state) };
 }

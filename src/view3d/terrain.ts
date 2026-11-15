@@ -8,6 +8,7 @@
  */
 import * as THREE from 'three';
 import type { TerrainType } from '../core/content';
+import { elevationAt } from '../core/elevation';
 import { terrainAt, themeOf } from '../core/gameContent';
 import { mapGrid } from '../core/mapGrid';
 import type { GameState, Pos } from '../core/model';
@@ -160,8 +161,25 @@ const quarterTurn = (pos: Pos, salt: number): THREE.Quaternion =>
   new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.floor(tileNoise(pos, salt) * 4) * (Math.PI / 2));
 
 /** Donde va una casilla, girada (los suelos son cuadrados: girarlos los varia sin que se note el corte). */
-const tilePlace = (pos: Pos): THREE.Matrix4 =>
-  new THREE.Matrix4().compose(new THREE.Vector3(pos.x, 0, pos.y), quarterTurn(pos, 5), new THREE.Vector3(1, 1, 1));
+const tilePlace = (pos: Pos, lift: number): THREE.Matrix4 =>
+  new THREE.Matrix4().compose(new THREE.Vector3(pos.x, lift, pos.y), quarterTurn(pos, 5), new THREE.Vector3(1, 1, 1));
+
+/** Lo que sube cada nivel de altura (regla de elevacion, core/elevation.ts), en casillas. */
+const LEVEL_HEIGHT = 0.3;
+const liftOf = (s: GameState, pos: Pos): number => elevationAt(s, pos) * LEVEL_HEIGHT;
+
+/**
+ * Donde va cada casilla y, debajo de las altas, una copia por nivel: rellenan el desnivel y en el
+ * borde del mapa y frente a lo mas bajo se ven como terrazas (la capa de arriba de cada copia, con
+ * su borde de hierba o arena). Cada sitio lleva su casilla (para la niebla).
+ */
+function stackedPlaces(s: GameState, positions: readonly Pos[]): { positions: Pos[]; places: THREE.Matrix4[] } {
+  const stacked = positions.flatMap((pos) => Array.from({ length: elevationAt(s, pos) + 1 }, (_, below) => ({ pos, below })));
+  return {
+    positions: stacked.map(({ pos }) => pos),
+    places: stacked.map(({ pos, below }) => tilePlace(pos, liftOf(s, pos) - below * LEVEL_HEIGHT)),
+  };
+}
 
 /** El modelo de la casilla: su clase y, si tiene variantes, una (siempre la misma). */
 function tileFile(s: GameState, pos: Pos): string {
@@ -178,8 +196,9 @@ function decorPlace(pos: Pos, top: number): THREE.Matrix4 {
 
 /** Las casillas de cada clase de modelo; las de agua, con el agua que se mueve (water.ts). */
 function tileMeshes(library: GlbLibrary, s: GameState, byFile: ReadonlyMap<string, Pos[]>): PlacedMesh[] {
-  return [...byFile].flatMap(([file, positions]) => {
-    const placed = instanced(library, file, positions, positions.map(tilePlace));
+  return [...byFile].flatMap(([file, tilePositions]) => {
+    const { positions, places } = stackedPlaces(s, tilePositions);
+    const placed = instanced(library, file, positions, places);
     const tile = pieceAt(s, positions[0]!).tile;
     if (MOVING_WATER.has(tile)) for (const { mesh } of placed) makeWater(mesh, s, positions);
     // La cara de arriba de la arena la dibuja su shader (dunas que siguen de casilla a casilla).
@@ -207,7 +226,7 @@ function decorMeshes(library: GlbLibrary, s: GameState, positions: readonly Pos[
       library,
       decor,
       at,
-      at.map((pos) => decorPlace(pos, tileTop(pieceAt(s, pos).tile))),
+      at.map((pos) => decorPlace(pos, tileTop(pieceAt(s, pos).tile) + liftOf(s, pos))),
     ),
   );
 }
@@ -231,7 +250,7 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   const object = new THREE.Group();
   object.add(...[...tiles, ...decor].map((placed) => placed.mesh));
   const heights = grid.createLayer(0);
-  for (const pos of positions) heights.set(pos, tileTop(pieceAt(s, pos).tile));
+  for (const pos of positions) heights.set(pos, tileTop(pieceAt(s, pos).tile) + liftOf(s, pos));
   const placedOf = new Map(tiles.map((placed) => [placed.mesh as THREE.Object3D, placed]));
   return {
     object,

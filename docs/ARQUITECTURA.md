@@ -627,6 +627,7 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `ambush` | `ambush` | los enemigos que no se ven no cuentan al planear; al chocar, emboscada |
 | `counterattack` | `counterattack` | `MELEE_COUNTER`: quien contraataca |
 | `bounty` | `bounty` > 0 | el botin al destruir (`killRewards`: lo que se cobra, `killReward` de rules/economy.ts, que preguntan el panel de combate y la IA) |
+| `elevation` | `elevation` (apagado por defecto) | la altura de cada casilla al empezar (`matchSetup`, `elevationFor` de core/elevation.ts, en `GameState.elevation`), el acierto desde arriba o desde abajo (`elevationHit`), la vision desde lo alto (`elevationVision`) y lo que cuesta subir (`elevationClimb`: `enterCosts` recibe tambien la casilla de la que se viene); los aviones no lo notan |
 
 Las listas (`RuleHooks`, en `ruleModules/hooks.ts`, solo tipos): `hitModifiers`, `coverPiercing`,
 `counterRules`, `combatSteps` (con su `CombatStage`), `roundPhases` (con su `RoundStage`),

@@ -56,6 +56,10 @@ export const SETTINGS_SCHEMA: { readonly [Rule in keyof MatchSettings]: SettingS
   controlPoints: count(0, 6),
   controlIncome: count(0, 1e6),
   controlRadius: count(0, 3),
+  elevation: SWITCH,
+  elevationHit: FRACTION,
+  elevationVision: count(0, 5),
+  elevationClimb: count(0, 5),
 };
 
 /** Los nombres de todas las reglas. */

@@ -10,6 +10,7 @@ import { ABILITIES } from './abilities';
 import { AMBUSH } from './ambush';
 import { BOUNTY } from './bounty';
 import { CONTROL_POINTS } from './controlPoints';
+import { ELEVATION } from './elevation';
 import { COUNTERATTACK } from './counterattack';
 import { FLANK } from './flank';
 import { FOREST_HIDES } from './forestHides';
@@ -44,6 +45,7 @@ export const RULE_MODULES: readonly RuleModule[] = [
   AMBUSH,
   COUNTERATTACK,
   BOUNTY,
+  ELEVATION,
 ];
 
 /**

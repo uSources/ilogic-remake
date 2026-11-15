@@ -15,6 +15,7 @@ import { allianceCount, isControllerKind } from './teams';
 import { isDefeatReason } from './rules/falls';
 import type { GeneralState, SavedGameState } from './model';
 import { Grid, type GridBounds } from './util/grid';
+import { isElevationGrid } from './elevation';
 import { isInt, isPosOn, isObject, isUid } from './util/validation';
 
 /**
@@ -285,6 +286,7 @@ export function cleanOptionalParts(frame: SaveFrame, saved: SavedGame): void {
   dropIfInvalid(saved, 'setup', (setup) => isValidSetup(frame, setup));
   dropIfInvalid(saved, 'weather', (weather) => isValidWeather(frame, weather));
   cleanSquads(frame, saved);
+  dropIfInvalid(saved, 'elevation', (elevation) => isElevationGrid(frame.board, elevation));
   dropIfInvalid(saved, 'controlPoints', (points) => Array.isArray(points) && points.every((point) => isControlPoint(frame, point)));
   // Si esta roto, solo no se puede deshacer.
   dropIfInvalid(saved, 'undoableMoves', (moves) => Array.isArray(moves) && moves.every((move) => isValidUndoableMove(frame, move)));
