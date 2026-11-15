@@ -8,13 +8,16 @@ import * as THREE from 'three';
 const VERTEX = /* glsl */ `
 attribute float aAlpha;
 attribute float aSize;
+attribute vec3 aColor;
 uniform float uScale;
 varying float vAlpha;
+varying vec3 vColor;
 void main() {
   vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * viewPosition;
   gl_PointSize = aSize * uScale / -viewPosition.z;
   vAlpha = aAlpha;
+  vColor = aColor;
 }
 `;
 
@@ -22,8 +25,9 @@ const FRAGMENT = /* glsl */ `
 uniform vec3 uColor;
 uniform float uOpacity;
 varying float vAlpha;
+varying vec3 vColor;
 void main() {
-  gl_FragColor = vec4(uColor, uOpacity * vAlpha);
+  gl_FragColor = vec4(uColor * vColor, uOpacity * vAlpha);
   #include <colorspace_fragment>
 }
 `;
@@ -33,16 +37,20 @@ export class PixelPoints {
   readonly positions: Float32Array;
   readonly alphas: Float32Array;
   readonly sizes: Float32Array;
+  /** El color de cada una (por el de todas, `setLook`); sin tocar, blanco. */
+  readonly colors: Float32Array;
   private readonly material: THREE.ShaderMaterial;
 
   constructor(readonly count: number) {
     this.positions = new Float32Array(count * 3);
     this.alphas = new Float32Array(count);
     this.sizes = new Float32Array(count);
+    this.colors = new Float32Array(count * 3).fill(1);
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3));
     geometry.setAttribute('aAlpha', new THREE.BufferAttribute(this.alphas, 1));
     geometry.setAttribute('aSize', new THREE.BufferAttribute(this.sizes, 1));
+    geometry.setAttribute('aColor', new THREE.BufferAttribute(this.colors, 3));
     this.material = new THREE.ShaderMaterial({
       vertexShader: VERTEX,
       fragmentShader: FRAGMENT,
@@ -71,5 +79,6 @@ export class PixelPoints {
     attributes.position!.needsUpdate = true;
     attributes.aAlpha!.needsUpdate = true;
     attributes.aSize!.needsUpdate = true;
+    attributes.aColor!.needsUpdate = true;
   }
 }

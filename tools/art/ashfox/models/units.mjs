@@ -5,6 +5,8 @@
 // piernas andan, las ruedas giran, el casco se balancea) y 'fire' (al disparar). La torreta es el hueso
 // 'turret' (la gira el juego para apuntar) y el rotor del helicoptero, 'rotor'. Lo escribe generate.mjs.
 
+import { kick, loopMotion, onceMotion, recoil, spin, sway } from './motions.mjs';
+
 const SIDES = {
   blue: { team: ['#1d4fa8', '#2f74d6', '#5ea8f2'], dark: ['#163a7a', '#1f56a8', '#3f84d8'] },
   red: { team: ['#8a1a1a', '#c8302a', '#f0605a'], dark: ['#601212', '#962220', '#c84038'] },
@@ -36,69 +38,6 @@ export const PAINTS = {
 
 const EYES = { name: 'eyes', face: 'north', pixels: 'k..k', colors: { k: '#141824' }, at: [[1, 2]] };
 const GOGGLES = { name: 'goggles', face: 'north', pixels: 'gg.gg', colors: { g: '#9fe3ff' }, at: [[1, 0]] };
-
-// ---- Animaciones ----
-
-const loopMotion = (duration, tracks, interp = 'catmullrom') => ({
-  duration,
-  fps: 20,
-  loop: 'loop',
-  tracks: tracks.map((track) => ({ interp, ...track })),
-});
-const onceMotion = (duration, tracks) => ({
-  duration,
-  fps: 30,
-  loop: 'once',
-  tracks: tracks.map((track) => ({ interp: 'linear', ...track })),
-});
-/** Un vaiven de un hueso: de 0 a `amount` (grados en cada eje), de vuelta, al reves y a 0. */
-const sway = (bone, amount, duration) => ({
-  bone,
-  channel: 'rotation',
-  keys: [
-    [0, [0, 0, 0]],
-    [duration / 4, amount],
-    [duration / 2, [0, 0, 0]],
-    [(duration * 3) / 4, amount.map((value) => -value)],
-    [duration, [0, 0, 0]],
-  ],
-});
-/**
- * Un giro sin fin (ruedas, helices, ventilador), a saltos de un cuarto de lo que tarda la pieza en
- * verse igual (`symmetry`: 90 grados una rueda cuadrada, 180 una helice); al acabar vuelve a 0, que
- * se ve igual: Ashfox pide que un bucle acabe como empieza, y a saltos queda de juguete.
- */
-const spin = (bone, duration, { axis = 0, symmetry = 90, sign = -1 } = {}) => ({
-  bone,
-  channel: 'rotation',
-  interp: 'step',
-  keys: [
-    ...[0, 1, 2, 3].map((quarter) => [(duration * quarter) / 4, angleOn(axis, (sign * symmetry * quarter) / 4)]),
-    [duration, [0, 0, 0]],
-  ],
-});
-/** Un giro de esos grados sobre un eje (0 = x, 1 = y, 2 = z). */
-const angleOn = (axis, degrees) => [0, 1, 2].map((index) => (index === axis ? degrees : 0));
-/** El golpe de un disparo: el hueso se echa atras (giro en x) y vuelve. */
-const kick = (bone, degrees) => ({
-  bone,
-  channel: 'rotation',
-  keys: [
-    [0, [0, 0, 0]],
-    [0.06, [degrees, 0, 0]],
-    [0.4, [0, 0, 0]],
-  ],
-});
-/** El cañon se encoge un momento (retroceso) y vuelve. */
-const recoil = (bone) => ({
-  bone,
-  channel: 'scale',
-  keys: [
-    [0, [1, 1, 1]],
-    [0.05, [1.15, 1.15, 0.6]],
-    [0.4, [1, 1, 1]],
-  ],
-});
 
 // ---- Infanteria: el muñeco chibi ----
 

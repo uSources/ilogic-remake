@@ -105,15 +105,10 @@ export class GlbLibrary {
     return new GlbLibrary(new Map(loaded.filter((entry): entry is [string, LoadedModel] => entry !== null)));
   }
 
-  /** Una copia del edificio de ese tipo para ese lado, mirando hacia +z (null si el tipo no tiene GLB). */
-  building(buildingType: string, side: OwnerSide): THREE.Group | null {
+  /** Una copia del edificio de ese tipo para ese lado, con su animacion de reposo si la tiene (null si el tipo no tiene GLB). */
+  building(buildingType: string, side: OwnerSide): GlbUnit | null {
     const model = this.models.get(buildingFile(buildingType, buildingSideOf(side)));
-    if (!model) return null;
-    const copy = model.scene.clone();
-    copy.rotation.y = Math.PI;
-    const object = new THREE.Group();
-    object.add(copy);
-    return object;
+    return model ? animatedCopy(model) : null;
   }
 
   /** Las mallas de un modelo fijo (vacio si no esta cargado). */

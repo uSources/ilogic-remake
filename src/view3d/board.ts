@@ -5,12 +5,15 @@
  * se lee (las animaciones mueven las piezas y despues `sync` las deja donde dice la partida).
  */
 import * as THREE from 'three';
+import type { MovementMotion } from '../core/content';
+import { unitTypeOf } from '../core/gameContent';
 import type { Building, GameState, Pos, TeamId, Unit } from '../core/model';
 import { posKey } from '../core/geom';
 import { capturePointsOf, captureProgress, isOnMap, isShownTo, visibility } from '../core/rules';
 import type { Grid } from '../core/util/grid';
 import { isFriendly, ownerSideOf, sideOf, type OwnerSide } from '../ui/sides';
 import { newBadge, showBar } from './badges';
+import type { PuffKind, PuffSource } from './particles';
 import { buildModel, type TeamPaint } from './blocks';
 import type { GlbLibrary, GlbUnit } from './glbModels';
 import { buildingModelOf, unitModelOf } from './models';
@@ -27,6 +30,13 @@ const SIDE_PAINT: Readonly<Record<OwnerSide, TeamPaint>> = {
 };
 /** El color de la barra de captura de cada lado (los de la interfaz). */
 const CAPTURE_COLOR: Readonly<Record<OwnerSide, string>> = { own: '#3aa8ff', ally: '#3aa8ff', enemy: '#ff4d45', neutral: '#c9d2e3' };
+
+/** Donde sale el humo de la chimenea de cada edificio que la tiene (id de buildings.json), en el modelo de Ashfox (1/16 de casilla). */
+const CHIMNEYS: Readonly<Record<string, THREE.Vector3>> = { Factory: new THREE.Vector3(5, 13, 5).divideScalar(16) };
+/** Por encima de la unidad sale el humo de sus heridas. */
+const WOUND_SMOKE_LIFT = new THREE.Vector3(0, 0.45, 0);
+/** El humo de las heridas: gris de la mitad para abajo, negro de un cuarto para abajo. */
+const woundSmokeOf = (life: number): PuffKind | null => (life <= 25 ? 'darkSmoke' : life <= 50 ? 'smoke' : null);
 
 /** Una unidad propia que ya ha hecho todo en este turno se ve oscurecida: se lee de un vistazo cual queda. */
 const SPENT_TINT = 0.5;
@@ -51,6 +61,8 @@ export interface UnitPiece {
   readonly lifeBar: THREE.Sprite;
   /** El modelo GLB animado (Ashfox), si su tipo lo tiene; si no, es de bloques. */
   readonly glb: GlbUnit | null;
+  /** Como se mueve (movements.json, "motion"): que huella deja y si levanta polvo. */
+  readonly motion: MovementMotion;
   /** Segundos que lleva apareciendo (null: ya esta). */
   popping: number | null;
 }
@@ -60,6 +72,10 @@ interface BuildingPiece {
   readonly captureBar: THREE.Sprite;
   /** El lado con el que se pinto: si cambia, se vuelve a construir. */
   readonly side: OwnerSide;
+  /** Su modelo de Ashfox (con lo que se mueve: radares, banderas, la bomba del pozo), si lo tiene. */
+  readonly glb: GlbUnit | null;
+  /** Su tipo (id de buildings.json): de el sale si tiene chimenea. */
+  readonly type: string;
 }
 
 export class BoardView {
@@ -84,6 +100,26 @@ export class BoardView {
 
   pieceOf(uid: number): UnitPiece | undefined {
     return this.units.get(uid);
+  }
+
+  /**
+   * De donde sale humo ahora: las chimeneas (CHIMNEYS) y las unidades muy dañadas que se ven (gris por
+   * debajo de la mitad de vida, negro por debajo de un cuarto). Cada fuente con su nombre (para su
+   * ritmo) y el sitio del mundo de donde sale.
+   */
+  smokeSources(): PuffSource[] {
+    const chimneys = [...this.buildings].flatMap(([key, piece]) => {
+      const offset = CHIMNEYS[piece.type];
+      const model = piece.glb?.object.children[0];
+      return offset && model ? [{ key: `b${key}`, at: model.localToWorld(offset.clone()), kind: 'smoke' as const }] : [];
+    });
+    const wounded = this.s.units.flatMap((unit) => {
+      const piece = this.units.get(unit.uid);
+      const kind = woundSmokeOf(unit.life);
+      if (!piece?.object.visible || !kind) return [];
+      return [{ key: `u${unit.uid}`, at: piece.body.getWorldPosition(new THREE.Vector3()).add(WOUND_SMOKE_LIFT), kind }];
+    });
+    return [...chimneys, ...wounded];
   }
 
   /** La unidad se ve ahora (la niebla no la tapa). */
@@ -111,6 +147,7 @@ export class BoardView {
       piece.glb?.update(seconds);
       if (piece.popping !== null) growIn(piece, seconds);
     }
+    for (const piece of this.buildings.values()) piece.glb?.update(seconds);
   }
 
   private syncBuildings(): void {
@@ -137,11 +174,12 @@ export class BoardView {
   }
 
   private addBuilding(building: Building, side: OwnerSide): BuildingPiece {
-    const object = this.glbModels.building(building.type, side) ?? buildModel(buildingModelOf(building.type), SIDE_PAINT[side]);
+    const glb = this.glbModels.building(building.type, side);
+    const object = glb?.object ?? buildModel(buildingModelOf(building.type), SIDE_PAINT[side]);
     object.position.copy(this.groundOf(building));
     const captureBar = newBadge(BUILDING_BADGE_HEIGHT);
     object.add(captureBar);
-    const piece = { object, captureBar, side };
+    const piece = { object, captureBar, side, glb, type: building.type };
     this.buildings.set(buildingKey(building), piece);
     this.object.add(object);
     return piece;
@@ -201,6 +239,7 @@ export class BoardView {
       rotor: object.getObjectByName('rotor') ?? null,
       lifeBar,
       glb,
+      motion: unitTypeOf(this.s, unit).motion,
       popping: 0,
     };
     this.units.set(unit.uid, piece);
