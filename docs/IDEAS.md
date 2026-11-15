@@ -3,19 +3,16 @@
 Lista viva de lo que se ha hablado para Ilogic y aún no está hecho (o se descartó, y por qué). Se
 actualiza al terminar cada cosa: lo hecho sale de aquí y va a las notas de versión (`CHANGELOG.md`).
 
-Estado a 1 de noviembre de 2026, después de la versión 0.7.1 (la sección «Vista 3D», del 15 de noviembre). Ahora el foco es un núcleo PvE bueno;
-el PvP, después.
+Estado a 15 de noviembre de 2026, con la versión 0.10.0 (el juego en 3D). Ahora el foco es que la
+vista 3D tenga lo que tenía el 2D, con su forma por sistemas (`docs/PLAN-VISTA3D.md`), y un núcleo
+PvE bueno; el PvP, después.
 
 ## En marcha
 
 | Qué | Dónde | Estado |
 |---|---|---|
-| Órdenes con destino estilo RTS (atacar, capturar, defender allí) y escuadras con nombre, también con el dedo | PR #46 | Lista; falta fusionarla |
-| Puntos de control: 3 casillas en el centro que dan 1000 por ronda | PR #47 | Lista; falta fusionarla |
-| Que la IA enemiga juegue en grupo: fuego concentrado y camino libre entre aliados | PR #51 | Lista (gana el 60 % a la anterior; el atasco baja poco, de 90 % a 88 %) |
-| Órdenes con un gesto | PR #49 | Lista |
-| Borde de la pantalla y menús por el sistema común de controles | PR #50 | Lista |
-| Versión 0.8.0 con todo lo anterior | — | Después de lo anterior |
+| La vista 3D por sistemas, agnósticos al motor: la regla, ESLint y el plan | PR #97, `docs/PLAN-VISTA3D.md` | La regla y el plan, listos; los pasos 1 a 6, por hacer |
+| Efectos de sonido con Ashfox, opciones y el tanque pesado | Rama `3d` (otra sesión) | A medias; tiene que traer `main` antes de su PR |
 
 ## Vista 3D (lo que tenía el 2D y aún falta)
 
