@@ -1,0 +1,56 @@
+# Publica el servidor de partidas por la red (server/: un Worker de Cloudflare con un Durable Object
+# por sala) con cada push a main que lo toque. Requiere dos secretos del repositorio (Settings →
+# Secrets and variables → Actions): CLOUDFLARE_API_TOKEN (un token de la API con la plantilla
+# "Edit Cloudflare Workers") y CLOUDFLARE_ACCOUNT_ID (el id de la cuenta, en el panel de Workers).
+# Sin ellos, el workflow no hace nada (asi un fork o una cuenta sin servidor no falla). Ver
+# server/README.md.
+name: Servidor
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - 'src/core/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/server.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: servidor
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ¿Hay credenciales de Cloudflare?
+        id: auth
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -n "$TOKEN" ] && [ -n "$ACCOUNT" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::Servidor no publicado: faltan CLOUDFLARE_API_TOKEN o CLOUDFLARE_ACCOUNT_ID (ver server/README.md)"; fi
+      - uses: actions/checkout@v5
+        if: steps.auth.outputs.ok
+      - uses: actions/setup-node@v5
+        if: steps.auth.outputs.ok
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.auth.outputs.ok
+        run: npm ci
+      # Tipos y tests del servidor (los de integracion corren el Worker de verdad en workerd).
+      - if: steps.auth.outputs.ok
+        run: npm run check:server
+      - if: steps.auth.outputs.ok
+        run: npx wrangler deploy
+        working-directory: server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

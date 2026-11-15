@@ -59,6 +59,8 @@ jobs:
       # Graficos ya compilados en el repo: sin Python ni npm run assets.
       - if: env.MODE == 'publish'
         run: npm run build:ci
+        env:
+          VITE_SERVER_URL: ${{ vars.VITE_SERVER_URL }}
       - if: env.MODE == 'publish'
         uses: JamesIves/github-pages-deploy-action@v4
         with:

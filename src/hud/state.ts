@@ -6,7 +6,18 @@ import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
 import type { GeneralVM } from './vm/general';
 import type { LabVM } from './vm/lab';
-import type { CampaignItemVM, HomeVM, MainMenuItemVM, MenuItemVM, MenuVM, OptionsVM, SetupRowVM, SetupVM } from './vm/menus';
+import type {
+  CampaignItemVM,
+  HomeVM,
+  MainMenuItemVM,
+  MenuItemVM,
+  MenuVM,
+  NetVM,
+  OnlineVM,
+  OptionsVM,
+  SetupRowVM,
+  SetupVM,
+} from './vm/menus';
 import type { MinimapVM } from './vm/minimap';
 import type { NotesVM } from './vm/notes';
 import type { HandoffVM, ReportLineVM } from './vm/notices';
@@ -24,7 +35,11 @@ export interface UIState {
   options: OptionsVM | null;
   /** Panel de pausa centrado (menu de partida). */
   pause: { title: string; info: string[]; items: MenuItemVM[]; selected: number } | null;
-  screen: 'loading' | 'logo' | 'menu' | 'setup' | 'campaign' | 'game' | 'outro' | 'end';
+  screen: 'loading' | 'logo' | 'menu' | 'setup' | 'campaign' | 'online' | 'game' | 'outro' | 'end';
+  /** Jugar en línea (la pantalla del menu). */
+  online: OnlineVM;
+  /** La conexion con el servidor en una partida por la red (null en una partida de esta pantalla). */
+  net: NetVM | null;
   campaign: {
     items: CampaignItemVM[];
     selected: number;
@@ -131,7 +146,14 @@ export const initialState: UIState = {
   loading: 0,
   mainMenu: { items: [], selected: 0 },
   newGame: { rows: [], selected: 0, code: '', codeError: false },
-  home: { focus: 'quick', save: null, quick: '', campaign: { done: 0, total: 0, next: null, thumb: null, marks: [] }, credits: false },
+  home: {
+    focus: 'quick',
+    save: null,
+    quick: '',
+    online: false,
+    campaign: { done: 0, total: 0, next: null, thumb: null, marks: [] },
+    credits: false,
+  },
   setup: {
     focus: 'start',
     preset: 'normal',
@@ -147,6 +169,17 @@ export const initialState: UIState = {
     thumb: '',
     mapInfo: '',
   },
+  online: {
+    mode: 'menu',
+    focus: 'create',
+    rooms: [],
+    create: { groups: [], seats: [], timers: [], thumb: '', mapInfo: '' },
+    join: { text: '', error: null },
+    lobby: null,
+    error: null,
+    busy: false,
+  },
+  net: null,
   options: null,
   pause: null,
   campaign: { items: [], selected: 0, brief: '', objective: '' },

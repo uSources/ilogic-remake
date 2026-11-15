@@ -7,6 +7,16 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Novedades
+- **Jugar en línea**: partidas contra amigos por internet, cada uno en su navegador y sin prisa. En Inicio → «Jugar en línea» creas una sala (de 2 a 4 equipos, personas o IA, con generales, y si quieres un reloj por turno) y repartes un enlace de invitación por asiento; con el enlace se entra directamente, y «Mis partidas en línea» recuerda tus salas para volver. Tu turno se juega como siempre; mientras juegan los demás ves «Esperando al equipo N…» y, al acabar, lo que han hecho animado. Si cambias de pestaña, el título te avisa de que te toca. Si se corta la conexión, el juego vuelve solo. Hace falta un servidor de partidas (ver el README).
+
+<!-- en -->
+
+### New
+- **Play online**: games against friends over the internet, each in their own browser and at their own pace. From Home → “Play online” you create a room (2 to 4 teams, people or AI, with generals, and a turn timer if you want) and hand out one invite link per seat; the link joins directly, and “My online games” remembers your rooms so you can come back. Your turn plays as always; while the others play you see “Waiting for team N…” and, when they finish, what they did, animated. If you switch tabs, the title tells you when it's your turn. If the connection drops, the game reconnects by itself. It needs a game server (see the README).
+
 ## [0.9.0] - 2026-11-07 — Teclas a tu gusto y edificios que vigilan
 
 ### Novedades

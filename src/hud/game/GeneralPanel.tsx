@@ -18,6 +18,13 @@ function GeneralFace({ general, cls = 'gp-face' }: { general: GeneralVM; cls?: s
 
 /** Barra de carga en estrellas: llenas, la que se esta cargando (con `--fill`) y vacias. */
 function ChargeBar({ general, title }: { general: GeneralVM; title?: string }) {
+  if (!general.chargeKnown) {
+    return (
+      <div class="gp-charge unknown" title={title}>
+        <span class="gp-unknown">?</span>
+      </div>
+    );
+  }
   const charging = general.stars;
   const starClass = (i: number) => (i < charging ? 'full' : i === charging ? 'part' : '');
   return (

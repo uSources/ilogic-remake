@@ -99,6 +99,8 @@ export interface HomeVM {
   save: { thumb: string; day: number; funds: number; size: number; mission: string | null; limit: number | null } | null;
   /** Resumen de las ultimas opciones (lo que hara "Rapida"). */
   quick: string;
+  /** Hay servidor de partidas por la red: sale «Jugar en línea». */
+  online: boolean;
   campaign: { done: number; total: number; next: string | null; thumb: string | null; marks: MarkVM[] };
   credits: boolean;
 }
@@ -136,4 +138,54 @@ export interface CampaignItemVM {
   thumb: string;
   kind: string;
   best: number | null;
+}
+
+/** Un asiento de una sala por la red, como se ve en el vestibulo. */
+export interface OnlineSeatVM {
+  seat: number;
+  /** "Equipo 1" y su general, si lo tiene. */
+  label: string;
+  general: string | null;
+  kind: 'person' | 'ai';
+  joined: boolean;
+  isMe: boolean;
+  /** Su enlace de invitacion (solo los sabe quien creo la sala). */
+  invite: string | null;
+  /** Quien creo la sala puede darlo a la IA (una persona que no ha entrado, mientras se espera). */
+  canHandToAi: boolean;
+}
+
+/** Una sala apuntada en «Mis partidas en línea». */
+export interface OnlineRoomVM {
+  code: string;
+  /** "3 equipos · En juego". */
+  summary: string;
+}
+
+/** La pantalla de «Jugar en línea»: el menu, crear una sala, entrar con un enlace o el vestibulo. */
+export interface OnlineVM {
+  mode: 'menu' | 'create' | 'join' | 'lobby';
+  focus: string;
+  rooms: OnlineRoomVM[];
+  /** Crear sala: las opciones de la partida, los asientos (quien y con que general) y los relojes. */
+  create: {
+    groups: { title: string; rows: OptionRowVM[] }[];
+    seats: OptionRowVM[][];
+    timers: OptionRowVM[];
+    thumb: string;
+    mapInfo: string;
+  };
+  join: { text: string; error: string | null };
+  lobby: { code: string; status: string; seats: OnlineSeatVM[]; note: string; connection: string } | null;
+  /** Algo que ha fallado (se enseña arriba). */
+  error: string | null;
+  /** Esperando al servidor (crear, entrar). */
+  busy: boolean;
+}
+
+/** La conexion de una partida por la red, en la partida. */
+export interface NetVM {
+  status: 'online' | 'reconnecting' | 'offline';
+  /** "Esperando al equipo 2…" mientras juega otro (null en el turno propio). */
+  waiting: string | null;
 }

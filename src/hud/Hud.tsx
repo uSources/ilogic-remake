@@ -4,6 +4,7 @@ import { Campaign } from './menus/Campaign';
 import { EndScreen } from './menus/EndScreen';
 import { Home } from './menus/Home';
 import { NewGame } from './menus/NewGame';
+import { Online } from './menus/Online';
 import { Options } from './menus/Options';
 import { Help } from './overlays/Help';
 import { Banner, Loading, Report, Toast } from './overlays/Notices';
@@ -27,10 +28,11 @@ export function Hud() {
   return (
     <>
       {s.screen === 'loading' && <Loading progress={s.loading} />}
-      {(s.screen === 'menu' || s.screen === 'setup' || s.screen === 'campaign') && <div class="menu-veil" />}
+      {(s.screen === 'menu' || s.screen === 'setup' || s.screen === 'campaign' || s.screen === 'online') && <div class="menu-veil" />}
       {s.screen === 'menu' && <Home s={s} />}
       {s.screen === 'setup' && <NewGame s={s} />}
       {s.screen === 'campaign' && <Campaign s={s} />}
+      {s.screen === 'online' && <Online s={s} />}
       {s.screen === 'game' && <GameHud s={s} />}
       {s.screen === 'end' && s.end && <EndScreen end={s.end} />}
       {s.options && <Options options={s.options} />}

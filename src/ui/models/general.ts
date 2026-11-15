@@ -9,9 +9,16 @@ const BLOCK_TEXT: Partial<Record<PowerBlock, TextKey>> = { powerUsed: 'genUsed',
 
 /**
  * Panel del general de un equipo para el que mira (`viewer`: su color en la cara), o null si no tiene.
- * `targeting`: poder que se esta apuntando.
+ * `targeting`: poder que se esta apuntando. `chargeKnown` false: la carga no se sabe (por la red, la
+ * de los demas equipos no llega) y la barra lo enseña asi.
  */
-export function generalVM(s: GameState, viewer: TeamId, team: TeamId, targeting: string | null): GeneralVM | null {
+export function generalVM(
+  s: GameState,
+  viewer: TeamId,
+  team: TeamId,
+  targeting: string | null,
+  { chargeKnown = true }: { chargeKnown?: boolean } = {},
+): GeneralVM | null {
   const general = generalOf(s, team);
   if (!general) return null;
   const lang = settings.lang;
@@ -24,6 +31,7 @@ export function generalVM(s: GameState, viewer: TeamId, team: TeamId, targeting:
     stars,
     max: general.definition.charge.max,
     fraction: stars >= general.definition.charge.max ? 0 : general.state.charge - stars,
+    chargeKnown,
     targeting,
     powers: general.definition.powers.map((power) => {
       // 'target' solo dice que falta elegir casilla: se puede usar.
