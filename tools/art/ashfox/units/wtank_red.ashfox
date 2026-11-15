@@ -14,9 +14,9 @@ asset wtank_red {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind chassis { parent-origin = (0u, 2u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind turret { parent-origin = (0u, 3u, 1u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind turret { parent-origin = (0u, 2u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind barrel { parent-origin = (0u, 1.5u, -3u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind fan { parent-origin = (0u, 4u, 6.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind fan { parent-origin = (0u, 5u, 6.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   motion idle for ModelRig {
     duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
@@ -26,6 +26,13 @@ asset wtank_red {
       key 0.6s = (0deg, 0deg, 0deg) catmullrom;
       key 0.9s = (-0.6deg, 0deg, -0.4deg) catmullrom;
       key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+    }
+    track fan.rotation {
+      key 0s = (0deg, 0deg, 0deg) step;
+      key 0.3s = (0deg, 0deg, 22.5deg) step;
+      key 0.6s = (0deg, 0deg, 45deg) step;
+      key 0.9s = (0deg, 0deg, 67.5deg) step;
+      key 1.2s = (0deg, 0deg, 0deg) step;
     }
   }
   motion drive for ModelRig {
@@ -39,9 +46,9 @@ asset wtank_red {
     }
     track fan.rotation {
       key 0s = (0deg, 0deg, 0deg) step;
-      key 0.1s = (0deg, 0deg, 45deg) step;
-      key 0.2s = (0deg, 0deg, 90deg) step;
-      key 0.3s = (0deg, 0deg, 135deg) step;
+      key 0.1s = (0deg, 0deg, 22.5deg) step;
+      key 0.2s = (0deg, 0deg, 45deg) step;
+      key 0.3s = (0deg, 0deg, 67.5deg) step;
       key 0.4s = (0deg, 0deg, 0deg) step;
     }
   }
@@ -60,45 +67,74 @@ asset wtank_red {
   }
   surface contract Skin {
     atlas { width = 64px; height = 64px; }
-    chart skirt box { width = 56px; height = 17px; coverage = opaque; }
-    chart hull box { width = 40px; height = 13px; coverage = opaque; }
+    chart skirt box { width = 56px; height = 16px; coverage = opaque; }
+    chart hull box { width = 48px; height = 15px; coverage = opaque; }
     chart turret box { width = 24px; height = 9px; coverage = opaque; }
     chart barrel box { width = 16px; height = 8px; coverage = opaque; }
-    chart fan_ring box { width = 14px; height = 7px; coverage = opaque; }
-    chart fan_blade box { width = 12px; height = 2px; coverage = opaque; }
+    chart muzzle box { width = 6px; height = 3px; coverage = opaque; }
+    chart fan_top box { width = 18px; height = 2px; coverage = opaque; }
+    chart fan_bottom box { width = 18px; height = 2px; coverage = opaque; }
+    chart fan_left box { width = 4px; height = 7px; coverage = opaque; }
+    chart fan_right box { width = 4px; height = 7px; coverage = opaque; }
+    chart blade_a box { width = 14px; height = 2px; coverage = opaque; }
+    chart blade_b box { width = 4px; height = 7px; coverage = opaque; }
     material = opaque;
   }
   surface paint: Skin {
     material = opaque;
     texture atlas {
-      atlas = (64px, 64px); background = dark_red; background-alpha = 255;
+      atlas = (64px, 64px); background = rubber; background-alpha = 255;
       palette {
-        dark_red = (#601212, #962220, #c84038);
-        team_red = (#8a1a1a, #c8302a, #f0605a);
-        camo_red = (#8a1a1a, #c8302a, #f0605a);
-        camo_red_spots = (#601212, #962220, #c84038);
-        steel = (#4e5666, #8a93a6, #c3cbd9);
-        gun = (#20242e, #3a404e, #5c6474);
+        rubber = (#262a34, #30353f, #3a404c);
+        team_red = (#b02824, #c8302a, #d84038);
+        rim_team_red_12_r = #f2786c;
+        rim_team_red_6_r = #f2786c;
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        gun = (#2a2e38, #343a46, #3e4554);
+        missile = (#e2e6ee, #eef2fa, #f8faff);
       }
-
+      stamp rim_team_red_12 { pixels = "rrrrrrrrrrrr"; r = rim_team_red_12_r; }
+      stamp rim_team_red_6 { pixels = "rrrrrr"; r = rim_team_red_6_r; }
       chart skirt box {
-        origin = (0px, 0px); fill = dark_red;
+        origin = (0px, 0px); fill = rubber;
       }
       chart hull box {
-        origin = (0px, 18px); fill = team_red;
+        origin = (0px, 17px); fill = team_red;
+        face north { stamp rim_team_red_12 { at = (0px, 0px); } }
+        face south { stamp rim_team_red_12 { at = (0px, 0px); } }
+        face east { stamp rim_team_red_12 { at = (0px, 0px); } }
+        face west { stamp rim_team_red_12 { at = (0px, 0px); } }
       }
       chart turret box {
-        origin = (0px, 32px); fill = camo_red;
-        pattern blotch { paint = camo_red_spots; scale = (3px, 2px, 3px); density = 0.25ratio; phase = 7; }
+        origin = (0px, 33px); fill = team_red;
+        face north { stamp rim_team_red_6 { at = (0px, 0px); } }
+        face south { stamp rim_team_red_6 { at = (0px, 0px); } }
+        face east { stamp rim_team_red_6 { at = (0px, 0px); } }
+        face west { stamp rim_team_red_6 { at = (0px, 0px); } }
       }
       chart barrel box {
-        origin = (25px, 32px); fill = steel;
+        origin = (25px, 33px); fill = steel;
       }
-      chart fan_ring box {
-        origin = (42px, 32px); fill = steel;
+      chart muzzle box {
+        origin = (57px, 33px); fill = gun;
       }
-      chart fan_blade box {
-        origin = (0px, 42px); fill = gun;
+      chart fan_top box {
+        origin = (0px, 43px); fill = gun;
+      }
+      chart fan_bottom box {
+        origin = (19px, 43px); fill = gun;
+      }
+      chart fan_left box {
+        origin = (42px, 33px); fill = gun;
+      }
+      chart fan_right box {
+        origin = (47px, 33px); fill = gun;
+      }
+      chart blade_a box {
+        origin = (38px, 43px); fill = missile;
+      }
+      chart blade_b box {
+        origin = (52px, 33px); fill = missile;
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -114,19 +150,24 @@ asset wtank_red {
     bind bone fan to skeleton.fan;
     geometry {
       bone chassis {
-        cube skirt { origin = (-7u, 0u, -7u); size = (14u, 3u, 14u); surface = skin.skirt; }
+        cube skirt { origin = (-7u, 0u, -7u); size = (14u, 2u, 14u); surface = skin.skirt; }
       }
       bone hull {
-        cube hull { origin = (-5u, 3u, -5u); size = (10u, 3u, 10u); surface = skin.hull; }
+        cube hull { origin = (-6u, 2u, -6u); size = (12u, 3u, 12u); surface = skin.hull; }
+        cube fan_top { origin = (-4u, 11u, 6u); size = (8u, 1u, 1u); surface = skin.fan_top; }
+        cube fan_bottom { origin = (-4u, 4u, 6u); size = (8u, 1u, 1u); surface = skin.fan_bottom; }
+        cube fan_left { origin = (-4u, 5u, 6u); size = (1u, 6u, 1u); surface = skin.fan_left; }
+        cube fan_right { origin = (3u, 5u, 6u); size = (1u, 6u, 1u); surface = skin.fan_right; }
         bone turret {
-          cube turret { origin = (-3u, 6u, -2u); size = (6u, 3u, 6u); surface = skin.turret; }
+          cube turret { origin = (-3u, 5u, -3u); size = (6u, 3u, 6u); surface = skin.turret; }
           bone barrel {
-            cube barrel { origin = (-0.5u, 7u, -9u); size = (1u, 1u, 7u); surface = skin.barrel; }
+            cube barrel { origin = (-0.5u, 6u, -10u); size = (1u, 1u, 7u); surface = skin.barrel; }
+            cube muzzle { origin = (-1u, 5.5u, -11u); size = (2u, 2u, 1u); surface = skin.muzzle; }
           }
         }
         bone fan {
-          cube fan_ring { origin = (-3u, 4u, 5u); size = (6u, 6u, 1u); surface = skin.fan_ring; }
-          cube fan_blade { origin = (-2.5u, 6.5u, 6u); size = (5u, 1u, 1u); surface = skin.fan_blade; }
+          cube blade_a { origin = (-3u, 7.5u, 6u); size = (6u, 1u, 1u); surface = skin.blade_a; }
+          cube blade_b { origin = (-0.5u, 5u, 6u); size = (1u, 6u, 1u); surface = skin.blade_b; }
         }
       }
     }

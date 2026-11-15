@@ -10,7 +10,7 @@ asset airport_neutral {
   skeleton ModelSkeleton implements ModelRig {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind radar { parent-origin = (-4.5u, 14u, -4.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind radar { parent-origin = (-4.5u, 15u, -4.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   motion idle for ModelRig {
     duration = 2.4s; fps = 20; loop = loop; rest-relative = true;
@@ -29,12 +29,14 @@ asset airport_neutral {
   surface contract Skin {
     atlas { width = 64px; height = 64px; }
     chart runway box { width = 56px; height = 15px; coverage = opaque; }
-    chart tower box { width = 12px; height = 13px; coverage = opaque; }
-    chart cab box { width = 16px; height = 6px; coverage = opaque; }
-    chart cab_roof box { width = 16px; height = 5px; coverage = opaque; }
-    chart hangar box { width = 28px; height = 12px; coverage = opaque; }
-    chart hangar_roof box { width = 24px; height = 8px; coverage = opaque; }
+    chart tower box { width = 16px; height = 13px; coverage = opaque; }
+    chart cab box { width = 20px; height = 8px; coverage = opaque; }
+    chart cab_roof box { width = 20px; height = 6px; coverage = opaque; }
+    chart cab_top box { width = 12px; height = 4px; coverage = opaque; }
     chart radar_dish box { width = 10px; height = 2px; coverage = opaque; }
+    chart hangar box { width = 32px; height = 12px; coverage = opaque; }
+    chart hangar_roof box { width = 28px; height = 9px; coverage = opaque; }
+    chart hangar_ridge box { width = 24px; height = 9px; coverage = opaque; }
     material = opaque;
   }
   surface paint: Skin {
@@ -44,36 +46,53 @@ asset airport_neutral {
       palette {
         asphalt = (#1c2028, #2a2e38, #3c4250);
         dashes_w = #f2f5ff;
-        body_neutral = (#55585e, #8f949c, #c8ccd2);
-        glass = (#4f9fc8, #9fe3ff, #e6f8ff);
-        trim_neutral = (#3a3d42, #62666e, #8f949c);
-        hangar_door_k = #14202c;
+        body_neutral = (#868a92, #8f949c, #9ca0a8);
+        rim_body_neutral_4_r = #c8ccd2;
+        window_glass = (#8ad4f4, #9fe3ff, #b8ecff);
+        trim_neutral = (#5a5e66, #62666e, #6e727a);
         metal = (#4e5666, #8a93a6, #c3cbd9);
+        rim_body_neutral_8_r = #c8ccd2;
+        hangar_door_k = #14202c;
       }
       stamp dashes { pixels = "ww..ww..ww"; w = dashes_w; }
-      stamp hangar_door { pixels = ".kkkkk./.kkkkk./.kkkkk."; k = hangar_door_k; }
+      stamp rim_body_neutral_4 { pixels = "rrrr"; r = rim_body_neutral_4_r; }
+      stamp rim_body_neutral_8 { pixels = "rrrrrrrr"; r = rim_body_neutral_8_r; }
+      stamp hangar_door { pixels = ".kkkkkk./.kkkkkk./.kkkkkk."; k = hangar_door_k; }
       chart runway box {
         origin = (0px, 0px); fill = asphalt;
         face up { stamp dashes { at = (2px, 11px); } }
       }
       chart tower box {
         origin = (0px, 16px); fill = body_neutral;
+        face north { stamp rim_body_neutral_4 { at = (0px, 0px); } }
+        face south { stamp rim_body_neutral_4 { at = (0px, 0px); } }
+        face east { stamp rim_body_neutral_4 { at = (0px, 0px); } }
+        face west { stamp rim_body_neutral_4 { at = (0px, 0px); } }
       }
       chart cab box {
-        origin = (25px, 30px); fill = glass;
+        origin = (0px, 40px); fill = window_glass;
       }
       chart cab_roof box {
-        origin = (42px, 30px); fill = trim_neutral;
+        origin = (21px, 40px); fill = trim_neutral;
       }
-      chart hangar box {
-        origin = (13px, 16px); fill = body_neutral;
-        face north { stamp hangar_door { at = (0px, 2px); } }
-      }
-      chart hangar_roof box {
-        origin = (0px, 30px); fill = trim_neutral;
+      chart cab_top box {
+        origin = (42px, 40px); fill = trim_neutral;
       }
       chart radar_dish box {
-        origin = (0px, 39px); fill = metal;
+        origin = (0px, 49px); fill = metal;
+      }
+      chart hangar box {
+        origin = (17px, 16px); fill = body_neutral;
+        face north { stamp rim_body_neutral_8 { at = (0px, 0px); } stamp hangar_door { at = (0px, 1px); } }
+        face south { stamp rim_body_neutral_8 { at = (0px, 0px); } }
+        face east { stamp rim_body_neutral_8 { at = (0px, 0px); } }
+        face west { stamp rim_body_neutral_8 { at = (0px, 0px); } }
+      }
+      chart hangar_roof box {
+        origin = (0px, 30px); fill = body_neutral;
+      }
+      chart hangar_ridge box {
+        origin = (29px, 30px); fill = trim_neutral;
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -87,13 +106,15 @@ asset airport_neutral {
     geometry {
       bone body {
         cube runway { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.runway; }
-        cube tower { origin = (-6u, 1u, -6u); size = (3u, 10u, 3u); surface = skin.tower; }
-        cube cab { origin = (-6.5u, 11u, -6.5u); size = (4u, 2u, 4u); surface = skin.cab; }
-        cube cab_roof { origin = (-6.5u, 13u, -6.5u); size = (4u, 1u, 4u); surface = skin.cab_roof; }
-        cube hangar { origin = (-1u, 1u, -6u); size = (7u, 5u, 7u); surface = skin.hangar; }
-        cube hangar_roof { origin = (0u, 6u, -6u); size = (5u, 1u, 7u); surface = skin.hangar_roof; }
+        cube tower { origin = (-6.5u, 1u, -6.5u); size = (4u, 9u, 4u); surface = skin.tower; }
+        cube cab { origin = (-7u, 10u, -7u); size = (5u, 3u, 5u); surface = skin.cab; }
+        cube cab_roof { origin = (-7u, 13u, -7u); size = (5u, 1u, 5u); surface = skin.cab_roof; }
+        cube cab_top { origin = (-6u, 14u, -6u); size = (3u, 1u, 3u); surface = skin.cab_top; }
+        cube hangar { origin = (-1.5u, 1u, -6u); size = (8u, 4u, 8u); surface = skin.hangar; }
+        cube hangar_roof { origin = (-0.5u, 5u, -6u); size = (6u, 1u, 8u); surface = skin.hangar_roof; }
+        cube hangar_ridge { origin = (0.5u, 6u, -6u); size = (4u, 1u, 8u); surface = skin.hangar_ridge; }
         bone radar {
-          cube radar_dish { origin = (-6.5u, 14u, -5u); size = (4u, 1u, 1u); surface = skin.radar_dish; }
+          cube radar_dish { origin = (-6.5u, 15u, -5u); size = (4u, 1u, 1u); surface = skin.radar_dish; }
         }
       }
     }

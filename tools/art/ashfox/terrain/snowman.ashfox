@@ -28,7 +28,7 @@ asset snowman {
       palette {
         snowcap = (#d6e6f6, #f0f6ff, #ffffff);
         eyes_k = #141824;
-        scarf = (#c8a010, #f2c81e, #ffe866);
+        scarf = (#9a1c22, #d8323a, #ff6a62);
         carrot = (#c85a10, #ee7a20, #ff9a40);
         hat = (#141824, #262c3c, #3c4458);
       }

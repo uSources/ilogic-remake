@@ -16,7 +16,18 @@ import * as units from './models/units.mjs';
 const ROOT = new URL('../../../', import.meta.url).pathname;
 /** Cada grupo: sus modelos y la carpeta de sus fuentes (tools/art/ashfox/<grupo>) y de sus GLB. */
 const GROUPS = { terrain: terrain.MODELS, buildings: buildings.MODELS, units: units.MODELS };
-const PAINTS = { ...terrain.PAINTS, ...buildings.PAINTS, ...units.PAINTS };
+const PAINTS = mergePaints([terrain.PAINTS, buildings.PAINTS, units.PAINTS]);
+/** Las pinturas de todos los grupos juntas: un nombre repetido con otros colores taparia al otro sin avisar. */
+function mergePaints(groups) {
+  const merged = {};
+  for (const paints of groups)
+    for (const [name, paint] of Object.entries(paints)) {
+      if (merged[name] && JSON.stringify(merged[name]) !== JSON.stringify(paint))
+        throw new Error(`La pintura ${name} esta en dos grupos con colores distintos: cambia el nombre de una`);
+      merged[name] = paint;
+    }
+  return merged;
+}
 const sourcesOf = (group) => join(ROOT, 'tools/art/ashfox', group);
 const outputOf = (group) => join(ROOT, 'public/assets/models', group);
 /** Separacion entre trozos del atlas (texeles): que no se mezclen al filtrar. */
@@ -91,6 +102,25 @@ function chartRecipe({ cube, origin }) {
   return lines.join('\n');
 }
 
+/** Los cubos mas bajos no llevan borde: en uno tan pequeño seria la mitad de la cara. */
+const RIM_MIN_HEIGHT = 3;
+/** Las caras de lado y el eje que da su ancho. */
+const SIDE_FACES = { north: 0, south: 0, east: 2, west: 2 };
+
+/**
+ * Si su pintura lo pide (`rim`), la fila de arriba de cada lado, mas clara: el borde iluminado del
+ * pixel art, que separa las piezas del mismo color. Va antes que los stamps del cubo (que la tapan).
+ */
+function withRim(cube) {
+  const rim = PAINTS[cube.paint]?.rim;
+  if (!rim || cube.size[1] < RIM_MIN_HEIGHT) return cube;
+  const rims = Object.entries(SIDE_FACES).map(([face, axis]) => {
+    const width = cube.size[axis];
+    return { name: `rim_${cube.paint}_${width}`, face, pixels: 'r'.repeat(width), colors: { r: rim }, at: [[0, 0]] };
+  });
+  return { ...cube, stamps: [...rims, ...(cube.stamps ?? [])] };
+}
+
 /** Sin huesos propios, el modelo es un solo hueso fijo (`body`) colgado de la raiz. */
 const DEFAULT_BONES = [{ name: 'body', parent: 'root', pivot: [0, 0, 0] }];
 const ROOT_PIVOT = [0, 0, 0];
@@ -161,7 +191,7 @@ function checkBones(name, model) {
 
 function source(name, model) {
   checkBones(name, model);
-  const cubes = model.cubes;
+  const cubes = model.cubes.map(withRim);
   const bones = bonesOf(model);
   const motions = Object.entries(model.motions ?? {});
   const { charts, atlas } = packCharts(cubes);

@@ -13,8 +13,8 @@ asset antiair_blue {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind chassis { parent-origin = (0u, 2u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind turret { parent-origin = (0u, 2u, 1u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind barrel { parent-origin = (0u, 2u, -1u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind turret { parent-origin = (0u, 2u, 0.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind barrel { parent-origin = (0u, 3u, -1.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   motion idle for ModelRig {
     duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
@@ -50,48 +50,57 @@ asset antiair_blue {
     }
   }
   surface contract Skin {
-    atlas { width = 64px; height = 64px; }
+    atlas { width = 64px; height = 128px; }
     chart track0 box { width = 32px; height = 16px; coverage = opaque; }
     chart track1 box { width = 32px; height = 16px; coverage = opaque; }
-    chart hull box { width = 36px; height = 12px; coverage = opaque; }
-    chart turret box { width = 24px; height = 9px; coverage = opaque; }
-    chart gun_left box { width = 18px; height = 9px; coverage = opaque; }
-    chart gun_right box { width = 18px; height = 9px; coverage = opaque; }
+    chart hull box { width = 42px; height = 13px; coverage = opaque; }
+    chart turret box { width = 30px; height = 9px; coverage = opaque; }
+    chart gun_mount box { width = 16px; height = 5px; coverage = opaque; }
+    chart gun_left box { width = 22px; height = 11px; coverage = opaque; }
+    chart gun_right box { width = 22px; height = 11px; coverage = opaque; }
     material = opaque;
   }
   surface paint: Skin {
     material = opaque;
     texture atlas {
-      atlas = (64px, 64px); background = tread; background-alpha = 255;
+      atlas = (64px, 128px); background = tread; background-alpha = 255;
       palette {
-        tread = (#141824, #262c3c, #3c4458);
-        tread_spots = (#3c4458, #5c6474, #7c8494);
-        camo_blue = (#1d4fa8, #2f74d6, #5ea8f2);
-        camo_blue_spots = (#163a7a, #1f56a8, #3f84d8);
-        team_blue = (#1d4fa8, #2f74d6, #5ea8f2);
-        steel = (#4e5666, #8a93a6, #c3cbd9);
+        tread = (#1a1e28, #232836, #2c3242);
+        wheels12_s = #5a6272;
+        wheels12_t = #363d4c;
+        sprocket_s = #6a7282;
+        team_blue = (#2766c4, #2f74d6, #3d84e2);
+        dark_blue = (#1a468e, #1f56a8, #2a64b8);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
       }
-
+      stamp wheels12 { pixels = "tttttttttttt/.ss.ss.ss.../.ss.ss.ss.../tttttttttttt"; s = wheels12_s; t = wheels12_t; }
+      stamp sprocket { pixels = "ss/ss"; s = sprocket_s; }
       chart track0 box {
         origin = (0px, 0px); fill = tread;
-        pattern blotch { paint = tread_spots; scale = (1px, 1px, 2px); density = 0.3ratio; phase = 7; }
+        face west { stamp wheels12 { at = (0px, 0px); } }
+        face north { stamp sprocket { at = (1px, 1px); } }
+        face south { stamp sprocket { at = (1px, 1px); } }
       }
       chart track1 box {
         origin = (0px, 17px); fill = tread;
-        pattern blotch { paint = tread_spots; scale = (1px, 1px, 2px); density = 0.3ratio; phase = 7; }
+        face east { stamp wheels12 { at = (0px, 0px); } }
+        face north { stamp sprocket { at = (1px, 1px); } }
+        face south { stamp sprocket { at = (1px, 1px); } }
       }
       chart hull box {
-        origin = (0px, 34px); fill = camo_blue;
-        pattern blotch { paint = camo_blue_spots; scale = (3px, 2px, 3px); density = 0.25ratio; phase = 7; }
+        origin = (0px, 34px); fill = team_blue;
       }
       chart turret box {
-        origin = (37px, 34px); fill = team_blue;
+        origin = (0px, 60px); fill = team_blue;
+      }
+      chart gun_mount box {
+        origin = (31px, 60px); fill = dark_blue;
       }
       chart gun_left box {
-        origin = (0px, 47px); fill = steel;
+        origin = (0px, 48px); fill = steel;
       }
       chart gun_right box {
-        origin = (19px, 47px); fill = steel;
+        origin = (23px, 48px); fill = steel;
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -110,12 +119,13 @@ asset antiair_blue {
         cube track1 { origin = (2u, 0u, -6u); size = (4u, 4u, 12u); surface = skin.track1; }
       }
       bone hull {
-        cube hull { origin = (-4u, 3u, -5u); size = (8u, 2u, 10u); surface = skin.hull; }
+        cube hull { origin = (-5u, 3u, -5.5u); size = (10u, 2u, 11u); surface = skin.hull; }
         bone turret {
-          cube turret { origin = (-3u, 5u, -2u); size = (6u, 3u, 6u); surface = skin.turret; }
+          cube turret { origin = (-4u, 5u, -3u); size = (8u, 2u, 7u); surface = skin.turret; }
+          cube gun_mount { origin = (-2.5u, 7u, -2u); size = (5u, 2u, 3u); surface = skin.gun_mount; }
           bone barrel {
-            cube gun_left { origin = (-2.5u, 6.5u, -8u); size = (1u, 1u, 8u); rotation = (45deg, 0deg, 0deg); pivot = (0u, 7u, 0u); surface = skin.gun_left; }
-            cube gun_right { origin = (1.5u, 6.5u, -8u); size = (1u, 1u, 8u); rotation = (45deg, 0deg, 0deg); pivot = (0u, 7u, 0u); surface = skin.gun_right; }
+            cube gun_left { origin = (-2u, 7.5u, -11u); size = (1u, 1u, 10u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 8u, -1u); surface = skin.gun_left; }
+            cube gun_right { origin = (1u, 7.5u, -11u); size = (1u, 1u, 10u); rotation = (35deg, 0deg, 0deg); pivot = (0u, 8u, -1u); surface = skin.gun_right; }
           }
         }
       }

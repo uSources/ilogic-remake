@@ -13,7 +13,7 @@ asset tank_blue {
     bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind chassis { parent-origin = (0u, 2u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind turret { parent-origin = (0u, 3u, 1u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind turret { parent-origin = (0u, 3u, 0.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind barrel { parent-origin = (0u, 1.5u, -3.5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   motion idle for ModelRig {
@@ -53,9 +53,11 @@ asset tank_blue {
     atlas { width = 64px; height = 128px; }
     chart track0 box { width = 36px; height = 18px; coverage = opaque; }
     chart track1 box { width = 36px; height = 18px; coverage = opaque; }
-    chart hull box { width = 44px; height = 15px; coverage = opaque; }
+    chart hull box { width = 50px; height = 16px; coverage = opaque; }
     chart turret box { width = 30px; height = 10px; coverage = opaque; }
-    chart hatch box { width = 12px; height = 4px; coverage = opaque; }
+    chart turret_top box { width = 22px; height = 6px; coverage = opaque; }
+    chart hatch box { width = 8px; height = 3px; coverage = opaque; }
+    chart mantlet box { width = 12px; height = 3px; coverage = opaque; }
     chart barrel_left box { width = 18px; height = 9px; coverage = opaque; }
     chart barrel_right box { width = 18px; height = 9px; coverage = opaque; }
     material = opaque;
@@ -65,38 +67,64 @@ asset tank_blue {
     texture atlas {
       atlas = (64px, 128px); background = tread; background-alpha = 255;
       palette {
-        tread = (#141824, #262c3c, #3c4458);
-        tread_spots = (#3c4458, #5c6474, #7c8494);
-        camo_blue = (#1d4fa8, #2f74d6, #5ea8f2);
-        camo_blue_spots = (#163a7a, #1f56a8, #3f84d8);
-        team_blue = (#1d4fa8, #2f74d6, #5ea8f2);
-        dark_blue = (#163a7a, #1f56a8, #3f84d8);
-        steel = (#4e5666, #8a93a6, #c3cbd9);
+        tread = (#1a1e28, #232836, #2c3242);
+        wheels14_s = #5a6272;
+        wheels14_t = #363d4c;
+        sprocket_s = #6a7282;
+        team_blue = (#2766c4, #2f74d6, #3d84e2);
+        rim_team_blue_12_r = #6fb0f2;
+        rim_team_blue_13_r = #6fb0f2;
+        rim_team_blue_8_r = #6fb0f2;
+        rim_team_blue_7_r = #6fb0f2;
+        dark_blue = (#1a468e, #1f56a8, #2a64b8);
+        steel = (#7a8394, #8a93a6, #9aa3b6);
       }
-
+      stamp wheels14 { pixels = "tttttttttttttt/.ss.ss.ss.ss../.ss.ss.ss.ss../tttttttttttttt"; s = wheels14_s; t = wheels14_t; }
+      stamp sprocket { pixels = "ss/ss"; s = sprocket_s; }
+      stamp rim_team_blue_12 { pixels = "rrrrrrrrrrrr"; r = rim_team_blue_12_r; }
+      stamp rim_team_blue_13 { pixels = "rrrrrrrrrrrrr"; r = rim_team_blue_13_r; }
+      stamp rim_team_blue_8 { pixels = "rrrrrrrr"; r = rim_team_blue_8_r; }
+      stamp rim_team_blue_7 { pixels = "rrrrrrr"; r = rim_team_blue_7_r; }
       chart track0 box {
         origin = (0px, 0px); fill = tread;
-        pattern blotch { paint = tread_spots; scale = (1px, 1px, 2px); density = 0.3ratio; phase = 7; }
+        face west { stamp wheels14 { at = (0px, 0px); } }
+        face north { stamp sprocket { at = (1px, 1px); } }
+        face south { stamp sprocket { at = (1px, 1px); } }
       }
       chart track1 box {
         origin = (0px, 19px); fill = tread;
-        pattern blotch { paint = tread_spots; scale = (1px, 1px, 2px); density = 0.3ratio; phase = 7; }
+        face east { stamp wheels14 { at = (0px, 0px); } }
+        face north { stamp sprocket { at = (1px, 1px); } }
+        face south { stamp sprocket { at = (1px, 1px); } }
       }
       chart hull box {
-        origin = (0px, 38px); fill = camo_blue;
-        pattern blotch { paint = camo_blue_spots; scale = (3px, 2px, 3px); density = 0.25ratio; phase = 7; }
+        origin = (0px, 38px); fill = team_blue;
+        face north { stamp rim_team_blue_12 { at = (0px, 0px); } }
+        face south { stamp rim_team_blue_12 { at = (0px, 0px); } }
+        face east { stamp rim_team_blue_13 { at = (0px, 0px); } }
+        face west { stamp rim_team_blue_13 { at = (0px, 0px); } }
       }
       chart turret box {
-        origin = (0px, 54px); fill = team_blue;
+        origin = (0px, 55px); fill = team_blue;
+        face north { stamp rim_team_blue_8 { at = (0px, 0px); } }
+        face south { stamp rim_team_blue_8 { at = (0px, 0px); } }
+        face east { stamp rim_team_blue_7 { at = (0px, 0px); } }
+        face west { stamp rim_team_blue_7 { at = (0px, 0px); } }
+      }
+      chart turret_top box {
+        origin = (19px, 66px); fill = team_blue;
       }
       chart hatch box {
-        origin = (19px, 65px); fill = dark_blue;
+        origin = (42px, 66px); fill = dark_blue;
+      }
+      chart mantlet box {
+        origin = (51px, 66px); fill = dark_blue;
       }
       chart barrel_left box {
-        origin = (31px, 54px); fill = steel;
+        origin = (31px, 55px); fill = steel;
       }
       chart barrel_right box {
-        origin = (0px, 65px); fill = steel;
+        origin = (0px, 66px); fill = steel;
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -115,13 +143,15 @@ asset tank_blue {
         cube track1 { origin = (3u, 0u, -7u); size = (4u, 4u, 14u); surface = skin.track1; }
       }
       bone hull {
-        cube hull { origin = (-5u, 3u, -6u); size = (10u, 3u, 12u); surface = skin.hull; }
+        cube hull { origin = (-6u, 3u, -6.5u); size = (12u, 3u, 13u); surface = skin.hull; }
         bone turret {
-          cube turret { origin = (-4u, 6u, -2.5u); size = (8u, 3u, 7u); surface = skin.turret; }
-          cube hatch { origin = (-2.5u, 9u, 0u); size = (3u, 1u, 3u); surface = skin.hatch; }
+          cube turret { origin = (-4u, 6u, -3u); size = (8u, 3u, 7u); surface = skin.turret; }
+          cube turret_top { origin = (-3u, 9u, -2u); size = (6u, 1u, 5u); surface = skin.turret_top; }
+          cube hatch { origin = (-2u, 10u, 0u); size = (2u, 1u, 2u); surface = skin.hatch; }
+          cube mantlet { origin = (-2.5u, 6.5u, -4u); size = (5u, 2u, 1u); surface = skin.mantlet; }
           bone barrel {
-            cube barrel_left { origin = (-2u, 7u, -10.5u); size = (1u, 1u, 8u); surface = skin.barrel_left; }
-            cube barrel_right { origin = (1u, 7u, -10.5u); size = (1u, 1u, 8u); surface = skin.barrel_right; }
+            cube barrel_left { origin = (-2u, 7u, -11u); size = (1u, 1u, 8u); surface = skin.barrel_left; }
+            cube barrel_right { origin = (1u, 7u, -11u); size = (1u, 1u, 8u); surface = skin.barrel_right; }
           }
         }
       }

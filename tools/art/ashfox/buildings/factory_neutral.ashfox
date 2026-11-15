@@ -12,15 +12,12 @@ asset factory_neutral {
   }
 
   surface contract Skin {
-    atlas { width = 64px; height = 128px; }
+    atlas { width = 64px; height = 64px; }
     chart plinth box { width = 56px; height = 15px; coverage = opaque; }
     chart hall box { width = 42px; height = 15px; coverage = opaque; }
-    chart roof0 box { width = 26px; height = 10px; coverage = opaque; }
-    chart skylight0 box { width = 22px; height = 11px; coverage = opaque; }
-    chart roof1 box { width = 26px; height = 10px; coverage = opaque; }
-    chart skylight1 box { width = 22px; height = 11px; coverage = opaque; }
-    chart roof2 box { width = 26px; height = 10px; coverage = opaque; }
-    chart skylight2 box { width = 22px; height = 11px; coverage = opaque; }
+    chart tooth0 box { width = 24px; height = 12px; coverage = opaque; }
+    chart tooth1 box { width = 24px; height = 12px; coverage = opaque; }
+    chart tooth2 box { width = 24px; height = 12px; coverage = opaque; }
     chart chimney box { width = 8px; height = 13px; coverage = opaque; }
     chart chimney_cap box { width = 12px; height = 4px; coverage = opaque; }
     material = opaque;
@@ -28,51 +25,66 @@ asset factory_neutral {
   surface paint: Skin {
     material = opaque;
     texture atlas {
-      atlas = (64px, 128px); background = pavement; background-alpha = 255;
+      atlas = (64px, 64px); background = pavement; background-alpha = 255;
       palette {
-        pavement = (#8a857a, #b9b2a0, #d6cfbd);
-        pavement_spots = (#7a756a, #9a958a, #b0aa9a);
-        body_neutral = (#55585e, #8f949c, #c8ccd2);
+        pavement = (#aea896, #b9b2a0, #c4bdaa);
+        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+        body_neutral = (#868a92, #8f949c, #9ca0a8);
+        rim_body_neutral_12_r = #c8ccd2;
+        rim_body_neutral_9_r = #c8ccd2;
         hall_windows_w = #14202c;
         hall_windows_l = #ffe08a;
         door_d = #14202c;
-        trim_neutral = (#3a3d42, #62666e, #8f949c);
-        glass = (#4f9fc8, #9fe3ff, #e6f8ff);
+        trim_neutral = (#5a5e66, #62666e, #6e727a);
+        rim_trim_neutral_4_r = #8f949c;
+        rim_trim_neutral_8_r = #8f949c;
+        glazing_g = #9fe3ff;
       }
-      stamp hall_windows { pixels = "w.w.w.l.w.w."; w = hall_windows_w; l = hall_windows_l; }
-      stamp door { pixels = "dd/dd/dd"; d = door_d; }
+      stamp rim_body_neutral_12 { pixels = "rrrrrrrrrrrr"; r = rim_body_neutral_12_r; }
+      stamp rim_body_neutral_9 { pixels = "rrrrrrrrr"; r = rim_body_neutral_9_r; }
+      stamp hall_windows { pixels = ".ww.ww.wl.ww/............/.ww.lw.ww.ww"; w = hall_windows_w; l = hall_windows_l; }
+      stamp door { pixels = "ddd/ddd/ddd"; d = door_d; }
+      stamp rim_trim_neutral_4 { pixels = "rrrr"; r = rim_trim_neutral_4_r; }
+      stamp rim_trim_neutral_8 { pixels = "rrrrrrrr"; r = rim_trim_neutral_8_r; }
+      stamp glazing { pixels = "gggggggg/gggggggg"; g = glazing_g; }
       chart plinth box {
         origin = (0px, 0px); fill = pavement;
-        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.15ratio; phase = 7; }
+        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; }
       }
       chart hall box {
         origin = (0px, 16px); fill = body_neutral;
-        face north { stamp hall_windows { at = (0px, 1px); } stamp door { at = (5px, 3px); } }
+        face north { stamp rim_body_neutral_12 { at = (0px, 0px); } stamp hall_windows { at = (0px, 1px); } stamp door { at = (1px, 3px); } }
+        face south { stamp rim_body_neutral_12 { at = (0px, 0px); } }
+        face east { stamp rim_body_neutral_9 { at = (0px, 0px); } }
+        face west { stamp rim_body_neutral_9 { at = (0px, 0px); } }
       }
-      chart roof0 box {
-        origin = (23px, 44px); fill = trim_neutral;
+      chart tooth0 box {
+        origin = (0px, 32px); fill = trim_neutral;
+        face north { stamp rim_trim_neutral_4 { at = (0px, 0px); } }
+        face south { stamp rim_trim_neutral_4 { at = (0px, 0px); } }
+        face east { stamp rim_trim_neutral_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } }
+        face west { stamp rim_trim_neutral_8 { at = (0px, 0px); } }
       }
-      chart skylight0 box {
-        origin = (0px, 32px); fill = glass;
+      chart tooth1 box {
+        origin = (25px, 32px); fill = trim_neutral;
+        face north { stamp rim_trim_neutral_4 { at = (0px, 0px); } }
+        face south { stamp rim_trim_neutral_4 { at = (0px, 0px); } }
+        face east { stamp rim_trim_neutral_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } }
+        face west { stamp rim_trim_neutral_8 { at = (0px, 0px); } }
       }
-      chart roof1 box {
-        origin = (0px, 56px); fill = trim_neutral;
-      }
-      chart skylight1 box {
-        origin = (23px, 32px); fill = glass;
-      }
-      chart roof2 box {
-        origin = (27px, 56px); fill = trim_neutral;
-      }
-      chart skylight2 box {
-        origin = (0px, 44px); fill = glass;
+      chart tooth2 box {
+        origin = (0px, 45px); fill = trim_neutral;
+        face north { stamp rim_trim_neutral_4 { at = (0px, 0px); } }
+        face south { stamp rim_trim_neutral_4 { at = (0px, 0px); } }
+        face east { stamp rim_trim_neutral_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } }
+        face west { stamp rim_trim_neutral_8 { at = (0px, 0px); } }
       }
       chart chimney box {
         origin = (43px, 16px); fill = pavement;
-        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.15ratio; phase = 7; }
+        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; }
       }
       chart chimney_cap box {
-        origin = (0px, 67px); fill = trim_neutral;
+        origin = (25px, 45px); fill = trim_neutral;
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -86,12 +98,9 @@ asset factory_neutral {
       bone body {
         cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
         cube hall { origin = (-6u, 1u, -4u); size = (12u, 6u, 9u); surface = skin.hall; }
-        cube roof0 { origin = (-6u, 7u, -4u); size = (4u, 1u, 9u); surface = skin.roof0; }
-        cube skylight0 { origin = (-4u, 8u, -4u); size = (2u, 2u, 9u); surface = skin.skylight0; }
-        cube roof1 { origin = (-2u, 7u, -4u); size = (4u, 1u, 9u); surface = skin.roof1; }
-        cube skylight1 { origin = (0u, 8u, -4u); size = (2u, 2u, 9u); surface = skin.skylight1; }
-        cube roof2 { origin = (2u, 7u, -4u); size = (4u, 1u, 9u); surface = skin.roof2; }
-        cube skylight2 { origin = (4u, 8u, -4u); size = (2u, 2u, 9u); surface = skin.skylight2; }
+        cube tooth0 { origin = (-6u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (-4u, 7u, 0.5u); surface = skin.tooth0; }
+        cube tooth1 { origin = (-2u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (0u, 7u, 0.5u); surface = skin.tooth1; }
+        cube tooth2 { origin = (2u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (4u, 7u, 0.5u); surface = skin.tooth2; }
         cube chimney { origin = (4u, 1u, 4u); size = (2u, 11u, 2u); surface = skin.chimney; }
         cube chimney_cap { origin = (3.5u, 12u, 3.5u); size = (3u, 1u, 3u); surface = skin.chimney_cap; }
       }

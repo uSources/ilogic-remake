@@ -18,8 +18,8 @@ asset msoldier_blue {
     bind leg_right { parent-origin = (1.5u, 5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind torso { parent-origin = (0u, 5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind head { parent-origin = (0u, 4u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind arm_left { parent-origin = (-4u, 3.5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind arm_right { parent-origin = (4u, 3.5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind arm_left { parent-origin = (-3.5u, 3.5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind arm_right { parent-origin = (3.5u, 3.5u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
     bind gear { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
   }
   motion idle for ModelRig {
@@ -84,75 +84,137 @@ asset msoldier_blue {
     }
   }
   surface contract Skin {
-    atlas { width = 64px; height = 32px; }
+    atlas { width = 64px; height = 64px; }
     chart boot_left box { width = 10px; height = 4px; coverage = opaque; }
     chart leg_left box { width = 8px; height = 6px; coverage = opaque; }
     chart boot_right box { width = 10px; height = 4px; coverage = opaque; }
     chart leg_right box { width = 8px; height = 6px; coverage = opaque; }
-    chart torso box { width = 18px; height = 7px; coverage = opaque; }
+    chart torso box { width = 16px; height = 7px; coverage = opaque; }
     chart head box { width = 24px; height = 10px; coverage = opaque; }
     chart helmet box { width = 28px; height = 10px; coverage = opaque; }
+    chart helmet_top box { width = 20px; height = 6px; coverage = opaque; }
+    chart neck_guard box { width = 16px; height = 3px; coverage = opaque; }
     chart arm_left box { width = 8px; height = 5px; coverage = opaque; }
-    chart arm_right box { width = 8px; height = 5px; coverage = opaque; }
-    chart tube box { width = 8px; height = 8px; coverage = opaque; }
+    chart arm_right box { width = 14px; height = 7px; coverage = opaque; }
     chart base_plate box { width = 14px; height = 4px; coverage = opaque; }
-    chart sandbag box { width = 24px; height = 4px; coverage = opaque; }
+    chart tube box { width = 8px; height = 7px; coverage = opaque; }
+    chart sandbags box { width = 26px; height = 5px; coverage = opaque; }
+    chart sandbags_top box { width = 18px; height = 5px; coverage = opaque; }
     material = opaque;
   }
   surface paint: Skin {
     material = opaque;
     texture atlas {
-      atlas = (64px, 32px); background = boot; background-alpha = 255;
+      atlas = (64px, 64px); background = boot; background-alpha = 255;
       palette {
-        boot = (#141824, #262c3c, #3c4458);
-        dark_blue = (#163a7a, #1f56a8, #3f84d8);
-        team_blue = (#1d4fa8, #2f74d6, #5ea8f2);
-        skin = (#c8946a, #f1c79b, #ffe2c4);
-        eyes_k = #141824;
-        goggles_g = #9fe3ff;
-        gun = (#20242e, #3a404e, #5c6474);
-        steel = (#4e5666, #8a93a6, #c3cbd9);
-        sandbag = (#a88a5a, #d2b47e, #efd6a0);
+        boot = (#3a3430, #4c443c, #5e544a);
+        dark_blue = (#1a468e, #1f56a8, #2a64b8);
+        rim_dark_blue_2_r = #3f7ccc;
+        team_blue = (#2766c4, #2f74d6, #3d84e2);
+        rim_team_blue_5_r = #6fb0f2;
+        rim_team_blue_3_r = #6fb0f2;
+        belt5_x = #5a3a22;
+        belt3_x = #5a3a22;
+        skin = (#e4b88c, #f1c79b, #f8d4ac);
+        eyes_k = #1d2a4a;
+        camo_blue = (#2766c4, #2f74d6, #3d84e2);
+        camo_blue_spots = (#4a4a2a, #6a6a3a, #8a7a4a);
+        strap7_x = #5a3a22;
+        goggles7_b = #5a3a22;
+        goggles7_g = #a8dcec;
+        rim_team_blue_2_r = #6fb0f2;
+        hand2_x = #f1c79b;
+        hand_s = #f1c79b;
+        steel = (#7a8394, #8a93a6, #9aa3b6);
+        gun = (#2a2e38, #343a46, #3e4554);
+        sandbag = (#c4a670, #d2b47e, #dec28e);
+        seams10_d = #a88a5a;
+        seams6_d = #a88a5a;
       }
-      stamp eyes { pixels = "k..k"; k = eyes_k; }
-      stamp goggles { pixels = "gg.gg"; g = goggles_g; }
+      stamp rim_dark_blue_2 { pixels = "rr"; r = rim_dark_blue_2_r; }
+      stamp rim_team_blue_5 { pixels = "rrrrr"; r = rim_team_blue_5_r; }
+      stamp rim_team_blue_3 { pixels = "rrr"; r = rim_team_blue_3_r; }
+      stamp belt5 { pixels = "xxxxx"; x = belt5_x; }
+      stamp belt3 { pixels = "xxx"; x = belt3_x; }
+      stamp eyes { pixels = "k..k/k..k"; k = eyes_k; }
+      stamp strap7 { pixels = "xxxxxxx"; x = strap7_x; }
+      stamp goggles7 { pixels = "bggbggb"; b = goggles7_b; g = goggles7_g; }
+      stamp rim_team_blue_2 { pixels = "rr"; r = rim_team_blue_2_r; }
+      stamp hand2 { pixels = "xx"; x = hand2_x; }
+      stamp hand { pixels = "ss/ss"; s = hand_s; }
+      stamp seams10 { pixels = "..d..d..d"; d = seams10_d; }
+      stamp seams6 { pixels = "..d.."; d = seams6_d; }
       chart boot_left box {
-        origin = (0px, 19px); fill = boot;
+        origin = (19px, 26px); fill = boot;
       }
       chart leg_left box {
-        origin = (19px, 11px); fill = dark_blue;
+        origin = (41px, 11px); fill = dark_blue;
+        face north { stamp rim_dark_blue_2 { at = (0px, 0px); } }
+        face south { stamp rim_dark_blue_2 { at = (0px, 0px); } }
+        face east { stamp rim_dark_blue_2 { at = (0px, 0px); } }
+        face west { stamp rim_dark_blue_2 { at = (0px, 0px); } }
       }
       chart boot_right box {
-        origin = (11px, 19px); fill = boot;
+        origin = (30px, 26px); fill = boot;
       }
       chart leg_right box {
-        origin = (28px, 11px); fill = dark_blue;
+        origin = (50px, 11px); fill = dark_blue;
+        face north { stamp rim_dark_blue_2 { at = (0px, 0px); } }
+        face south { stamp rim_dark_blue_2 { at = (0px, 0px); } }
+        face east { stamp rim_dark_blue_2 { at = (0px, 0px); } }
+        face west { stamp rim_dark_blue_2 { at = (0px, 0px); } }
       }
       chart torso box {
         origin = (0px, 11px); fill = team_blue;
+        face north { stamp rim_team_blue_5 { at = (0px, 0px); } stamp belt5 { at = (0px, 3px); } }
+        face south { stamp rim_team_blue_5 { at = (0px, 0px); } stamp belt5 { at = (0px, 3px); } }
+        face east { stamp rim_team_blue_3 { at = (0px, 0px); } stamp belt3 { at = (0px, 3px); } }
+        face west { stamp rim_team_blue_3 { at = (0px, 0px); } stamp belt3 { at = (0px, 3px); } }
       }
       chart head box {
         origin = (0px, 0px); fill = skin;
-        face north { stamp eyes { at = (1px, 2px); } }
+        face north { stamp eyes { at = (1px, 1px); } }
       }
       chart helmet box {
-        origin = (25px, 0px); fill = team_blue;
-        face north { stamp goggles { at = (1px, 0px); } }
+        origin = (25px, 0px); fill = camo_blue;
+        pattern blotch { paint = camo_blue_spots; scale = (1px, 1px, 1px); density = 0.5ratio; phase = 7; }
+        face south { stamp strap7 { at = (0px, 1px); } }
+        face east { stamp strap7 { at = (0px, 1px); } }
+        face west { stamp strap7 { at = (0px, 1px); } }
+        face north { stamp goggles7 { at = (0px, 1px); } }
+      }
+      chart helmet_top box {
+        origin = (0px, 19px); fill = camo_blue;
+        pattern blotch { paint = camo_blue_spots; scale = (1px, 1px, 1px); density = 0.5ratio; phase = 7; }
+      }
+      chart neck_guard box {
+        origin = (0px, 32px); fill = camo_blue;
+        pattern blotch { paint = camo_blue_spots; scale = (1px, 1px, 1px); density = 0.5ratio; phase = 7; }
       }
       chart arm_left box {
-        origin = (37px, 11px); fill = team_blue;
+        origin = (21px, 19px); fill = team_blue;
+        face north { stamp rim_team_blue_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } }
+        face south { stamp rim_team_blue_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } }
+        face east { stamp rim_team_blue_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } }
+        face west { stamp rim_team_blue_2 { at = (0px, 0px); } stamp hand2 { at = (0px, 2px); } }
       }
       chart arm_right box {
-        origin = (46px, 11px); fill = team_blue;
-      }
-      chart tube box {
-        origin = (54px, 0px); fill = gun;
+        origin = (17px, 11px); fill = team_blue;
+        face north { stamp hand { at = (0px, 0px); } }
       }
       chart base_plate box {
-        origin = (22px, 19px); fill = steel;
+        origin = (41px, 26px); fill = steel;
       }
-      chart sandbag box {
-        origin = (37px, 19px); fill = sandbag;
+      chart tube box {
+        origin = (32px, 11px); fill = gun;
+      }
+      chart sandbags box {
+        origin = (30px, 19px); fill = sandbag;
+        face north { stamp seams10 { at = (0px, 1px); } }
+      }
+      chart sandbags_top box {
+        origin = (0px, 26px); fill = sandbag;
+        face north { stamp seams6 { at = (0px, 1px); } }
       }
       grain clustered { seed = 2013; }
       tone voxel;
@@ -178,22 +240,25 @@ asset msoldier_blue {
         cube leg_right { origin = (0.5u, 1u, -1u); size = (2u, 4u, 2u); surface = skin.leg_right; }
       }
       bone torso {
-        cube torso { origin = (-3u, 5u, -1.5u); size = (6u, 4u, 3u); surface = skin.torso; }
+        cube torso { origin = (-2.5u, 5u, -1.5u); size = (5u, 4u, 3u); surface = skin.torso; }
         bone head {
           cube head { origin = (-3u, 9u, -3u); size = (6u, 4u, 6u); surface = skin.head; }
           cube helmet { origin = (-3.5u, 12u, -3.5u); size = (7u, 3u, 7u); surface = skin.helmet; }
+          cube helmet_top { origin = (-2.5u, 15u, -2.5u); size = (5u, 1u, 5u); surface = skin.helmet_top; }
+          cube neck_guard { origin = (-3.5u, 10u, 2.5u); size = (7u, 2u, 1u); surface = skin.neck_guard; }
         }
         bone arm_left {
-          cube arm_left { origin = (-5u, 6u, -1u); size = (2u, 3u, 2u); surface = skin.arm_left; }
+          cube arm_left { origin = (-4.5u, 6u, -1u); size = (2u, 3u, 2u); surface = skin.arm_left; }
         }
         bone arm_right {
-          cube arm_right { origin = (3u, 6u, -1u); size = (2u, 3u, 2u); surface = skin.arm_right; }
+          cube arm_right { origin = (2.5u, 7u, -5.5u); size = (2u, 2u, 5u); surface = skin.arm_right; }
         }
       }
       bone gear {
-        cube tube { origin = (-1u, 1u, -8u); size = (2u, 6u, 2u); rotation = (-30deg, 0deg, 0deg); pivot = (0u, 1u, -7u); surface = skin.tube; }
-        cube base_plate { origin = (-2u, 0u, -8.5u); size = (4u, 1u, 3u); surface = skin.base_plate; }
-        cube sandbag { origin = (-5u, 0u, 3u); size = (10u, 2u, 2u); surface = skin.sandbag; }
+        cube base_plate { origin = (-2u, 0u, -5.5u); size = (4u, 1u, 3u); surface = skin.base_plate; }
+        cube tube { origin = (-1u, 1u, -5u); size = (2u, 5u, 2u); rotation = (-30deg, 0deg, 0deg); pivot = (0u, 1u, -4u); surface = skin.tube; }
+        cube sandbags { origin = (-5u, 0u, -8u); size = (10u, 2u, 3u); surface = skin.sandbags; }
+        cube sandbags_top { origin = (-3u, 2u, -8u); size = (6u, 2u, 3u); surface = skin.sandbags_top; }
       }
     }
   }

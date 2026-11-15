@@ -27,18 +27,22 @@ export const sway = (bone, amount, duration) => ({
 });
 /**
  * Un giro sin fin (ruedas, helices, ventilador, radar), a saltos de una parte (`steps`) de lo que
- * tarda la pieza en verse igual (`symmetry`: 90 grados una rueda cuadrada, 180 una helice); al acabar
- * vuelve a 0, que se ve igual: Ashfox pide que un bucle acabe como empieza, y a saltos queda de juguete.
+ * tarda la pieza en verse igual (`symmetry`: 90 grados una rueda cuadrada, 180 una helice), `turns`
+ * veces en cada bucle; al acabar vuelve a 0, que se ve igual: Ashfox pide que un bucle acabe como
+ * empieza, y a saltos queda de juguete.
  */
-export const spin = (bone, duration, { axis = 0, symmetry = 90, sign = -1, steps = 4 } = {}) => ({
-  bone,
-  channel: 'rotation',
-  interp: 'step',
-  keys: [
-    ...Array.from({ length: steps }, (_, step) => [(duration * step) / steps, angleOn(axis, (sign * symmetry * step) / steps)]),
-    [duration, [0, 0, 0]],
-  ],
-});
+export const spin = (bone, duration, { axis = 0, symmetry = 90, sign = -1, steps = 4, turns = 1 } = {}) => {
+  const total = steps * turns;
+  return {
+    bone,
+    channel: 'rotation',
+    interp: 'step',
+    keys: [
+      ...Array.from({ length: total }, (_, step) => [(duration * step) / total, angleOn(axis, (sign * symmetry * step) / steps)]),
+      [duration, [0, 0, 0]],
+    ],
+  };
+};
 /** Un giro de esos grados sobre un eje (0 = x, 1 = y, 2 = z). */
 export const angleOn = (axis, degrees) => [0, 1, 2].map((index) => (index === axis ? degrees : 0));
 /** El golpe de un disparo: el hueso se echa atras (giro en x) y vuelve. */
