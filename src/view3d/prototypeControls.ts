@@ -5,7 +5,7 @@
  */
 import type { GameSession } from '../core/session';
 import type { Pos, TeamId, Unit } from '../core/model';
-import { canMoveNow, canReach, moveRange, pathTo, reachableTiles, unitAt, type MoveRange } from '../core/rules';
+import { canMoveNow, canReach, moveRange, pathTo, reachableTiles, unitAt, unitById, type MoveRange } from '../core/rules';
 import { playEvents, type AnimationHost } from './animations';
 import type { Highlights } from './highlights';
 
@@ -31,6 +31,11 @@ export class PrototypeControls {
     return this.session.state;
   }
 
+  /** Se esta animando algo (la interfaz lo enseña: sin fichas ni boton de fin de turno). */
+  get busy(): boolean {
+    return this.isBusy;
+  }
+
   /** Lleva la partida hasta que le toca decidir a la persona (o se acaba). */
   runUntilInput(): void {
     while (this.session.step().kind === 'acted');
@@ -41,6 +46,24 @@ export class PrototypeControls {
     if (this.isBusy || this.session.awaitingInput !== this.viewer) return;
     if (this.selection && canReach(this.selection.range, pos)) return this.moveSelected(pos);
     this.selectAt(pos);
+  }
+
+  /** Elegir una unidad por su uid (desde la interfaz): como tocar su casilla. */
+  focusUnit(uid: number): void {
+    const unit = unitById(this.state, uid);
+    if (unit && !this.isBusy) this.selectAt(unit);
+  }
+
+  /** La siguiente unidad propia que aun puede moverse, despues de la elegida (null si no queda ninguna). */
+  nextIdleUnit(): number | null {
+    const idle = this.state.units.filter((unit) => unit.team === this.viewer && canMoveNow(unit));
+    const current = idle.findIndex((unit) => unit.uid === this.selection?.unit.uid);
+    return idle[(current + 1) % idle.length]?.uid ?? null;
+  }
+
+  /** Soltar la unidad elegida. */
+  cancel(): void {
+    if (!this.isBusy) this.deselect();
   }
 
   endTurn(): void {
@@ -70,6 +93,7 @@ export class PrototypeControls {
     const result = this.session.act(this.viewer, { kind: 'move', uid: unit.uid, to, path: pathTo(range, to) });
     if (!result.ok) return console.warn('Movimiento rechazado:', result.reason);
     this.isBusy = true;
+    this.refresh();
     await playEvents(result.events, this.animations);
     this.isBusy = false;
     this.refresh();

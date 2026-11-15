@@ -2,68 +2,14 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Ilogic 3D · prototipo</title>
     <meta name="robots" content="noindex" />
-    <style>
-      html,
-      body {
-        margin: 0;
-        height: 100%;
-        overflow: hidden;
-        background: #bfe6ff;
-        font-family: system-ui, sans-serif;
-      }
-      #world {
-        position: fixed;
-        inset: 0;
-        touch-action: none;
-      }
-      #hud3d {
-        position: fixed;
-        left: 12px;
-        right: 12px;
-        top: 12px;
-        pointer-events: none;
-        color: #0b1220;
-      }
-      #hud3d .bar {
-        display: inline-flex;
-        gap: 12px;
-        align-items: center;
-        padding: 8px 12px;
-        border-radius: 10px;
-        border: 3px solid #141a2b;
-        background: #fffdf5;
-        box-shadow: 0 4px 0 #141a2b;
-        pointer-events: auto;
-      }
-      #hud3d .tag {
-        font-size: 12px;
-        padding: 2px 6px;
-        border-radius: 6px;
-        background: #ffd447;
-      }
-      #hud3d button {
-        font: inherit;
-        font-weight: 700;
-        padding: 6px 12px;
-        border-radius: 8px;
-        border: 3px solid #141a2b;
-        background: #3aa8ff;
-        color: #fff;
-        cursor: pointer;
-      }
-      #hud3d .help {
-        margin-top: 8px;
-        font-size: 13px;
-        opacity: 0.8;
-      }
-    </style>
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
   </head>
   <body>
-    <div id="world"></div>
-    <div id="hud3d"></div>
+    <div id="game"></div>
+    <div id="hud"></div>
     <script type="module" src="/src/view3d/main.ts"></script>
   </body>
 </html>

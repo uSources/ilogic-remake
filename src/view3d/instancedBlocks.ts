@@ -1,11 +1,11 @@
 /**
  * Muchas copias del mismo modelo de bloques (los arboles de todo un mapa) en pocas llamadas de
- * dibujo: una malla instanciada por bloque del modelo (y otra para su contorno), con una copia por
+ * dibujo: una malla instanciada por bloque del modelo, con una copia por
  * sitio. Asi un mapa grande lleno de decorado cuesta casi lo mismo que uno pequeño.
  */
 import * as THREE from 'three';
 import { colorOf, type Block, type BlockModel, type TeamPaint } from './blocks';
-import { hullSize, outlineMaterial, toonMaterial } from './toon';
+import { toonMaterial } from './toon';
 
 /** Donde va el bloque dentro del modelo (la base del bloque en `at`). */
 function blockOffset(block: Block): THREE.Matrix4 {
@@ -20,20 +20,18 @@ function instancedMesh(geometry: THREE.BufferGeometry, material: THREE.Material,
   return mesh;
 }
 
-function blockCopies(block: Block, teamPaint: TeamPaint, places: readonly THREE.Matrix4[]): THREE.InstancedMesh[] {
-  const [width, height, depth] = block.size;
-  const offset = blockOffset(block);
-  const solid = instancedMesh(new THREE.BoxGeometry(width, height, depth), toonMaterial(colorOf(block.paint, teamPaint)), offset, places);
-  solid.castShadow = true;
-  solid.receiveShadow = true;
-  const hull = instancedMesh(new THREE.BoxGeometry(...hullSize(block.size)), outlineMaterial, offset, places);
-  return [solid, hull];
+function blockCopies(block: Block, teamPaint: TeamPaint, places: readonly THREE.Matrix4[]): THREE.InstancedMesh {
+  const material = toonMaterial(colorOf(block.paint, teamPaint));
+  const copies = instancedMesh(new THREE.BoxGeometry(...block.size), material, blockOffset(block), places);
+  copies.castShadow = true;
+  copies.receiveShadow = true;
+  return copies;
 }
 
 /** Una copia del modelo en cada sitio (`places`: donde va y como gira cada una). */
 export function instancedModel(model: BlockModel, teamPaint: TeamPaint, places: readonly THREE.Matrix4[]): THREE.Group {
   const group = new THREE.Group();
   if (places.length === 0) return group;
-  for (const block of model.blocks) group.add(...blockCopies(block, teamPaint, places));
+  for (const block of model.blocks) group.add(blockCopies(block, teamPaint, places));
   return group;
 }

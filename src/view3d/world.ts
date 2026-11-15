@@ -5,12 +5,16 @@
  */
 import * as THREE from 'three';
 
-/** La luz cartoon: un cielo que tiñe las sombras de azul, un sol calido con sombras y un fondo de cielo. */
-const SKY_COLOR = 0xbfe6ff;
-const GROUND_BOUNCE = 0x5a6b45;
-const SUN_COLOR = 0xfff1d6;
-const SUN_INTENSITY = 2.4;
-const SKY_INTENSITY = 1.3;
+/**
+ * La luz cartoon: un sol calido y fuerte, que pinta la cara iluminada, y un cielo frio y flojo, que
+ * es lo unico que llega a la sombra. Asi la sombra no es gris sino azulada, como en un dibujo animado.
+ */
+const BACKGROUND_COLOR = 0xbfe6ff;
+const SKY_FILL = 0x7f9cff;
+const GROUND_FILL = 0x8a6fae;
+const SKY_INTENSITY = 0.9;
+const SUN_COLOR = 0xffe6b8;
+const SUN_INTENSITY = 2.8;
 /** De donde viene el sol (relativo al centro del mapa): alto y de lado, para que los bloques se lean. */
 const SUN_DIRECTION = new THREE.Vector3(-0.6, 1, 0.45).normalize();
 /** Resolucion del mapa de sombras: con la rampa de tres tonos no hace falta mas. */
@@ -33,13 +37,13 @@ export class World {
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     parent.appendChild(this.renderer.domElement);
     this.addLights();
-    this.scene.background = new THREE.Color(SKY_COLOR);
+    this.scene.background = new THREE.Color(BACKGROUND_COLOR);
     this.fit();
     window.addEventListener('resize', () => this.fit());
   }
 
   private addLights(): void {
-    this.scene.add(new THREE.HemisphereLight(SKY_COLOR, GROUND_BOUNCE, SKY_INTENSITY));
+    this.scene.add(new THREE.HemisphereLight(SKY_FILL, GROUND_FILL, SKY_INTENSITY));
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
     this.sun.shadow.bias = -0.0005;

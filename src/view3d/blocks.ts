@@ -5,7 +5,7 @@
  * en un grupo con ese nombre, para animarlos aparte (la torreta del tanque, la bandera).
  */
 import * as THREE from 'three';
-import { outlinedBox } from './toon';
+import { toonBox } from './toon';
 
 /** De que se pinta un bloque: el color de su equipo (claro u oscuro) o un material fijo. */
 export type BlockPaint =
@@ -49,8 +49,8 @@ const FIXED_PAINT: Readonly<Record<Exclude<BlockPaint, keyof TeamPaint>, number>
 export const colorOf = (paint: BlockPaint, teamPaint: TeamPaint): THREE.ColorRepresentation =>
   paint === 'team' || paint === 'teamDark' ? teamPaint[paint] : FIXED_PAINT[paint];
 
-function blockMesh(block: Block, teamPaint: TeamPaint): THREE.Group {
-  const box = outlinedBox(block.size, colorOf(block.paint, teamPaint));
+function blockMesh(block: Block, teamPaint: TeamPaint): THREE.Mesh {
+  const box = toonBox(block.size, colorOf(block.paint, teamPaint));
   const [x, y, z] = block.at;
   box.position.set(x, y + block.size[1] / 2, z);
   return box;

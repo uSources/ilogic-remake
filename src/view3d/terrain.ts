@@ -12,7 +12,7 @@ import { terrainAt } from '../core/gameContent';
 import type { TerrainType } from '../core/content';
 import type { BlockModel, TeamPaint } from './blocks';
 import { instancedModel } from './instancedBlocks';
-import { OUTLINE_WIDTH, outlineMaterial, toonMaterial } from './toon';
+import { toonMaterial } from './toon';
 import { tileToWorld } from './space';
 
 type DecorKind = 'tree' | 'pine' | 'cactus' | 'flowers';
@@ -92,8 +92,6 @@ const NO_TEAM: TeamPaint = { team: 0xffffff, teamDark: 0xffffff };
 
 /** Hasta donde bajan los bloques del terreno: se ven sus lados en los bordes y en los cortados. */
 const TERRAIN_BOTTOM = -0.5;
-/** Lo que baja la cara de arriba del contorno de una casilla respecto a la casilla (ver tileOutlines). */
-const OUTLINE_SINK = 0.01;
 /** Cuanto cambia el tono de una casilla a otra (en ajedrezado), para que se lea la cuadricula. */
 const CHECKER_SHADE = 0.05;
 /** Lo que se desplaza y gira el decorado en su casilla, para que no parezca copiado. */
@@ -133,23 +131,6 @@ function decorMatrix(pos: Pos, height: number): THREE.Matrix4 {
   return new THREE.Matrix4().compose(at, turn, new THREE.Vector3(1, 1, 1));
 }
 
-/**
- * El contorno de las casillas: un casco algo mas ancho que cada una pero con su cara de arriba un
- * pelo por debajo, asi entre casillas de la misma altura no se ve (no ensucia el suelo) y solo
- * dibuja la raya en los escalones, los cortados y la orilla.
- */
-function tileOutlines(s: GameState, positions: readonly Pos[]): THREE.InstancedMesh {
-  const hull = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), outlineMaterial, positions.length);
-  const grow = 1 + OUTLINE_WIDTH * 2;
-  positions.forEach((pos, index) => {
-    const top = lookOf(terrainAt(s, pos)).height - OUTLINE_SINK;
-    const depth = top - TERRAIN_BOTTOM;
-    const center = tileToWorld(pos, TERRAIN_BOTTOM + depth / 2);
-    hull.setMatrixAt(index, new THREE.Matrix4().compose(center, new THREE.Quaternion(), new THREE.Vector3(grow, depth, grow)));
-  });
-  return hull;
-}
-
 /** Las casillas, todas en una malla instanciada (cada una con su altura y su color). */
 function tilesMesh(s: GameState, positions: readonly Pos[]): THREE.InstancedMesh {
   const tiles = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), toonMaterial(0xffffff), positions.length);
@@ -178,7 +159,7 @@ export function buildTerrain(s: GameState): TerrainView {
   const positions = [...grid.cells()].map((cell) => cell.pos);
   const tiles = tilesMesh(s, positions);
   const object = new THREE.Group();
-  object.add(tiles, tileOutlines(s, positions), ...decorObjects(s, positions));
+  object.add(tiles, ...decorObjects(s, positions));
   const heights = grid.createLayer(0);
   for (const pos of positions) heights.set(pos, lookOf(terrainAt(s, pos)).height);
   return { object, tiles, tileOfInstance: positions, heightAt: (pos) => heights.at(pos) };

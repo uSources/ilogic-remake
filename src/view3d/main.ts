@@ -1,27 +1,39 @@
 /**
- * Prototipo 3D (3d.html): la misma partida, las mismas reglas y la misma sesion que el juego, vistas
- * con three.js en bloques y luz cartoon. Aqui solo se junta todo: cada pieza vive en su modulo.
+ * Prototipo 3D (3d.html): la misma partida, las mismas reglas, la misma sesion y la misma interfaz
+ * HTML que el juego, con el mapa visto con three.js en bloques y luz cartoon. Aqui solo se junta
+ * todo: cada pieza vive en su modulo.
  */
+import '@fontsource/silkscreen/latin-400.css';
+import '@fontsource/pixelify-sans/latin-400.css';
+import '../hud/hud.css';
 import * as THREE from 'three';
+import { render, h } from 'preact';
 import { mapGrid } from '../core/mapGrid';
 import type { Pos } from '../core/model';
+import { Hud } from '../hud/Hud';
+import { applySettings } from '../settings';
 import { BoardView } from './board';
 import { CameraRig } from './cameraRig';
+import { loadGameAtlas } from './gameAtlas';
 import { Highlights } from './highlights';
+import { installHudActions, publishHud } from './hudBridge';
+import { installKeys } from './keyInput';
+import { installPointer } from './pointerInput';
 import { PrototypeControls } from './prototypeControls';
 import { startPrototype } from './prototypeMatch';
-import { buildTerrain, type TerrainView } from './terrain';
+import { buildTerrain } from './terrain';
 import { World } from './world';
-import { installHud } from './hud';
 
-/** Se considera arrastre (y no toque) si el puntero se mueve mas de esto en pixeles. */
-const DRAG_THRESHOLD = 6;
 const START_DISTANCE = 14;
 const START_YAW = Math.PI / 4;
 
+render(h(Hud, {}), document.getElementById('hud')!);
+applySettings();
+const textures = await loadGameAtlas();
+
 const { session, viewer } = startPrototype();
 const state = session.state;
-const world = new World(document.getElementById('world')!);
+const world = new World(document.getElementById('game')!);
 const terrain = buildTerrain(state);
 const board = new BoardView(state, viewer, terrain);
 const highlights = new Highlights((pos) => board.groundOf(pos));
@@ -36,69 +48,57 @@ const firstUnit = state.units.find((unit) => unit.team === viewer);
 const startTarget = firstUnit ? board.groundOf(firstUnit) : center.clone();
 const rig = new CameraRig(world.camera, { target: startTarget, distance: START_DISTANCE, yaw: START_YAW }, bounds);
 
-const hud = installHud(document.getElementById('hud3d')!, { onEndTurn: () => controls.endTurn() });
-const controls = new PrototypeControls(session, viewer, highlights, { board, animate: (s, step) => world.animate(s, step) }, () => {
+let cursor: Pos | null = null;
+const refresh = () => {
   board.sync();
-  hud.update(state);
-});
+  publishHud(textures, state, viewer, { cursor, busy: controls.busy });
+};
+const animations = { board, animate: (seconds: number, step: (progress: number) => void) => world.animate(seconds, step) };
+const controls = new PrototypeControls(session, viewer, highlights, animations, refresh);
+installHudActions({ endTurn: () => controls.endTurn(), focusUnit: (uid) => focusUnit(uid) });
+
+/** Elige la unidad y lleva la camara hasta ella. */
+function focusUnit(uid: number): void {
+  const unit = state.units.find((candidate) => candidate.uid === uid);
+  if (!unit) return;
+  controls.focusUnit(uid);
+  rig.lookAt(board.groundOf(unit));
+}
 
 /** La casilla bajo un punto de la pantalla: la de la unidad si se toca una, si no la del terreno. */
-function tileAt(clientX: number, clientY: number, terrainView: TerrainView): Pos | null {
+function tileAt(clientX: number, clientY: number): Pos | null {
   const canvas = world.renderer.domElement.getBoundingClientRect();
   const pointer = new THREE.Vector2(((clientX - canvas.left) / canvas.width) * 2 - 1, -((clientY - canvas.top) / canvas.height) * 2 + 1);
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(pointer, world.camera);
-  const [hit] = raycaster.intersectObjects([board.object, terrainView.tiles], true);
+  const [hit] = raycaster.intersectObjects([board.object, terrain.tiles], true);
   if (!hit) return null;
   const uid = board.unitHit(hit.object);
   if (uid !== null) return state.units.find((unit) => unit.uid === uid) ?? null;
-  if (hit.object === terrainView.tiles && hit.instanceId !== undefined) return terrainView.tileOfInstance[hit.instanceId] ?? null;
+  if (hit.object === terrain.tiles && hit.instanceId !== undefined) return terrain.tileOfInstance[hit.instanceId] ?? null;
   return { x: Math.round(hit.point.x), y: Math.round(hit.point.z) };
 }
 
-/** Arrastrar desplaza la camara; soltar sin arrastrar es tocar la casilla. */
-function installPointer(canvas: HTMLCanvasElement): void {
-  let press: { x: number; y: number; isDrag: boolean } | null = null;
-  canvas.addEventListener('pointerdown', (event) => (press = { x: event.clientX, y: event.clientY, isDrag: false }));
-  canvas.addEventListener('pointermove', (event) => {
-    highlights.hover(tileAt(event.clientX, event.clientY, terrain));
-    if (!press) return;
-    const moved = Math.hypot(event.clientX - press.x, event.clientY - press.y);
-    if (moved > DRAG_THRESHOLD) press.isDrag = true;
-    if (!press.isDrag) return;
-    const scale = rig.tilesPerPixel(canvas.clientHeight);
-    rig.pan(-event.movementX * scale, event.movementY * scale);
-  });
-  canvas.addEventListener('pointerup', (event) => {
-    const wasTap = press && !press.isDrag;
-    press = null;
-    const pos = wasTap ? tileAt(event.clientX, event.clientY, terrain) : null;
-    if (pos) void controls.tap(pos);
-  });
-  canvas.addEventListener('wheel', (event) => rig.zoom(event.deltaY), { passive: true });
+/** La casilla señalada: el cuadro amarillo y la ficha de la interfaz. */
+function hover(pos: Pos | null): void {
+  const isSame = pos && cursor ? pos.x === cursor.x && pos.y === cursor.y : pos === cursor;
+  if (isSame) return;
+  cursor = pos;
+  highlights.hover(pos);
+  refresh();
 }
 
-/** Teclas que se mantienen (desplazar) y teclas de una vez (girar, fin de turno). */
-function installKeys(): void {
-  const held = new Set<string>();
-  const axis = (positive: string[], negative: string[]) =>
-    (positive.some((key) => held.has(key)) ? 1 : 0) - (negative.some((key) => held.has(key)) ? 1 : 0);
-  window.addEventListener('keydown', (event) => {
-    held.add(event.code);
-    if (event.code === 'KeyQ') rig.turn(1);
-    if (event.code === 'KeyE') rig.turn(-1);
-    if (event.code === 'Enter') controls.endTurn();
-  });
-  window.addEventListener('keyup', (event) => held.delete(event.code));
-  world.onFrame((seconds) => {
-    const right = axis(['KeyD', 'ArrowRight'], ['KeyA', 'ArrowLeft']);
-    const forward = axis(['KeyW', 'ArrowUp'], ['KeyS', 'ArrowDown']);
-    if (right || forward) rig.panByKeys(right, forward, seconds);
-  });
-}
-
-installPointer(world.renderer.domElement);
-installKeys();
+installPointer(world.renderer.domElement, { rig, tileAt, hover, tap: (pos) => void controls.tap(pos) });
+installKeys({
+  rig,
+  onFrame: (listener) => world.onFrame(listener),
+  endTurn: () => controls.endTurn(),
+  nextUnit: () => {
+    const uid = controls.nextIdleUnit();
+    if (uid !== null) focusUnit(uid);
+  },
+  cancel: () => controls.cancel(),
+});
 world.onFrame((seconds) => {
   rig.update(seconds);
   highlights.update(seconds);
