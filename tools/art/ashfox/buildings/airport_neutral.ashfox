@@ -1,0 +1,81 @@
+ashfox-model 1
+asset airport_neutral {
+  rig contract StaticRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+  }
+  skeleton StaticSkeleton implements StaticRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart runway box { width = 56px; height = 15px; coverage = opaque; }
+    chart tower box { width = 12px; height = 13px; coverage = opaque; }
+    chart cab box { width = 16px; height = 6px; coverage = opaque; }
+    chart cab_roof box { width = 16px; height = 5px; coverage = opaque; }
+    chart hangar box { width = 28px; height = 12px; coverage = opaque; }
+    chart hangar_roof box { width = 24px; height = 8px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = asphalt; background-alpha = 255;
+      palette {
+        asphalt = (#1c2028, #2a2e38, #3c4250);
+        dashes_w = #f2f5ff;
+        body_neutral = (#55585e, #8f949c, #c8ccd2);
+        glass = (#4f9fc8, #9fe3ff, #e6f8ff);
+        trim_neutral = (#3a3d42, #62666e, #8f949c);
+        hangar_door_k = #14202c;
+      }
+      stamp dashes { pixels = "ww..ww..ww"; w = dashes_w; }
+      stamp hangar_door { pixels = ".kkkkk./.kkkkk./.kkkkk."; k = hangar_door_k; }
+      chart runway box {
+        origin = (0px, 0px); fill = asphalt;
+        face up { stamp dashes { at = (2px, 11px); } }
+      }
+      chart tower box {
+        origin = (0px, 16px); fill = body_neutral;
+      }
+      chart cab box {
+        origin = (25px, 30px); fill = glass;
+      }
+      chart cab_roof box {
+        origin = (42px, 30px); fill = trim_neutral;
+      }
+      chart hangar box {
+        origin = (13px, 16px); fill = body_neutral;
+        face north { stamp hangar_door { at = (0px, 2px); } }
+      }
+      chart hangar_roof box {
+        origin = (0px, 30px); fill = trim_neutral;
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: StaticRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube runway { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.runway; }
+        cube tower { origin = (-6u, 1u, -6u); size = (3u, 10u, 3u); surface = skin.tower; }
+        cube cab { origin = (-6.5u, 11u, -6.5u); size = (4u, 2u, 4u); surface = skin.cab; }
+        cube cab_roof { origin = (-6.5u, 13u, -6.5u); size = (4u, 1u, 4u); surface = skin.cab_roof; }
+        cube hangar { origin = (-1u, 1u, -6u); size = (7u, 5u, 7u); surface = skin.hangar; }
+        cube hangar_roof { origin = (0u, 6u, -6u); size = (5u, 1u, 7u); surface = skin.hangar_roof; }
+      }
+    }
+  }
+  export asset airport_neutral {
+    settings { density = 16; forward = north; }
+    skeleton = StaticSkeleton;
+    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+  }
+}

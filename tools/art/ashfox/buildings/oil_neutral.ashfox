@@ -1,0 +1,85 @@
+ashfox-model 1
+asset oil_neutral {
+  rig contract StaticRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+  }
+  skeleton StaticSkeleton implements StaticRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 64px; }
+    chart plinth box { width = 56px; height = 15px; coverage = opaque; }
+    chart deck box { width = 40px; height = 10px; coverage = opaque; }
+    chart leg_left box { width = 8px; height = 10px; coverage = opaque; }
+    chart leg_right box { width = 8px; height = 10px; coverage = opaque; }
+    chart beam box { width = 32px; height = 6px; coverage = opaque; }
+    chart cap box { width = 12px; height = 5px; coverage = opaque; }
+    chart drill box { width = 6px; height = 9px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = pavement; background-alpha = 255;
+      palette {
+        pavement = (#8a857a, #b9b2a0, #d6cfbd);
+        pavement_spots = (#7a756a, #9a958a, #b0aa9a);
+        trim_neutral = (#3a3d42, #62666e, #8f949c);
+        body_neutral = (#55585e, #8f949c, #c8ccd2);
+        metal = (#4e5666, #8a93a6, #c3cbd9);
+        brace_k = #14202c;
+      }
+      stamp brace { pixels = "k./.k/k./.k/k./.k/k./.k"; k = brace_k; }
+      chart plinth box {
+        origin = (0px, 0px); fill = pavement;
+        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.15ratio; phase = 7; }
+      }
+      chart deck box {
+        origin = (0px, 16px); fill = trim_neutral;
+      }
+      chart leg_left box {
+        origin = (41px, 16px); fill = body_neutral;
+      }
+      chart leg_right box {
+        origin = (50px, 16px); fill = body_neutral;
+      }
+      chart beam box {
+        origin = (7px, 27px); fill = body_neutral;
+      }
+      chart cap box {
+        origin = (40px, 27px); fill = trim_neutral;
+      }
+      chart drill box {
+        origin = (0px, 27px); fill = metal;
+        face north { stamp brace { at = (0px, 0px); } }
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: StaticRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
+        cube deck { origin = (-6u, 1u, -4u); size = (12u, 2u, 8u); surface = skin.deck; }
+        cube leg_left { origin = (-5u, 3u, -1u); size = (2u, 8u, 2u); surface = skin.leg_left; }
+        cube leg_right { origin = (3u, 3u, -1u); size = (2u, 8u, 2u); surface = skin.leg_right; }
+        cube beam { origin = (-6u, 11u, -2u); size = (12u, 2u, 4u); surface = skin.beam; }
+        cube cap { origin = (-1.5u, 13u, -1.5u); size = (3u, 2u, 3u); surface = skin.cap; }
+        cube drill { origin = (-1u, 3u, -0.5u); size = (2u, 8u, 1u); surface = skin.drill; }
+      }
+    }
+  }
+  export asset oil_neutral {
+    settings { density = 16; forward = north; }
+    skeleton = StaticSkeleton;
+    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+  }
+}

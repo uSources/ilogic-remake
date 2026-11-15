@@ -1,0 +1,104 @@
+ashfox-model 1
+asset factory_red {
+  rig contract StaticRig {
+    handedness = right;
+    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = rotation; mirror = none; }
+  }
+  skeleton StaticSkeleton implements StaticRig {
+    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+  }
+  surface contract Skin {
+    atlas { width = 64px; height = 128px; }
+    chart plinth box { width = 56px; height = 15px; coverage = opaque; }
+    chart hall box { width = 42px; height = 15px; coverage = opaque; }
+    chart roof0 box { width = 26px; height = 10px; coverage = opaque; }
+    chart skylight0 box { width = 22px; height = 11px; coverage = opaque; }
+    chart roof1 box { width = 26px; height = 10px; coverage = opaque; }
+    chart skylight1 box { width = 22px; height = 11px; coverage = opaque; }
+    chart roof2 box { width = 26px; height = 10px; coverage = opaque; }
+    chart skylight2 box { width = 22px; height = 11px; coverage = opaque; }
+    chart chimney box { width = 8px; height = 13px; coverage = opaque; }
+    chart chimney_cap box { width = 12px; height = 4px; coverage = opaque; }
+    material = opaque;
+  }
+  surface paint: Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 128px); background = pavement; background-alpha = 255;
+      palette {
+        pavement = (#8a857a, #b9b2a0, #d6cfbd);
+        pavement_spots = (#7a756a, #9a958a, #b0aa9a);
+        body_red = (#6e1414, #b8282a, #ee5a50);
+        hall_windows_w = #14202c;
+        hall_windows_l = #ffe08a;
+        door_d = #14202c;
+        trim_red = (#4a0c0c, #86181a, #c23a36);
+        glass = (#4f9fc8, #9fe3ff, #e6f8ff);
+      }
+      stamp hall_windows { pixels = "w.w.w.l.w.w."; w = hall_windows_w; l = hall_windows_l; }
+      stamp door { pixels = "dd/dd/dd"; d = door_d; }
+      chart plinth box {
+        origin = (0px, 0px); fill = pavement;
+        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.15ratio; phase = 7; }
+      }
+      chart hall box {
+        origin = (0px, 16px); fill = body_red;
+        face north { stamp hall_windows { at = (0px, 1px); } stamp door { at = (5px, 3px); } }
+      }
+      chart roof0 box {
+        origin = (23px, 44px); fill = trim_red;
+      }
+      chart skylight0 box {
+        origin = (0px, 32px); fill = glass;
+      }
+      chart roof1 box {
+        origin = (0px, 56px); fill = trim_red;
+      }
+      chart skylight1 box {
+        origin = (23px, 32px); fill = glass;
+      }
+      chart roof2 box {
+        origin = (27px, 56px); fill = trim_red;
+      }
+      chart skylight2 box {
+        origin = (0px, 44px); fill = glass;
+      }
+      chart chimney box {
+        origin = (43px, 16px); fill = pavement;
+        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.15ratio; phase = 7; }
+      }
+      chart chimney_cap box {
+        origin = (0px, 67px); fill = trim_red;
+      }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+  component Body {
+    requires rig skeleton: StaticRig;
+    requires surface skin: Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
+        cube hall { origin = (-6u, 1u, -4u); size = (12u, 6u, 9u); surface = skin.hall; }
+        cube roof0 { origin = (-6u, 7u, -4u); size = (4u, 1u, 9u); surface = skin.roof0; }
+        cube skylight0 { origin = (-4u, 8u, -4u); size = (2u, 2u, 9u); surface = skin.skylight0; }
+        cube roof1 { origin = (-2u, 7u, -4u); size = (4u, 1u, 9u); surface = skin.roof1; }
+        cube skylight1 { origin = (0u, 8u, -4u); size = (2u, 2u, 9u); surface = skin.skylight1; }
+        cube roof2 { origin = (2u, 7u, -4u); size = (4u, 1u, 9u); surface = skin.roof2; }
+        cube skylight2 { origin = (4u, 8u, -4u); size = (2u, 2u, 9u); surface = skin.skylight2; }
+        cube chimney { origin = (4u, 1u, 4u); size = (2u, 11u, 2u); surface = skin.chimney; }
+        cube chimney_cap { origin = (3.5u, 12u, 3.5u); size = (3u, 1u, 3u); surface = skin.chimney_cap; }
+      }
+    }
+  }
+  export asset factory_red {
+    settings { density = 16; forward = north; }
+    skeleton = StaticSkeleton;
+    use Body as model { bind skeleton = StaticRig; bind skin = paint; };
+  }
+}

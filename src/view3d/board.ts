@@ -135,7 +135,7 @@ export class BoardView {
   }
 
   private addBuilding(building: Building, side: OwnerSide): BuildingPiece {
-    const object = buildModel(buildingModelOf(building.type), SIDE_PAINT[side]);
+    const object = this.glbModels.building(building.type, side) ?? buildModel(buildingModelOf(building.type), SIDE_PAINT[side]);
     object.position.copy(this.groundOf(building));
     const captureBar = newBadge(BUILDING_BADGE_HEIGHT);
     object.add(captureBar);

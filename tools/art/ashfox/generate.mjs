@@ -1,18 +1,23 @@
-// Escribe los .ashfox de los modelos fijos (terreno y decorado) a partir de descripciones cortas
-// (models/terrain.mjs): cada modelo son cubos con su pintura. Ashfox no coloca solo los trozos de
-// textura de cada cubo (charts): aqui se calculan y se empaquetan en el atlas. Despues, con --export,
-// saca cada GLB a public/assets/models/terrain/ (hace falta el CLI de Ashfox: ver README.md).
+// Escribe los .ashfox de los modelos fijos (terreno, decorado y edificios) a partir de descripciones
+// cortas (models/*.mjs, un grupo por fichero): cada modelo son cubos con su pintura. Ashfox no coloca
+// solo los trozos de textura de cada cubo (charts): aqui se calculan y se empaquetan en el atlas.
+// Despues, con --export, saca cada GLB a public/assets/models/<grupo>/ (hace falta el CLI de Ashfox:
+// ver README.md).
 //
 //   node tools/art/ashfox/generate.mjs            escribe los .ashfox
 //   node tools/art/ashfox/generate.mjs --export   y exporta los GLB (ASHFOX=<ruta del ejecutable>)
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { MODELS, PAINTS } from './models/terrain.mjs';
+import * as buildings from './models/buildings.mjs';
+import * as terrain from './models/terrain.mjs';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;
-const SOURCES = join(ROOT, 'tools/art/ashfox/terrain');
-const OUTPUT = join(ROOT, 'public/assets/models/terrain');
+/** Cada grupo: sus modelos y la carpeta de sus fuentes (tools/art/ashfox/<grupo>) y de sus GLB. */
+const GROUPS = { terrain: terrain.MODELS, buildings: buildings.MODELS };
+const PAINTS = { ...terrain.PAINTS, ...buildings.PAINTS };
+const sourcesOf = (group) => join(ROOT, 'tools/art/ashfox', group);
+const outputOf = (group) => join(ROOT, 'public/assets/models', group);
 /** Separacion entre trozos del atlas (texeles): que no se mezclen al filtrar. */
 const GAP = 1;
 const IDENTITY_FRAME = 'frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }';
@@ -136,23 +141,26 @@ ${cubes.map((cube) => `        cube ${cube.name} { origin = ${vec(cube.origin, '
 `;
 }
 
-function writeSources() {
-  mkdirSync(SOURCES, { recursive: true });
-  for (const [name, model] of Object.entries(MODELS)) writeFileSync(join(SOURCES, `${name}.ashfox`), source(name, model));
-  console.log(`${Object.keys(MODELS).length} modelos en ${SOURCES}`);
+function writeSources(group, models) {
+  mkdirSync(sourcesOf(group), { recursive: true });
+  for (const [name, model] of Object.entries(models)) writeFileSync(join(sourcesOf(group), `${name}.ashfox`), source(name, model));
+  console.log(`${group}: ${Object.keys(models).length} modelos`);
 }
 
 /** Exporta cada modelo a su GLB (Ashfox no sobrescribe: se borra antes). */
-function exportModels() {
+function exportModels(group, models) {
   const ashfox = process.env.ASHFOX ?? 'ashfox';
-  mkdirSync(OUTPUT, { recursive: true });
-  for (const name of Object.keys(MODELS)) {
-    const output = join(OUTPUT, `${name}.glb`);
+  mkdirSync(outputOf(group), { recursive: true });
+  for (const name of Object.keys(models)) {
+    const output = join(outputOf(group), `${name}.glb`);
     rmSync(output, { force: true });
-    execFileSync(ashfox, ['export', join(SOURCES, `${name}.ashfox`), '--output', output], { stdio: ['ignore', 'ignore', 'inherit'] });
+    const input = join(sourcesOf(group), `${name}.ashfox`);
+    execFileSync(ashfox, ['export', input, '--output', output], { stdio: ['ignore', 'ignore', 'inherit'] });
   }
-  console.log(`${Object.keys(MODELS).length} GLB en ${OUTPUT}`);
+  console.log(`${group}: ${Object.keys(models).length} GLB`);
 }
 
-writeSources();
-if (process.argv.includes('--export')) exportModels();
+for (const [group, models] of Object.entries(GROUPS)) {
+  writeSources(group, models);
+  if (process.argv.includes('--export')) exportModels(group, models);
+}

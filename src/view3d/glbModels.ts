@@ -18,6 +18,14 @@ const GLB_UNITS: Readonly<Record<string, { friendly: string; enemy: string }>> =
   Tank: { friendly: 'tank_blue', enemy: 'tank_red' },
 };
 
+/** Los edificios con modelo de Ashfox (id de buildings.json): uno por lado en assets/models/buildings. */
+const GLB_BUILDINGS: readonly string[] = ['Base', 'City', 'Factory', 'Oil', 'Stronghold', 'Airport'];
+const BUILDING_SIDES = { friendly: 'blue', enemy: 'red', neutral: 'neutral' } as const;
+const buildingSideOf = (side: OwnerSide): keyof typeof BUILDING_SIDES =>
+  side === 'neutral' ? 'neutral' : isFriendly(side) ? 'friendly' : 'enemy';
+const buildingFile = (buildingType: string, side: keyof typeof BUILDING_SIDES): string =>
+  `buildings/${buildingType.toLowerCase()}_${BUILDING_SIDES[side]}`;
+
 /** Las animaciones que se repiten (las demas suenan una vez y vuelven a 'idle'). */
 const LOOPING: ReadonlySet<UnitClip> = new Set<UnitClip>(['idle', 'drive']);
 const FADE_SECONDS = 0.15;
@@ -69,7 +77,11 @@ export class GlbLibrary {
   /** Carga los de las unidades y los fijos que se piden (`staticFiles`, rutas dentro de assets/models). */
   static async load(staticFiles: readonly string[] = []): Promise<GlbLibrary> {
     const loader = new GLTFLoader();
-    const files = [...Object.values(GLB_UNITS).flatMap((sides) => [sides.friendly, sides.enemy]), ...staticFiles];
+    const unitFiles = Object.values(GLB_UNITS).flatMap((sides) => [sides.friendly, sides.enemy]);
+    const buildingFiles = GLB_BUILDINGS.flatMap((type) =>
+      Object.keys(BUILDING_SIDES).map((side) => buildingFile(type, side as keyof typeof BUILDING_SIDES)),
+    );
+    const files = [...unitFiles, ...buildingFiles, ...staticFiles];
     const loaded = await Promise.all(
       files.map(async (file) => {
         const gltf = await loader.loadAsync(modelUrl(file));
@@ -78,6 +90,17 @@ export class GlbLibrary {
       }),
     );
     return new GlbLibrary(new Map(loaded));
+  }
+
+  /** Una copia del edificio de ese tipo para ese lado, mirando hacia +z (null si el tipo no tiene GLB). */
+  building(buildingType: string, side: OwnerSide): THREE.Group | null {
+    const model = this.models.get(buildingFile(buildingType, buildingSideOf(side)));
+    if (!model) return null;
+    const copy = model.scene.clone();
+    copy.rotation.y = Math.PI;
+    const object = new THREE.Group();
+    object.add(copy);
+    return object;
   }
 
   /** Las mallas de un modelo fijo (vacio si no esta cargado). */

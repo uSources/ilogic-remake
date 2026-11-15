@@ -8,9 +8,10 @@ que carga `src/view3d/glbModels.ts`.
 Hay dos maneras de escribirlos:
 
 - **A mano** (las unidades, con huesos y animaciones): cada una en su carpeta (`units/<tipo>/`), ver abajo.
-- **Generados** (el terreno y su decorado, modelos fijos): `models/terrain.mjs` describe cada modelo
+- **Generados** (modelos fijos: el terreno y su decorado, `models/terrain.mjs`, y los edificios, uno por
+  lado, `models/buildings.mjs`): cada fichero de `models/` describe cada modelo
   en pocas lineas (cubos y su pintura: rampa de tres tonos y manchas) a semejanza del terreno 2D, y
-  `generate.mjs` escribe los `.ashfox` completos en `terrain/` (calcula y coloca en el atlas el trozo
+  `generate.mjs` escribe los `.ashfox` completos en `terrain/` y `buildings/` (calcula y coloca en el atlas el trozo
   de textura de cada cubo, que Ashfox no coloca solo). Un modelo nuevo es una entrada en `MODELS`;
   que terreno lo usa, `TERRAIN_PIECES` en `src/view3d/terrain.ts`.
 
