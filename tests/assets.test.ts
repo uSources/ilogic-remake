@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { ATLAS_PAGES, LOOSE_IMAGES } from '../src/atlasPages';
 import { IMAGE_KEYS } from '../src/assetList';
 import { defaultContent } from '@core/content/default';
-import { requiredArtKeys } from '../src/ui/terrainArt';
 
 const UNIT_NAMES = defaultContent().units.list.map((unitType) => unitType.id);
 const BUILDING_NAMES = defaultContent().buildings.list.map((buildingType) => buildingType.id);
@@ -23,10 +22,6 @@ describe('graficos compilados', () => {
     const missing = IMAGE_KEYS.filter((key) => !frames.has(key) && !LOOSE_IMAGES.includes(key));
     expect(missing).toEqual([]);
     for (const image of LOOSE_IMAGES) expect(existsSync(`public/assets/img/${image}.png`)).toBe(true);
-  });
-
-  it('el terreno nuevo tiene todas sus laminas', () => {
-    expect(requiredArtKeys().filter((key) => !frames.has(key))).toEqual([]);
   });
 
   it('cada unidad y edificio tiene sus versiones de bando', () => {

@@ -1,205 +1,165 @@
 ashfox-model 1
 asset transport_blue {
-  rig contract ModelRig {
-    handedness = right;
-    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint hull { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint wheels_front { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint wheels_back { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint turret { parent = hull; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint barrel { parent = turret; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-  }
-  skeleton ModelSkeleton implements ModelRig {
-    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind wheels_front { parent-origin = (0u, 3u, -5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind wheels_back { parent-origin = (0u, 3u, 5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind turret { parent-origin = (0u, 4u, 2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind barrel { parent-origin = (0u, 1u, -2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-  }
-  motion idle for ModelRig {
-    duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
-    track hull.rotation {
-      key 0s = (0deg, 0deg, 0deg) catmullrom;
-      key 0.3s = (0.5deg, 0deg, 0.5deg) catmullrom;
-      key 0.6s = (0deg, 0deg, 0deg) catmullrom;
-      key 0.9s = (-0.5deg, 0deg, -0.5deg) catmullrom;
-      key 1.2s = (0deg, 0deg, 0deg) catmullrom;
-    }
-  }
-  motion drive for ModelRig {
-    duration = 0.4s; fps = 20; loop = loop; rest-relative = true;
-    track wheels_front.rotation {
-      key 0s = (0deg, 0deg, 0deg) step;
-      key 0.1s = (-22.5deg, 0deg, 0deg) step;
-      key 0.2s = (-45deg, 0deg, 0deg) step;
-      key 0.3s = (-67.5deg, 0deg, 0deg) step;
-      key 0.4s = (0deg, 0deg, 0deg) step;
-    }
-    track wheels_back.rotation {
-      key 0s = (0deg, 0deg, 0deg) step;
-      key 0.1s = (-22.5deg, 0deg, 0deg) step;
-      key 0.2s = (-45deg, 0deg, 0deg) step;
-      key 0.3s = (-67.5deg, 0deg, 0deg) step;
-      key 0.4s = (0deg, 0deg, 0deg) step;
-    }
-    track hull.rotation {
-      key 0s = (0deg, 0deg, 0deg) linear;
-      key 0.1s = (-1.5deg, 0deg, 1deg) linear;
-      key 0.2s = (0deg, 0deg, 0deg) linear;
-      key 0.3s = (1.5deg, 0deg, -1deg) linear;
-      key 0.4s = (0deg, 0deg, 0deg) linear;
-    }
-  }
-  motion fire for ModelRig {
-    duration = 0.5s; fps = 30; loop = once; rest-relative = true;
-    track hull.rotation {
-      key 0s = (0deg, 0deg, 0deg) linear;
-      key 0.06s = (4deg, 0deg, 0deg) linear;
-      key 0.4s = (0deg, 0deg, 0deg) linear;
-    }
-  }
-  surface contract Skin {
-    atlas { width = 64px; height = 128px; }
-    chart wheel_front_left box { width = 12px; height = 10px; coverage = opaque; }
-    chart wheel_front_left_round box { width = 14px; height = 10px; coverage = opaque; }
-    chart wheel_front_right box { width = 12px; height = 10px; coverage = opaque; }
-    chart wheel_front_right_round box { width = 14px; height = 10px; coverage = opaque; }
-    chart wheel_back_left box { width = 12px; height = 10px; coverage = opaque; }
-    chart wheel_back_left_round box { width = 14px; height = 10px; coverage = opaque; }
-    chart wheel_back_right box { width = 12px; height = 10px; coverage = opaque; }
-    chart wheel_back_right_round box { width = 14px; height = 10px; coverage = opaque; }
-    chart cab box { width = 30px; height = 12px; coverage = opaque; }
-    chart bumper box { width = 22px; height = 2px; coverage = opaque; }
-    chart bed box { width = 42px; height = 13px; coverage = opaque; }
-    chart cover box { width = 40px; height = 15px; coverage = opaque; }
-    chart cover_top box { width = 36px; height = 11px; coverage = opaque; }
-    material = opaque;
-  }
-  surface paint: Skin {
-    material = opaque;
-    texture atlas {
-      atlas = (64px, 128px); background = tire; background-alpha = 255;
-      palette {
-        tire = (#14171e, #1c2029, #252a35);
-        hub_h = #8a93a6;
-        team_blue = (#2766c4, #2f74d6, #3d84e2);
-        rim_team_blue_10_r = #6fb0f2;
-        rim_team_blue_5_r = #6fb0f2;
-        windshield_g = #9fe3ff;
-        lights_l = #ffe066;
-        lights_k = #141824;
-        side_window_g = #9fe3ff;
-        gun = (#2a2e38, #343a46, #3e4554);
-        dark_blue = (#1a468e, #1f56a8, #2a64b8);
-        canvas = (#b8a8a0, #c8b8b0, #d6c8c0);
-        ribs_d = #a8968c;
-      }
-      stamp hub { pixels = "hh/hh"; h = hub_h; }
-      stamp rim_team_blue_10 { pixels = "rrrrrrrrrr"; r = rim_team_blue_10_r; }
-      stamp rim_team_blue_5 { pixels = "rrrrr"; r = rim_team_blue_5_r; }
-      stamp windshield { pixels = "gggggggg/gggggggg/gggggggg"; g = windshield_g; }
-      stamp lights { pixels = "l.kkkkkk.l"; l = lights_l; k = lights_k; }
-      stamp side_window { pixels = "ggg/ggg"; g = side_window_g; }
-      stamp ribs { pixels = "d..d..d/d..d..d/d..d..d"; d = ribs_d; }
-      chart wheel_front_left box {
-        origin = (37px, 43px); fill = tire;
-        face east { stamp hub { at = (1px, 2px); } }
-        face west { stamp hub { at = (1px, 2px); } }
-      }
-      chart wheel_front_left_round box {
-        origin = (50px, 43px); fill = tire;
-      }
-      chart wheel_front_right box {
-        origin = (0px, 55px); fill = tire;
-        face east { stamp hub { at = (1px, 2px); } }
-        face west { stamp hub { at = (1px, 2px); } }
-      }
-      chart wheel_front_right_round box {
-        origin = (13px, 55px); fill = tire;
-      }
-      chart wheel_back_left box {
-        origin = (28px, 55px); fill = tire;
-        face east { stamp hub { at = (1px, 2px); } }
-        face west { stamp hub { at = (1px, 2px); } }
-      }
-      chart wheel_back_left_round box {
-        origin = (41px, 55px); fill = tire;
-      }
-      chart wheel_back_right box {
-        origin = (0px, 66px); fill = tire;
-        face east { stamp hub { at = (1px, 2px); } }
-        face west { stamp hub { at = (1px, 2px); } }
-      }
-      chart wheel_back_right_round box {
-        origin = (13px, 66px); fill = tire;
-      }
-      chart cab box {
-        origin = (0px, 30px); fill = team_blue;
-        face north { stamp rim_team_blue_10 { at = (0px, 0px); } stamp windshield { at = (1px, 1px); } stamp lights { at = (0px, 5px); } }
-        face south { stamp rim_team_blue_10 { at = (0px, 0px); } }
-        face east { stamp rim_team_blue_5 { at = (0px, 0px); } stamp side_window { at = (1px, 1px); } }
-        face west { stamp rim_team_blue_5 { at = (0px, 0px); } stamp side_window { at = (1px, 1px); } }
-      }
-      chart bumper box {
-        origin = (28px, 66px); fill = gun;
-      }
-      chart bed box {
-        origin = (0px, 16px); fill = dark_blue;
-      }
-      chart cover box {
-        origin = (0px, 0px); fill = canvas;
-        face east { stamp ribs { at = (1px, 1px); } }
-        face west { stamp ribs { at = (1px, 1px); } }
-      }
-      chart cover_top box {
-        origin = (0px, 43px); fill = canvas;
-      }
-      grain clustered { seed = 2013; }
-      tone voxel;
-    }
-  }
-  component Body {
-    requires rig skeleton: ModelRig;
-    requires surface skin: Skin;
-    bind bone hull to skeleton.hull;
-    bind bone wheels_front to skeleton.wheels_front;
-    bind bone wheels_back to skeleton.wheels_back;
-    bind bone turret to skeleton.turret;
-    bind bone barrel to skeleton.barrel;
-    geometry {
-      bone hull {
-        cube cab { origin = (-5u, 3u, -8u); size = (10u, 7u, 5u); surface = skin.cab; }
-        cube bumper { origin = (-5u, 3u, -9u); size = (10u, 1u, 1u); surface = skin.bumper; }
-        cube bed { origin = (-5u, 3u, -3u); size = (10u, 2u, 11u); surface = skin.bed; }
-        cube cover { origin = (-5u, 5u, -2.5u); size = (10u, 5u, 10u); surface = skin.cover; }
-        cube cover_top { origin = (-4u, 10u, -2.5u); size = (8u, 1u, 10u); surface = skin.cover_top; }
-        bone turret {
-          bone barrel {
-          }
-        }
-      }
-      bone wheels_front {
-        cube wheel_front_left { origin = (-6.5u, 0u, -7u); size = (2u, 6u, 4u); surface = skin.wheel_front_left; }
-        cube wheel_front_left_round { origin = (-6u, 1u, -8u); size = (1u, 4u, 6u); surface = skin.wheel_front_left_round; }
-        cube wheel_front_right { origin = (4.5u, 0u, -7u); size = (2u, 6u, 4u); surface = skin.wheel_front_right; }
-        cube wheel_front_right_round { origin = (5u, 1u, -8u); size = (1u, 4u, 6u); surface = skin.wheel_front_right_round; }
-      }
-      bone wheels_back {
-        cube wheel_back_left { origin = (-6.5u, 0u, 3u); size = (2u, 6u, 4u); surface = skin.wheel_back_left; }
-        cube wheel_back_left_round { origin = (-6u, 1u, 2u); size = (1u, 4u, 6u); surface = skin.wheel_back_left_round; }
-        cube wheel_back_right { origin = (4.5u, 0u, 3u); size = (2u, 6u, 4u); surface = skin.wheel_back_right; }
-        cube wheel_back_right_round { origin = (5u, 1u, 2u); size = (1u, 4u, 6u); surface = skin.wheel_back_right_round; }
-      }
-    }
-  }
-  export asset transport_blue {
-    settings { density = 16; forward = north; }
-    skeleton = ModelSkeleton;
-    motion = idle;
-    motion = drive;
-    motion = fire;
-    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-  }
+rig contract ModelRig {
+handedness = right;
+frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint hull { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint wheels_front { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint wheels_back { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint turret { parent = hull; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint barrel { parent = turret; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+}
+skeleton ModelSkeleton implements ModelRig {
+bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind wheels_front { parent-origin = (0u, 3u, -5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind wheels_back { parent-origin = (0u, 3u, 5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind turret { parent-origin = (0u, 4u, 2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind barrel { parent-origin = (0u, 1u, -2u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+}
+motion idle for ModelRig {
+duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
+track hull.rotation {
+key 0s = (0deg, 0deg, 0deg) catmullrom;
+key 0.3s = (0.5deg, 0deg, 0.5deg) catmullrom;
+key 0.6s = (0deg, 0deg, 0deg) catmullrom;
+key 0.9s = (-0.5deg, 0deg, -0.5deg) catmullrom;
+key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+}
+}
+motion drive for ModelRig {
+duration = 0.4s; fps = 20; loop = loop; rest-relative = true;
+track wheels_front.rotation {
+key 0s = (0deg, 0deg, 0deg) step;
+key 0.1s = (-22.5deg, 0deg, 0deg) step;
+key 0.2s = (-45deg, 0deg, 0deg) step;
+key 0.3s = (-67.5deg, 0deg, 0deg) step;
+key 0.4s = (0deg, 0deg, 0deg) step;
+}
+track wheels_back.rotation {
+key 0s = (0deg, 0deg, 0deg) step;
+key 0.1s = (-22.5deg, 0deg, 0deg) step;
+key 0.2s = (-45deg, 0deg, 0deg) step;
+key 0.3s = (-67.5deg, 0deg, 0deg) step;
+key 0.4s = (0deg, 0deg, 0deg) step;
+}
+track hull.rotation {
+key 0s = (0deg, 0deg, 0deg) linear;
+key 0.1s = (-1.5deg, 0deg, 1deg) linear;
+key 0.2s = (0deg, 0deg, 0deg) linear;
+key 0.3s = (1.5deg, 0deg, -1deg) linear;
+key 0.4s = (0deg, 0deg, 0deg) linear;
+}
+}
+motion fire for ModelRig {
+duration = 0.5s; fps = 30; loop = once; rest-relative = true;
+track hull.rotation {
+key 0s = (0deg, 0deg, 0deg) linear;
+key 0.06s = (4deg, 0deg, 0deg) linear;
+key 0.4s = (0deg, 0deg, 0deg) linear;
+}
+}
+surface contract Skin {
+atlas { width = 64px; height = 128px; }
+chart wheel_front_left box { width = 12px; height = 10px; coverage = opaque; }
+chart wheel_front_left_round box { width = 14px; height = 10px; coverage = opaque; }
+chart wheel_front_right box { width = 12px; height = 10px; coverage = opaque; }
+chart wheel_front_right_round box { width = 14px; height = 10px; coverage = opaque; }
+chart wheel_back_left box { width = 12px; height = 10px; coverage = opaque; }
+chart wheel_back_left_round box { width = 14px; height = 10px; coverage = opaque; }
+chart wheel_back_right box { width = 12px; height = 10px; coverage = opaque; }
+chart wheel_back_right_round box { width = 14px; height = 10px; coverage = opaque; }
+chart cab box { width = 30px; height = 12px; coverage = opaque; }
+chart bumper box { width = 22px; height = 2px; coverage = opaque; }
+chart bed box { width = 42px; height = 13px; coverage = opaque; }
+chart cover box { width = 40px; height = 15px; coverage = opaque; }
+chart cover_top box { width = 36px; height = 11px; coverage = opaque; }
+material = opaque;
+}
+surface paint: Skin {
+material = opaque;
+texture atlas {
+atlas = (64px, 128px); background = tire; background-alpha = 255;
+palette {
+tire = (#14171e, #1c2029, #252a35);
+hub_h = #8a93a6;
+team_blue = (#2766c4, #2f74d6, #3d84e2);
+rim_team_blue_10_r = #6fb0f2;
+rim_team_blue_5_r = #6fb0f2;
+windshield_g = #9fe3ff;
+lights_l = #ffe066;
+lights_k = #141824;
+side_window_g = #9fe3ff;
+gun = (#2a2e38, #343a46, #3e4554);
+dark_blue = (#1a468e, #1f56a8, #2a64b8);
+canvas = (#b8a8a0, #c8b8b0, #d6c8c0);
+ribs_d = #a8968c;
+}
+stamp hub { pixels = "hh/hh"; h = hub_h; }
+stamp rim_team_blue_10 { pixels = "rrrrrrrrrr"; r = rim_team_blue_10_r; }
+stamp rim_team_blue_5 { pixels = "rrrrr"; r = rim_team_blue_5_r; }
+stamp windshield { pixels = "gggggggg/gggggggg/gggggggg"; g = windshield_g; }
+stamp lights { pixels = "l.kkkkkk.l"; l = lights_l; k = lights_k; }
+stamp side_window { pixels = "ggg/ggg"; g = side_window_g; }
+stamp ribs { pixels = "d..d..d/d..d..d/d..d..d"; d = ribs_d; }
+chart wheel_front_left box { origin = (37px, 43px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+chart wheel_front_left_round box { origin = (50px, 43px); fill = tire; }
+chart wheel_front_right box { origin = (0px, 55px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+chart wheel_front_right_round box { origin = (13px, 55px); fill = tire; }
+chart wheel_back_left box { origin = (28px, 55px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+chart wheel_back_left_round box { origin = (41px, 55px); fill = tire; }
+chart wheel_back_right box { origin = (0px, 66px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+chart wheel_back_right_round box { origin = (13px, 66px); fill = tire; }
+chart cab box { origin = (0px, 30px); fill = team_blue; face north { stamp rim_team_blue_10 { at = (0px, 0px); } stamp windshield { at = (1px, 1px); } stamp lights { at = (0px, 5px); } } face south { stamp rim_team_blue_10 { at = (0px, 0px); } } face east { stamp rim_team_blue_5 { at = (0px, 0px); } stamp side_window { at = (1px, 1px); } } face west { stamp rim_team_blue_5 { at = (0px, 0px); } stamp side_window { at = (1px, 1px); } } }
+chart bumper box { origin = (28px, 66px); fill = gun; }
+chart bed box { origin = (0px, 16px); fill = dark_blue; }
+chart cover box { origin = (0px, 0px); fill = canvas; face east { stamp ribs { at = (1px, 1px); } } face west { stamp ribs { at = (1px, 1px); } } }
+chart cover_top box { origin = (0px, 43px); fill = canvas; }
+grain clustered { seed = 2013; }
+tone voxel;
+}
+}
+component Body {
+requires rig skeleton: ModelRig;
+requires surface skin: Skin;
+bind bone hull to skeleton.hull;
+bind bone wheels_front to skeleton.wheels_front;
+bind bone wheels_back to skeleton.wheels_back;
+bind bone turret to skeleton.turret;
+bind bone barrel to skeleton.barrel;
+geometry {
+bone hull {
+cube cab { origin = (-5u, 3u, -8u); size = (10u, 7u, 5u); surface = skin.cab; }
+cube bumper { origin = (-5u, 3u, -9u); size = (10u, 1u, 1u); surface = skin.bumper; }
+cube bed { origin = (-5u, 3u, -3u); size = (10u, 2u, 11u); surface = skin.bed; }
+cube cover { origin = (-5u, 5u, -2.5u); size = (10u, 5u, 10u); surface = skin.cover; }
+cube cover_top { origin = (-4u, 10u, -2.5u); size = (8u, 1u, 10u); surface = skin.cover_top; }
+bone turret {
+bone barrel {
+}
+}
+}
+bone wheels_front {
+cube wheel_front_left { origin = (-6.5u, 0u, -7u); size = (2u, 6u, 4u); surface = skin.wheel_front_left; }
+cube wheel_front_left_round { origin = (-6u, 1u, -8u); size = (1u, 4u, 6u); surface = skin.wheel_front_left_round; }
+cube wheel_front_right { origin = (4.5u, 0u, -7u); size = (2u, 6u, 4u); surface = skin.wheel_front_right; }
+cube wheel_front_right_round { origin = (5u, 1u, -8u); size = (1u, 4u, 6u); surface = skin.wheel_front_right_round; }
+}
+bone wheels_back {
+cube wheel_back_left { origin = (-6.5u, 0u, 3u); size = (2u, 6u, 4u); surface = skin.wheel_back_left; }
+cube wheel_back_left_round { origin = (-6u, 1u, 2u); size = (1u, 4u, 6u); surface = skin.wheel_back_left_round; }
+cube wheel_back_right { origin = (4.5u, 0u, 3u); size = (2u, 6u, 4u); surface = skin.wheel_back_right; }
+cube wheel_back_right_round { origin = (5u, 1u, 2u); size = (1u, 4u, 6u); surface = skin.wheel_back_right_round; }
+}
+}
+}
+export asset transport_blue {
+settings { density = 16; forward = north; }
+skeleton = ModelSkeleton;
+motion = idle;
+motion = drive;
+motion = fire;
+use Body as model { bind skeleton = ModelRig; bind skin = paint; };
+}
 }

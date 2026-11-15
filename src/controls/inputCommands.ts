@@ -2,7 +2,7 @@
  * Ordenes de la entrada del jugador en el mapa (`InputCommand`), sin importar de donde vienen. No son
  * las ordenes permanentes de las unidades (`StandingOrder`) ni las acciones del juego: es lo que pide el
  * mando. Cada mando (teclado, y mas adelante raton, dedo o un gamepad) es un adaptador que traduce lo
- * suyo a estas ordenes, y GameScene solo sabe cumplirlas (GameScene.command). Asi un mando nuevo es un
+ * suyo a estas ordenes, y la partida solo sabe cumplirlas. Asi un mando nuevo es un
  * fichero nuevo en src/controls, sin tocar la escena.
  */
 export type InputCommand =

@@ -1,12 +1,12 @@
 /**
- * El clima de la partida en 3D, con los mismos estilos que el 2D (STYLES de ui/weatherFx.ts: lluvia,
+ * El clima de la partida en 3D, con sus estilos (STYLES de weatherStyles.ts: lluvia,
  * nieve, tormenta y tormenta de arena; cuantas particulas, caida, viento, color, velo y relampagos):
  * las particulas caen en el mundo, en una caja alrededor de lo que mira la camara, y el velo tiñe la
  * pantalla. Con «reducir el movimiento» solo queda el velo (como en 2D).
  */
 import * as THREE from 'three';
 import { reducedMotion } from '../ui/motion';
-import { STYLES, type Style } from '../ui/weatherFx';
+import { STYLES, type Style } from './weatherStyles';
 import { PixelPoints } from './pixelPoints';
 import { WIND_DIRECTION as WIND } from './space';
 

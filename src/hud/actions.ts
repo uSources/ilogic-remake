@@ -1,6 +1,6 @@
 /**
- * Lo que la interfaz le pide a la escena (botones, clics, pasar el raton). Los componentes solo llaman
- * a `ui.actions.<accion>`; cada escena pone las suyas en create() y `resetActions()` las quita al
+ * Lo que la interfaz le pide al juego (botones, clics, pasar el raton). Los componentes solo llaman
+ * a `ui.actions.<accion>`; el menu y la partida ponen las suyas al empezar y `resetActions()` las quita al
  * cerrarla. Una pantalla o panel nuevo añade aqui su grupo, con su valor por defecto en
  * `DEFAULT_ACTIONS` (store.ts).
  *

@@ -45,7 +45,7 @@ return gotCloser ? best.pos : null;
    `canReach(range, pos)`, y ningun valor dice dos cosas (0 para "no llega" y para "ya esta alli": se
    usa `null` o `Infinity` y se dice), `team !== unit.team` es `isHostile(s, team, unit.team)`, una constante con nombre
    en vez de `350`. Ningun numero de equipo es especial: ni `team === 0` ni `team = 0` por defecto (el
-   equipo se pasa siempre; en la escena es `viewer`, y la interfaz pinta por lado: `sideOf`).
+   equipo se pasa siempre; en la vista es `viewer`, y la interfaz pinta por lado: `sideOf`).
 5. **Recorrer con piezas comunes, no a mano.** Para el mapa, `Grid<T>` (`at`, `set`, `forEach`) y
    `reachableTiles`; para elegir el mejor, `minBy`/`maxBy`. Nada de `[x]![y]!` ni de tripletes
    `best / bestD / bestC`. Antes de escribir un bucle, buscar si ya existe la ayuda (`src/core/util/`).
@@ -53,7 +53,7 @@ return gotCloser ? best.pos : null;
    animaciones por suceso) es una lista de entradas con su `when`/`run`, no un `switch` que hay que
    abrir cada vez. Un `switch` corto sobre un tipo cerrado esta bien.
 7. **Depender de poco.** Cada modulo pide una interfaz pequena con lo que usa (`...Host`), no la
-   escena ni el estado entero. El nucleo (`src/core`) no importa nada de fuera.
+   vista entera ni el estado entero. El nucleo (`src/core`) no importa nada de fuera.
 8. **Funciones puras donde se pueda.** Calcular y aplicar por separado: primero se decide (puro, con
    test), despues se cambia el estado o se dibuja. Una funcion con nombre de consulta (`statsOf`,
    `captureProgress`) nunca escribe en la partida.
@@ -104,5 +104,6 @@ return gotCloser ? best.pos : null;
 - Reescribir sin cambiar lo que hace: los mismos resultados, el mismo orden en los empates (`minBy`
   se queda con el primero, como los bucles de antes).
 - Comprobar con `npm run check`; si toca reglas o IA, que las partidas de referencia de la IA
-  (`tests/aiGolden.test.ts`) salgan iguales sin `-u`; si toca algo visual, `npm run shots`.
+  (`tests/aiGolden.test.ts`) salgan iguales sin `-u`; si toca algo visual, mirarlo en el navegador
+  (`npm run dev`).
 - Commits pequenos, uno por idea, para que se pueda revisar.

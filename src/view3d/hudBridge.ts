@@ -1,8 +1,8 @@
 /**
  * La interfaz HTML del juego (hud/, Preact) sobre el mundo 3D: se publica en el mismo store (`ui`)
- * y con las mismas piezas que usa la escena 2D (economyVM, dayInfoVM, weatherVM, tileVM, forecastVM,
+ * y con las piezas puras de ui/hudModels.ts (economyVM, dayInfoVM, weatherVM, tileVM, forecastVM,
  * los menus de la unidad y de compra...), asi la barra de arriba, las fichas, la prevision de combate
- * y los menus son los del juego. Lo que el prototipo aun no hace (escuadras, ordenes, generales)
+ * y los menus son los del juego. Lo que la partida 3D aun no hace (escuadras, ordenes, generales)
  * sigue con sus valores de partida.
  */
 import { visibility, buildingsOf, canActNow, commandUsed } from '../core/rules';
@@ -11,13 +11,13 @@ import { unitTypeOf } from '../core/gameContent';
 import { teamState } from '../core/teams';
 import { helpRulesOfMatch } from '../hud/helpText';
 import { ui, type Anchor, type IdleVM, type UIState } from '../hud/store';
-import { teamIncome } from '../scenes/game/hudParts';
+import { teamIncome } from './menuItems';
 import { nameOf } from '../settings';
 import { dayInfoVM, economyVM, forecastVM, tileVM, weatherVM } from '../ui/hudModels';
 import { sideOf } from '../ui/sides';
 import { unitKey } from '../ui/sprites';
 import type { AttackPlan } from './attackPlan';
-import type { GameTextures } from './gameAtlas';
+import type { GameImages } from '../atlas';
 import type { MenuView } from './turnControls';
 
 /** Lo que sabe la vista 3D y no la partida: la casilla señalada, si se anima algo, el menu y el combate a la vista. */
@@ -37,6 +37,8 @@ export interface HudActions {
   menuPick: (index: number) => void;
   menuHover: (index: number) => void;
   menuClose: () => void;
+  /** Abrir el menu de pausa (boton de la barra). */
+  openGameMenu: () => void;
 }
 
 /** Linea de ayuda de abajo: los mandos del 3D (los del juego en 2D son otros). */
@@ -45,8 +47,8 @@ const NOTHING_HIDDEN: ReadonlySet<number> = new Set();
 
 const idleUnits = (s: GameState, viewer: TeamId) => s.units.filter((unit) => unit.team === viewer && canActNow(unit));
 
-/** La bandeja de unidades sin mover, con su retrato del atlas (como GameScene.idleList). */
-function idleList(textures: GameTextures, s: GameState, viewer: TeamId): IdleVM[] {
+/** La bandeja de unidades sin mover, con su retrato del atlas. */
+function idleList(textures: GameImages, s: GameState, viewer: TeamId): IdleVM[] {
   return idleUnits(s, viewer).map((unit) => ({
     uid: unit.uid,
     icon: unitKey(textures, s, unit, viewer),
@@ -54,26 +56,27 @@ function idleList(textures: GameTextures, s: GameState, viewer: TeamId): IdleVM[
   }));
 }
 
-function tileCard(textures: GameTextures, s: GameState, viewer: TeamId, moment: HudMoment) {
+function tileCard(textures: GameImages, s: GameState, viewer: TeamId, moment: HudMoment) {
   if (!moment.cursor || moment.busy) return null;
   return tileVM(textures, s, moment.cursor, { viewer, vis: visibility(s, viewer), hidden: NOTHING_HIDDEN });
 }
 
 function menuOf(moment: HudMoment): UIState['menu'] {
   const menu = moment.menu;
-  if (!menu || moment.busy) return null;
+  // La pausa se abre tambien mientras juegan los demas; los menus del tablero, no.
+  if (!menu || (moment.busy && menu.kind !== 'game')) return null;
   const { at, ...shown } = menu;
   return { ...shown, anchor: moment.anchorOf(at) };
 }
 
-function forecastOf(textures: GameTextures, s: GameState, viewer: TeamId, moment: HudMoment): UIState['forecast'] {
+function forecastOf(textures: GameImages, s: GameState, viewer: TeamId, moment: HudMoment): UIState['forecast'] {
   const plan = moment.forecast;
   if (!plan || moment.busy) return null;
   return forecastVM(textures, s, viewer, plan.attacker, plan.from, plan.target, moment.anchorOf(plan.target));
 }
 
-/** Publica el estado de la partida para la interfaz (como GameScene.refreshHud). */
-export function publishHud(textures: GameTextures, s: GameState, viewer: TeamId, moment: HudMoment): void {
+/** Publica el estado de la partida para la interfaz. */
+export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, moment: HudMoment): void {
   ui.set({
     screen: 'game',
     funds: teamState(s, viewer).funds,
@@ -98,7 +101,7 @@ export function publishHud(textures: GameTextures, s: GameState, viewer: TeamId,
   });
 }
 
-/** Los botones de la interfaz que el prototipo atiende (el resto no hace nada). */
+/** Los botones de la interfaz que la partida 3D atiende (el resto no hace nada). */
 export function installHudActions(actions: HudActions): void {
   Object.assign(ui.actions, actions);
 }

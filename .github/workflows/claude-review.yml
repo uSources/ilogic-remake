@@ -1,4 +1,4 @@
-# Revision automatica de cada PR por Claude con las normas del proyecto (skills ilogic-code y phaser4).
+# Revision automatica de cada PR por Claude con las normas del proyecto (skills ilogic-code y ashfox).
 # Necesita el mismo secreto que claude.yml; sin el, no hace nada.
 name: Revision de Claude
 
@@ -38,16 +38,16 @@ jobs:
             PR: ${{ github.event.pull_request.number }}
 
             Revisa este PR del juego Ilogic en español. Antes, lee CLAUDE.md, docs/ARQUITECTURA.md y
-            .claude/skills/ilogic-code/SKILL.md (y .claude/skills/phaser4/SKILL.md si toca escenas o dibujo).
+            .claude/skills/ilogic-code/SKILL.md (y .claude/skills/ashfox/SKILL.md si toca modelos 3D).
 
             Comprueba sobre todo:
-            1. Capas: src/core sin Phaser/DOM/interfaz; logica nueva en core con test.
+            1. Capas: src/core sin three.js/DOM/interfaz; logica nueva en core con test.
             2. Reglas o IA cambiadas: ¿se ha actualizado tests/aiGolden.test.ts a proposito y se explica por que?
-            3. Escenas de Phaser: estado reiniciado en resetMatch(), limpieza en SHUTDOWN, nada creado por fotograma.
-            4. Numeros en data.ts, textos en settings.ts (es y en), colores en palette.ts; nada duplicado.
-            5. Ficheros generados editados a mano (atlas, assetList, *Sets.ts, sheets.ts): deben salir de npm run assets.
+            3. Vista 3D (src/view3d): nada creado por fotograma (geometrias, materiales, vectores en bucles calientes).
+            4. Numeros en el contenido (core/content/*.json), textos en src/i18n (es y en); nada duplicado.
+            5. Ficheros generados editados a mano (atlas, assetList, .ashfox, GLB): deben salir de sus generadores.
             6. Claves, tokens o secretos en el codigo: bloqueante.
-            7. Si cambia algo que ve el jugador: CHANGELOG.md y capturas (npm run shots:update) a juego.
+            7. Si cambia algo que ve el jugador: CHANGELOG.md a juego.
 
             Comentarios en linea para problemas concretos; un resumen corto al final. Sin elogios de relleno.
           claude_args: |

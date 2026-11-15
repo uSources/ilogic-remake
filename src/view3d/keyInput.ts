@@ -1,7 +1,7 @@
 /**
  * El teclado en el 3D, con las mismas teclas que el juego: la tabla de controls/keyboard.ts con los
  * cambios del jugador (`settings.keys`). Las flechas y WASD, que en 2D mueven el cursor, aqui
- * desplazan la camara mientras se mantienen; el resto de ordenes que el prototipo sabe hacer van a
+ * desplazan la camara mientras se mantienen; el resto de ordenes que la partida 3D sabe hacer van a
  * KEY_ACTIONS (una nueva es una entrada mas).
  */
 import type { InputCommand, InputCommandKind } from '../controls/inputCommands';

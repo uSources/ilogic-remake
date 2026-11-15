@@ -524,7 +524,7 @@ Para ser fiel, el turno de la IA debe ser instantáneo. Se puede añadir como op
 
 ## 9. "Feel": detalles que hay que copiar
 
-- 10 FPS en partida: el cursor, la selección y las nubes se actualizan cada 100 ms. La respuesta a teclas es inmediata en estado, pero el repintado sale como mucho cada 100 ms. Con Phaser a 60 FPS el estado se puede pintar cada fotograma; solo **la lógica de las nubes** debe avanzar al ritmo de 10 pasos por segundo (0.5 px por paso, probabilidad por paso).
+- 10 FPS en partida: el cursor, la selección y las nubes se actualizan cada 100 ms. La respuesta a teclas es inmediata en estado, pero el repintado sale como mucho cada 100 ms. Con el bucle de dibujo a 60 FPS (`requestAnimationFrame`) el estado se puede pintar cada fotograma; solo **la lógica de las nubes** debe avanzar al ritmo de 10 pasos por segundo (0.5 px por paso, probabilidad por paso).
 - Sin animaciones: movimientos, ataques, compras y capturas son instantáneos. No hay números de daño, ni explosiones, ni parpadeos. Lo único que se mueve solo son las nubes. Tampoco hay animación de cursor ni de unidades: `Climate` (fotogramas de clima) existe pero no se usa.
 - El desplazamiento de la vista es de casilla en casilla, sin suavizado.
 - Doble clic "lento": primer clic coloca o selecciona, segundo clic confirma.
@@ -542,7 +542,7 @@ Marcados [F] los que conviene **conservar** por fidelidad y [C] los que se recom
 | # | Rareza (origen) | Propuesta |
 |---|---|---|
 | B1 | Esc en cualquier fase vuelve al menú y abandona la partida sin guardar ni confirmar (`Accion_ESC`). | [C] Esc = "atrás" contextual: 4/5/6/7/8 → fase anterior (7→3, 8→5, 11→5, 12→11, 6/4→3). En la fase 3, Esc abre el menú de partida o pide confirmación para salir. En 9/10, al menú. |
-| B2 | Bucles con espera activa (logo, menú y partida) que tienen la CPU al 100 % (`displGName`, `ciclomenu`, `ciclojuego`). | [C] Usar el bucle de Phaser. Las nubes avanzan con un acumulador de 100 ms. |
+| B2 | Bucles con espera activa (logo, menú y partida) que tienen la CPU al 100 % (`displGName`, `ciclomenu`, `ciclojuego`). | [C] Usar el bucle de dibujo del navegador (`requestAnimationFrame`). Las nubes avanzan con un acumulador de 100 ms. |
 | B3 | Vida 91..99 → `n_10.png`, que no existe, así que no se ve número (`paint`). | [F] Mostrar el número solo si `ceil(life/10) ≤ 9`. Es el comportamiento efectivo y coincide con el estilo Advance Wars. |
 | B4 | En la fase 5 la vida se muestra como `ceil(life/10)` (un 10 con 91 de vida). | [F] |
 | B5 | El guardado solo se borra al ganar o perder si la partida se cargó; una partida nueva guardada a mano sobrevive a su final (`ciclojuego`). | [C] Borrar siempre el guardado al terminar una partida que se haya guardado, o al menos si su `gameid` y su contenido son de esta partida. |

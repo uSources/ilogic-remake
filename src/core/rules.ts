@@ -1,6 +1,6 @@
 /**
  * Reglas del juego (portadas de Ilogic.java, Unit.java y Building.java).
- * Funciones sobre GameState, sin nada de Phaser, que preguntan y calculan: que puede hacer cada
+ * Funciones sobre GameState, sin nada de la vista, que preguntan y calculan: que puede hacer cada
  * unidad, hasta donde llega, cuanto acierta... Los modulos de `rules/` tienen tambien los pasos que
  * cambian la partida (`advanceCapture`, `mergeInto`, `earn`, `endRound`...), pero esos solo los
  * llaman el `apply` de las acciones (core/actions.ts, `dispatch`), los pasos de ronda y de turno y

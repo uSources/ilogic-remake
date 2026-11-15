@@ -1,9 +1,8 @@
-import type Phaser from 'phaser';
 import type { TerrainType, UnitType } from '../core/content';
 import { buildingTypeOf, terrainAt, themeOf, unitTypeOf } from '../core/gameContent';
 import { isOnBoard } from '../core/mapGrid';
 import type { Building, GameState, Pos, TeamId, Unit } from '../core/model';
-import { hasImage } from '../atlas';
+import { hasImage, type GameImages } from '../atlas';
 import { settings } from '../settings';
 import { ownerSideOf, sideLetter, sideOf, unitSideLetter } from './sides';
 import { canStillAct } from '../core/rules';
@@ -20,7 +19,7 @@ const CLASSIC_COAST: Readonly<Record<string, number>> = { Plains: 0, Desert: 1, 
 const warned = new Set<string>();
 
 /** Devuelve la primera clave que exista; avisa una vez por consola si no hay ninguna. */
-function firstExisting(textures: Phaser.Textures.TextureManager, keys: string[]): string | null {
+function firstExisting(textures: GameImages, keys: string[]): string | null {
   for (const key of keys) if (hasImage(textures, key)) return key;
   if (!warned.has(keys[0]!)) {
     warned.add(keys[0]!);
@@ -44,13 +43,7 @@ export const AS_ACTIVE: UnitDrawing = { active: true };
  * El dibujo de una unidad vista por `viewer`: azul (gris si ya ha actuado) la propia y la aliada,
  * roja la enemiga; `drawing` dice si se dibuja de otra forma que como esta (UnitDrawing).
  */
-export function unitKey(
-  textures: Phaser.Textures.TextureManager,
-  s: GameState,
-  unit: Unit,
-  viewer: TeamId,
-  drawing: UnitDrawing = {},
-): string | null {
+export function unitKey(textures: GameImages, s: GameState, unit: Unit, viewer: TeamId, drawing: UnitDrawing = {}): string | null {
   const isActive = drawing.active ?? canStillAct(unit);
   const drawnAt = drawing.at ?? unit;
   const unitSide = sideOf(s, viewer, unit.team);
@@ -68,13 +61,7 @@ export function unitIconKey(unitType: UnitType, available: boolean): string {
   return settings.terrainArt === 'new' ? `u/${key}` : key;
 }
 
-export function buildingKey(
-  textures: Phaser.Textures.TextureManager,
-  s: GameState,
-  building: Building,
-  visible: boolean,
-  viewer: TeamId,
-): string | null {
+export function buildingKey(textures: GameImages, s: GameState, building: Building, visible: boolean, viewer: TeamId): string | null {
   const owner = visible ? ownerSideOf(s, viewer, building.owner) : 'neutral';
   const side = owner === 'neutral' ? '' : `${sideLetter(owner)}_`;
   const buildingType = buildingTypeOf(s, building);

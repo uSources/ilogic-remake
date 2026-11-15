@@ -3,12 +3,12 @@ import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
 
-/** El nucleo no depende de Phaser, ni del DOM, ni de la interfaz. */
+/** El nucleo no depende de la vista 3D (three.js), ni del DOM, ni de la interfaz. */
 const CORE_IS_PURE = [
-  { group: ['phaser', 'preact', 'preact/*'], message: 'src/core no puede depender de Phaser ni de la interfaz.' },
+  { group: ['three', 'three/*', 'preact', 'preact/*'], message: 'src/core no puede depender de la vista 3D ni de la interfaz.' },
   {
-    group: ['../scenes/*', '../ui/*', '../hud/*', '../menu/*', '../settings', '../storage', '../music'],
-    message: 'src/core no puede depender de escenas, dibujo ni interfaz.',
+    group: ['../view3d/*', '../ui/*', '../hud/*', '../menu/*', '../audio/*', '../settings', '../storage'],
+    message: 'src/core no puede depender de la vista, el sonido ni la interfaz.',
   },
 ];
 /** El contenido del juego solo lo eligen estos dos: el resto del nucleo usa el de la partida. */
@@ -261,7 +261,7 @@ export default tseslint.config(
     },
   },
   {
-    // La logica del juego es TypeScript puro: sin Phaser, sin DOM, sin interfaz. Y no elige contenido:
+    // La logica del juego es TypeScript puro: sin three.js, sin DOM, sin interfaz. Y no elige contenido:
     // lo recibe con la partida (solo defaultGames.ts y content/default.ts conocen el del juego).
     files: ['src/core/**/*.ts'],
     ignores: DEFAULT_CONTENT_FILES,
@@ -389,9 +389,9 @@ export default tseslint.config(
           patterns: [
             {
               group: ['**/src', '**/src/**'],
-              message: "tools/ solo puede usar el nucleo del juego, importandolo como '@core/...' (nada de escenas, interfaz ni ajustes).",
+              message: "tools/ solo puede usar el nucleo del juego, importandolo como '@core/...' (nada de vista, interfaz ni ajustes).",
             },
-            { group: ['phaser', 'preact', 'preact/*'], message: 'tools/ no puede depender de Phaser ni de la interfaz.' },
+            { group: ['three', 'three/*', 'preact', 'preact/*'], message: 'tools/ no puede depender de la vista 3D ni de la interfaz.' },
             ...CORE_FACADES_ONLY,
             ...ROOT_STEPS,
           ],
@@ -415,7 +415,7 @@ export default tseslint.config(
   },
   {
     // Lo que va dentro de page.evaluate() se ejecuta en el navegador.
-    files: ['tests/visual/**/*.mjs', 'scripts/**/*.mjs'],
+    files: ['scripts/**/*.mjs'],
     languageOptions: { globals: { window: 'readonly', localStorage: 'readonly', document: 'readonly' } },
   },
   {

@@ -41,7 +41,7 @@ Comprobar:
    src/core/missions/check.ts: edificios sobre suelo, unidades donde pueden estar, una Base por
    equipo, el objetivo en su sitio), bases conectadas, guardar/cargar.
 2. Jugarla por texto: `npm run play -- --mission <id>` (o `-e "map; ai; ai; status"` para ver a la IA).
-3. En el navegador: `window.ilogicDebug.startGame({ mission: '<id>' })` y añadir una escena en
-   `tests/visual/shots.mjs` si es importante que no cambie.
+3. En el navegador (`npm run dev`): Campaña → la mision. No hay forma de abrir una mision directa
+   por la direccion (solo `?seed=N` para una escaramuza).
 4. Textos de objetivo y estado: `src/campaign.ts` (`objectiveText`, `objectiveStatusText`).
 5. CHANGELOG.md y `npm run check`.

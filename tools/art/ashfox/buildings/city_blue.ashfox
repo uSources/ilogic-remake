@@ -1,88 +1,73 @@
 ashfox-model 1
 asset city_blue {
-  rig contract ModelRig {
-    handedness = right;
-    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-  }
-  skeleton ModelSkeleton implements ModelRig {
-    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-  }
+rig contract ModelRig {
+handedness = right;
+frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+}
+skeleton ModelSkeleton implements ModelRig {
+bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+}
 
-  surface contract Skin {
-    atlas { width = 64px; height = 64px; }
-    chart plinth box { width = 56px; height = 15px; coverage = opaque; }
-    chart tower box { width = 36px; height = 24px; coverage = opaque; }
-    chart awning box { width = 14px; height = 3px; coverage = opaque; }
-    chart parapet box { width = 40px; height = 11px; coverage = opaque; }
-    chart skylight box { width = 16px; height = 5px; coverage = opaque; }
-    material = opaque;
-  }
-  surface paint: Skin {
-    material = opaque;
-    texture atlas {
-      atlas = (64px, 64px); background = pavement; background-alpha = 255;
-      palette {
-        pavement = (#aea896, #b9b2a0, #c4bdaa);
-        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
-        body_blue = (#1a8ea2, #1f9fb4, #2cb0c4);
-        rim_body_blue_9_r = #6ad8e4;
-        front_windows_w = #14202c;
-        front_windows_l = #ffe08a;
-        door_d = #14202c;
-        side_windows_w = #14202c;
-        side_windows_l = #ffe08a;
-        trim_blue = (#126c7e, #16788a, #1f889a);
-        window_glass = (#8ad4f4, #9fe3ff, #b8ecff);
-      }
-      stamp rim_body_blue_9 { pixels = "rrrrrrrrr"; r = rim_body_blue_9_r; }
-      stamp front_windows { pixels = ".w.l.w.w./.w.l.w.w./........./.w.w.w.l./.w.w.w.l./........./.l.w.w.w./.l.w.w.w./........./.w.w.l.w./.w.w.l.w."; w = front_windows_w; l = front_windows_l; }
-      stamp door { pixels = "ddd/ddd/ddd"; d = door_d; }
-      stamp side_windows { pixels = ".w.l.w.w./.w.l.w.w./........./.w.w.w.l./.w.w.w.l./........./.l.w.w.w./.l.w.w.w./........./.w.w.l.w./.w.w.l.w./........./.w.w.w.w./.w.w.w.w."; w = side_windows_w; l = side_windows_l; }
-      chart plinth box {
-        origin = (0px, 25px); fill = pavement;
-        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; }
-      }
-      chart tower box {
-        origin = (0px, 0px); fill = body_blue;
-        face north { stamp rim_body_blue_9 { at = (0px, 0px); } stamp front_windows { at = (0px, 1px); } stamp door { at = (3px, 12px); } }
-        face south { stamp rim_body_blue_9 { at = (0px, 0px); } stamp side_windows { at = (0px, 1px); } }
-        face east { stamp rim_body_blue_9 { at = (0px, 0px); } stamp side_windows { at = (0px, 1px); } }
-        face west { stamp rim_body_blue_9 { at = (0px, 0px); } stamp side_windows { at = (0px, 1px); } }
-      }
-      chart awning box {
-        origin = (0px, 53px); fill = trim_blue;
-      }
-      chart parapet box {
-        origin = (0px, 41px); fill = trim_blue;
-      }
-      chart skylight box {
-        origin = (41px, 41px); fill = window_glass;
-      }
-      grain clustered { seed = 2013; }
-      tone voxel;
-    }
-  }
-  component Body {
-    requires rig skeleton: ModelRig;
-    requires surface skin: Skin;
-    bind bone body to skeleton.body;
-    geometry {
-      bone body {
-        cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
-        cube tower { origin = (-4.5u, 1u, -4.5u); size = (9u, 15u, 9u); surface = skin.tower; }
-        cube awning { origin = (-2.5u, 4u, -6u); size = (5u, 1u, 2u); surface = skin.awning; }
-        cube parapet { origin = (-5u, 16u, -5u); size = (10u, 1u, 10u); surface = skin.parapet; }
-        cube skylight { origin = (-2u, 17u, -2u); size = (4u, 1u, 4u); surface = skin.skylight; }
-      }
-    }
-  }
-  export asset city_blue {
-    settings { density = 16; forward = north; }
-    skeleton = ModelSkeleton;
+surface contract Skin {
+atlas { width = 64px; height = 64px; }
+chart plinth box { width = 56px; height = 15px; coverage = opaque; }
+chart tower box { width = 36px; height = 24px; coverage = opaque; }
+chart awning box { width = 14px; height = 3px; coverage = opaque; }
+chart parapet box { width = 40px; height = 11px; coverage = opaque; }
+chart skylight box { width = 16px; height = 5px; coverage = opaque; }
+material = opaque;
+}
+surface paint: Skin {
+material = opaque;
+texture atlas {
+atlas = (64px, 64px); background = pavement; background-alpha = 255;
+palette {
+pavement = (#aea896, #b9b2a0, #c4bdaa);
+pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+body_blue = (#1a8ea2, #1f9fb4, #2cb0c4);
+rim_body_blue_9_r = #6ad8e4;
+front_windows_w = #14202c;
+front_windows_l = #ffe08a;
+door_d = #14202c;
+side_windows_w = #14202c;
+side_windows_l = #ffe08a;
+trim_blue = (#126c7e, #16788a, #1f889a);
+window_glass = (#8ad4f4, #9fe3ff, #b8ecff);
+}
+stamp rim_body_blue_9 { pixels = "rrrrrrrrr"; r = rim_body_blue_9_r; }
+stamp front_windows { pixels = ".w.l.w.w./.w.l.w.w./........./.w.w.w.l./.w.w.w.l./........./.l.w.w.w./.l.w.w.w./........./.w.w.l.w./.w.w.l.w."; w = front_windows_w; l = front_windows_l; }
+stamp door { pixels = "ddd/ddd/ddd"; d = door_d; }
+stamp side_windows { pixels = ".w.l.w.w./.w.l.w.w./........./.w.w.w.l./.w.w.w.l./........./.l.w.w.w./.l.w.w.w./........./.w.w.l.w./.w.w.l.w./........./.w.w.w.w./.w.w.w.w."; w = side_windows_w; l = side_windows_l; }
+chart plinth box { origin = (0px, 25px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } }
+chart tower box { origin = (0px, 0px); fill = body_blue; face north { stamp rim_body_blue_9 { at = (0px, 0px); } stamp front_windows { at = (0px, 1px); } stamp door { at = (3px, 12px); } } face south { stamp rim_body_blue_9 { at = (0px, 0px); } stamp side_windows { at = (0px, 1px); } } face east { stamp rim_body_blue_9 { at = (0px, 0px); } stamp side_windows { at = (0px, 1px); } } face west { stamp rim_body_blue_9 { at = (0px, 0px); } stamp side_windows { at = (0px, 1px); } } }
+chart awning box { origin = (0px, 53px); fill = trim_blue; }
+chart parapet box { origin = (0px, 41px); fill = trim_blue; }
+chart skylight box { origin = (41px, 41px); fill = window_glass; }
+grain clustered { seed = 2013; }
+tone voxel;
+}
+}
+component Body {
+requires rig skeleton: ModelRig;
+requires surface skin: Skin;
+bind bone body to skeleton.body;
+geometry {
+bone body {
+cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
+cube tower { origin = (-4.5u, 1u, -4.5u); size = (9u, 15u, 9u); surface = skin.tower; }
+cube awning { origin = (-2.5u, 4u, -6u); size = (5u, 1u, 2u); surface = skin.awning; }
+cube parapet { origin = (-5u, 16u, -5u); size = (10u, 1u, 10u); surface = skin.parapet; }
+cube skylight { origin = (-2u, 17u, -2u); size = (4u, 1u, 4u); surface = skin.skylight; }
+}
+}
+}
+export asset city_blue {
+settings { density = 16; forward = north; }
+skeleton = ModelSkeleton;
 
-    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-  }
+use Body as model { bind skeleton = ModelRig; bind skin = paint; };
+}
 }

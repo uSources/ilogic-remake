@@ -8,15 +8,13 @@ codigo estan en la skill `ilogic-code`; la arquitectura en `docs/ARQUITECTURA.md
 | Que | Orden | Cuando |
 |---|---|---|
 | Tipos, lint, formato, tests | `npm run check` | Siempre antes de terminar |
-| Que nada visual cambie sin querer | `npm run shots` | Cambios en dibujo, interfaz, escenas, graficos |
 | Ver una regla funcionando | `npm run play -- --seed 7 -e "..."` | Cambios de reglas o IA |
 | Equilibrio | `npm run balance -- run ...` | Cambios de numeros o de IA (skill `equilibrar`) |
-| Teclado en un navegador real (Tab, foco) | `npm run keys` | Cambios en teclado, `main.ts` o cuadros de texto |
-| Jugarlo en un navegador | `npm run build:single` y abrir `dist-single/ilogic.html` | Interaccion, tactil, raton |
+| Jugarlo en un navegador | `npm run dev` y abrir `http://localhost:5173/` | Interfaz, menus, vista 3D, sonido |
+| Ver los modelos 3D y sus animaciones | `npm run dev` y abrir `/units3d.html` | Modelos de Ashfox (skill `ashfox`) |
 
-`npm run shots` deja `tests/visual/out/index.html` con cada escena: captura actual, referencia y
-diferencias en rojo. Leer las imagenes `.diff.png` para ver que ha cambiado. Si el cambio es a
-proposito: `npm run shots:update` y decirlo en el commit.
+No hay capturas de referencia: lo que cambia a la vista se comprueba mirandolo (captura del
+navegador) y se dice en el commit.
 
 ## Automejora
 
@@ -49,47 +47,29 @@ del turno siguiente) y pasa el dia; `ai` juega tu turno con la IA; `state` da el
 misma que una nueva del juego con ese codigo de mapa (`skirmishConfig`). Si una orden falla, la
 linea empieza por `error:` y el programa sale con 1.
 
-## API de depuracion en el navegador (`window.ilogicDebug`)
+## Probar en el navegador (`window.ilogic3d`)
 
-Desde Playwright (`page.evaluate`) o la consola:
+`npm run dev` y, en el navegador:
 
-```js
-await ilogicDebug.ready();                                  // espera al menu
-ilogicDebug.freeze();                                       // sin animaciones (capturas comparables)
-await ilogicDebug.startGame({ seed: 7, size: 20, theme: 'Plains', fog: false });
-await ilogicDebug.startGame({ seed: 7, rival: 'human' });  // dos personas en la misma pantalla, por turnos
-await ilogicDebug.startGame({ mission: 'tutorial' });
-await ilogicDebug.startGame({ state: jsonDeUnaPartida });  // p. ej. el de `npm run play ... state`
-ilogicDebug.game();    // { phase, busy, ended, day, cursor }
-ilogicDebug.state();   // GameState (copia)
-ilogicDebug.ui();      // estado de la interfaz HTML (fichas, menus...)
-await ilogicDebug.idle();                                   // espera a que acabe el turno enemigo
-await ilogicDebug.toMenu();
-```
+- `/`: el menu principal (Inicio, Nueva partida, Campaña, Opciones). Cada partida va en su propia carga
+  de la pagina: al empezar una se recarga, y salir al menu tambien (`src/view3d/gameStart.ts`).
+- `/?seed=2013`: una escaramuza directa (la persona contra la IA) con ese mapa; `&elevation=0`, sin la
+  regla de altura. Siempre el mismo mapa: sirve para comparar antes y despues.
+- `/units3d.html`: el playground de modelos (todas las unidades y edificios, sus animaciones, luz por
+  clima; `?model=Tank&side=enemy`). Desde la consola, `window.ilogicPlayground`.
 
-Para jugar, usar teclado y raton de Playwright como un jugador (Enter, flechas, Tab, E para terminar
-turno; clic en casillas). `window.ilogic` es el juego de Phaser, por si hace falta algo mas.
+En la partida, `window.ilogic3d` da `session` (la partida: `session.state`), `board` (las piezas),
+`controls` (la entrada del turno: `tap(pos)`, `endTurn()`, `focusUnit(uid)`), `rig` (la camara:
+`lookAt(punto)`), `world` (escena, `setWeather(id)`), `weather`, `animations` (para lanzar sucesos a mano
+con `playEvents` de `/src/view3d/animations.ts`), `wrecks`, `pause` (el menu de pausa) y `ui` (el estado de la
+interfaz: `ui.get()`, y sus botones: `ui.actions`). Usar estos y no `import()` desde la consola: tras una
+recarga en caliente, `import()` puede dar otra copia del modulo.
 
-Normas al probar en el navegador:
-- Abrir `dist-single/ilogic.html` por `file://`. **Nunca** `vite preview` ni servidores.
-- Cortar la red (`page.route(/^https?:\/\//, r => r.abort())`): Novedades consulta GitHub.
-- Ajustes del juego por `localStorage['ilogic.settings']` antes de cargar (p. ej. `{ "menuBg": "classic" }`).
-
-## Laboratorio de animaciones (`#lab`, `npm run lab:record`)
-
-Para ver y ajustar como se anima mover, atacar, el contraataque y una unidad destruida sin jugar:
-
-- Abrir el juego con `#lab` al final de la direccion (`dist-single/ilogic.html#lab`, o la web
-  publicada): una unidad propia y una enemiga en campo abierto, con botones para cada accion,
-  elegir las dos unidades y camara lenta (a un cuarto de velocidad). Cada boton empieza de cero.
-- Desde Playwright: `ilogicDebug.lab({ attacker: 'Artillery', defender: 'Tank', slow: true, play: 'counter' })`.
-- `npm run lab:record` (con el juego compilado) graba las cuatro acciones en video en
-  `tests/visual/out/lab/` y dice cuanto dura cada una; con ffmpeg instalado, ademas un GIF y una hoja
-  de fotogramas por accion (`counter.png`...), que se pueden mirar como imagen. Opciones:
-  `-- --attacker Bomber --defender Tank --slow --out carpeta` (para comparar antes y despues).
-
-Codigo: `src/lab.ts` (la partida de mentira) y `src/scenes/game/labMode.ts` (las animaciones son las
-de siempre: `EventPlayer` en `src/scenes/game/playback.ts`).
+Normas:
+- Con el panel del navegador oculto, la pagina va a saltos (sin fotogramas): esperar con varios
+  `requestAnimationFrame` o pedir que se enseñe el panel.
+- Novedades consulta GitHub: sin red no pasa nada.
+- Ajustes del juego por `localStorage['ilogic.settings']` antes de cargar.
 
 ## Antes de tocar...
 

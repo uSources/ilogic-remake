@@ -31,13 +31,16 @@ vigila).
 2. Graficos: skill `arte-retro-diffusion` (32x32, magenta, fondo blanco) → `units32/<id>.png` →
    `npm run assets`, y quitar `"art"`. `tests/assets.test.ts` exige `u/b_`, `u/i_` y `u/r_` (los de
    `art` mientras lo tenga) y avisa de las unidades que aun usan dibujo prestado. Sin dibujo de 2013 se ve
-   el nuevo tambien con la opcion "2013" (o `classicSprite` si lo hay).
+   el nuevo tambien con la opcion "2013" (o `classicSprite` si lo hay). Son las imagenes de la
+   interfaz (fichas, compra, bandeja).
+   **Modelo 3D**: skill `ashfox` → `public/assets/models/units/<id en minusculas>_{blue,red}.glb`
+   (edificios: `buildings/<id>_{blue,red,neutral}.glb`). Sin GLB se ve con un modelo de bloques (`src/view3d/models/`).
 3. IA (`src/core/ai/production.ts`): revisar `produce()` si la unidad hace algo nuevo.
 4. Equilibrio: skill `equilibrar` (`npm run balance -- duel` contra cada unidad y una tanda de partidas).
 5. `tests/aiGolden.test.ts` cambiara (la IA compra distinto): actualizar con
    `npx vitest run -u tests/aiGolden.test.ts` solo tras revisar el equilibrio.
 6. Ayuda o tutorial si hace falta (`src/hud/helpText.ts`, `src/campaign.ts`).
-7. CHANGELOG.md (apartado `[Sin publicar]`) y `npm run check`, `npm run shots`.
+7. CHANGELOG.md (apartado `[Sin publicar]`) y `npm run check`; mirarla en el navegador (`npm run dev`).
 
 Una regla nueva (curar al lado, volar sobre agua...) que el JSON no sabe expresar si es codigo: campo
 nuevo en `UnitDef` + validacion + su campo en `UnitType` (`buildUnitTypes`, content/units.ts) + esquema + test, y la regla en su modulo de `core/rules/`. Una habilidad pasiva nueva: su forma en `AbilityDef`, su validacion en `ABILITY_SHAPES` (`content/abilities.ts`) y lo que aporta a las listas de las reglas en `ABILITY_HOOKS` y su sitio en `ABILITY_ORDER` (`core/abilities.ts`). Si depende de un ajuste de la partida, es un modulo de reglas (`core/ruleModules/`, `docs/ARQUITECTURA.md`, "Modulos de reglas").

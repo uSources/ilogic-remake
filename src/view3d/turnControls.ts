@@ -27,9 +27,7 @@ import {
 } from '../core/rules';
 import type { GameSession } from '../core/session';
 import { showBanner, showToast, type MenuItemVM } from '../hud/store';
-import { buyItem } from '../scenes/game/phases/buy';
-import { unitMenuItems, withBack } from '../scenes/game/phases/unitMenu';
-import type { ActionKey } from '../scenes/game/types';
+import { buyItem, unitMenuItems, withBack, type ActionKey } from './menuItems';
 import { fmtNum, nameOf, t } from '../settings';
 import { buyBlockedText } from '../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../core/gameContent';
@@ -52,9 +50,12 @@ type Mode =
 
 /** El menu abierto, para la interfaz (el bocadillo del juego, junto a la casilla `at`). */
 export interface MenuView {
-  kind: 'unit' | 'buy';
+  /** De la unidad, de compra o de pausa (este, de matchMenus.ts). */
+  kind: 'unit' | 'buy' | 'game';
   title: string;
   subtitle?: string;
+  /** Lineas extra (el objetivo de la mision, en la pausa). */
+  info?: string[];
   items: MenuItemVM[];
   selected: number;
   at: Pos;
@@ -67,6 +68,8 @@ export interface TurnHost {
   animations: AnimationHost;
   /** La partida o lo elegido ha cambiado: volver a pintar piezas e interfaz. */
   refresh(): void;
+  /** La partida se ha acabado (tras el cartel de victoria o derrota). */
+  onOver(): void;
 }
 
 export class TurnControls {
@@ -117,6 +120,7 @@ export class TurnControls {
     this.isBusy = true;
     showBanner(`${t('day')} ${this.s.day}`, t(won ? 'victory' : 'defeat'), won ? 'blue' : 'red');
     this.host.refresh();
+    this.host.onOver();
   }
 
   // ---- Tocar el tablero ----
@@ -133,7 +137,7 @@ export class TurnControls {
         return this.tapTarget(mode.unit, mode.targets, pos);
       case 'unitMenu':
       case 'buy':
-        return this.cancel();
+        return void this.cancel();
     }
   }
 
@@ -288,12 +292,15 @@ export class TurnControls {
   }
 
   /** Esc o tocar fuera: un paso atras en lo que se estaba haciendo. */
-  cancel(): void {
-    if (this.isBusy) return;
+  /** Deshace lo elegido (un paso atras); false si no habia nada elegido (Esc abre entonces la pausa). */
+  cancel(): boolean {
+    if (this.isBusy) return true;
     const mode = this.mode;
-    if (mode.kind === 'unitMenu') return void this.back(mode.unit);
-    if (mode.kind === 'target') return this.openUnitMenu(mode.unit);
-    this.setMode({ kind: 'idle' });
+    if (mode.kind === 'idle') return false;
+    if (mode.kind === 'unitMenu') void this.back(mode.unit);
+    else if (mode.kind === 'target') this.openUnitMenu(mode.unit);
+    else this.setMode({ kind: 'idle' });
+    return true;
   }
 
   // ---- Elegir desde la interfaz ----

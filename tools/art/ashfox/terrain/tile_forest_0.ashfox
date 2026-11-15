@@ -1,65 +1,58 @@
 ashfox-model 1
 asset tile_forest_0 {
-  rig contract ModelRig {
-    handedness = right;
-    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-  }
-  skeleton ModelSkeleton implements ModelRig {
-    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-  }
+rig contract ModelRig {
+handedness = right;
+frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+}
+skeleton ModelSkeleton implements ModelRig {
+bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+}
 
-  surface contract Skin {
-    atlas { width = 64px; height = 64px; }
-    chart base box { width = 64px; height = 26px; coverage = opaque; }
-    chart top box { width = 64px; height = 18px; coverage = opaque; }
-    material = opaque;
-  }
-  surface paint: Skin {
-    material = opaque;
-    texture atlas {
-      atlas = (64px, 64px); background = earth; background-alpha = 255;
-      palette {
-        earth = (#5a3420, #8a5530, #b47a45);
-        earth_spots = (#4a2a18, #6e4228, #8f5b36);
-        forest_floor = (#2f6f24, #468f2f, #62ae3c);
-        forest_floor_spots = (#255a1d, #357a26, #4e9630);
-        leaves_o = #b06a2a;
-        leaves_y = #c8a030;
-        moss_m = #2a6420;
-      }
-      stamp leaves { pixels = "o.y/.o."; o = leaves_o; y = leaves_y; }
-      stamp moss { pixels = "mm/m."; m = moss_m; }
-      chart base box {
-        origin = (0px, 0px); fill = earth;
-        pattern blotch { paint = earth_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 3; }
-      }
-      chart top box {
-        origin = (0px, 27px); fill = forest_floor;
-        pattern blotch { paint = forest_floor_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 3; }
-        face up { stamp leaves { at = (10px, 8px); } stamp leaves { at = (5px, 11px); } stamp leaves { at = (0px, 6px); } stamp leaves { at = (2px, 11px); } stamp leaves { at = (0px, 9px); } stamp moss { at = (5px, 10px); } stamp moss { at = (14px, 3px); } stamp moss { at = (13px, 7px); } }
-      }
-      grain clustered { seed = 2013; }
-      tone voxel;
-    }
-  }
-  component Body {
-    requires rig skeleton: ModelRig;
-    requires surface skin: Skin;
-    bind bone body to skeleton.body;
-    geometry {
-      bone body {
-        cube base { origin = (-8u, -8u, -8u); size = (16u, 10u, 16u); surface = skin.base; }
-        cube top { origin = (-8u, 2u, -8u); size = (16u, 2u, 16u); surface = skin.top; }
-      }
-    }
-  }
-  export asset tile_forest_0 {
-    settings { density = 16; forward = north; }
-    skeleton = ModelSkeleton;
+surface contract Skin {
+atlas { width = 64px; height = 64px; }
+chart base box { width = 64px; height = 26px; coverage = opaque; }
+chart top box { width = 64px; height = 18px; coverage = opaque; }
+material = opaque;
+}
+surface paint: Skin {
+material = opaque;
+texture atlas {
+atlas = (64px, 64px); background = earth; background-alpha = 255;
+palette {
+earth = (#5a3420, #8a5530, #b47a45);
+earth_spots = (#4a2a18, #6e4228, #8f5b36);
+forest_floor = (#2f6f24, #468f2f, #62ae3c);
+forest_floor_spots = (#255a1d, #357a26, #4e9630);
+leaves_o = #b06a2a;
+leaves_y = #c8a030;
+moss_m = #2a6420;
+}
+stamp leaves { pixels = "o.y/.o."; o = leaves_o; y = leaves_y; }
+stamp moss { pixels = "mm/m."; m = moss_m; }
+chart base box { origin = (0px, 0px); fill = earth; pattern blotch { paint = earth_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 3; } }
+chart top box { origin = (0px, 27px); fill = forest_floor; pattern blotch { paint = forest_floor_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 3; } face up { stamp leaves { at = (10px, 8px); } stamp leaves { at = (5px, 11px); } stamp leaves { at = (0px, 6px); } stamp leaves { at = (2px, 11px); } stamp leaves { at = (0px, 9px); } stamp moss { at = (5px, 10px); } stamp moss { at = (14px, 3px); } stamp moss { at = (13px, 7px); } } }
+grain clustered { seed = 2013; }
+tone voxel;
+}
+}
+component Body {
+requires rig skeleton: ModelRig;
+requires surface skin: Skin;
+bind bone body to skeleton.body;
+geometry {
+bone body {
+cube base { origin = (-8u, -8u, -8u); size = (16u, 10u, 16u); surface = skin.base; }
+cube top { origin = (-8u, 2u, -8u); size = (16u, 2u, 16u); surface = skin.top; }
+}
+}
+}
+export asset tile_forest_0 {
+settings { density = 16; forward = north; }
+skeleton = ModelSkeleton;
 
-    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-  }
+use Body as model { bind skeleton = ModelRig; bind skin = paint; };
+}
 }

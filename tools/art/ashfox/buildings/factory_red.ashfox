@@ -1,115 +1,83 @@
 ashfox-model 1
 asset factory_red {
-  rig contract ModelRig {
-    handedness = right;
-    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-  }
-  skeleton ModelSkeleton implements ModelRig {
-    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-  }
+rig contract ModelRig {
+handedness = right;
+frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint body { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+}
+skeleton ModelSkeleton implements ModelRig {
+bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind body { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+}
 
-  surface contract Skin {
-    atlas { width = 64px; height = 64px; }
-    chart plinth box { width = 56px; height = 15px; coverage = opaque; }
-    chart hall box { width = 42px; height = 15px; coverage = opaque; }
-    chart tooth0 box { width = 24px; height = 12px; coverage = opaque; }
-    chart tooth1 box { width = 24px; height = 12px; coverage = opaque; }
-    chart tooth2 box { width = 24px; height = 12px; coverage = opaque; }
-    chart chimney box { width = 8px; height = 13px; coverage = opaque; }
-    chart chimney_cap box { width = 12px; height = 4px; coverage = opaque; }
-    material = opaque;
-  }
-  surface paint: Skin {
-    material = opaque;
-    texture atlas {
-      atlas = (64px, 64px); background = pavement; background-alpha = 255;
-      palette {
-        pavement = (#aea896, #b9b2a0, #c4bdaa);
-        pavement_spots = (#9a958a, #a8a290, #b0aa9a);
-        body_red = (#a42424, #b8282a, #c8383a);
-        rim_body_red_12_r = #ee6a60;
-        rim_body_red_9_r = #ee6a60;
-        hall_windows_w = #14202c;
-        hall_windows_l = #ffe08a;
-        door_d = #14202c;
-        trim_red = (#741416, #86181a, #962420);
-        rim_trim_red_4_r = #c23a36;
-        rim_trim_red_8_r = #c23a36;
-        glazing_g = #9fe3ff;
-      }
-      stamp rim_body_red_12 { pixels = "rrrrrrrrrrrr"; r = rim_body_red_12_r; }
-      stamp rim_body_red_9 { pixels = "rrrrrrrrr"; r = rim_body_red_9_r; }
-      stamp hall_windows { pixels = ".ww.ww.wl.ww/............/.ww.lw.ww.ww"; w = hall_windows_w; l = hall_windows_l; }
-      stamp door { pixels = "ddd/ddd/ddd"; d = door_d; }
-      stamp rim_trim_red_4 { pixels = "rrrr"; r = rim_trim_red_4_r; }
-      stamp rim_trim_red_8 { pixels = "rrrrrrrr"; r = rim_trim_red_8_r; }
-      stamp glazing { pixels = "gggggggg/gggggggg"; g = glazing_g; }
-      chart plinth box {
-        origin = (0px, 0px); fill = pavement;
-        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; }
-      }
-      chart hall box {
-        origin = (0px, 16px); fill = body_red;
-        face north { stamp rim_body_red_12 { at = (0px, 0px); } stamp hall_windows { at = (0px, 1px); } stamp door { at = (1px, 3px); } }
-        face south { stamp rim_body_red_12 { at = (0px, 0px); } }
-        face east { stamp rim_body_red_9 { at = (0px, 0px); } }
-        face west { stamp rim_body_red_9 { at = (0px, 0px); } }
-      }
-      chart tooth0 box {
-        origin = (0px, 32px); fill = trim_red;
-        face north { stamp rim_trim_red_4 { at = (0px, 0px); } }
-        face south { stamp rim_trim_red_4 { at = (0px, 0px); } }
-        face east { stamp rim_trim_red_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } }
-        face west { stamp rim_trim_red_8 { at = (0px, 0px); } }
-      }
-      chart tooth1 box {
-        origin = (25px, 32px); fill = trim_red;
-        face north { stamp rim_trim_red_4 { at = (0px, 0px); } }
-        face south { stamp rim_trim_red_4 { at = (0px, 0px); } }
-        face east { stamp rim_trim_red_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } }
-        face west { stamp rim_trim_red_8 { at = (0px, 0px); } }
-      }
-      chart tooth2 box {
-        origin = (0px, 45px); fill = trim_red;
-        face north { stamp rim_trim_red_4 { at = (0px, 0px); } }
-        face south { stamp rim_trim_red_4 { at = (0px, 0px); } }
-        face east { stamp rim_trim_red_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } }
-        face west { stamp rim_trim_red_8 { at = (0px, 0px); } }
-      }
-      chart chimney box {
-        origin = (43px, 16px); fill = pavement;
-        pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; }
-      }
-      chart chimney_cap box {
-        origin = (25px, 45px); fill = trim_red;
-      }
-      grain clustered { seed = 2013; }
-      tone voxel;
-    }
-  }
-  component Body {
-    requires rig skeleton: ModelRig;
-    requires surface skin: Skin;
-    bind bone body to skeleton.body;
-    geometry {
-      bone body {
-        cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
-        cube hall { origin = (-6u, 1u, -4u); size = (12u, 6u, 9u); surface = skin.hall; }
-        cube tooth0 { origin = (-6u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (-4u, 7u, 0.5u); surface = skin.tooth0; }
-        cube tooth1 { origin = (-2u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (0u, 7u, 0.5u); surface = skin.tooth1; }
-        cube tooth2 { origin = (2u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (4u, 7u, 0.5u); surface = skin.tooth2; }
-        cube chimney { origin = (4u, 1u, 4u); size = (2u, 11u, 2u); surface = skin.chimney; }
-        cube chimney_cap { origin = (3.5u, 12u, 3.5u); size = (3u, 1u, 3u); surface = skin.chimney_cap; }
-      }
-    }
-  }
-  export asset factory_red {
-    settings { density = 16; forward = north; }
-    skeleton = ModelSkeleton;
+surface contract Skin {
+atlas { width = 64px; height = 64px; }
+chart plinth box { width = 56px; height = 15px; coverage = opaque; }
+chart hall box { width = 42px; height = 15px; coverage = opaque; }
+chart tooth0 box { width = 24px; height = 12px; coverage = opaque; }
+chart tooth1 box { width = 24px; height = 12px; coverage = opaque; }
+chart tooth2 box { width = 24px; height = 12px; coverage = opaque; }
+chart chimney box { width = 8px; height = 13px; coverage = opaque; }
+chart chimney_cap box { width = 12px; height = 4px; coverage = opaque; }
+material = opaque;
+}
+surface paint: Skin {
+material = opaque;
+texture atlas {
+atlas = (64px, 64px); background = pavement; background-alpha = 255;
+palette {
+pavement = (#aea896, #b9b2a0, #c4bdaa);
+pavement_spots = (#9a958a, #a8a290, #b0aa9a);
+body_red = (#a42424, #b8282a, #c8383a);
+rim_body_red_12_r = #ee6a60;
+rim_body_red_9_r = #ee6a60;
+hall_windows_w = #14202c;
+hall_windows_l = #ffe08a;
+door_d = #14202c;
+trim_red = (#741416, #86181a, #962420);
+rim_trim_red_4_r = #c23a36;
+rim_trim_red_8_r = #c23a36;
+glazing_g = #9fe3ff;
+}
+stamp rim_body_red_12 { pixels = "rrrrrrrrrrrr"; r = rim_body_red_12_r; }
+stamp rim_body_red_9 { pixels = "rrrrrrrrr"; r = rim_body_red_9_r; }
+stamp hall_windows { pixels = ".ww.ww.wl.ww/............/.ww.lw.ww.ww"; w = hall_windows_w; l = hall_windows_l; }
+stamp door { pixels = "ddd/ddd/ddd"; d = door_d; }
+stamp rim_trim_red_4 { pixels = "rrrr"; r = rim_trim_red_4_r; }
+stamp rim_trim_red_8 { pixels = "rrrrrrrr"; r = rim_trim_red_8_r; }
+stamp glazing { pixels = "gggggggg/gggggggg"; g = glazing_g; }
+chart plinth box { origin = (0px, 0px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } }
+chart hall box { origin = (0px, 16px); fill = body_red; face north { stamp rim_body_red_12 { at = (0px, 0px); } stamp hall_windows { at = (0px, 1px); } stamp door { at = (1px, 3px); } } face south { stamp rim_body_red_12 { at = (0px, 0px); } } face east { stamp rim_body_red_9 { at = (0px, 0px); } } face west { stamp rim_body_red_9 { at = (0px, 0px); } } }
+chart tooth0 box { origin = (0px, 32px); fill = trim_red; face north { stamp rim_trim_red_4 { at = (0px, 0px); } } face south { stamp rim_trim_red_4 { at = (0px, 0px); } } face east { stamp rim_trim_red_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } } face west { stamp rim_trim_red_8 { at = (0px, 0px); } } }
+chart tooth1 box { origin = (25px, 32px); fill = trim_red; face north { stamp rim_trim_red_4 { at = (0px, 0px); } } face south { stamp rim_trim_red_4 { at = (0px, 0px); } } face east { stamp rim_trim_red_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } } face west { stamp rim_trim_red_8 { at = (0px, 0px); } } }
+chart tooth2 box { origin = (0px, 45px); fill = trim_red; face north { stamp rim_trim_red_4 { at = (0px, 0px); } } face south { stamp rim_trim_red_4 { at = (0px, 0px); } } face east { stamp rim_trim_red_8 { at = (0px, 0px); } stamp glazing { at = (0px, 1px); } } face west { stamp rim_trim_red_8 { at = (0px, 0px); } } }
+chart chimney box { origin = (43px, 16px); fill = pavement; pattern blotch { paint = pavement_spots; scale = (2px, 1px, 2px); density = 0.1ratio; phase = 7; } }
+chart chimney_cap box { origin = (25px, 45px); fill = trim_red; }
+grain clustered { seed = 2013; }
+tone voxel;
+}
+}
+component Body {
+requires rig skeleton: ModelRig;
+requires surface skin: Skin;
+bind bone body to skeleton.body;
+geometry {
+bone body {
+cube plinth { origin = (-7u, 0u, -7u); size = (14u, 1u, 14u); surface = skin.plinth; }
+cube hall { origin = (-6u, 1u, -4u); size = (12u, 6u, 9u); surface = skin.hall; }
+cube tooth0 { origin = (-6u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (-4u, 7u, 0.5u); surface = skin.tooth0; }
+cube tooth1 { origin = (-2u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (0u, 7u, 0.5u); surface = skin.tooth1; }
+cube tooth2 { origin = (2u, 5u, -3.5u); size = (4u, 4u, 8u); rotation = (0deg, 0deg, 45deg); pivot = (4u, 7u, 0.5u); surface = skin.tooth2; }
+cube chimney { origin = (4u, 1u, 4u); size = (2u, 11u, 2u); surface = skin.chimney; }
+cube chimney_cap { origin = (3.5u, 12u, 3.5u); size = (3u, 1u, 3u); surface = skin.chimney_cap; }
+}
+}
+}
+export asset factory_red {
+settings { density = 16; forward = north; }
+skeleton = ModelSkeleton;
 
-    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-  }
+use Body as model { bind skeleton = ModelRig; bind skin = paint; };
+}
 }

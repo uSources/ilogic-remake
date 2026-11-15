@@ -1,7 +1,6 @@
-import type Phaser from 'phaser';
 import { ui, type OptionsRowVM, type OptionsTabVM } from '../hud/store';
 import { keyLabelOf } from '../hud/keyLabels';
-import { playMusic, stopMusic } from '../music';
+import { playMusic, stopMusic, type MusicTrack } from '../audio/music';
 import { saveSettings, settings, t, UI_SCALES, type Settings, type TextKey } from '../settings';
 import type { MenuCommand, MenuContext } from '../controls/menu';
 import { KEY_BINDING_IDS, keyConflict, withKeyBound, type KeyBindingId, type KeyConflict } from '../controls/keyboard';
@@ -120,8 +119,7 @@ export class OptionsPanel {
   private notice: { id: KeyBindingId; text: string } | null = null;
 
   constructor(
-    private scene: Phaser.Scene,
-    private track: 'menu' | 'game',
+    private track: MusicTrack,
     /** Se llama al cambiar algo (p. ej. el idioma, para repintar lo de debajo). */
     private onChange: (key: keyof Settings) => void,
     private onClose: () => void,
@@ -292,7 +290,7 @@ export class OptionsPanel {
   private changed(key: keyof Settings): void {
     saveSettings();
     if (key === 'music') {
-      if (settings.music) playMusic(this.scene, this.track, true);
+      if (settings.music) playMusic(this.track, true);
       else stopMusic();
     }
     this.onChange(key);

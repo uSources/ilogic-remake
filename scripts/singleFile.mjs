@@ -3,7 +3,7 @@
 import ts from 'typescript';
 
 /** El tipo de cada recurso que se incrusta, por su extension. */
-export const ASSET_MIME_TYPES = { png: 'image/png', json: 'application/json', mp3: 'audio/mpeg' };
+export const ASSET_MIME_TYPES = { png: 'image/png', json: 'application/json', mp3: 'audio/mpeg', glb: 'model/gltf-binary' };
 
 /** El tipo de un recurso, o null si no se incrusta (la musica solo en mp3: el ogg duplicaria el peso). */
 export function assetMimeType(fileName) {

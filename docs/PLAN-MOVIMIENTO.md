@@ -2,6 +2,11 @@
 
 > Nota (30-10-2026): el combustible y la municion se quitaron del juego despues de este plan; lo que
 > se dice aqui de ellos (avisos, gasto por coste) ya no aplica.
+>
+> Nota (15-11-2026): todo esto se hizo en la vista 2D, que ya no existe. Las reglas (coste, bloqueos,
+> niebla, deshacer, ordenes de varios turnos, movimiento en grupo) siguen en el nucleo; en la vista 3D
+> de momento solo se toca para elegir, mover y atacar. Arrastrar y soltar, el camino a mano, el
+> bocadillo, el recuadro, los grupos y las ordenes estan pendientes de rehacer en 3D.
 
 ## Estado (27-10-2026)
 

@@ -19,10 +19,6 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check": "tsc --noEmit && eslint . && prettier --check . && vitest run",
-    "shots": "npm run build:single && node tests/visual/shots.mjs",
-    "shots:update": "npm run build:single && node tests/visual/shots.mjs --update",
-    "touch": "npm run build:single && node tests/visual/touch.mjs",
-    "keys": "npm run build:single && node tests/visual/keys.mjs",
     "play": "tsx tools/play/cli.ts",
     "fuzz": "tsx tools/improve/fuzz.ts",
     "metrics": "tsx tools/improve/metrics.ts",
@@ -32,13 +28,11 @@
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
     "commitlint": "commitlint",
     "notes": "tsx tools/notes/cli.ts",
-    "generals": "tsx tools/balance/generals.ts",
-    "lab:record": "node tests/visual/lab.mjs"
+    "generals": "tsx tools/balance/generals.ts"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",
     "@fontsource/silkscreen": "^5.3.0",
-    "phaser": "^4.2.1",
     "preact": "^10.29.8",
     "three": "^0.181.0"
   },
@@ -50,9 +44,6 @@
     "@types/three": "^0.181.0",
     "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",
-    "pixelmatch": "7.1.0",
-    "playwright": "1.63.0",
-    "pngjs": "7.0.0",
     "prettier": "3.9.10",
     "tsx": "^4.23.15",
     "typescript": "5.9",
@@ -60,7 +51,7 @@
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
-  "description": "Ilogic: remake en TypeScript + Phaser del juego de estrategia por turnos de 2013",
+  "description": "Ilogic: remake en 3D (TypeScript + three.js) del juego de estrategia por turnos de 2013",
   "repository": {
     "type": "git",
     "url": "https://github.com/uSources/ilogic-remake.git"

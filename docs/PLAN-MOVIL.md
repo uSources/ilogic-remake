@@ -1,15 +1,18 @@
 # Plan: que se pueda jugar bien en el móvil
 
-## Estado (30-10-2026)
+## Estado (15-11-2026)
 
-Sin empezar. El juego ya funciona con el dedo (tocar, mantener pulsado, pellizcar) y se instala como
-app (PWA, versión 0.4.0), pero jugar una partida entera en un móvil es incómodo: el mapa se ve poco,
-mover una unidad cuesta cuatro toques y varias pantallas se salen por los lados.
+Sin empezar. El juego se instala como app (PWA), pero jugar una partida entera en un móvil es
+incómodo. Desde que el juego es 3D, lo que se midió sobre el mapa 2D (tamaño de casilla, cuatro
+toques para mover, arrastrar con pulsación larga) ya no vale: la partida 3D se juega tocando (tocar
+una unidad la elige, tocar una casilla azul la mueve y abre su menú: **dos toques y el menú**) y
+arrastrar con un dedo desplaza la cámara. **Falta para el dedo:** pellizcar para acercar y girar la
+cámara con dos dedos (`src/view3d/pointerInput.ts` solo sabe de botones del ratón y de la rueda).
 
-## Cómo está ahora
+## Cómo está ahora (medido antes del 3D: la interfaz HTML es la misma)
 
 Probado con Playwright en un móvil típico (393×852 CSS, densidad 2, táctil), en vertical, en
-horizontal (852×393) y en uno pequeño (360×640), abriendo `dist-single/ilogic.html`.
+horizontal (852×393) y en uno pequeño (360×640).
 
 **Pantallas que se cortan**
 - **Inicio:** en horizontal solo se ve la tarjeta Nueva partida; Campaña y la fila de abajo quedan
@@ -19,45 +22,24 @@ horizontal (852×393) y en uno pequeño (360×640), abriendo `dist-single/ilogic
 - **Cómo se juega:** en vertical el texto se corta por la derecha (no hace salto de línea); en
   horizontal la tabla de controles se sale por abajo.
 
-**El mapa se ve poco**
-- La casilla mide 48 px en vertical (64 px en horizontal): buen tamaño para el dedo, pero caben unas
-  8 columnas en vertical.
-- **En horizontal la interfaz tapa más de la mitad del mapa:** ficha del edificio, ficha de la
+**La interfaz tapa el tablero**
+- **En horizontal la interfaz tapa más de la mitad de la pantalla:** ficha del edificio, ficha de la
   unidad, bandeja "Sin mover" y la barra de arriba ocupan casi toda la altura (393 px).
-- En vertical la ficha de abajo y el botón Amenaza tapan las dos últimas filas.
-- La columna 0 queda pegada al borde de la pantalla: las unidades del borde se tocan mal y quedan
-  bajo el borde redondeado o la muesca del teléfono.
-
-**Mover cuesta demasiado**
-- Mover una unidad una casilla: tocar la unidad (señala), tocar otra vez (selecciona), tocar el
-  destino (señala), tocar otra vez (confirma) y elegir en el menú. **Cuatro toques y el menú.**
-  "Primer toque señala, segundo confirma" viene del cursor de teclado; con el dedo sobra.
-- Arrastrar para mover solo funciona tras mantener pulsado; el gesto natural (arrastrar la unidad)
-  mueve el mapa.
+- En vertical la ficha de abajo tapa la parte de abajo del tablero.
 
 **Cosas de escritorio que estorban**
 - Teclas en los botones (E, TAB, T, ESC, H, O) que en el móvil no existen.
-- La explicación de los gestos sale como aviso grande encima del mapa y, en horizontal, **tapa el
-  menú de acciones** de la unidad.
-- En horizontal, la ficha del terreno enseña un cuadrado verde liso en vez del dibujo de la casilla.
-
-**Lo que ya funciona bien:** el lienzo nítido a la densidad del móvil, el pellizco por pasos enteros,
-mantener pulsado para el alcance, los botones de 48 px de la barra de arriba y del menú de pausa, y
-la barra de arriba en vertical.
+- La línea de ayuda de abajo explica el ratón (clic, botón central, botón derecho, rueda).
 
 ## Fase V0: ver y probar el móvil sin un móvil
 
-Antes de cambiar nada, poder comprobarlo cada vez, como con las capturas de escritorio.
+Antes de cambiar nada, poder comprobarlo cada vez. Ya no hay capturas comparadas (`npm run shots`
+se quitó con el 2D): hace falta una forma nueva de abrir inicio, partida, pausa, ayuda, compra y
+menú de acciones en **vertical 393×852**, **horizontal 852×393** y **pequeño 360×640**, con un
+control de que **nada se sale de la pantalla** (ningún elemento visible del HUD con
+`getBoundingClientRect()` fuera de la ventana, salvo los que tienen scroll).
 
-- `npm run shots` añade escenas de móvil: inicio, partida, pausa, ayuda, compra y menú de acciones
-  en **vertical 393×852**, **horizontal 852×393** y **pequeño 360×640**, con `hasTouch` e `isMobile`.
-- Comprobación automática de que **nada se sale de la pantalla**: en cada escena, ningún elemento
-  visible del HUD con `getBoundingClientRect()` fuera de la ventana (salvo los que tienen scroll).
-- Una ayuda de toques en `tests/visual/` (tocar la casilla x, y) para escribir recorridos: mover,
-  atacar, comprar y terminar el turno solo con el dedo.
-
-**Hecho cuando:** las escenas de móvil están en `tests/visual/ref/` y el control de "nada se sale"
-falla hoy en las pantallas de arriba (y sirve para ver que se arreglan).
+**Hecho cuando:** ese control existe y falla hoy en las pantallas de arriba.
 
 ## Fase V1: que nada se corte
 
@@ -73,41 +55,28 @@ Arreglos de maquetación, sin cambiar cómo se juega.
 
 **Hecho cuando:** el control de V0 no encuentra nada fuera de la pantalla en ninguna escena.
 
-## Fase V2: más mapa
+## Fase V2: más tablero
 
-El mapa es el juego: tiene que ocupar casi toda la pantalla.
+El tablero es el juego: tiene que ocupar casi toda la pantalla.
 
 - **Horizontal:** una sola columna estrecha a un lado (dinero, día, fin del turno, menú) en vez de
-  barra arriba, y una ficha compacta que solo sale con algo seleccionado. Objetivo: **el mapa ocupa al
-  menos el 75 % de la pantalla** con la ficha abierta, y el 90 % sin ella.
+  barra arriba, y una ficha compacta que solo sale con algo seleccionado. Objetivo: **el tablero se
+  ve en al menos el 75 % de la pantalla** con la ficha abierta, y el 90 % sin ella.
 - **Vertical:** la ficha de abajo se pliega a una línea (nombre, vida, movimiento) y se despliega al
   tocarla; la bandeja "Sin mover" pasa a un botón con el número que salta a la siguiente unidad.
-- La ficha del terreno enseña el dibujo de la casilla (ver por qué sale el cuadrado verde liso).
-- **Margen alrededor del mapa** para poder llevar la columna 0 y la última fila al centro de la
-  pantalla, lejos de los bordes.
-- Zoom inicial según la pantalla: que quepan unas 9 casillas en el lado corto.
+- Distancia de la cámara al empezar según la pantalla.
 
-**Hecho cuando:** en las capturas de V0 el mapa ocupa lo dicho y ninguna unidad queda bajo la
-interfaz sin poder desplazarla a la vista.
+**Hecho cuando:** en las pantallas de V0 el tablero se ve lo dicho.
 
-## Fase V3: mover con un toque
+## Fase V3: el dedo en el 3D
 
-El cambio más grande. El ratón y el teclado siguen igual; esto es solo para el dedo.
+Tocar para elegir y mover ya está. Falta:
 
-- **Tocar una unidad propia la selecciona** y enseña su alcance (sin el toque de "señalar").
-- **Tocar un destino dentro del alcance mueve** y abre el menú de acciones, con la opción más
-  probable marcada. Total: **dos toques y el menú** (ahora cuatro).
-- **Tocar un enemigo atacable** enseña la previsión de combate en grande con un botón Atacar; un
-  segundo toque sobre el mismo enemigo también ataca.
-- **Arrastrar desde una unidad propia la lleva** (como con el ratón, sin mantener pulsado);
-  arrastrar desde cualquier otro sitio mueve el mapa.
-- Tocar fuera del alcance deselecciona. Mantener pulsado sigue enseñando la ficha y el alcance de
-  cualquier unidad, también enemiga.
-- Vibración corta al coger, al soltar y al atacar (`navigator.vibrate`, se puede quitar en Opciones).
-- El aviso de gestos sale una vez, abajo, pequeño y nunca encima de un menú.
-
-**Hecho cuando:** con la ayuda de toques de V0, mover, atacar, capturar, unir y subir a un transporte
-salen en dos toques (más el menú cuando haga falta), y los tests de movimiento siguen igual.
+- **Pellizcar** para acercar y **girar con dos dedos** (en `src/view3d/pointerInput.ts`).
+- **Tocar un enemigo atacable** enseña la previsión de combate en grande con un botón Atacar.
+- Mantener pulsado enseña la ficha y el alcance de cualquier unidad, también enemiga.
+- Vibración corta al elegir, al mover y al atacar (`navigator.vibrate`, se puede quitar en Opciones).
+- Línea de ayuda de abajo con los gestos del dedo en pantallas táctiles.
 
 ## Fase V4: menús hechos para el pulgar
 
@@ -128,8 +97,7 @@ más que para guardar.
 - **Orientación:** el juego funciona en las dos; opción en Opciones para fijarla (Android).
 - Sin "tirar para recargar", sin seleccionar texto, sin menú del navegador al mantener pulsado
   (`overscroll-behavior: none`, `user-select: none`, `-webkit-touch-callout: none`).
-- **Batería:** sin animaciones de fondo cuando no pasa nada (bajar a 30 fps en reposo) y menú sin
-  fondo vivo por defecto en móvil.
+- **Batería:** bajar a 30 fps en reposo (el bucle de `src/view3d/world.ts` dibuja siempre).
 - Guardar al salir de la app (`visibilitychange`), por si el sistema la cierra.
 
 **Hecho cuando:** jugando 20 minutos en un Android y un iPhone reales no salta nada del navegador ni
@@ -147,13 +115,12 @@ se pierde la partida al cambiar de app.
 
 | Fase | Tamaño | Por qué en este orden |
 |---|---|---|
-| V0 Ver y probar | pequeña | sin ella no se sabe si cada fase mejora algo |
+| V0 Ver y probar | mediana | sin ella no se sabe si cada fase mejora algo |
 | V1 Que nada se corte | pequeña | arreglos rápidos que ya se notan |
-| V2 Más mapa | mediana | lo que más se nota al jugar |
-| V3 Mover con un toque | grande | el cambio de controles; toca `GameScene` y necesita V2 para ver el alcance |
+| V2 Más tablero | mediana | lo que más se nota al jugar |
+| V3 El dedo en el 3D | mediana | los gestos de dos dedos; toca `src/view3d/pointerInput.ts` |
 | V4 Menús para el pulgar | mediana | se apoya en V3 |
 | V5 Como una app | pequeña | independiente, se puede hacer en cualquier momento |
 | V6 Móviles reales | — | al final de cada fase grande, no solo al final |
 
-Cada fase en su PR, con las capturas de móvil al día (`npm run shots:update`) y su línea en el
-CHANGELOG. El teclado y el ratón no cambian en ninguna fase: los tests de escritorio siguen igual.
+Cada fase en su PR, con el control de V0 pasando y su línea en el CHANGELOG. El teclado y el ratón no cambian en ninguna fase: los tests de escritorio siguen igual.

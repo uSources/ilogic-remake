@@ -1,243 +1,186 @@
 ashfox-model 1
 asset fsoldier_red {
-  rig contract ModelRig {
-    handedness = right;
-    frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
-    joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint hull { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint wheels_front { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint wheels_back { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-    joint rider { parent = hull; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
-  }
-  skeleton ModelSkeleton implements ModelRig {
-    bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind wheels_front { parent-origin = (0u, 3u, -5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind wheels_back { parent-origin = (0u, 3u, 5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-    bind rider { parent-origin = (0u, 4u, 1u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
-  }
-  motion idle for ModelRig {
-    duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
-    track rider.rotation {
-      key 0s = (0deg, 0deg, 0deg) catmullrom;
-      key 0.3s = (2deg, 0deg, 1deg) catmullrom;
-      key 0.6s = (0deg, 0deg, 0deg) catmullrom;
-      key 0.9s = (-2deg, 0deg, -1deg) catmullrom;
-      key 1.2s = (0deg, 0deg, 0deg) catmullrom;
-    }
-  }
-  motion drive for ModelRig {
-    duration = 0.4s; fps = 20; loop = loop; rest-relative = true;
-    track wheels_front.rotation {
-      key 0s = (0deg, 0deg, 0deg) step;
-      key 0.1s = (-22.5deg, 0deg, 0deg) step;
-      key 0.2s = (-45deg, 0deg, 0deg) step;
-      key 0.3s = (-67.5deg, 0deg, 0deg) step;
-      key 0.4s = (0deg, 0deg, 0deg) step;
-    }
-    track wheels_back.rotation {
-      key 0s = (0deg, 0deg, 0deg) step;
-      key 0.1s = (-22.5deg, 0deg, 0deg) step;
-      key 0.2s = (-45deg, 0deg, 0deg) step;
-      key 0.3s = (-67.5deg, 0deg, 0deg) step;
-      key 0.4s = (0deg, 0deg, 0deg) step;
-    }
-    track hull.rotation {
-      key 0s = (0deg, 0deg, 0deg) linear;
-      key 0.1s = (0deg, 0deg, 3deg) linear;
-      key 0.2s = (0deg, 0deg, 0deg) linear;
-      key 0.3s = (0deg, 0deg, -3deg) linear;
-      key 0.4s = (0deg, 0deg, 0deg) linear;
-    }
-  }
-  motion fire for ModelRig {
-    duration = 0.4s; fps = 30; loop = once; rest-relative = true;
-    track rider.rotation {
-      key 0s = (0deg, 0deg, 0deg) linear;
-      key 0.06s = (8deg, 0deg, 0deg) linear;
-      key 0.4s = (0deg, 0deg, 0deg) linear;
-    }
-  }
-  surface contract Skin {
-    atlas { width = 64px; height = 64px; }
-    chart wheel_front box { width = 12px; height = 10px; coverage = opaque; }
-    chart wheel_front_round box { width = 14px; height = 10px; coverage = opaque; }
-    chart wheel_back box { width = 12px; height = 10px; coverage = opaque; }
-    chart wheel_back_round box { width = 14px; height = 10px; coverage = opaque; }
-    chart fork box { width = 4px; height = 6px; coverage = opaque; }
-    chart engine box { width = 14px; height = 7px; coverage = opaque; }
-    chart tank box { width = 16px; height = 8px; coverage = opaque; }
-    chart headlight box { width = 6px; height = 3px; coverage = opaque; }
-    chart seat box { width = 14px; height = 5px; coverage = opaque; }
-    chart fender box { width = 14px; height = 5px; coverage = opaque; }
-    chart exhaust box { width = 14px; height = 7px; coverage = opaque; }
-    chart handlebar box { width = 14px; height = 2px; coverage = opaque; }
-    chart leg_left box { width = 14px; height = 7px; coverage = opaque; }
-    chart leg_right box { width = 14px; height = 7px; coverage = opaque; }
-    chart rider_body box { width = 16px; height = 7px; coverage = opaque; }
-    chart arm_left box { width = 10px; height = 5px; coverage = opaque; }
-    chart arm_right box { width = 10px; height = 5px; coverage = opaque; }
-    chart rider_head box { width = 20px; height = 9px; coverage = opaque; }
-    chart rider_helmet box { width = 24px; height = 8px; coverage = opaque; }
-    chart scarf box { width = 18px; height = 6px; coverage = opaque; }
-    material = opaque;
-  }
-  surface paint: Skin {
-    material = opaque;
-    texture atlas {
-      atlas = (64px, 64px); background = tire; background-alpha = 255;
-      palette {
-        tire = (#14171e, #1c2029, #252a35);
-        hub_h = #8a93a6;
-        steel = (#7a8394, #8a93a6, #9aa3b6);
-        gun = (#2a2e38, #343a46, #3e4554);
-        team_red = (#b02824, #c8302a, #d84038);
-        rim_team_red_3_r = #f2786c;
-        rim_team_red_5_r = #f2786c;
-        lamp = (#e8c020, #f8d838, #fff070);
-        pack = (#6a462a, #7e5432, #8e6040);
-        dark_red = (#80181a, #962220, #a82c28);
-        belt5_x = #5a3a22;
-        belt3_x = #5a3a22;
-        skin = (#e4b88c, #f1c79b, #f8d4ac);
-        eyes_k = #1d2a4a;
-        strap6_x = #5a3a22;
-        goggles6_b = #5a3a22;
-        goggles6_g = #a8dcec;
-      }
-      stamp hub { pixels = "hh/hh"; h = hub_h; }
-      stamp rim_team_red_3 { pixels = "rrr"; r = rim_team_red_3_r; }
-      stamp rim_team_red_5 { pixels = "rrrrr"; r = rim_team_red_5_r; }
-      stamp belt5 { pixels = "xxxxx"; x = belt5_x; }
-      stamp belt3 { pixels = "xxx"; x = belt3_x; }
-      stamp eyes { pixels = "k.k/k.k"; k = eyes_k; }
-      stamp strap6 { pixels = "xxxxxx"; x = strap6_x; }
-      stamp goggles6 { pixels = "bggggb"; b = goggles6_b; g = goggles6_g; }
-      chart wheel_front box {
-        origin = (0px, 0px); fill = tire;
-        face east { stamp hub { at = (1px, 2px); } }
-        face west { stamp hub { at = (1px, 2px); } }
-      }
-      chart wheel_front_round box {
-        origin = (13px, 0px); fill = tire;
-      }
-      chart wheel_back box {
-        origin = (28px, 0px); fill = tire;
-        face east { stamp hub { at = (1px, 2px); } }
-        face west { stamp hub { at = (1px, 2px); } }
-      }
-      chart wheel_back_round box {
-        origin = (41px, 0px); fill = tire;
-      }
-      chart fork box {
-        origin = (17px, 29px); fill = steel;
-      }
-      chart engine box {
-        origin = (0px, 21px); fill = gun;
-      }
-      chart tank box {
-        origin = (21px, 11px); fill = team_red;
-        face north { stamp rim_team_red_3 { at = (0px, 0px); } }
-        face south { stamp rim_team_red_3 { at = (0px, 0px); } }
-        face east { stamp rim_team_red_5 { at = (0px, 0px); } }
-        face west { stamp rim_team_red_5 { at = (0px, 0px); } }
-      }
-      chart headlight box {
-        origin = (37px, 37px); fill = lamp;
-      }
-      chart seat box {
-        origin = (41px, 29px); fill = pack;
-      }
-      chart fender box {
-        origin = (0px, 37px); fill = team_red;
-      }
-      chart exhaust box {
-        origin = (15px, 21px); fill = steel;
-      }
-      chart handlebar box {
-        origin = (44px, 37px); fill = steel;
-      }
-      chart leg_left box {
-        origin = (30px, 21px); fill = dark_red;
-      }
-      chart leg_right box {
-        origin = (45px, 21px); fill = dark_red;
-      }
-      chart rider_body box {
-        origin = (0px, 29px); fill = team_red;
-        face north { stamp rim_team_red_5 { at = (0px, 0px); } stamp belt5 { at = (0px, 3px); } }
-        face south { stamp rim_team_red_5 { at = (0px, 0px); } stamp belt5 { at = (0px, 3px); } }
-        face east { stamp rim_team_red_3 { at = (0px, 0px); } stamp belt3 { at = (0px, 3px); } }
-        face west { stamp rim_team_red_3 { at = (0px, 0px); } stamp belt3 { at = (0px, 3px); } }
-      }
-      chart arm_left box {
-        origin = (15px, 37px); fill = team_red;
-      }
-      chart arm_right box {
-        origin = (26px, 37px); fill = team_red;
-      }
-      chart rider_head box {
-        origin = (0px, 11px); fill = skin;
-        face north { stamp eyes { at = (1px, 1px); } }
-      }
-      chart rider_helmet box {
-        origin = (38px, 11px); fill = team_red;
-        face south { stamp strap6 { at = (0px, 1px); } }
-        face east { stamp strap6 { at = (0px, 1px); } }
-        face west { stamp strap6 { at = (0px, 1px); } }
-        face north { stamp goggles6 { at = (0px, 1px); } }
-      }
-      chart scarf box {
-        origin = (22px, 29px); fill = dark_red;
-      }
-      grain clustered { seed = 2013; }
-      tone voxel;
-    }
-  }
-  component Body {
-    requires rig skeleton: ModelRig;
-    requires surface skin: Skin;
-    bind bone hull to skeleton.hull;
-    bind bone wheels_front to skeleton.wheels_front;
-    bind bone wheels_back to skeleton.wheels_back;
-    bind bone rider to skeleton.rider;
-    geometry {
-      bone hull {
-        cube fork { origin = (-0.5u, 3u, -5.5u); size = (1u, 5u, 1u); surface = skin.fork; }
-        cube engine { origin = (-1.5u, 2u, -2u); size = (3u, 3u, 4u); surface = skin.engine; }
-        cube tank { origin = (-1.5u, 5u, -4u); size = (3u, 3u, 5u); surface = skin.tank; }
-        cube headlight { origin = (-1u, 6u, -5u); size = (2u, 2u, 1u); surface = skin.headlight; }
-        cube seat { origin = (-1.5u, 6u, 1u); size = (3u, 1u, 4u); surface = skin.seat; }
-        cube fender { origin = (-1.5u, 6u, 5u); size = (3u, 1u, 4u); surface = skin.fender; }
-        cube exhaust { origin = (1.5u, 2u, 1u); size = (1u, 1u, 6u); surface = skin.exhaust; }
-        cube handlebar { origin = (-3u, 8u, -4.5u); size = (6u, 1u, 1u); surface = skin.handlebar; }
-        bone rider {
-          cube leg_left { origin = (-3u, 6u, -3u); size = (2u, 2u, 5u); surface = skin.leg_left; }
-          cube leg_right { origin = (1u, 6u, -3u); size = (2u, 2u, 5u); surface = skin.leg_right; }
-          cube rider_body { origin = (-2.5u, 7u, 0u); size = (5u, 4u, 3u); surface = skin.rider_body; }
-          cube arm_left { origin = (-3.5u, 8.5u, -4u); size = (1u, 1u, 4u); surface = skin.arm_left; }
-          cube arm_right { origin = (2.5u, 8.5u, -4u); size = (1u, 1u, 4u); surface = skin.arm_right; }
-          cube rider_head { origin = (-2.5u, 11u, -1u); size = (5u, 4u, 5u); surface = skin.rider_head; }
-          cube rider_helmet { origin = (-3u, 14u, -1.5u); size = (6u, 2u, 6u); surface = skin.rider_helmet; }
-          cube scarf { origin = (-2u, 11u, 3.5u); size = (4u, 1u, 5u); surface = skin.scarf; }
-        }
-      }
-      bone wheels_front {
-        cube wheel_front { origin = (-1u, 0u, -7u); size = (2u, 6u, 4u); surface = skin.wheel_front; }
-        cube wheel_front_round { origin = (-0.5u, 1u, -8u); size = (1u, 4u, 6u); surface = skin.wheel_front_round; }
-      }
-      bone wheels_back {
-        cube wheel_back { origin = (-1u, 0u, 3u); size = (2u, 6u, 4u); surface = skin.wheel_back; }
-        cube wheel_back_round { origin = (-0.5u, 1u, 2u); size = (1u, 4u, 6u); surface = skin.wheel_back_round; }
-      }
-    }
-  }
-  export asset fsoldier_red {
-    settings { density = 16; forward = north; }
-    skeleton = ModelSkeleton;
-    motion = idle;
-    motion = drive;
-    motion = fire;
-    use Body as model { bind skeleton = ModelRig; bind skin = paint; };
-  }
+rig contract ModelRig {
+handedness = right;
+frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); }
+joint root { parent = none; role = root; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint hull { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint wheels_front { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint wheels_back { parent = root; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+joint rider { parent = hull; role = body; frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } channels = (rotation, scale); mirror = none; }
+}
+skeleton ModelSkeleton implements ModelRig {
+bind root { parent-origin = (0u, 0u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind hull { parent-origin = (0u, 3u, 0u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind wheels_front { parent-origin = (0u, 3u, -5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind wheels_back { parent-origin = (0u, 3u, 5u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+bind rider { parent-origin = (0u, 4u, 1u); frame { x = (1, 0, 0); y = (0, 1, 0); z = (0, 0, 1); } }
+}
+motion idle for ModelRig {
+duration = 1.2s; fps = 20; loop = loop; rest-relative = true;
+track rider.rotation {
+key 0s = (0deg, 0deg, 0deg) catmullrom;
+key 0.3s = (2deg, 0deg, 1deg) catmullrom;
+key 0.6s = (0deg, 0deg, 0deg) catmullrom;
+key 0.9s = (-2deg, 0deg, -1deg) catmullrom;
+key 1.2s = (0deg, 0deg, 0deg) catmullrom;
+}
+}
+motion drive for ModelRig {
+duration = 0.4s; fps = 20; loop = loop; rest-relative = true;
+track wheels_front.rotation {
+key 0s = (0deg, 0deg, 0deg) step;
+key 0.1s = (-22.5deg, 0deg, 0deg) step;
+key 0.2s = (-45deg, 0deg, 0deg) step;
+key 0.3s = (-67.5deg, 0deg, 0deg) step;
+key 0.4s = (0deg, 0deg, 0deg) step;
+}
+track wheels_back.rotation {
+key 0s = (0deg, 0deg, 0deg) step;
+key 0.1s = (-22.5deg, 0deg, 0deg) step;
+key 0.2s = (-45deg, 0deg, 0deg) step;
+key 0.3s = (-67.5deg, 0deg, 0deg) step;
+key 0.4s = (0deg, 0deg, 0deg) step;
+}
+track hull.rotation {
+key 0s = (0deg, 0deg, 0deg) linear;
+key 0.1s = (0deg, 0deg, 3deg) linear;
+key 0.2s = (0deg, 0deg, 0deg) linear;
+key 0.3s = (0deg, 0deg, -3deg) linear;
+key 0.4s = (0deg, 0deg, 0deg) linear;
+}
+}
+motion fire for ModelRig {
+duration = 0.4s; fps = 30; loop = once; rest-relative = true;
+track rider.rotation {
+key 0s = (0deg, 0deg, 0deg) linear;
+key 0.06s = (8deg, 0deg, 0deg) linear;
+key 0.4s = (0deg, 0deg, 0deg) linear;
+}
+}
+surface contract Skin {
+atlas { width = 64px; height = 64px; }
+chart wheel_front box { width = 12px; height = 10px; coverage = opaque; }
+chart wheel_front_round box { width = 14px; height = 10px; coverage = opaque; }
+chart wheel_back box { width = 12px; height = 10px; coverage = opaque; }
+chart wheel_back_round box { width = 14px; height = 10px; coverage = opaque; }
+chart fork box { width = 4px; height = 6px; coverage = opaque; }
+chart engine box { width = 14px; height = 7px; coverage = opaque; }
+chart tank box { width = 16px; height = 8px; coverage = opaque; }
+chart headlight box { width = 6px; height = 3px; coverage = opaque; }
+chart seat box { width = 14px; height = 5px; coverage = opaque; }
+chart fender box { width = 14px; height = 5px; coverage = opaque; }
+chart exhaust box { width = 14px; height = 7px; coverage = opaque; }
+chart handlebar box { width = 14px; height = 2px; coverage = opaque; }
+chart leg_left box { width = 14px; height = 7px; coverage = opaque; }
+chart leg_right box { width = 14px; height = 7px; coverage = opaque; }
+chart rider_body box { width = 16px; height = 7px; coverage = opaque; }
+chart arm_left box { width = 10px; height = 5px; coverage = opaque; }
+chart arm_right box { width = 10px; height = 5px; coverage = opaque; }
+chart rider_head box { width = 20px; height = 9px; coverage = opaque; }
+chart rider_helmet box { width = 24px; height = 8px; coverage = opaque; }
+chart scarf box { width = 18px; height = 6px; coverage = opaque; }
+material = opaque;
+}
+surface paint: Skin {
+material = opaque;
+texture atlas {
+atlas = (64px, 64px); background = tire; background-alpha = 255;
+palette {
+tire = (#14171e, #1c2029, #252a35);
+hub_h = #8a93a6;
+steel = (#7a8394, #8a93a6, #9aa3b6);
+gun = (#2a2e38, #343a46, #3e4554);
+team_red = (#b02824, #c8302a, #d84038);
+rim_team_red_3_r = #f2786c;
+rim_team_red_5_r = #f2786c;
+lamp = (#e8c020, #f8d838, #fff070);
+pack = (#6a462a, #7e5432, #8e6040);
+dark_red = (#80181a, #962220, #a82c28);
+belt5_x = #5a3a22;
+belt3_x = #5a3a22;
+skin = (#e4b88c, #f1c79b, #f8d4ac);
+eyes_k = #1d2a4a;
+strap6_x = #5a3a22;
+goggles6_b = #5a3a22;
+goggles6_g = #a8dcec;
+}
+stamp hub { pixels = "hh/hh"; h = hub_h; }
+stamp rim_team_red_3 { pixels = "rrr"; r = rim_team_red_3_r; }
+stamp rim_team_red_5 { pixels = "rrrrr"; r = rim_team_red_5_r; }
+stamp belt5 { pixels = "xxxxx"; x = belt5_x; }
+stamp belt3 { pixels = "xxx"; x = belt3_x; }
+stamp eyes { pixels = "k.k/k.k"; k = eyes_k; }
+stamp strap6 { pixels = "xxxxxx"; x = strap6_x; }
+stamp goggles6 { pixels = "bggggb"; b = goggles6_b; g = goggles6_g; }
+chart wheel_front box { origin = (0px, 0px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+chart wheel_front_round box { origin = (13px, 0px); fill = tire; }
+chart wheel_back box { origin = (28px, 0px); fill = tire; face east { stamp hub { at = (1px, 2px); } } face west { stamp hub { at = (1px, 2px); } } }
+chart wheel_back_round box { origin = (41px, 0px); fill = tire; }
+chart fork box { origin = (17px, 29px); fill = steel; }
+chart engine box { origin = (0px, 21px); fill = gun; }
+chart tank box { origin = (21px, 11px); fill = team_red; face north { stamp rim_team_red_3 { at = (0px, 0px); } } face south { stamp rim_team_red_3 { at = (0px, 0px); } } face east { stamp rim_team_red_5 { at = (0px, 0px); } } face west { stamp rim_team_red_5 { at = (0px, 0px); } } }
+chart headlight box { origin = (37px, 37px); fill = lamp; }
+chart seat box { origin = (41px, 29px); fill = pack; }
+chart fender box { origin = (0px, 37px); fill = team_red; }
+chart exhaust box { origin = (15px, 21px); fill = steel; }
+chart handlebar box { origin = (44px, 37px); fill = steel; }
+chart leg_left box { origin = (30px, 21px); fill = dark_red; }
+chart leg_right box { origin = (45px, 21px); fill = dark_red; }
+chart rider_body box { origin = (0px, 29px); fill = team_red; face north { stamp rim_team_red_5 { at = (0px, 0px); } stamp belt5 { at = (0px, 3px); } } face south { stamp rim_team_red_5 { at = (0px, 0px); } stamp belt5 { at = (0px, 3px); } } face east { stamp rim_team_red_3 { at = (0px, 0px); } stamp belt3 { at = (0px, 3px); } } face west { stamp rim_team_red_3 { at = (0px, 0px); } stamp belt3 { at = (0px, 3px); } } }
+chart arm_left box { origin = (15px, 37px); fill = team_red; }
+chart arm_right box { origin = (26px, 37px); fill = team_red; }
+chart rider_head box { origin = (0px, 11px); fill = skin; face north { stamp eyes { at = (1px, 1px); } } }
+chart rider_helmet box { origin = (38px, 11px); fill = team_red; face south { stamp strap6 { at = (0px, 1px); } } face east { stamp strap6 { at = (0px, 1px); } } face west { stamp strap6 { at = (0px, 1px); } } face north { stamp goggles6 { at = (0px, 1px); } } }
+chart scarf box { origin = (22px, 29px); fill = dark_red; }
+grain clustered { seed = 2013; }
+tone voxel;
+}
+}
+component Body {
+requires rig skeleton: ModelRig;
+requires surface skin: Skin;
+bind bone hull to skeleton.hull;
+bind bone wheels_front to skeleton.wheels_front;
+bind bone wheels_back to skeleton.wheels_back;
+bind bone rider to skeleton.rider;
+geometry {
+bone hull {
+cube fork { origin = (-0.5u, 3u, -5.5u); size = (1u, 5u, 1u); surface = skin.fork; }
+cube engine { origin = (-1.5u, 2u, -2u); size = (3u, 3u, 4u); surface = skin.engine; }
+cube tank { origin = (-1.5u, 5u, -4u); size = (3u, 3u, 5u); surface = skin.tank; }
+cube headlight { origin = (-1u, 6u, -5u); size = (2u, 2u, 1u); surface = skin.headlight; }
+cube seat { origin = (-1.5u, 6u, 1u); size = (3u, 1u, 4u); surface = skin.seat; }
+cube fender { origin = (-1.5u, 6u, 5u); size = (3u, 1u, 4u); surface = skin.fender; }
+cube exhaust { origin = (1.5u, 2u, 1u); size = (1u, 1u, 6u); surface = skin.exhaust; }
+cube handlebar { origin = (-3u, 8u, -4.5u); size = (6u, 1u, 1u); surface = skin.handlebar; }
+bone rider {
+cube leg_left { origin = (-3u, 6u, -3u); size = (2u, 2u, 5u); surface = skin.leg_left; }
+cube leg_right { origin = (1u, 6u, -3u); size = (2u, 2u, 5u); surface = skin.leg_right; }
+cube rider_body { origin = (-2.5u, 7u, 0u); size = (5u, 4u, 3u); surface = skin.rider_body; }
+cube arm_left { origin = (-3.5u, 8.5u, -4u); size = (1u, 1u, 4u); surface = skin.arm_left; }
+cube arm_right { origin = (2.5u, 8.5u, -4u); size = (1u, 1u, 4u); surface = skin.arm_right; }
+cube rider_head { origin = (-2.5u, 11u, -1u); size = (5u, 4u, 5u); surface = skin.rider_head; }
+cube rider_helmet { origin = (-3u, 14u, -1.5u); size = (6u, 2u, 6u); surface = skin.rider_helmet; }
+cube scarf { origin = (-2u, 11u, 3.5u); size = (4u, 1u, 5u); surface = skin.scarf; }
+}
+}
+bone wheels_front {
+cube wheel_front { origin = (-1u, 0u, -7u); size = (2u, 6u, 4u); surface = skin.wheel_front; }
+cube wheel_front_round { origin = (-0.5u, 1u, -8u); size = (1u, 4u, 6u); surface = skin.wheel_front_round; }
+}
+bone wheels_back {
+cube wheel_back { origin = (-1u, 0u, 3u); size = (2u, 6u, 4u); surface = skin.wheel_back; }
+cube wheel_back_round { origin = (-0.5u, 1u, 2u); size = (1u, 4u, 6u); surface = skin.wheel_back_round; }
+}
+}
+}
+export asset fsoldier_red {
+settings { density = 16; forward = north; }
+skeleton = ModelSkeleton;
+motion = idle;
+motion = drive;
+motion = fire;
+use Body as model { bind skeleton = ModelRig; bind skin = paint; };
+}
 }

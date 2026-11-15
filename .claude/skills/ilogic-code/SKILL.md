@@ -1,25 +1,25 @@
 ---
 name: ilogic-code
-description: Use when writing, refactoring or reviewing TypeScript in Ilogic (game rules, AI, scenes, HUD, tests). Project architecture, layering rules, conventions and the checks every change must pass.
+description: Use when writing, refactoring or reviewing TypeScript in Ilogic (game rules, AI, 3D view, HUD, menus, sound, tests). Project architecture, layering rules, conventions and the checks every change must pass.
 ---
 
 # Codigo de Ilogic
 
-Juego de estrategia por turnos: TypeScript estricto + Phaser 4 (dibujo) + Preact (interfaz HTML).
-Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
+Juego de estrategia por turnos en 3D: TypeScript estricto + three.js (vista) + Preact (interfaz HTML).
+Para los modelos 3D, ademas, la skill `ashfox`. Del juego 2D de antes solo quedan las imagenes.
 
 ## Capas (de dentro afuera)
 
 | Carpeta | Que va | Puede importar |
 |---|---|---|
 | `src/core/` | Reglas, IA, mapas, misiones, guardado, estadisticas. **TypeScript puro.** | solo `src/core` |
-| `src/ui/` | Dibujo del mapa con Phaser (`mapView` = fachada de las capas de `ui/map/`; `fx`, `combatFx`, `terrainArt`), datos para el HUD (`hudModels` → `models/<panel>.ts`) | core, settings, atlas |
+| `src/ui/` | Datos puros para el HUD (`hudModels` → `models/<panel>.ts`), claves de imagen (`sprites`), lados (`sides`) | core, settings, atlas |
 | `src/hud/` | Componentes Preact (`game/`, `menus/`, `overlays/`, piezas en `common/`), `store` (estado; tipos en `state.ts`, `actions.ts`, `vm/`) y estilos (`styles/`) | settings, assets, patchNotes, tipos de core |
-| `src/scenes/` | Escenas de Phaser: orquestan core + ui + hud | todo |
-| `src/scenes/game/` | Modulos de `GameScene` (animar eventos, turno enemigo, final, seleccion, ordenes, modelos del HUD...). Cada uno recibe de la escena una interfaz `...Host` pequeña (con `live()`, `host.ts`); lo puro, con test | todo |
-| `src/menu/`, `src/patchNotes/` | Pantallas del menu, fondo vivo, notas de parche | core, ui, hud |
-| `src/controls/` | Ordenes del jugador (`InputCommand` en el mapa, `MenuCommand` en los menus) y adaptadores de cada mando (teclado...): funciones puras, sin Phaser | menu (teclas compartidas) |
-| `src/controls/pointer.ts` | Adaptador de raton y dedos (`PointerGestures`): de eventos de bajo nivel a gestos (toque, arrastre, coger y soltar, recuadro, pulsacion larga, pellizco, rueda). Sin Phaser | `scenes/game/pointerInput.ts` implementa `PointerTarget` |
+| `src/view3d/` | El juego: arranque (`main.ts`: menu o partida, `gameStart.ts`), menu (`menuFlow.ts`), la partida 3D (`match3d.ts` junta tablero, terreno, clima, particulas, camara, entrada del turno `turnControls.ts`, pausa y final `matchMenus.ts`, HUD `hudBridge.ts`) y el playground de modelos (`playground/`) | todo |
+| `src/audio/` | Musica y sonido (con el audio del navegador) | settings, assets |
+| `src/menu/`, `src/patchNotes/` | Pantallas del menu (inicio, partida nueva, campaña, opciones), notas de parche | core, ui, hud |
+| `src/controls/` | Ordenes del jugador (`InputCommand` en el mapa, `MenuCommand` en los menus) y adaptadores de cada mando (teclado...): funciones puras | menu (teclas compartidas) |
+| `src/controls/pointer.ts` | Gestos de raton y dedos (`PointerGestures`): de eventos de bajo nivel a gestos (toque, arrastre, recuadro, pulsacion larga, pellizco, rueda). Puro; la vista 3D aun usa su propio `view3d/pointerInput.ts` | quien implemente `PointerTarget` |
 | `tools/` | Equilibrio, automejora, partida por texto, contenido (Node) | solo core, como `'@core/...'` |
 | `tests/` | Vitest | todo; core como `'@core/...'` |
 
@@ -30,20 +30,19 @@ Para cualquier cosa de Phaser, ademas, la skill `phaser4`.
   y manda por la sesion (`GameSession.act`), nunca con `dispatch`.
   Fuera de core se importa de la fachada; dentro, del modulo concreto, sin crear ciclos. Un import
   por modulo, con los tipos dentro (`import { a, type B }`; lo vigila ESLint).
-- `src/core` **no** importa Phaser, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
-  Si una regla se escribe dentro de una escena, no se puede probar: va a core (ver `core/targeting.ts`).
-- Las escenas no leen teclas ni botones de un mando: un adaptador de `src/controls` los traduce a
-  `InputCommand` (mapa) o `MenuCommand` (menus) y la escena los cumple (`command` / `menu`, segun
-  `controlContext()`). Un mando nuevo es un adaptador nuevo (`docs/ARQUITECTURA.md`, "Mandos").
-- Las escenas no calculan lo que enseña la interfaz a mano: usan funciones puras de `ui/hudModels.ts`
+- `src/core` **no** importa three.js, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
+  Si una regla se escribe dentro de la vista, no se puede probar: va a core (ver `core/targeting.ts`).
+- La vista no lee teclas a mano: un adaptador de `src/controls` las traduce a `InputCommand` (mapa)
+  o `MenuCommand` (menus) y la partida o el menu las cumplen (`view3d/keyInput.ts`, `menuFlow.ts`).
+  Un mando nuevo es un adaptador nuevo (`docs/ARQUITECTURA.md`, "Mandos").
+- La vista no calcula lo que enseña la interfaz a mano: usa funciones puras de `ui/hudModels.ts`
   y publican con `ui.set(...)`. Los componentes solo pintan lo que hay en el store. Como se añade un
   panel y que pieza usar (`Button`, `Popover`, `Veil`...): `docs/ARQUITECTURA.md`, "Interfaz HTML".
 - **La partida solo cambia con acciones**: quien juega un equipo manda una `GameAction` (datos: uids y
   casillas) con `dispatch(s, team, action)` (`core/actions.ts`), que la comprueba (`validate`, desde
   la partida; solo el equipo al que le toca: `GameState.turn`), la hace y devuelve sus sucesos (o por
   que no vale). Cada equipo lo juega un controlador dentro de una `GameSession` (`core/session.ts`):
-  la escena manda las de la persona con `host.act(...)`/`host.perform(...)` (`ActionHost`, por
-  `session.act`); la IA y las ordenes permanentes **solo proponen**: son planes (`ActionPlan`, un
+  la vista manda las de la persona con `session.act(...)` (`view3d/turnControls.ts`); la IA y las ordenes permanentes **solo proponen**: son planes (`ActionPlan`, un
   generador que da cada `GameAction` y recibe su `ActionResult`; `act`/`doMove`/`finish` en
   `autopilot/context.ts`) que cumple la sesion (`proposing`) o, fuera de ella, `carryOut`. Quien
   decide lee la vista de su equipo (`PlayerView`, `core/playerView.ts`: sin lo que no ve, al dia con
@@ -90,12 +89,11 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   defecto). Enemigo es `isHostile(s, a, b)` (otra alianza); lo de cada equipo, `teamState(s, team)`
   (dinero, general, estadisticas); quien lo juega, su `controller`. Lo que actua por un equipo lo
   recibe (`playerView(s, team)`, `formSquad(s, team, units)`); como acaba la partida es
-  igual para todos (`matchResult(s)`: quien gana, nada de 'won'/'lost' de un equipo). En la escena, el
+  igual para todos (`matchResult(s)`: quien gana, nada de 'won'/'lost' de un equipo). En la vista, el
   equipo que mira es `viewer` y la interfaz pinta por lado (`ui/sides.ts`). Ver `docs/ARQUITECTURA.md`, "Equipos".
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
-  vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de Phaser en `ui/palette.ts` (iguales que
-  las variables de `hud/styles/base/base.css`). Textos de pantalla en `src/i18n/es/` y `en/`, un fichero por tema (se leen con `t('clave')`, de `settings.ts`).
+  vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de la interfaz en `hud/hud.css` (y los de lienzos, `ui/palette.ts`, iguales); los del 3D, en su modulo de `view3d`. Textos de pantalla en `src/i18n/es/` y `en/`, un fichero por tema (se leen con `t('clave')`, de `settings.ts`).
 - **La partida es la unica fuente**: reglas en `s.settings`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(settingChanges)` en los tests,
@@ -119,13 +117,13 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   con `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged` y si se mueve y
   dispara con `firesAfterMove`, un combate hipotetico con `engagement(...)` (nunca copias de
   unidades), el daño con `damageModelOf`, numeros con `fmtNum`; en
-  el mapa, esperas y textos de efectos con `ui/fxKit.ts`, esquinas y marcos con `ui/pixelDraw.ts`,
-  casillas con `ui/map/geometry.ts` y marcas nuevas como funcion de `OVERLAYS` (`docs/ARQUITECTURA.md`,
-  "Vista del mapa").
+  3D, casillas con `view3d/space.ts`, efectos de un momento con `view3d/fx.ts`, humo y polvo con
+  `ParticleSystem` (una clase mas en `PUFFS`) y un suceso animado con su entrada en `EVENT_ANIMATIONS`
+  (`view3d/animations.ts`).
 - **Extender sin abrir funciones grandes**: accion nueva = su forma en `GameAction` y en
   `ACTION_SHAPES` (`core/actions/shape.ts`, campo a campo), su suceso en `GameEvent` y su entrada en
   `ACTIONS` (`core/actions/`; y en `UNIT_MENU` si sale en el menu de la unidad, en `SELECTION_MENU`
-  si se manda a unas elegidas, y en `ANIMATORS` de la escena); lo que se limpia tras cualquier
+  si se manda a unas elegidas, y en `EVENT_ANIMATIONS` de la vista 3D); lo que se limpia tras cualquier
   accion y cada ronda = entrada en `INVARIANTS` (`core/rules/invariants.ts`); lo que se mira antes
   de cualquiera = entrada en `ACTION_GUARDS`; una pieza de reglas que depende de un ajuste = un
   modulo de reglas (`core/ruleModules/`, entrada en `RULE_MODULES`) que aporta a las listas
@@ -168,8 +166,9 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
 - `switch` sobre uniones: con todos los casos o con `default:` explicito (lo pide el lint).
 - Las reglas cambiadas respecto al juego de 2013 llevan `[CAMBIO]` en un comentario con el porque.
 - Comentarios y nombres de cara al jugador en español, sin tildes en el codigo (si en los textos).
-- Escenas: estado de partida en `resetMatch()` (lo llama `init()`); limpieza en `SHUTDOWN`
-  (ver skill `phaser4`). Esperas asincronas: comprobar `this.match` despues de cada `await` largo.
+- Vista 3D: cada partida va en su carga de pagina (`gameStart.ts`), asi que no hay que deshacer
+  escenas a mano. Nada creado por fotograma en bucles calientes (geometrias, materiales); lo que se
+  anima pide `world.animate`/`world.onFrame` en vez de su propio `requestAnimationFrame`.
 
 ## Tipos que trabajan por nosotros
 
@@ -183,7 +182,7 @@ partida. Pero un tipo tiene que leerse a la primera, como el codigo (`docs/ESTIL
   `.filter((unit): unit is Unit => !!unit)`; si un valor tiene que existir, una funcion
   `asserts value is T` que falle con un mensaje claro es mejor que un `!` que falla lejos.
 - **Uniones con discriminante** (`kind`, `type`, `mode`) para cosas que son una de varias, y `switch`
-  con todos los casos y `default: return valor satisfies never` (como `ui/combatFx.ts`): un caso nuevo
+  con todos los casos y `default: return valor satisfies never` (como `view3d/matchMenus.ts`): un caso nuevo
   rompe la compilacion donde falta tratarlo.
 - **`satisfies` para comprobar sin perder el tipo exacto**: `{ start: 'load' } satisfies GameStartData`,
   tablas `const X = {...} as const satisfies Record<Clave, Valor>`.
@@ -205,7 +204,7 @@ partida. Pero un tipo tiene que leerse a la primera, como el codigo (`docs/ESTIL
 ```bash
 npm run check        # tipos + ESLint + Prettier + tests (lo mismo que pasa GitHub antes de publicar)
 npm run format       # si Prettier se queja
-npm run build:single # y abrir dist-single/ilogic.html (file://) para probarlo jugando
+npm run dev          # y abrir http://localhost:5173/ (o /?seed=2013) para probarlo jugando
 ```
 
 - Reescribir sin cambiar comportamiento (refactor): `npm run huella` antes y despues; la "huella
@@ -216,4 +215,4 @@ npm run build:single # y abrir dist-single/ilogic.html (file://) para probarlo j
   `npm run balance`.
 - Logica nueva en core o en `hudModels`: con su test en `tests/`.
 - Graficos: nunca a mano en `public/assets/atlas`; se compilan con `npm run assets` (README, "Graficos").
-- Nunca `vite preview` ni servidores: el juego se prueba con el fichero unico por `file://`.
+- Nunca `vite preview`: el juego se prueba con `npm run dev` (docs/AGENTES.md).

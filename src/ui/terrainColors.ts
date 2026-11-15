@@ -1,7 +1,6 @@
-import type Phaser from 'phaser';
 import { defaultContent } from '../core/content/default';
 import { terrainKey } from './sprites';
-import { drawFrame, hasImage } from '../atlas';
+import { hasImage, type GameImages } from '../atlas';
 
 /** Color medio de cada terreno, por id de terreno (terrain.json). */
 export type TerrainPalette = Readonly<Record<string, number>>;
@@ -9,7 +8,7 @@ export type TerrainPalette = Readonly<Record<string, number>>;
 let cache: TerrainPalette | null = null;
 
 /** Color medio de cada imagen de terreno del juego (para minimapas y miniaturas). */
-export function terrainPalette(textures: Phaser.Textures.TextureManager): TerrainPalette {
+export function terrainPalette(textures: GameImages): TerrainPalette {
   if (cache) return cache;
   const out: Record<string, number> = {};
   const cv = document.createElement('canvas');
@@ -21,7 +20,7 @@ export function terrainPalette(textures: Phaser.Textures.TextureManager): Terrai
     const key = terrainKey(terrain);
     if (hasImage(textures, key)) {
       context.clearRect(0, 0, 8, 8);
-      drawFrame(context, textures, key, 0, 0, 8, 8);
+      textures.draw(context, key, 0, 0, 8, 8);
       const pixels = context.getImageData(0, 0, 8, 8).data;
       let red = 0,
         green = 0,

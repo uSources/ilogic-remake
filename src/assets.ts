@@ -1,5 +1,4 @@
-import type Phaser from 'phaser';
-import { ATLAS, hasImage } from './atlas';
+import { gameImages } from './atlas';
 
 /**
  * En la version de un solo fichero (scripts/build-single.mjs) los recursos van incrustados
@@ -16,25 +15,7 @@ export function assetsAvailable(paths: string[]): string[] {
   return inline ? paths.filter((p) => p in inline) : paths;
 }
 
-let textures: Phaser.Textures.TextureManager | null = null;
-const urls = new Map<string, string>();
-
-/** Lo llama BootScene cuando el atlas ya esta cargado. */
-export function setImageSource(t: Phaser.Textures.TextureManager): void {
-  textures = t;
-  urls.clear();
-}
-
-/**
- * URL de una imagen del juego por su clave (para la interfaz HTML). Se recorta del atlas ya
- * cargado la primera vez que se pide y se guarda.
- */
+/** URL de una imagen del juego por su clave (para la interfaz HTML), si el atlas ya esta cargado. */
 export function imgUrl(key: string | null | undefined): string | undefined {
-  if (!key || !textures || !hasImage(textures, key)) return undefined;
-  let u = urls.get(key);
-  if (!u) {
-    u = textures.getBase64(ATLAS, key);
-    urls.set(key, u);
-  }
-  return u;
+  return key ? gameImages()?.url(key) : undefined;
 }

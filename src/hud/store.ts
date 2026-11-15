@@ -3,8 +3,8 @@ import { initialState, type UIState } from './state';
 import type { ReportLineVM } from './vm/notices';
 
 /**
- * Estado de la interfaz (HTML) compartido con las escenas de Phaser.
- * Las escenas escriben con ui.set(...) y registran sus acciones en ui.actions;
+ * Estado de la interfaz (HTML) compartido con la partida 3D y el menu.
+ * El menu y la partida escriben con ui.set(...) y registran sus acciones en ui.actions;
  * los componentes de Preact leen con useUI() y llaman a esas acciones.
  *
  * Los tipos viven por partes (state.ts, actions.ts, vm/*) y se reexportan aqui: el resto del juego
@@ -42,7 +42,7 @@ export type { BreakdownLineVM, DayInfoVM, EconomyVM, WeatherVM } from './vm/topB
 
 const noop = () => {};
 
-/** Acciones sin escena: no hacen nada (salvo cerrar la ayuda). Las escenas ponen las suyas en create(). */
+/** Acciones por defecto: no hacen nada (salvo cerrar la ayuda). El menu y la partida ponen las suyas al empezar. */
 const DEFAULT_ACTIONS: UIActions = {
   labPlay: noop,
   labSet: noop,
@@ -130,7 +130,7 @@ export function showBanner(small: string, big: string, tone: 'blue' | 'red'): vo
   ui.set({ banner: { small, big, tone, id: nextNoticeId() } });
 }
 
-/** Quita las acciones que registro una escena (se llama al cerrarla: nada de botones que actuen sobre una escena cerrada). */
+/** Quita las acciones registradas (nada de botones que actuen sobre una pantalla cerrada). */
 export function resetActions(): void {
   Object.assign(ui.actions, DEFAULT_ACTIONS);
 }

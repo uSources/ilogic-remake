@@ -1,6 +1,6 @@
 # Ilogic — Especificación de REGLAS y LÓGICA del juego
 
-Documento de referencia para reimplementar en TypeScript + Phaser 4 la lógica del Ilogic original (Java, 2013) **sin volver a mirar el Java**.
+Documento de referencia para reimplementar en TypeScript la lógica del Ilogic original (Java, 2013) **sin volver a mirar el Java**.
 Fuente única de verdad: `/home/claude/rename/final/*.java` (descompilado con nombres y comentarios añadidos; el bytecode es idéntico al original).
 
 Cubre: `Unit.java`, `Building.java`, `Terrain.java`, `Climate.java`, `IA.java`, `RandomMap.java`, `Auxiliar.java` (con `Coordinate` y `LValue`), `IlogicIO.java`, y las reglas que viven en `Ilogic.java` (movimiento, visión, combate, fin de turno, victoria/derrota, compra, menú de acciones). La interfaz y el flujo de pantallas (fases, teclado, ratón, dibujo de menús) los documenta otro agente; aquí solo se recogen en la medida en que condicionan las reglas.
@@ -1284,7 +1284,7 @@ Leyenda de impacto: **J** = afecta al juego; **P** = podría fallar; **U** = có
 | B6 | J | `IA.run` | `unitMap`/`buildMap` calculados al empezar el turno: fusiones con unidades ya movidas fallan, producción con casilla ocupada/libre desactualizada. | Recalcular tras cada acción. |
 | B7 | J | `IA.getRandMove` | `random() < 1/--count`: penúltima casilla siempre, última nunca (n≥2); muy sesgado a las primeras del rombo. | Elegir uniforme: `casillas[floor(random()*n)]`. |
 | B8 | diseño | `getMoveMap` / `getGroundRange` | Coste 1 por casilla sin importar terreno (bosque = llanura). | Mantener (fidelidad) o añadir tabla de costes opcional. |
-| B9 | P | `Ilogic` bucles | Esperas activas (CPU al 100%). | Usar el bucle de Phaser. |
+| B9 | P | `Ilogic` bucles | Esperas activas (CPU al 100%). | Usar el bucle de dibujo del navegador (`requestAnimationFrame`). |
 | B10 | J (UI) | `Accion_ESC` | ESC abandona la partida sin guardar. | Pedir confirmación. |
 | B11 | J | `IlogicIO.loadMap` | `gameid` distinto ⇒ `System.exit(-1)`. | Ignorar o avisar. |
 | B12 | J | `IlogicIO.saveMap` | Reescribe `carrier` en las unidades vivas con índices compactados; si hay huecos `null` antes del transporte, tras guardar (incluido autosave cada ronda) el pasajero apunta a otra unidad o a un hueco ⇒ puede desaparecer en la siguiente limpieza. | Serializar sobre una copia; usar ids estables. |
