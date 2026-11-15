@@ -38,14 +38,6 @@ const ROWS: Row[] = [
     values: ['new', 'classic'],
     show: (v) => t(v === 'new' ? 'artNew' : 'artClassic'),
   },
-  {
-    key: 'menuBg',
-    group: 'optGroupScreen',
-    label: 'optMenuBg',
-    values: ['live', 'classic'],
-    show: (v) => t(v === 'live' ? 'bgLive' : 'bgClassic'),
-    menuOnly: true,
-  },
   { key: 'lang', group: 'optGroupLang', label: 'language', values: ['es', 'en'], show: (v) => (v === 'es' ? 'Español' : 'English') },
 ] as Row[];
 

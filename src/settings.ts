@@ -33,8 +33,7 @@ export interface Settings {
   /** [CAMBIO] Al terminar el turno con unidades sin mover, el boton pide confirmarlo. */
   warnIdle: boolean;
   /** Fondo del menu principal: partida en directo o la imagen original de 2013. */
-  menuBg: 'live' | 'classic';
-  /** Dibujo del terreno: el nuevo (piezas con orillas) o el de 2013. */
+  /** Los dibujos de las unidades y los edificios en los paneles y menus: los nuevos o los de 2013. */
   terrainArt: 'new' | 'classic';
   /** Teclas del mapa que el jugador ha cambiado (solo esas; las de serie, en controls/keyboard.ts). */
   keys: KeyOverrides;
@@ -54,14 +53,12 @@ const DEFAULTS: Settings = {
   reduceMotion: false,
   alwaysThreat: false,
   warnIdle: true,
-  menuBg: 'live',
   terrainArt: 'new',
   keys: {},
 };
 export const UI_SCALES = [0.9, 1, 1.25];
 const LANGS: Lang[] = ['es', 'en'];
 const SPEEDS: Speed[] = ['normal', 'fast', 'instant'];
-const MENU_BACKGROUNDS: Settings['menuBg'][] = ['live', 'classic'];
 const TERRAIN_ARTS: Settings['terrainArt'][] = ['new', 'classic'];
 
 /** Lo guardado si es uno de los valores validos; si no (o no estaba, o es de otra version), `fallback`. */
@@ -84,7 +81,6 @@ export function parseSaved(saved: Partial<Settings>): Settings {
     reduceMotion: !!saved.reduceMotion,
     alwaysThreat: !!saved.alwaysThreat,
     warnIdle: saved.warnIdle !== false,
-    menuBg: oneOf(saved.menuBg, MENU_BACKGROUNDS, DEFAULTS.menuBg),
     terrainArt: oneOf(saved.terrainArt, TERRAIN_ARTS, DEFAULTS.terrainArt),
     keys: parseKeyOverrides(saved.keys),
   };
