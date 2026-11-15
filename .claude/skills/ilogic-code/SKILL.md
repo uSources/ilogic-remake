@@ -32,6 +32,13 @@ Para los modelos 3D, ademas, la skill `ashfox`. Del juego 2D de antes solo queda
   por modulo, con los tipos dentro (`import { a, type B }`; lo vigila ESLint).
 - `src/core` **no** importa three.js, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
   Si una regla se escribe dentro de la vista, no se puede probar: va a core (ver `core/targeting.ts`).
+- **La vista 3D: sistemas agnosticos al motor; solo el motor dibuja.** three.js solo se importa en
+  la capa del motor (hoy, la lista `ENGINE_FILES` de `eslint.config.js`; destino, `src/view3d/engine/`).
+  Los sistemas (turno, entrada, seleccion, que se anima con cada suceso, logica de la camara,
+  interfaz, menus) deciden sin three.js y hablan con el motor por interfaces pequeñas (puertos), no
+  con sus clases: se prueban sin navegador y el motor se podria cambiar sin tocarlos. SOLID: una
+  responsabilidad por modulo, depender de interfaces, lo que crece como datos. Un fichero nuevo que
+  importe three.js fuera del motor lo para ESLint. Plan de la reorganizacion: `docs/PLAN-VISTA3D.md`.
 - La vista no lee teclas a mano: un adaptador de `src/controls` las traduce a `InputCommand` (mapa)
   o `MenuCommand` (menus) y la partida o el menu las cumplen (`view3d/keyInput.ts`, `menuFlow.ts`).
   Un mando nuevo es un adaptador nuevo (`docs/ARQUITECTURA.md`, "Mandos").

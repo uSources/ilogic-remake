@@ -63,6 +63,45 @@ const CORE_FACADES_ONLY = [
  * Medir sin comprobar (core/measure.ts: el combate suelto, poner unidades) es de las herramientas y los
  * tests, no del juego: ningun fichero de src/ lo importa, con la ruta que sea (con o sin `.ts`, por alias).
  */
+/**
+ * La capa del motor de la vista 3D: los unicos ficheros que pueden importar three.js. Hoy es la lista
+ * de los que ya lo hacian; la reorganizacion (docs/PLAN-VISTA3D.md) los lleva a src/view3d/engine/,
+ * saca de ellos la logica que aun mezclan y deja aqui solo esa carpeta. No añadir ficheros a mano: uno
+ * nuevo que dibuje va al motor; uno que decida, a su sistema, sin three.js.
+ */
+const ENGINE_FILES = [
+  'src/view3d/animations.ts',
+  'src/view3d/badges.ts',
+  'src/view3d/blocks.ts',
+  'src/view3d/board.ts',
+  'src/view3d/cameraRig.ts',
+  'src/view3d/fx.ts',
+  'src/view3d/glbModels.ts',
+  'src/view3d/groundMarks.ts',
+  'src/view3d/highlights.ts',
+  'src/view3d/match3d.ts',
+  'src/view3d/particles.ts',
+  'src/view3d/pixelPoints.ts',
+  'src/view3d/relief.ts',
+  'src/view3d/sandDust.ts',
+  'src/view3d/space.ts',
+  'src/view3d/terrain.ts',
+  'src/view3d/toon.ts',
+  'src/view3d/water.ts',
+  'src/view3d/weather3d.ts',
+  'src/view3d/world.ts',
+  'src/view3d/wrecks.ts',
+  'src/view3d/engine/**/*.ts',
+  'src/view3d/playground/main.ts',
+  'src/view3d/playground/stage.ts',
+];
+/** Fuera del motor, la vista decide sin three.js y le pide lo que quiere por interfaces (puertos). */
+const ONLY_THE_ENGINE_DRAWS = {
+  group: ['three', 'three/*'],
+  message:
+    'Solo el motor de la vista 3D importa three.js (ENGINE_FILES): un sistema decide sin el y le pide lo que necesita por una interfaz (docs/ARQUITECTURA.md, "Vista 3D").',
+};
+
 const MEASURING_IS_NOT_THE_GAME = {
   regex: '(^|/)measure(\\.ts)?$',
   message: 'core/measure.ts no comprueba nada: es para tools/ y tests/. El juego cambia la partida con dispatch.',
@@ -374,8 +413,19 @@ export default tseslint.config(
     ...tseslint.configs.disableTypeChecked,
   },
   {
+    // Solo el motor dibuja: fuera de la capa del motor de la vista 3D no se importa three.js
+    // (docs/ARQUITECTURA.md, "Vista 3D").
     files: ['src/**/*.ts', 'src/**/*.tsx'],
-    ignores: ['src/core/**'],
+    ignores: ['src/core/**', ...ENGINE_FILES],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [...CORE_FACADES_ONLY, ...ROOT_STEPS, MEASURING_IS_NOT_THE_GAME, ONLY_THE_ENGINE_DRAWS] },
+      ],
+    },
+  },
+  {
+    files: ENGINE_FILES,
     rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_FACADES_ONLY, ...ROOT_STEPS, MEASURING_IS_NOT_THE_GAME] }] },
   },
   {

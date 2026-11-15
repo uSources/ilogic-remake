@@ -32,6 +32,9 @@ npm run huella              # huella del comportamiento: igual antes y despues d
 - **Estilo (obligatorio en todo codigo nuevo o tocado): `docs/ESTILO.md`.** Nombres completos, una funcion por
   idea, salir pronto, nada magico, piezas comunes (`core/util/`) en vez de bucles a mano, lo que crece como lista
   de datos, comentarios del porque. Al reescribir, `npm run huella` tiene que dar lo mismo.
+- **Vista 3D: sistemas agnosticos al motor.** Solo la capa del motor importa three.js (ESLint,
+  `ENGINE_FILES`); los sistemas deciden sin el y hablan con el por interfaces pequeñas; SOLID.
+  Ver `docs/ARQUITECTURA.md`, "Vista 3D", y el plan `docs/PLAN-VISTA3D.md`.
 - `src/core` es logica pura: sin three.js, DOM ni interfaz (lo comprueba ESLint). La vista 3D, en `src/view3d`. Logica nueva → core + test.
 - La partida solo cambia con acciones: `dispatch(s, team, action)` (`src/core/actions.ts`; una accion
   nueva, una entrada en `ACTIONS`). Las reglas (`core/rules`) preguntan y calculan; sus pasos que
