@@ -33,10 +33,9 @@ import { fmtNum, nameOf, t } from '../settings';
 import { buyBlockedText } from '../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../core/gameContent';
 import { teamState } from '../core/teams';
-import { playEvents, type AnimationHost } from './animations';
 import { endSound } from './soundCues';
 import { attackPlan, type AttackPlan } from './attackPlan';
-import type { Highlights } from './highlights';
+import type { EventPlayer, TileMarks } from './turnPorts';
 
 /** Las opciones del menu de la unidad que el prototipo ya sabe hacer (las demas no salen). */
 const SUPPORTED_OPTIONS: ReadonlySet<ActionKey> = new Set<ActionKey>(['attack', 'capture', 'supply', 'wait', 'back']);
@@ -66,8 +65,10 @@ export interface MenuView {
 export interface TurnHost {
   session: GameSession;
   viewer: TeamId;
-  highlights: Highlights;
-  animations: AnimationHost;
+  /** Las marcas del tablero (alcance, objetivos, lo elegido). */
+  marks: TileMarks;
+  /** Enseña los sucesos de cada accion (las propias y las de los demas). */
+  events: EventPlayer;
   /** Elegir unidad, comprar, tu turno y el final. */
   sounds: SoundPort;
   /** La partida o lo elegido ha cambiado: volver a pintar piezas e interfaz. */
@@ -105,7 +106,7 @@ export class TurnControls {
       const step = this.host.session.step();
       if (step.kind === 'over') return this.finish(step.result.winners.some((team) => team === this.host.viewer));
       if (step.kind !== 'acted') break;
-      await playEvents(step.events, this.host.animations);
+      await this.host.events.play(step.events);
       this.host.refresh();
     }
     this.isBusy = false;
@@ -206,7 +207,7 @@ export class TurnControls {
     }
     this.isBusy = true;
     this.host.refresh();
-    await playEvents(result.events, this.host.animations);
+    await this.host.events.play(result.events);
     this.isBusy = false;
     this.host.refresh();
     if (this.host.session.result.status !== 'playing') void this.runUntilInput();
@@ -337,10 +338,10 @@ export class TurnControls {
 
   private showMarks(): void {
     const mode = this.mode;
-    const { highlights } = this.host;
-    highlights.showReach(mode.kind === 'move' ? reachableTiles(mode.range) : []);
-    highlights.showTargets(this.targetTiles());
-    highlights.select('unit' in mode ? mode.unit : 'building' in mode ? mode.building : null);
+    const { marks } = this.host;
+    marks.showReach(mode.kind === 'move' ? reachableTiles(mode.range) : []);
+    marks.showTargets(this.targetTiles());
+    marks.select('unit' in mode ? mode.unit : 'building' in mode ? mode.building : null);
   }
 
   private targetTiles(): Pos[] {

@@ -1079,7 +1079,7 @@ modulo:
 | `highlights.ts`, `attackPlan.ts` | casillas a las que llega (azul), a quien ataca (rojo), casilla señalada; desde donde atacaria |
 | `animations.ts`, `fx.ts`, `particles.ts`, `pixelPoints.ts`, `groundMarks.ts`, `wrecks.ts` | animar los sucesos (`EVENT_ANIMATIONS`), efectos de un momento, humo y polvo, rodadas y quemados, restos humeantes |
 | `weather3d.ts`, `weatherStyles.ts` | lluvia, nieve, tormentas (particulas y velo) por id de `weather.json` |
-| `turnControls.ts` | el turno de la persona (elegir, mover, atacar, comprar, deshacer) y los turnos de los demas paso a paso |
+| `turnControls.ts`, `turnPorts.ts` | el turno de la persona (elegir, mover, atacar, comprar, deshacer) y los turnos de los demas paso a paso; pide al motor lo que enseña por `TileMarks` y `EventPlayer` (`turnPorts.ts`) |
 | `keyInput.ts`, `pointerInput.ts` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`) y raton o dedo sobre el mundo |
 | `hudBridge.ts`, `menuItems.ts`, `matchMenus.ts` | publicar la interfaz (`publishHud`, `installHudActions`), textos de los menus de unidad y compra, pausa y pantalla final |
 

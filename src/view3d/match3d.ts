@@ -12,6 +12,7 @@ import { CameraRig } from './cameraRig';
 import type { GameImages } from '../atlas';
 import type { GlbLibrary } from './glbModels';
 import { Highlights } from './highlights';
+import { playEvents } from './animations';
 import { installHudActions, publishHud } from './hudBridge';
 import { installKeys } from './keyInput';
 import { installPointer } from './pointerInput';
@@ -110,7 +111,15 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     scorch: (at: THREE.Vector3) => marks.scorch(at),
     wreck: (model: THREE.Object3D) => wrecks.leave(model),
   };
-  const controls = new TurnControls({ session, viewer, highlights, animations, sounds, refresh, onOver: () => showEndSoon() });
+  const controls = new TurnControls({
+    session,
+    viewer,
+    marks: highlights,
+    events: { play: (events) => playEvents(events, animations) },
+    sounds,
+    refresh,
+    onOver: () => showEndSoon(),
+  });
   const options = new OptionsPanel(
     'game',
     () => publish(),
