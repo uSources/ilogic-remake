@@ -70,7 +70,42 @@ hacerlo):
 | `FrameClock` | sucesos, camara, entrada | avisar en cada fotograma; esperar un tiempo |
 
 Los sistemas dependen del puerto, no de la clase (`TileMarks`, no `Highlights`); los tests usan un
-puerto falso que apunta lo que se le pide.
+puerto falso que apunta lo que se le pide. Un puerto nace de un sistema que lo necesita hoy y tiene
+al menos dos implementaciones (la del motor y la falsa de los tests); si no, sobra.
+
+## Como se hablan los sistemas
+
+Lo mismo que ya hace el nucleo (acciones que entran por `dispatch`, sucesos que salen), llevado a la
+vista. Comandos que entran, sucesos que salen, sistemas puros que devuelven efectos y un motor que
+solo los ejecuta.
+
+- **Efectos como datos.** Un sistema que decide no llama al motor: devuelve lo que hay que hacer.
+  `update(estado, entrada) → { estado, efectos }`, con efectos como
+  `{ kind: 'showRange', tiles }` o `{ kind: 'playEvents', events }`. La raiz de composicion
+  (`app/`) los pasa a los puertos. Los tests comparan listas (sin puertos falsos que apunten
+  llamadas) y la interfaz se puede grabar y repetir como una partida. Sobre todo para el turno y
+  la camara; los puertos quedan para lo que el motor hace por dentro.
+- **Maquinas de estados explicitas.** Las fases del turno y los menus son un union discriminado
+  (`picking | moving | targeting | buying`...) y una tabla de transiciones, no banderas sueltas.
+  Lo que falta del 2D (recuadro, grupos, ordenes) entra como estados nuevos, no como mas `if`.
+- **Linea de tiempo para animar.** Lo que va en orden y espera (mover, girar, disparar, chispas,
+  esperar) son pasos en datos (`systems/events/`), y el sonido que va con ellos (pasos, disparos,
+  golpes) es un paso mas, por `SoundPort`, para que suene a la vez que se ve.
+- **Oyentes de sucesos, solo en la frontera.** Lo que no espera ni va en orden (estadisticas, avisos
+  del HUD, sonidos que no van con una animacion) puede escuchar los `GameEvent` ya aplicados: un mapa
+  tipado `kind → oyentes`, sincrono, montado en la raiz de composicion. Nada de bus global con
+  nombres en cadenas, ni oyentes que manden acciones (esconden el flujo).
+- **Las fronteras las vigila ESLint**, no la disciplina: ningun fichero fuera del motor importa
+  three.js (ya esta), `systems/` no importa `engine/` (paso 5) y `core` no importa la vista.
+
+Descartado, y por que:
+
+- **ECS (entidades y componentes):** sirve para miles de entidades en tiempo real; con unas 30
+  unidades por turnos añade una capa sin dar nada que no den ya acciones y sucesos.
+- **Un almacen global (estilo Redux) para la vista:** lo de cada fotograma (camara, interpolaciones)
+  no pasa por un almacen; cada sistema guarda su propio estado.
+- **Jerarquias de clases** (`Unit extends Entity`...): datos y registros, como el contenido en JSON
+  y `ACTIONS`.
 
 ## Los pasos
 
@@ -78,7 +113,8 @@ Cada paso es una PR; el juego se ve y se juega igual al final de cada uno.
 
 1. **Puertos para el turno.** `turnControls.ts` deja de importar `animations.ts` y `highlights.ts`:
    pide `TileMarks` y un `EventPlayer` (reproducir los sucesos de una accion). `match3d.ts` le da las
-   implementaciones. Primeros tests del turno con puertos falsos.
+   implementaciones. Primeros tests del turno con puertos falsos. Si encaja, el turno ya como
+   maquina de estados que devuelve efectos (ver "Como se hablan los sistemas").
 2. **Separar `animations.ts`.** `systems/events/`: la tabla de cada suceso como pasos (mover por el
    camino, girar hacia, disparar, chispas, texto, esperar) sin three.js, con tests. `engine/fx/`:
    el que ejecuta esos pasos sobre `PieceStage` y `EffectStage`.
