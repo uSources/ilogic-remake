@@ -69,6 +69,11 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
   como los sprites; en una hoja con Pillow, el sprite ampliado (vecino mas cercano) junto a la captura.
 - Exportar todo tarda unos minutos (82 modelos); para probar uno, `ashfox export <fuente> --output
   public/assets/models/<grupo>/<nombre>.glb` (borrando antes el `.glb`: Ashfox no sobrescribe).
+- **Playground de modelos** (`npm run dev` y `/units3d.html`, codigo en `src/view3d/playground/`):
+  todas las unidades o edificios, o uno (`?model=Tank&side=enemy`), con la luz del juego y la de
+  cada clima; sus animaciones (velocidad, pausa, fotograma a fotograma, disparo en bucle), la
+  torreta y lo que mide cada modelo. Tras exportar, «Recargar modelos» (o R) los trae sin perder lo
+  elegido. Desde la consola, `window.ilogicPlayground`.
 - Despues, **en el juego**: `npm run dev` y `/3d.html` (`?seed=` para elegir mapa, `?seed=2` es
   desierto y `?seed=7` nevado). Desde la consola, `GlbLibrary.load(...)` de
   `/src/view3d/glbModels.ts` y `lib.unit(id, 'own')` sirven para poner modelos en fila y mirarlos.

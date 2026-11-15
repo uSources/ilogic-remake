@@ -86,8 +86,8 @@ export default defineConfig({
     target: 'es2022',
     chunkSizeWarningLimit: 2000,
     assetsInlineLimit: 0,
-    // 3d.html: el prototipo 3D (three.js, src/view3d), aparte del juego.
-    rollupOptions: { input: { main: 'index.html', proto3d: '3d.html' } },
+    // 3d.html: el prototipo 3D (three.js, src/view3d), aparte del juego; units3d.html, su playground de modelos.
+    rollupOptions: { input: { main: 'index.html', proto3d: '3d.html', models3d: 'units3d.html' } },
   },
   // Sin aislar cada fichero en su propio entorno: casi todo el tiempo es jugar partidas (IA contra
   // IA), y volver a cargar el nucleo en cada fichero costaba un 7 % mas (198 s → 185 s con 2 nucleos).

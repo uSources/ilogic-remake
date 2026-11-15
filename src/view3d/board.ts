@@ -46,7 +46,7 @@ const BADGE_HEIGHT = 0.7;
 const BADGE_GAP = 0.12;
 const BUILDING_BADGE_HEIGHT = 1.0;
 /** Vueltas por segundo del rotor de los helicopteros. */
-const ROTOR_SPEED = 14;
+export const ROTOR_SPEED = 14;
 /** Lo que tarda en aparecer (creciendo) una unidad nueva. */
 const POP_SECONDS = 0.35;
 
