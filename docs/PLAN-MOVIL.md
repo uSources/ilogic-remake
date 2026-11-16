@@ -7,7 +7,7 @@ incómodo. Desde que el juego es 3D, lo que se midió sobre el mapa 2D (tamaño 
 toques para mover, arrastrar con pulsación larga) ya no vale: la partida 3D se juega tocando (tocar
 una unidad la elige, tocar una casilla azul la mueve y abre su menú: **dos toques y el menú**) y
 arrastrar con un dedo desplaza la cámara. **Falta para el dedo:** pellizcar para acercar y girar la
-cámara con dos dedos (`src/view3d/pointerInput.ts` solo sabe de botones del ratón y de la rueda).
+cámara con dos dedos (`src/view3d/systems/input/pointerInput.ts` solo sabe de botones del ratón y de la rueda).
 
 ## Cómo está ahora (medido antes del 3D: la interfaz HTML es la misma)
 
@@ -72,7 +72,7 @@ El tablero es el juego: tiene que ocupar casi toda la pantalla.
 
 Tocar para elegir y mover ya está. Falta:
 
-- **Pellizcar** para acercar y **girar con dos dedos** (en `src/view3d/pointerInput.ts`).
+- **Pellizcar** para acercar y **girar con dos dedos** (en `src/view3d/systems/input/pointerInput.ts`).
 - **Tocar un enemigo atacable** enseña la previsión de combate en grande con un botón Atacar.
 - Mantener pulsado enseña la ficha y el alcance de cualquier unidad, también enemiga.
 - Vibración corta al elegir, al mover y al atacar (`navigator.vibrate`, se puede quitar en Opciones).
@@ -97,7 +97,7 @@ más que para guardar.
 - **Orientación:** el juego funciona en las dos; opción en Opciones para fijarla (Android).
 - Sin "tirar para recargar", sin seleccionar texto, sin menú del navegador al mantener pulsado
   (`overscroll-behavior: none`, `user-select: none`, `-webkit-touch-callout: none`).
-- **Batería:** bajar a 30 fps en reposo (el bucle de `src/view3d/world.ts` dibuja siempre).
+- **Batería:** bajar a 30 fps en reposo (el bucle de `src/view3d/engine/core/world.ts` dibuja siempre).
 - Guardar al salir de la app (`visibilitychange`), por si el sistema la cierra.
 
 **Hecho cuando:** jugando 20 minutos en un Android y un iPhone reales no salta nada del navegador ni
@@ -118,7 +118,7 @@ se pierde la partida al cambiar de app.
 | V0 Ver y probar | mediana | sin ella no se sabe si cada fase mejora algo |
 | V1 Que nada se corte | pequeña | arreglos rápidos que ya se notan |
 | V2 Más tablero | mediana | lo que más se nota al jugar |
-| V3 El dedo en el 3D | mediana | los gestos de dos dedos; toca `src/view3d/pointerInput.ts` |
+| V3 El dedo en el 3D | mediana | los gestos de dos dedos; toca `src/view3d/systems/input/pointerInput.ts` |
 | V4 Menús para el pulgar | mediana | se apoya en V3 |
 | V5 Como una app | pequeña | independiente, se puede hacer en cualquier momento |
 | V6 Móviles reales | — | al final de cada fase grande, no solo al final |

@@ -161,7 +161,7 @@ Un campo mas de unidad: `art` (id de otra unidad) = se pinta con su dibujo mient
 
 `terrain.json` tiene los 15 terrenos. **El suelo llano** es el que lleva `"plain": true`
 (exactamente uno: el de los mapas vacios del laboratorio, los duelos y las pruebas). Se cambian sus
-numeros; uno nuevo necesita su modelo 3D (o su relieve: `TERRAIN_PIECES` en `src/view3d/terrain.ts`,
+numeros; uno nuevo necesita su modelo 3D (o su relieve: `TERRAIN_PIECES` en `src/view3d/engine/terrain/terrain.ts`,
 skill `ashfox`), su imagen en el atlas (de ella salen los colores de las miniaturas,
 `src/ui/terrainColors.ts`) y salir en algun tema (`themes.json`).
 

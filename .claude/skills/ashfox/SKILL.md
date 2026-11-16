@@ -1,6 +1,6 @@
 ---
 name: ashfox
-description: Use when creating, changing or reviewing the 3D models of Ilogic (units, buildings, terrain tiles and decor of the game's 3D board) with Ashfox, or when touching tools/art/ashfox or src/view3d/glbModels.ts. Covers how models are described and generated, how to export them, how to check them visually (capture, replay) and the Ashfox rules that break exports.
+description: Use when creating, changing or reviewing the 3D models of Ilogic (units, buildings, terrain tiles and decor of the game's 3D board) with Ashfox, or when touching tools/art/ashfox or src/view3d/engine/pieces/glbModels.ts. Covers how models are described and generated, how to export them, how to check them visually (capture, replay) and the Ashfox rules that break exports.
 ---
 
 # Modelos 3D con Ashfox
@@ -87,7 +87,7 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
   elegido. Desde la consola, `window.ilogicPlayground`.
 - Despues, **en el juego**: `npm run dev` y `/` (`?seed=` para una escaramuza directa en ese mapa,
   `?seed=2` es desierto y `?seed=7` nevado; `?elevation=0` sin relieve). Desde la consola,
-  `window.ilogic3d` (`board`, `camera`, `world`...). Tambien `GlbLibrary.load(...)` de `/src/view3d/glbModels.ts` y
+  `window.ilogic3d` (`board`, `camera`, `world`...). Tambien `GlbLibrary.load(...)` de `/src/view3d/engine/pieces/glbModels.ts` y
   `lib.unit(id, 'own')` sirven para poner modelos en fila y mirarlos.
 - Al acabar, `npm run check`. Ashfox no entra en los tests: lo que se comprueba a ojo, se dice.
 
@@ -112,7 +112,7 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
 - **Aviones**: todo cuelga del hueso `body`, subido `FLYING_HEIGHT`; la barra de vida se pone sola
   encima de lo mas alto del modelo.
 - **Terreno**: que casilla y que decorado lleva cada terreno, `TERRAIN_PIECES` en
-  `src/view3d/terrain.ts`. Las montañas, las mesetas y la arena **no son modelos de Ashfox**: son
+  `src/view3d/engine/terrain/terrain.ts`. Las montañas, las mesetas y la arena **no son modelos de Ashfox**: son
   relieve que dibuja el juego (`relief.ts`, su `ReliefStyle` en `TERRAIN_PIECES`); el agua se mueve
   con un shader (`water.ts`).
 
@@ -164,8 +164,8 @@ ASHFOX=<ejecutable> node tools/art/ashfox/sounds.mjs --export      # y los WAV (
   bajos, que cansan.
 - Ashfox no oye: que compile no basta; el usuario tiene que escucharlos.
 - En el juego, sin depender de Web Audio: quien decide pide por el puerto `SoundPort`
-  (`src/audio/sounds.ts`) y `src/audio/sfx.ts` es el que suena (lo junta `view3d/main.ts`). Que suena
-  con que cosa esta en tablas en `view3d/soundCues.ts`; lo piden los pasos de los sucesos (`systems/events/eventSteps.ts`: pasos, disparos,
+  (`src/audio/sounds.ts`) y `src/audio/sfx.ts` es el que suena (lo junta `view3d/app/main.ts`). Que suena
+  con que cosa esta en tablas en `view3d/systems/sound/soundCues.ts`; lo piden los pasos de los sucesos (`systems/events/eventSteps.ts`: pasos, disparos,
   golpes, caidas, captura), `turnControls.ts` (elegir unidad, comprar, tu turno, final) y
   `menuFlow.ts` (menus); los botones, con cualquier clic. Un sonido nuevo: en `models/sounds.mjs` y
   en `soundCues.ts`.
