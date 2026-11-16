@@ -52,7 +52,7 @@ linea empieza por `error:` y el programa sale con 1.
 `npm run dev` y, en el navegador:
 
 - `/`: el menu principal (Inicio, Nueva partida, Campaña, Opciones). Cada partida va en su propia carga
-  de la pagina: al empezar una se recarga, y salir al menu tambien (`src/view3d/gameStart.ts`).
+  de la pagina: al empezar una se recarga, y salir al menu tambien (`src/view3d/app/gameStart.ts`).
 - `/?seed=2013`: una escaramuza directa (la persona contra la IA) con ese mapa; `&elevation=0`, sin la
   regla de altura. Siempre el mismo mapa: sirve para comparar antes y despues.
 - `/units3d.html`: el playground de modelos (todas las unidades y edificios, sus animaciones, luz por
@@ -71,6 +71,21 @@ Normas:
   `requestAnimationFrame` o pedir que se enseñe el panel.
 - Novedades consulta GitHub: sin red no pasa nada.
 - Ajustes del juego por `localStorage['ilogic.settings']` antes de cargar.
+
+## Probar un sistema de la vista 3D sin navegador
+
+Los sistemas de `src/view3d/systems/` no usan three.js ni el motor, asi que se prueban con Vitest como
+el nucleo: una partida de prueba (`blankState`, `newUnit` de `tests/helpers.ts`) y, segun el sistema,
+se comparan los datos que devuelve o se le dan puertos falsos (`ports/`) que apuntan lo que se les pide.
+
+| Sistema | Como se prueba | Ejemplo |
+|---|---|---|
+| El turno (`systems/turn/`) | puertos falsos de marcas y sucesos (`TileMarks`, `EventPlayer`) y tocar casillas | `tests/turnControls.test.ts` |
+| Los sucesos animados (`systems/events/`) | `stepsOf(suceso, piezas)` da los pasos como datos; `runSteps` con un motor falso que apunta las llamadas | `tests/eventSteps.test.ts` |
+| El tablero (`systems/board/`) | `boardScene(s, viewer)`: niebla, lados, vida, capturas | `tests/boardScene.test.ts` |
+| La camara (`systems/camera/`) | `StrategyCamera` y su `pose` tras `update(segundos)` | `tests/strategyCamera.test.ts` |
+
+Lo que se ve de verdad (modelos, luz, efectos) se sigue mirando en el navegador.
 
 ## Antes de tocar...
 

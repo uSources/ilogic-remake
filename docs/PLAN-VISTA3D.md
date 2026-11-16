@@ -1,5 +1,8 @@
 # Plan: la vista 3D por sistemas, agnosticos al motor
 
+**Hecho** (pasos 1 a 6). Como queda: `docs/ARQUITECTURA.md`, "Vista 3D". Este plan se guarda por el
+porque de cada decision; "Donde estamos" es como estaba al empezar.
+
 La regla esta en `docs/ARQUITECTURA.md` ("Vista 3D", "La regla: sistemas agnosticos, solo el motor
 dibuja") y la vigila ESLint (`ENGINE_FILES`, `ONLY_THE_ENGINE_DRAWS`). Este plan dice como llegar a
 ella desde lo que hay, en pasos pequeños: cada uno en su PR, con el juego igual al acabar
@@ -128,7 +131,7 @@ Cada paso es una PR; el juego se ve y se juega igual al final de cada uno.
    `app/match3d.ts` lo que creaba del motor, y `ports/frame.ts` el reloj) (`app/`, `systems/`, `engine/`), sin cambiar codigo; si se renombra la
    carpeta, aqui. `ENGINE_FILES` queda en `src/view3d/engine/**` (y el playground), y una regla mas
    de ESLint: `systems/` no importa `engine/` (solo puertos).
-6. **Documentacion.** `docs/ARQUITECTURA.md` ("Vista 3D": la tabla de modulos por sistema), la skill
+6. **Documentacion** (hecho). `docs/ARQUITECTURA.md` ("Vista 3D": la tabla de modulos por sistema), la skill
    `ilogic-code` y `docs/AGENTES.md` (como probar un sistema sin navegador).
 
 Lo que falta portar del 2D (recuadro, grupos, ordenes, minimapa... en `docs/IDEAS.md`) se hace ya

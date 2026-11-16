@@ -15,11 +15,11 @@ Para los modelos 3D, ademas, la skill `ashfox`. Del juego 2D de antes solo queda
 | `src/core/` | Reglas, IA, mapas, misiones, guardado, estadisticas. **TypeScript puro.** | solo `src/core` |
 | `src/ui/` | Datos puros para el HUD (`hudModels` → `models/<panel>.ts`), claves de imagen (`sprites`), lados (`sides`) | core, settings, atlas |
 | `src/hud/` | Componentes Preact (`game/`, `menus/`, `overlays/`, piezas en `common/`), `store` (estado; tipos en `state.ts`, `actions.ts`, `vm/`) y estilos (`styles/`) | settings, assets, patchNotes, tipos de core |
-| `src/view3d/` | El juego: arranque (`main.ts`: menu o partida, `gameStart.ts`), menu (`menuFlow.ts`), la partida 3D (`match3d.ts` junta tablero, terreno, clima, particulas, camara, entrada del turno `turnControls.ts`, pausa y final `matchMenus.ts`, HUD `hudBridge.ts`) y el playground de modelos (`playground/`) | todo |
+| `src/view3d/` | El juego en 3D, en cuatro carpetas: `app/` (arranque `main.ts`, menu `menuFlow.ts`, `gameStart.ts` y la partida `match3d.ts`, que junta sistemas y motor), `systems/` (deciden sin three.js: `turn/`, `events/`, `board/`, `camera/`, `input/`, `hud/`, `sound/`, `weather/`), `engine/` (dibuja con three.js: `matchScene.ts`, `core/`, `terrain/`, `pieces/`, `fx/`, `camera/`) y `ports/` (lo que los sistemas piden al motor). Mas el playground de modelos (`playground/`) | `app/`: todo; `systems/` y `ports/`: todo menos three.js y `engine/`; `engine/`: lo de fuera y `ports/` |
 | `src/audio/` | Musica y sonido (con el audio del navegador) | settings, assets |
 | `src/menu/`, `src/patchNotes/` | Pantallas del menu (inicio, partida nueva, campaña, opciones), notas de parche | core, ui, hud |
 | `src/controls/` | Ordenes del jugador (`InputCommand` en el mapa, `MenuCommand` en los menus) y adaptadores de cada mando (teclado...): funciones puras | menu (teclas compartidas) |
-| `src/controls/pointer.ts` | Gestos de raton y dedos (`PointerGestures`): de eventos de bajo nivel a gestos (toque, arrastre, recuadro, pulsacion larga, pellizco, rueda). Puro; la vista 3D aun usa su propio `view3d/pointerInput.ts` | quien implemente `PointerTarget` |
+| `src/controls/pointer.ts` | Gestos de raton y dedos (`PointerGestures`): de eventos de bajo nivel a gestos (toque, arrastre, recuadro, pulsacion larga, pellizco, rueda). Puro; la vista 3D aun usa su propio `view3d/systems/input/pointerInput.ts` | quien implemente `PointerTarget` |
 | `tools/` | Equilibrio, automejora, partida por texto, contenido (Node) | solo core, como `'@core/...'` |
 | `tests/` | Vitest | todo; core como `'@core/...'` |
 
@@ -33,14 +33,18 @@ Para los modelos 3D, ademas, la skill `ashfox`. Del juego 2D de antes solo queda
 - `src/core` **no** importa three.js, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
   Si una regla se escribe dentro de la vista, no se puede probar: va a core (ver `core/targeting.ts`).
 - **La vista 3D: sistemas agnosticos al motor; solo el motor dibuja.** three.js solo se importa en
-  la capa del motor (hoy, la lista `ENGINE_FILES` de `eslint.config.js`; destino, `src/view3d/engine/`).
-  Los sistemas (turno, entrada, seleccion, que se anima con cada suceso, logica de la camara,
-  interfaz, menus) deciden sin three.js y hablan con el motor por interfaces pequeñas (puertos), no
-  con sus clases: se prueban sin navegador y el motor se podria cambiar sin tocarlos. SOLID: una
-  responsabilidad por modulo, depender de interfaces, lo que crece como datos. Un fichero nuevo que
-  importe three.js fuera del motor lo para ESLint. Plan de la reorganizacion: `docs/PLAN-VISTA3D.md`.
+  `src/view3d/engine/` (y el playground: `ENGINE_FILES` de `eslint.config.js`). Los sistemas
+  (`systems/`: turno, entrada, que se anima con cada suceso, que se ve en el tablero, la camara,
+  interfaz, menus) deciden sin three.js y sin importar `engine/` (`SYSTEMS_ASK_BY_PORTS`): devuelven
+  datos (los pasos de un suceso, la pose de la camara, el tablero visto por quien mira) o piden al
+  motor por interfaces pequeñas de `ports/`, que el motor implementa; los junta `app/match3d.ts`. Asi
+  se prueban sin navegador (puertos falsos o comparando datos: `tests/turnControls.test.ts`,
+  `eventSteps`, `boardScene`, `strategyCamera`) y el motor se podria cambiar sin tocarlos. SOLID: una
+  responsabilidad por modulo, depender de interfaces, lo que crece como datos. Algo nuevo de la vista:
+  su sistema en `systems/`, su dibujo en `engine/` y su puerto en `ports/` (`docs/ARQUITECTURA.md`,
+  "Vista 3D").
 - La vista no lee teclas a mano: un adaptador de `src/controls` las traduce a `InputCommand` (mapa)
-  o `MenuCommand` (menus) y la partida o el menu las cumplen (`view3d/keyInput.ts`, `menuFlow.ts`).
+  o `MenuCommand` (menus) y la partida o el menu las cumplen (`view3d/systems/input/keyInput.ts`, `app/menuFlow.ts`).
   Un mando nuevo es un adaptador nuevo (`docs/ARQUITECTURA.md`, "Mandos").
 - La vista no calcula lo que enseña la interfaz a mano: usa funciones puras de `ui/hudModels.ts`
   y publican con `ui.set(...)`. Los componentes solo pintan lo que hay en el store. Como se añade un
@@ -49,7 +53,7 @@ Para los modelos 3D, ademas, la skill `ashfox`. Del juego 2D de antes solo queda
   casillas) con `dispatch(s, team, action)` (`core/actions.ts`), que la comprueba (`validate`, desde
   la partida; solo el equipo al que le toca: `GameState.turn`), la hace y devuelve sus sucesos (o por
   que no vale). Cada equipo lo juega un controlador dentro de una `GameSession` (`core/session.ts`):
-  la vista manda las de la persona con `session.act(...)` (`view3d/turnControls.ts`); la IA y las ordenes permanentes **solo proponen**: son planes (`ActionPlan`, un
+  la vista manda las de la persona con `session.act(...)` (`view3d/systems/turn/turnControls.ts`); la IA y las ordenes permanentes **solo proponen**: son planes (`ActionPlan`, un
   generador que da cada `GameAction` y recibe su `ActionResult`; `act`/`doMove`/`finish` en
   `autopilot/context.ts`) que cumple la sesion (`proposing`) o, fuera de ella, `carryOut`. Quien
   decide lee la vista de su equipo (`PlayerView`, `core/playerView.ts`: sin lo que no ve, al dia con
@@ -100,7 +104,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   equipo que mira es `viewer` y la interfaz pinta por lado (`ui/sides.ts`). Ver `docs/ARQUITECTURA.md`, "Equipos".
 - **SOLID en pequeño**: un modulo por responsabilidad (`core/content/units.ts` valida y construye solo
   unidades; `index.ts` solo compone). Funciones puras que reciben lo que necesitan (`ContentContext`) en
-  vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de la interfaz en `hud/hud.css` (y los de lienzos, `ui/palette.ts`, iguales); los del 3D, en su modulo de `view3d`. Textos de pantalla en `src/i18n/es/` y `en/`, un fichero por tema (se leen con `t('clave')`, de `settings.ts`).
+  vez de leer globales; las herramientas separan la logica (pura, con test) de la linea de comandos. Colores de la interfaz en `hud/hud.css` (y los de lienzos, `ui/palette.ts`, iguales); los del 3D, en su modulo del motor (`view3d/engine/`; los de cada lado, `engine/pieces/sidePaint.ts`). Textos de pantalla en `src/i18n/es/` y `en/`, un fichero por tema (se leen con `t('clave')`, de `settings.ts`).
 - **La partida es la unica fuente**: reglas en `s.settings`, tamaño del mapa en `s.map` (`mapGrid(s)`),
   tipos de la partida en `core/model/` (sin dependencias). Nada de variables de modulo con la partida
   en curso; para probar otras reglas, una partida con otras reglas (`blankState(settingChanges)` en los tests,
@@ -124,7 +128,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   con `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged` y si se mueve y
   dispara con `firesAfterMove`, un combate hipotetico con `engagement(...)` (nunca copias de
   unidades), el daño con `damageModelOf`, numeros con `fmtNum`; en
-  3D, casillas con `view3d/space.ts`, efectos de un momento con `view3d/fx.ts`, humo y polvo con
+  3D, casillas con `view3d/engine/core/space.ts`, efectos de un momento con `engine/fx/fx.ts`, humo y polvo con
   `ParticleSystem` (una clase mas en `PUFFS`) y un suceso animado con su entrada en `EVENT_STEPS`
   (`view3d/systems/events/eventSteps.ts`: sus pasos como datos; un paso nuevo, en `steps.ts` y `STEP_RUNNERS`).
 - **Extender sin abrir funciones grandes**: accion nueva = su forma en `GameAction` y en
@@ -189,7 +193,7 @@ partida. Pero un tipo tiene que leerse a la primera, como el codigo (`docs/ESTIL
   `.filter((unit): unit is Unit => !!unit)`; si un valor tiene que existir, una funcion
   `asserts value is T` que falle con un mensaje claro es mejor que un `!` que falla lejos.
 - **Uniones con discriminante** (`kind`, `type`, `mode`) para cosas que son una de varias, y `switch`
-  con todos los casos y `default: return valor satisfies never` (como `view3d/matchMenus.ts`): un caso nuevo
+  con todos los casos y `default: return valor satisfies never` (como `view3d/systems/hud/matchMenus.ts`): un caso nuevo
   rompe la compilacion donde falta tratarlo.
 - **`satisfies` para comprobar sin perder el tipo exacto**: `{ start: 'load' } satisfies GameStartData`,
   tablas `const X = {...} as const satisfies Record<Clave, Valor>`.

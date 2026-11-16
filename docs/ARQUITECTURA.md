@@ -25,13 +25,14 @@ flowchart TB
     teams["teams.ts<br/>equipos y alianzas"]
     net["net.ts + net/<br/>partida por la red: protocolo, sala (Room),<br/>niebla de los sucesos, vista del cliente"]
   end
-  subgraph view3d["src/view3d — la vista 3D (three.js)"]
-    main3d["main.ts<br/>imagenes y modelos GLB"] --> menuFlow["menuFlow.ts<br/>menu principal"]
-    main3d --> match["match3d.ts<br/>junta la partida"]
-    match --> game["turnControls.ts<br/>el turno de la persona"]
-    match --> boardView["board.ts · terrain.ts · relief.ts<br/>tablero y piezas"]
-    match --> anim["animations.ts · fx.ts · particles.ts<br/>sucesos animados"]
-    match --> bridge["hudBridge.ts · matchMenus.ts<br/>publican la interfaz"]
+  subgraph view3d["src/view3d — la vista 3D"]
+    main3d["app/main.ts<br/>imagenes y modelos GLB"] --> menuFlow["app/menuFlow.ts<br/>menu principal"]
+    main3d --> match["app/match3d.ts<br/>junta sistemas y motor"]
+    match --> game["systems/turn<br/>el turno de la persona"]
+    match --> systems["systems/events · board · camera · input<br/>deciden (sin three.js)"]
+    match --> bridge["systems/hud<br/>publican la interfaz"]
+    match --> engine["engine/ (three.js)<br/>MatchScene: terreno, piezas, efectos"]
+    systems -. "ports/" .-> engine
   end
   subgraph ui["src/ui — datos para la interfaz (puro)"]
     hudModels["hudModels.ts → models/*<br/>fichas, prevision, minimapa"]
@@ -187,7 +188,7 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   cuenta nada nuevo de la partida y deja deshacer lo de antes, y con `anyTime` si vale fuera del
   turno, como rendirse); si se ofrece en el menu de una unidad, su entrada en `UNIT_MENU`; si se
   puede mandar a unas unidades elegidas, en `SELECTION_MENU`; si se anima, su entrada en
-  `EVENT_ANIMATIONS` (`view3d/animations.ts`). Lo comun a todas las acciones es una entrada en `ACTION_GUARDS`; lo
+  `EVENT_STEPS` (`view3d/systems/events/eventSteps.ts`). Lo comun a todas las acciones es una entrada en `ACTION_GUARDS`; lo
   que hay que limpiar despues de cualquiera (y de cada ronda), una en `INVARIANTS`, que devuelve sus
   sucesos.
 
@@ -208,7 +209,7 @@ tiene un solo suceso `squad` (`SquadChange`): `change: 'disbanded'` si su equipo
 lleva el equipo de esa accion como actor y va antes que el `formed` o `grouped`; si la vacia la
 partida (caen sus unidades), la cuenta la invariante sin actor. Los numeros de escuadra no se
 reutilizan (`nextSquadId`). Con ellos
-se anima (`EVENT_ANIMATIONS`, view3d/animations.ts), se cuentan las estadisticas (`recordEvents` en dispatch, por el `actor`) y se resume el
+se anima (`EVENT_STEPS`, view3d/systems/events/eventSteps.ts), se cuentan las estadisticas (`recordEvents` en dispatch, por el `actor`) y se resume el
 fin de ronda (`roundReport(s, events)`: lo que enseña la vista; cada parte del resumen es una
 `ROUND_REPORT_PARTS` de siempre, ingresos y curas, o una `roundReportParts` de su modulo: control,
 mantenimiento, clima; el resumen solo tiene la parte de un modulo si este la ha apuntado, y cada
@@ -543,7 +544,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   - un suceso propio de un modulo (el mantenimiento, los puntos de control, el clima) es su tipo en
     `ModuleEvents` (`model/events.ts`, con `declare module` desde el modulo). `GameEvent` es lo de
     cualquier partida (`CoreGameEvent`) mas esos; la vista 3D anima los que tienen entrada en
-    `EVENT_ANIMATIONS` (`view3d/animations.ts`; los demas no se animan), y `npm run play` y las
+    `EVENT_STEPS` (`view3d/systems/events/eventSteps.ts`; los demas no se animan), y `npm run play` y las
     estadisticas tienen un caso por defecto. Los sucesos no se guardan ni se leen de fuera, asi que
     no hay validacion que necesite la lista cerrada; un ingreso nuevo del fin de ronda dice de donde
     sale con el nombre de su modulo (`income.source`, ampliando `IncomeSources`);
@@ -688,7 +689,7 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
 - Hace falta al menos dos alianzas (`newTeams` y `readSave` no aceptan menos).
 - Las reglas no miran el `controller`: solo dice quien decide (el controlador que le pone la sesion,
   ver "Partidas en juego"). Las ordenes con destino se le pueden dar a cualquier equipo.
-- **La vista**: el equipo que mira es `viewer` (`StartedGame.viewer`, `view3d/gameStart.ts`; sin
+- **La vista**: el equipo que mira es `viewer` (`StartedGame.viewer`, `view3d/app/gameStart.ts`; sin
   personas, el primer equipo, que juega la persona aunque guarde `controller: 'ai'`,
   `screenControllers` de core/controllers, que usa tambien `npm run play`), y todos los `...Host`
   lo tienen. La niebla, la amenaza, lo que se elige
@@ -727,7 +728,7 @@ nucleo, una herramienta con dependencias propias, publicar el nucleo), `src/core
 
 ### Interfaz HTML (src/hud)
 
-La vista 3D publica con `ui.set(...)` lo que hay que enseñar (`view3d/hudBridge.ts`, `matchMenus.ts`,
+La vista 3D publica con `ui.set(...)` lo que hay que enseñar (`view3d/systems/hud/hudBridge.ts`, `matchMenus.ts`,
 `menuFlow.ts`) y los componentes de Preact solo lo pintan; los botones llaman a `ui.actions.*`, que
 pone la vista. Cada pieza en su sitio:
 
@@ -826,7 +827,7 @@ azar"): nadie se lo da, asi que la pantalla, el fondo del menu y las herramienta
   equipos), se acaba para esta pantalla: `screenEnd(session, viewer)` lo dice (un `PersonEnd`;
   `people`, `personStillPlays`, session/screen.ts) y la pantalla del final se lee desde quien mira
   (`screenEndFor`: `ScreenEnd.fallenBy` dice de quien fue la caida que lo decidio, asi «Te has
-  rendido» solo lo lee quien se rindio). En 3D lo mira `showEndIfOver` (`view3d/matchMenus.ts`), que
+  rendido» solo lo lee quien se rindio). En 3D lo mira `showEndIfOver` (`view3d/systems/hud/matchMenus.ts`), que
   borra el guardado; asi la partida por texto acaba igual (K4). Pendiente en 3D: el guardado
   automatico (`isAutosaveMoment`), el aviso de cada equipo que cae y salir mientras juegan los demas.
 
@@ -836,7 +837,7 @@ sequenceDiagram
   participant G as TurnControls (view3d)
   participant S as GameSession
   participant R as core/actions + rules
-  participant V as animations + board
+  participant V as systems/events + engine
   participant H as store → Preact
   J->>G: clic / tecla / arrastrar
   G->>S: act(viewer, { kind: 'move' | 'attack' | 'capture' | 'buy'... })
@@ -1057,74 +1058,109 @@ Dos clases de graficos:
   `public/assets/atlas/` (2 paginas). Las carga `src/atlas.ts` (`loadGameImages`, `GameImages`: `url`
   para un `<img>`, `draw` en un lienzo), sin motor de juego. Ver README, "Graficos".
 - **Modelos 3D** (unidades, edificios, casillas y decorado): fuentes en `tools/art/ashfox/` → `.glb`
-  en `public/assets/models/` (skill `ashfox`). Los carga `view3d/glbModels.ts` (`GlbLibrary`); un
-  tipo sin GLB se ve con su modelo de bloques (`view3d/models/`, `blocks.ts`).
+  en `public/assets/models/` (skill `ashfox`). Los carga `view3d/engine/pieces/glbModels.ts` (`GlbLibrary`); un
+  tipo sin GLB se ve con su modelo de bloques (`engine/pieces/models/`, `blocks.ts`).
 
 ## Vista 3D
 
-`index.html` arranca `src/view3d/main.ts`: carga la interfaz HTML, el atlas y los GLB y abre el menu
-(`menuFlow.ts`, con las pantallas de `src/menu/`) o la partida pendiente (`gameStart.ts`). Cada
-partida va en su propia carga de pagina: el menu apunta lo elegido y recarga, y salir al menu
+`index.html` arranca `src/view3d/app/main.ts`: carga la interfaz HTML, el atlas y los GLB y abre el
+menu (`app/menuFlow.ts`, con las pantallas de `src/menu/`) o la partida pendiente (`app/gameStart.ts`).
+Cada partida va en su propia carga de pagina: el menu apunta lo elegido y recarga, y salir al menu
 recarga sin nada (asi no hay que deshacer a mano la escena 3D). `?seed=N` empieza una escaramuza
-directa y `?elevation=0` quita el relieve. `match3d.ts` junta la partida; cada pieza vive en su
-modulo:
+directa y `?elevation=0` quita el relieve.
 
-| Modulo | Que hace |
+La vista esta en cuatro carpetas, y cada cosa tiene su sitio:
+
+```
+src/view3d/
+  app/        raiz de composicion: arranque, menu y la partida (match3d.ts junta cada sistema con el motor)
+  ports/      lo que los sistemas piden al motor (interfaces pequeñas; las implementa el motor)
+  systems/    deciden, sin three.js; se prueban sin navegador
+  engine/     dibuja con three.js; no decide nada
+  playground/ la herramienta de modelos (units3d.html; usa el motor directamente)
+```
+
+| Carpeta | Que hace |
 |---|---|
-| `world.ts`, `toon.ts`, `space.ts` | lienzo, escena, luz cartoon (y por clima) y bucle de dibujo (`onFrame`, `animate`); materiales de dos tonos; casilla ↔ mundo (`tileToWorld`) |
-| `cameraRig.ts` | camara de estrategia: desplazar, acercar, girar alrededor del punto mirado |
-| `terrain.ts`, `relief.ts`, `water.ts`, `sandDust.ts` | casillas y decorado por terreno (`TERRAIN_PIECES`), relieve de montañas y dunas en voxels, agua animada, polvo de la arena |
-| `board.ts`, `badges.ts` | piezas de unidades y edificios que siguen a la partida como la ve quien mira (`sync`), con niebla y marcas de vida y captura |
-| `glbModels.ts`, `models/`, `blocks.ts` | modelos de Ashfox (animados: `idle`, `drive`, `fire`) y los de bloques de reserva |
-| `highlights.ts`, `attackPlan.ts` | casillas a las que llega (azul), a quien ataca (rojo), casilla señalada; desde donde atacaria |
-| `animations.ts`, `fx.ts`, `particles.ts`, `pixelPoints.ts`, `groundMarks.ts`, `wrecks.ts` | animar los sucesos (`EVENT_ANIMATIONS`), efectos de un momento, humo y polvo, rodadas y quemados, restos humeantes |
-| `weather3d.ts`, `weatherStyles.ts` | lluvia, nieve, tormentas (particulas y velo) por id de `weather.json` |
-| `turnControls.ts`, `turnPorts.ts` | el turno de la persona (elegir, mover, atacar, comprar, deshacer) y los turnos de los demas paso a paso; pide al motor lo que enseña por `TileMarks` y `EventPlayer` (`turnPorts.ts`) |
-| `keyInput.ts`, `pointerInput.ts` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`) y raton o dedo sobre el mundo |
-| `hudBridge.ts`, `menuItems.ts`, `matchMenus.ts` | publicar la interfaz (`publishHud`, `installHudActions`), textos de los menus de unidad y compra, pausa y pantalla final |
+| `app/main.ts`, `menuFlow.ts`, `gameStart.ts` | arranque, menu principal y empezar o cargar una partida |
+| `app/match3d.ts` | la partida: crea el motor (`MatchScene`) y los sistemas y los conecta; no dibuja ni decide |
+| `ports/turn.ts` | `TileMarks` (marcas del tablero) y `EventPlayer` (enseñar sucesos), para el turno |
+| `ports/stage.ts` | `PieceStage`, `EffectStage`, `PieceLookup` y los sitios (`Spot`), para los sucesos animados |
+| `ports/camera.ts`, `ports/frame.ts` | `CameraView` (situar la camara), `CameraPose`, `Point3`; el reloj (`FrameListener`) |
+| `systems/turn/` | el turno de la persona (elegir, mover, atacar, comprar, deshacer) y los de los demas paso a paso (`turnControls.ts`); desde donde atacaria (`attackPlan.ts`); textos de los menus de unidad y compra (`menuItems.ts`) |
+| `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
+| `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas |
+| `systems/camera/` | la camara de estrategia como logica (`StrategyCamera`): desplazar, acercar, girar, limites y suavizado; da su pose como datos |
+| `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`) y raton o dedo sobre el mundo, a ordenes de la camara y del turno |
+| `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`), pausa y pantalla final (`matchMenus.ts`) |
+| `systems/sound/`, `systems/weather/` | que suena con cada cosa (`soundCues.ts`); como se ve cada clima (datos: `weatherStyles.ts`) |
+| `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
+| `engine/core/` | lienzo, escena, luz cartoon (y por clima) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`) |
+| `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas, agua, polvo de la arena |
+| `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, barras, restos y rodadas |
+| `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`), lluvia y nieve (`weather3d.ts`) |
+| `engine/camera/` | situa la camara de three.js en la pose que da `systems/camera` |
 
-- **La partida cambia con acciones**: `TurnControls` manda por la sesion (`session.act`) y anima los
-  sucesos que devuelve (`playEvents`); despues `board.sync` deja cada pieza donde dice la partida. Lo
-  que se ofrece lo dice siempre el nucleo (`availableActions`, `reachableTiles`, `attackTargets`,
+- **La partida cambia con acciones**: `TurnControls` manda por la sesion (`session.act`) y enseña los
+  sucesos que devuelve (`EventPlayer`); despues `sync` deja cada pieza donde dice la partida. Lo que
+  se ofrece lo dice siempre el nucleo (`availableActions`, `reachableTiles`, `attackTargets`,
   `buyOptions`...). La vista no juega a los demas equipos: pide pasos a la sesion (`step`).
-- **La animacion de un `GameEvent`**: su entrada en `EVENT_ANIMATIONS` (`animations.ts`); un suceso
-  sin entrada no se anima (la pieza salta con el siguiente `sync`). Lo que la niebla tapa no se anima.
-- **Un efecto** o una particula nueva: una funcion en `fx.ts` que recibe un `FxHost` y puntos del
-  mundo, o una entrada en `PUFFS` (`particles.ts`).
-- **Depuracion**: en la consola, `window.ilogic3d` (`session`, `board`, `controls`, `rig`, `world`,
-  `weather`, `animations`, `wrecks`...). Playground de modelos y animaciones: `units3d.html`
+- **La animacion de un `GameEvent`**: su entrada en `EVENT_STEPS` (`systems/events/eventSteps.ts`),
+  que da sus pasos como datos (`[{ kind: 'aim', ... }, { kind: 'sound', ... }, { kind: 'together',
+  steps: [...] }]`). Un suceso sin entrada no se anima (la pieza salta con el siguiente `sync`); lo que
+  la niebla tapa no se anima. Un paso nuevo: su forma en `steps.ts` y su entrada en `STEP_RUNNERS`
+  (`timeline.ts`), y lo que pide al motor, en su puerto (`ports/stage.ts`) y en `engine/fx/`.
+- **Un efecto** o una particula nueva: una funcion en `engine/fx/fx.ts` que recibe un `FxHost` y
+  puntos del mundo, o una entrada en `PUFFS` (`engine/fx/particles.ts`; su nombre, en `PuffKind` de
+  `ports/stage.ts`).
+- **Como se ve una pieza** para quien mira (un estado nuevo: tintada, con un icono...): un campo en
+  `UnitLook` o `BuildingLook` (`systems/board/boardScene.ts`, con su test) y su dibujo en
+  `engine/pieces/boardView.ts`.
+- **Depuracion**: en la consola, `window.ilogic3d` (`session`, `board`, `controls`, `camera`, `world`,
+  `weather`, `stages`, `wrecks`...). Playground de modelos y animaciones: `units3d.html`
   (`src/view3d/playground/`, `window.ilogicPlayground`).
 - **Aun no en 3D** (estaban en el 2D): escuadras, ordenes permanentes, grupos y recuadro, poderes de
   los generales, minimapa dibujado, varias personas en la misma pantalla, repetir el turno enemigo,
-  guardado automatico, tutorial, laboratorio de animaciones y campaña online.
+  guardado automatico, tutorial, laboratorio de animaciones y campaña online. Cada uno entra con esta
+  forma: su sistema en `systems/`, su dibujo en `engine/` y su puerto en `ports/`.
 - Colores de los lienzos de la interfaz: `PAL_CSS` en `ui/palette.ts` (los mismos que `hud.css`).
 
 ### La regla: sistemas agnosticos, solo el motor dibuja
 
 La vista se divide en dos clases de piezas, y la frontera es una regla, no una costumbre:
 
-- **El motor** (three.js) es lo unico que representa: crea y mueve mallas, materiales, luz,
-  camara, particulas, el bucle de dibujo. No decide nada de la partida.
-- **Los sistemas** deciden: el turno (que se puede tocar, que pasa al tocarlo), la entrada (de teclas
-  y punteros a ordenes), que se anima con cada suceso y en que orden, la logica de la camara
-  (a donde mirar, limites), lo que enseña la interfaz y los menus. **No importan three.js** y no
-  conocen las clases del motor: le piden lo que necesitan por **interfaces pequeñas (puertos)**
-  —«enseña estas casillas», «mueve esta pieza por este camino», «lanza este efecto aqui»— que el
-  motor implementa. Asi un sistema se prueba sin navegador ni WebGL, y el motor se podria cambiar
-  sin tocar ningun sistema.
-- **La raiz de composicion** (`match3d.ts`, `main.ts`) es el unico sitio que junta un sistema con
-  su motor.
+- **El motor** (`engine/`, three.js) es lo unico que representa: crea y mueve mallas, materiales,
+  luz, camara, particulas, el bucle de dibujo. No decide nada de la partida.
+- **Los sistemas** (`systems/`) deciden: el turno (que se puede tocar, que pasa al tocarlo), la
+  entrada (de teclas y punteros a ordenes), que se anima con cada suceso y en que orden, que se ve en
+  el tablero, la logica de la camara (a donde mirar, limites), lo que enseña la interfaz y los menus.
+  **No importan three.js ni el motor**: le piden lo que necesitan por **interfaces pequeñas (puertos,
+  `ports/`)** —«enseña estas casillas», «mueve esta pieza por este camino», «lanza este efecto
+  aqui»— que el motor implementa. Asi un sistema se prueba sin navegador ni WebGL, y el motor se
+  podria cambiar sin tocar ningun sistema.
+- **La raiz de composicion** (`app/`) es el unico sitio que junta un sistema con su motor.
+
+Como se hablan: lo que decide un sistema sale como **datos** siempre que se puede (los pasos de un
+suceso, la pose de la camara, el tablero visto por quien mira) y el motor solo los cumple; los
+puertos quedan para lo que el motor hace por dentro (mover una pieza, poner un efecto). Lo que va en
+orden y espera es una **linea de tiempo** de pasos (`systems/events/`), con el sonido como un paso
+mas. Descartado: ECS, un almacen global para la vista y jerarquias de clases (el porque, en
+`docs/PLAN-VISTA3D.md`).
 
 SOLID en la practica: una responsabilidad por modulo (un sistema no dibuja; el motor no decide),
 abierto a ampliar con datos (un suceso nuevo, una entrada en una tabla; un efecto nuevo, una entrada
-en `PUFFS`), interfaces pequeñas por quien las usa (`...Host`, `...Port`) y depender de ellas, no de
-las clases concretas. Cada sistema, en su subcarpeta.
+en `PUFFS`), interfaces pequeñas por quien las usa (`...Host`, `...Port`, `ports/`) y depender de
+ellas, no de las clases concretas. Cada sistema, en su subcarpeta.
 
-**Lo vigila ESLint**: fuera de la capa del motor no se puede importar `three`. Hoy la capa del motor
-es la lista `ENGINE_FILES` de `eslint.config.js` (los ficheros que ya lo importaban); la
-reorganizacion (`docs/PLAN-VISTA3D.md`) la lleva a `src/view3d/engine/`, saca de ella la logica que
-aun mezclan (`animations.ts`, `board.ts`, `match3d.ts`) y vacia la lista. Un fichero nuevo que dibuje
-va al motor; uno que decida, a su sistema.
+**Lo vigila ESLint**: solo `ENGINE_FILES` (`src/view3d/engine/**` y el playground) importa `three`, y
+`systems/` y `ports/` no importan `engine/` (`SYSTEMS_ASK_BY_PORTS`). Un fichero nuevo que dibuje va
+al motor; uno que decida, a su sistema; lo que se piden, a un puerto.
+
+**Probar un sistema sin navegador**: se le da la partida (`blankState`, `newUnit` de los tests) y
+puertos falsos que apuntan lo que se les pide, o se comparan los datos que devuelve. Ejemplos:
+`tests/turnControls.test.ts` (el turno con marcas y sucesos falsos), `tests/eventSteps.test.ts` (los
+pasos de cada suceso y la linea de tiempo), `tests/boardScene.test.ts` (niebla, lados, vida, capturas)
+y `tests/strategyCamera.test.ts` (la camara).
 
 ## Decisiones (y por que)
 
@@ -1138,8 +1174,8 @@ va al motor; uno que decida, a su sistema.
 | Semillas para mapas y para la IA | Mapas compartibles por codigo; partidas reproducibles | Codigo de mapa, tests de referencia |
 | Imagenes compiladas antes (`npm run assets`) en un atlas; modelos 3D ya exportados a GLB | Carga rapida, nada se dibuja ni se genera al jugar | Rendimiento, HTML de un fichero |
 | Color de bando por giro de tono desde un dibujo magenta | Una generacion por unidad (coste en RD) y bandos identicos | Arte y presupuesto de RD |
-| Sistemas de la vista sin three.js; solo el motor dibuja, por interfaces (puertos) | Probar la logica de la vista sin navegador; cambiar o mejorar el motor sin tocar el juego; modulos con una sola responsabilidad que escalan | Tests de la vista, `ENGINE_FILES` y la reorganizacion de `PLAN-VISTA3D.md` |
-| Cada partida en su propia carga de pagina (`view3d/gameStart.ts`) | No hay que deshacer a mano la escena 3D ni sus escuchas | Fallos al volver a jugar |
+| Sistemas de la vista sin three.js; solo el motor dibuja, por interfaces (puertos) | Probar la logica de la vista sin navegador; cambiar o mejorar el motor sin tocar el juego; modulos con una sola responsabilidad que escalan | Tests de la vista sin navegador, `ENGINE_FILES` y `SYSTEMS_ASK_BY_PORTS` |
+| Cada partida en su propia carga de pagina (`view3d/app/gameStart.ts`) | No hay que deshacer a mano la escena 3D ni sus escuchas | Fallos al volver a jugar |
 | Version en un solo fichero HTML | Jugar sin servidor (file://), compartir por correo | Releases, pruebas por file:// |
 | Releases y web por GitHub Actions | La sesion de Claude no puede crear Releases; asi no hace falta | Novedades y aviso de version |
 | Contenido resuelto al cargar en tipos con nombre, y guardado por id | `unitType.cost` se lee y se comprueba; añadir o reordenar una unidad no rompe partidas ni reglas | Formato 3 de las partidas, CONTENIDO.md |
@@ -1154,8 +1190,8 @@ traduce lo que pulsa el jugador a **ordenes**, y la vista las cumple.
 
 | Orden | Donde vale | Quien la cumple |
 |---|---|---|
-| `InputCommand` (`inputCommands.ts`): cursor, aceptar, atras, fin de turno, siguiente unidad, zoom... | la partida | `KEY_ACTIONS` de `view3d/keyInput.ts` (cursor = desplazar la camara mientras se mantiene) |
-| `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda | `MenuFlow` (`view3d/menuFlow.ts`, que pasa a `OptionsPanel.command`...) |
+| `InputCommand` (`inputCommands.ts`): cursor, aceptar, atras, fin de turno, siguiente unidad, zoom... | la partida | `KEY_ACTIONS` de `view3d/systems/input/keyInput.ts` (cursor = desplazar la camara mientras se mantiene) |
+| `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda | `MenuFlow` (`view3d/app/menuFlow.ts`, que pasa a `OptionsPanel.command`...) |
 
 - **Teclado**: `keyCommand(key, settings.keys)` en la partida, con las tablas `FIXED_KEYS` y
   `REBINDABLE_KEYS` (una entrada por `KeyBindingId` con su tecla de serie; el jugador la cambia en
@@ -1165,12 +1201,12 @@ traduce lo que pulsa el jugador a **ordenes**, y la vista las cumple.
   tablas de teclas: la ayuda, los botones y la linea de abajo enseñan la tecla de cada orden con
   `hud/keyLabels.ts` (`keyLabelOf`, `withKeyLabels`; nombres por idioma en `i18n/<idioma>/keyNames.ts`),
   nunca una letra escrita a mano. Una orden nueva en la partida es una entrada en `KEY_ACTIONS`.
-- **Raton y dedos**: `view3d/pointerInput.ts` (izquierdo: tocar la casilla o arrastrar para
+- **Raton y dedos**: `view3d/systems/input/pointerInput.ts` (izquierdo: tocar la casilla o arrastrar para
   desplazar; central: desplazar; derecho: girar; rueda: acercar); la casilla tocada la decide un
-  rayo sobre el tablero (`match3d.ts`) y la cumple `TurnControls.tap`. Los gestos puros de
+  rayo sobre el tablero (`MatchScene.tileAt`, `engine/matchScene.ts`) y la cumple `TurnControls.tap`. Los gestos puros de
   `controls/pointer.ts` (`PointerGestures`, `gestures/`) y la seleccion de `controls/selection.ts`
   (`clickSelect`, `boxSelect`) son del 2D y el 3D aun no los usa.
-- **Se queda fuera a proposito**: `installTabGuard` (`browserKeys.ts`, desde `view3d/main.ts`: Tab no
+- **Se queda fuera a proposito**: `installTabGuard` (`browserKeys.ts`, desde `view3d/app/main.ts`: Tab no
   mueve el foco del navegador, es «siguiente unidad») y el cuadro de texto del nombre de escuadra
   (`hud/overlays/RenameSquad.tsx`).
 
@@ -1198,11 +1234,11 @@ Un fichero nuevo, `src/controls/gamepad.ts`, con la misma forma que el teclado:
 | Cambiar como juega la IA | `src/core/ai/` (`unitTurn.ts` prioridades, `tactics.ts` cada paso, `production.ts` compras), pesos en `data.AI` |
 | Cambiar lo que enseña una ficha | `src/ui/models/tile.ts` y `src/hud/game/Cards.tsx` (ver "Interfaz HTML") |
 | Añadir un panel o una pantalla a la interfaz | `src/hud/` (ver "Interfaz HTML") |
-| Cambiar como se ve el tablero (terreno, relieve, piezas, luz, clima) | su modulo de `src/view3d/` (ver "Vista 3D"); los modelos, `tools/art/ashfox/` (skill `ashfox`) |
-| Añadir una marca sobre el tablero o un efecto | `src/view3d/highlights.ts`; `src/view3d/fx.ts`, `particles.ts` |
+| Cambiar como se ve el tablero (terreno, relieve, piezas, luz, clima) | su modulo de `src/view3d/engine/` (ver "Vista 3D"); lo que se ve para quien mira, `systems/board/`; los modelos, `tools/art/ashfox/` (skill `ashfox`) |
+| Añadir una marca sobre el tablero o un efecto | `src/view3d/engine/fx/highlights.ts`; `engine/fx/fx.ts`, `particles.ts` (y si va con un suceso, su paso en `systems/events/`) |
 | Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ver "Mandos": teclas del mapa en `keyboard.ts`, de los menus en `menu.ts`) |
-| Cambiar el raton o el dedo sobre el tablero | `src/view3d/pointerInput.ts` (y que hace la casilla tocada, `TurnControls.tap`) |
-| Cambiar algo de la partida en pantalla (animaciones, turno enemigo, pausa, final...) | `src/view3d/` (ver "Vista 3D": `turnControls.ts`, `animations.ts`, `matchMenus.ts`) |
+| Cambiar el raton o el dedo sobre el tablero | `src/view3d/systems/input/pointerInput.ts` (y que hace la casilla tocada, `TurnControls.tap`) |
+| Cambiar algo de la partida en pantalla (animaciones, turno enemigo, pausa, final...) | `src/view3d/` (ver "Vista 3D": `systems/turn/`, `systems/events/`, `systems/hud/matchMenus.ts`) |
 
 | Textos | `src/i18n/es/*.ts` (un fichero por tema) y su traduccion en `src/i18n/en/` (ver "Interfaz HTML", "Textos"); `t('clave')` y `nameOf` en `src/settings.ts` |
 | Generar mapas | `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios, puntos de control; los pasos en orden en `steps.ts`, fachada `mapgen.ts`), sus numeros en `mapgen.json` y `themes.json` |

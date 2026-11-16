@@ -64,7 +64,7 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
   moda de color (sin mezclar) antes de guardarlas en `ui/`.
 - Efectos animados: la hoja va como `ui/anim_<nombre>.png` y `rd_ui.py` la parte en fotogramas (lado
   en `ANIM_FRAME`) sin los vacios ni el magenta suelto. Los reproducia el 2D (`playAnim`); la vista 3D
-  no los usa (sus efectos son particulas, `src/view3d/particles.ts`).
+  no los usa (sus efectos son particulas, `src/view3d/engine/fx/particles.ts`).
 - **Rechazado:** proyectiles del combate (misil, bala de cañon, bombas) con RD Plus y la explosion
   de `rd_animation__vfx`: no encajan con la estetica del juego. Los proyectiles siguen por codigo.
 - **Explosion que si encaja** (`ui/anim_boom.png`, fotogramas de 64x64): fotograma clave con
