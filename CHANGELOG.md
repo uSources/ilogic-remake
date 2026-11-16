@@ -7,6 +7,40 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.12.0] - 2026-11-16 — Una interfaz de juguete y un mar alrededor
+
+### Novedades
+- **Interfaz nueva, «caja de juguete»**: fichas redondeadas de color crema con borde oscuro y letra redonda. En pantalla solo quedan cuatro cosas: el dinero (su desglose al pasar el ratón), el día con su clima, el menú y «Fin del turno», ahora abajo a la derecha. Su número dice cuántas unidades quedan sin mover, y pulsarlo lleva a la siguiente.
+- **Sin menú de la unidad**: todo se hace tocando el tablero. Junto a la unidad elegida solo salen fichas para lo que no es un clic (capturar si ya está encima, bajar carga, reparar), y si no hay nada de eso, nada.
+- **Esperar es automático**: la unidad que se mueve y ya no puede hacer nada espera sola, y la que dejas tras moverla también. Ctrl+Z deshace el movimiento aunque ya haya esperado. Se puede apagar en Opciones, «Esperar sola al soltar».
+- **La rueda**: clic derecho (o mantener pulsado con el dedo) sobre una unidad o un grupo abre a su alrededor lo poco frecuente: esperar ahí, órdenes, escuadras (también elegir la escuadra entera), deshacer y disolver.
+- **Órdenes con un clic derecho**: con algo elegido, clic derecho (o F) en otra casilla le da la orden que tiene sentido allí: atacar al enemigo, capturar el edificio o defender.
+- **Comprar con retratos**: al tocar una fábrica sale una rejilla con cada unidad y su precio; las que no puedes pagar, en gris. Un toque compra y tocar fuera cierra.
+- **Los datos cuando los pides**: al parar el ratón sobre una casilla sale a su lado una ficha con la unidad y el terreno (con el dedo, al tocarla); con Alt, todos los datos. La previsión de combate enseña lo justo y el resto con Alt.
+- **Ver amenaza (T) en 3D**: marca en naranja a dónde pueden disparar los enemigos que ves. Está en el menú de la partida, junto a «Ver órdenes» (V).
+- **Cielo y mar**: el tablero ya no flota sobre un fondo azul. Ahora es una isla en un mar que llega al horizonte, con bajíos claros, espuma en la orilla e islotes de bloques alrededor, bajo un cielo de dibujo animado con nubes de bloques. El cielo cambia con el clima: gris con lluvia, oscuro con tormenta, blanco con nieve y ocre con la tormenta de arena. La cámara se puede inclinar más para verlo.
+
+### Interfaz
+- El cartel del día, los avisos, la pausa, la pantalla final, las opciones y los menús de inicio tienen la misma estética nueva.
+- Arrastrar con el botón derecho sigue girando la cámara; el clic derecho sin arrastrar es ahora la rueda o una orden.
+
+<!-- en -->
+
+### New
+- **New “toy box” interface**: rounded cream chips with a dark outline and a round font. Only four things stay on screen: funds (hover for the breakdown), the day with its weather, the menu and “End turn”, now at the bottom right. Its number says how many units haven't moved, and tapping it goes to the next one.
+- **No unit menu**: everything is done by clicking the board. Next to the selected unit only chips for what isn't a click appear (capture when already on it, unload, repair), and if there's none of that, nothing.
+- **Waiting is automatic**: a unit that moves and can do nothing else waits by itself, and so does one you leave after moving it. Ctrl+Z undoes the move even after it waited. Turn it off in Options, “Wait automatically on drop”.
+- **The wheel**: right-click (or press and hold with a finger) a unit or a group to open the rarely used actions around it: wait there, orders, squads (including picking the whole squad), undo and disband.
+- **Orders with a right-click**: with something selected, right-click (or F) another tile to give the order that makes sense there: attack the enemy, capture the building or hold there.
+- **Buying with portraits**: tapping a factory shows a grid of units with their price; the ones you can't afford are greyed out. One tap buys and tapping elsewhere closes it.
+- **Details when you ask for them**: resting the mouse on a tile shows a small card next to it with the unit and the terrain (with a finger, tap it); hold Alt for everything. The combat forecast shows the essentials and the rest with Alt.
+- **See the threat (T) in 3D**: tiles enemies you can see could shoot at turn orange. It's in the game menu, next to “Show orders” (V).
+- **Sky and sea**: the board no longer floats on a flat blue background. It's now an island in a sea that reaches the horizon, with light shallows, foam along the shore and block islets around it, under a cartoon sky with block clouds. The sky changes with the weather: grey in rain, dark in storms, white in snow and ochre in sandstorms. The camera can tilt lower to see it.
+
+### Interface
+- The day banner, notices, pause, end screen, options and start menus share the new look.
+- Dragging with the right button still turns the camera; a right-click without dragging is now the wheel or an order.
+
 ## [0.11.0] - 2026-11-16 — Órdenes, grupos y sonido
 
 ### Novedades
