@@ -224,6 +224,28 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   `src/hud/common/toy.tsx` (`Pill`, `Chip`): un color o una forma nuevos se añaden ahí, no sueltos en
   un componente.
 
+## Cielo y fondo
+
+Decidido con el usuario (16-11-2026): el tablero es **una isla de juguete en un mar que llega al
+horizonte**, bajo un cielo de dibujo animado. Se eligió frente a una tierra de bloques alrededor (el
+tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
+
+- **Cielo en bandas**: una cúpula con seis bandas secas del horizonte (claro) al cenit (azul), sin
+  degradado suave, como la sombra de dos tonos de las piezas. Sol **cuadrado** de píxel con un halo.
+- **Nubes de bloques**: losas blancas con bultos encima, con el material cartoon, bajas y lejos del
+  mapa para que se vean por encima del mar al inclinar la cámara; pasan despacio con el viento.
+- **Mar**: un plano por debajo del agua del tablero (se ve el borde de tierra, como un acantilado)
+  que recibe la sombra del mapa, con casillas un poco más claras u oscuras y los mismos brillos de
+  píxel que el agua del tablero. Su color va por tema: templado, turquesa en el desierto, verdoso en
+  el pantano y más frío con nieve.
+- **Niebla del horizonte**: del color de abajo del cielo, empieza pasado el mapa (nunca lo tapa) y
+  funde el mar con el cielo.
+- **Con el clima**: cielo, nubes y niebla cambian a la vez que la luz: gris y sin sol con lluvia,
+  oscuro con tormenta, blanco con nieve, ocre con la tormenta de arena.
+- Para ver el cielo, la cámara se puede inclinar hasta 12° sobre el suelo.
+- Código: `src/view3d/engine/core/sky.ts` (cielo y nubes), `engine/terrain/sea.ts` (mar) y los
+  colores de cada clima en `engine/core/world.ts` (`WEATHER_MOODS`).
+
 ## Cómo comprobarlo
 
 - Capturas de frente, de lado, de espaldas y **desde arriba como la cámara del juego** (elevación

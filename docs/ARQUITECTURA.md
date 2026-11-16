@@ -1100,8 +1100,8 @@ src/view3d/
 | `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien las escuadras de la bandeja y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`) |
 | `systems/sound/`, `systems/weather/` | que suena con cada cosa (`soundCues.ts`); como se ve cada clima (datos: `weatherStyles.ts`) |
 | `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
-| `engine/core/` | lienzo, escena, luz cartoon (y por clima) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`) |
-| `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas, agua, polvo de la arena |
+| `engine/core/` | lienzo, escena, luz cartoon (y por clima), cielo de bandas con nubes de bloques y niebla del horizonte (`sky.ts`) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`) |
+| `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas, agua, polvo de la arena, el mar alrededor del mapa (`sea.ts`) |
 | `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, barras, restos y rodadas |
 | `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`), la flecha y el fantasma al mover (`movePreview.ts`) y las flechas de las ordenes (`intentArrows.ts`; piezas comunes en `arrowParts.ts`), lluvia y nieve (`weather3d.ts`) |
 | `engine/camera/` | situa la camara de three.js en la pose que da `systems/camera` |
