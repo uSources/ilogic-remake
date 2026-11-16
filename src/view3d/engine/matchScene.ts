@@ -11,11 +11,12 @@ import type { Anchor } from '../../hud/store';
 import type { CameraPose, Point3 } from '../ports/camera';
 import type { FrameListener } from '../ports/frame';
 import type { EffectStage, PieceLookup, PieceStage, PuffKind } from '../ports/stage';
-import type { TileMarks } from '../ports/turn';
+import type { MovePreview, TileMarks } from '../ports/turn';
 import { ThreeCameraView } from './camera/cameraView';
 import { World } from './core/world';
 import { FxEffectStage } from './fx/effectStage';
 import { Highlights } from './fx/highlights';
+import { MovePreviewView } from './fx/movePreview';
 import { ParticleSystem } from './fx/particles';
 import { BoardPieceStage } from './fx/pieceStage';
 import { WeatherView } from './fx/weather3d';
@@ -51,6 +52,7 @@ export class MatchScene {
   readonly center: Point3;
   private readonly terrain: TerrainView;
   private readonly highlights: Highlights;
+  private readonly preview: MovePreviewView;
   private readonly effects = new THREE.Group();
   private readonly particles = new ParticleSystem();
   private readonly marks = new GroundMarks();
@@ -66,6 +68,7 @@ export class MatchScene {
     this.terrain = buildTerrain(state, glbModels);
     this.board = new BoardView(state, viewer, this.terrain, glbModels);
     this.highlights = new Highlights((pos) => this.board.groundOf(pos));
+    this.preview = new MovePreviewView(this.board);
     this.weather = new WeatherView(container);
     this.sandDust = new SandDust(this.terrain.sandTiles, (pos) => this.board.groundOf(pos));
     this.cameraView = new ThreeCameraView(this.world.camera);
@@ -73,6 +76,7 @@ export class MatchScene {
       this.terrain.object,
       this.board.object,
       this.highlights.object,
+      this.preview.object,
       this.effects,
       this.weather.object,
       this.sandDust.object,
@@ -102,6 +106,11 @@ export class MatchScene {
   /** Las marcas del tablero que pide el turno (alcance, objetivos, lo elegido). */
   get tileMarks(): TileMarks {
     return this.highlights;
+  }
+
+  /** La flecha del camino y el fantasma de la unidad que se va a mover. */
+  get movePreview(): MovePreview {
+    return this.preview;
   }
 
   /** El lienzo donde se dibuja (y donde se toca). */

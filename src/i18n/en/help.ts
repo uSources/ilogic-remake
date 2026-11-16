@@ -87,7 +87,7 @@ export const help: HelpTexts = {
   head: ['Action', 'Keyboard', 'Mouse / touch'],
   controls: (keys: KeyLabels) => [
     ['Select a unit', '—', 'Click it'],
-    ['Move it', '—', 'Click a blue tile'],
+    ['Move it', '—', 'Click a blue tile (hover to see the path arrow and its ghost where it ends; the path follows the mouse)'],
     ['Attack, capture, join, board', '—', 'Click the target and choose in the menu'],
     ['Choose in a menu', 'Enter', 'Click'],
     ['Back', keys.cancel, '—'],

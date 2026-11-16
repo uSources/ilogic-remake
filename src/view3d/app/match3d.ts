@@ -64,6 +64,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     session,
     viewer,
     marks: scene.tileMarks,
+    preview: scene.movePreview,
     events: { play: (events) => playEvents(events, stages) },
     sounds,
     refresh,
@@ -123,6 +124,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     if (isSame) return;
     cursor = pos;
     scene.hover(pos);
+    controls.hover(pos);
     publish();
   }
 

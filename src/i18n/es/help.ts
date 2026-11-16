@@ -89,7 +89,11 @@ export const help: HelpTexts = {
   head: ['Acción', 'Teclado', 'Ratón / táctil'],
   controls: (keys: KeyLabels) => [
     ['Elegir una unidad', '—', 'Clic en ella'],
-    ['Moverla', '—', 'Clic en una casilla azul'],
+    [
+      'Moverla',
+      '—',
+      'Clic en una casilla azul (al pasar por encima, la flecha del camino y su fantasma donde llega; el camino sigue al ratón)',
+    ],
     ['Atacar, capturar, unir, subir', '—', 'Clic en el objetivo y elegir en el menú'],
     ['Elegir en un menú', 'Enter', 'Clic'],
     ['Atrás', keys.cancel, '—'],
