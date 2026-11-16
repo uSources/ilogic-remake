@@ -20,6 +20,7 @@ import { resolveRuleset, type Ruleset } from './ruleset';
 import { NO_FOG } from './noFog';
 import { NO_HEAL_UNDER_FIRE } from './noHealUnderFire';
 import { PASS_ALLIES } from './passAllies';
+import { RELIEF } from './relief';
 import { TERRAIN_COST } from './terrainCost';
 import { UPKEEP } from './upkeep';
 import { VETERANCY } from './veterancy';
@@ -46,6 +47,7 @@ export const RULE_MODULES: readonly RuleModule[] = [
   COUNTERATTACK,
   BOUNTY,
   ELEVATION,
+  RELIEF,
 ];
 
 /**

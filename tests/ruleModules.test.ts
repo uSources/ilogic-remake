@@ -54,12 +54,13 @@ describe('modulos de reglas (RULE_MODULES)', () => {
   });
 
   it('todos los modulos con interruptor estan en la prueba', () => {
-    const switched = RULE_MODULES.map((module) => module.id).filter((id) => id !== 'generals' && id !== 'noFog');
+    const switched = RULE_MODULES.map((module) => module.id).filter((id) => id !== 'generals' && id !== 'noFog' && id !== 'relief');
     expect(Object.keys(SWITCHED_OFF).sort()).toEqual([...switched].sort());
   });
 
-  it('los generales van siempre; sin niebla, el modulo que lo enseña todo', () => {
+  it('los generales y el relieve van siempre; sin niebla, el modulo que lo enseña todo', () => {
     expect(isRuleOn(blankState(DEFAULTS), 'generals')).toBe(true);
+    expect(isRuleOn(blankState(DEFAULTS), 'relief')).toBe(true);
     expect(isRuleOn(blankState(DEFAULTS), 'noFog')).toBe(false);
     expect(isRuleOn(blankState(settingsWith(defaultContent(), { fog: false })), 'noFog')).toBe(true);
   });

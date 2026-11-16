@@ -33,6 +33,8 @@ export interface MapgenDef {
   minLandTiles: number;
   /** El tipo de movimiento con el que se mide lo que se pisa a pie (las salidas, la tierra): id de movements.json. */
   landMovement: string;
+  /** [CAMBIO] El tipo de movimiento que tiene que poder cruzar entre sierras: donde una cordillera corta su camino, se abre un paso. */
+  passMovement: string;
   /** Distancia minima entre dos salidas en un mapa de 32 (se escala con el lado). */
   minSpawnDistance: number;
   /** Donde pone los puntos de control (regla controlPoints). */
@@ -74,6 +76,7 @@ export function validateMapgen(settings: MapgenDef, context: ContentContext, che
   for (const field of ['minSpawnWalkable', 'minSpawnBuildable', 'minLandTiles'] as const)
     scope.num(field, settings?.[field], { min: 0, int: true });
   scope.known('landMovement', settings?.landMovement, context.movementIds, 'el movimiento ');
+  scope.known('passMovement', settings?.passMovement, context.movementIds, 'el movimiento ');
   scope.num('minSpawnDistance', settings?.minSpawnDistance, { min: 1, int: true });
   validateControlPointPlacement(check, settings?.controlPoints);
 }

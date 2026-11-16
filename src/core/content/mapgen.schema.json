@@ -15,7 +15,8 @@
     "minLandTiles",
     "minSpawnDistance",
     "controlPoints",
-    "landMovement"
+    "landMovement",
+    "passMovement"
   ],
   "definitions": {
     "range": {
@@ -82,6 +83,10 @@
     "landMovement": {
       "type": "string",
       "description": "Tipo de movimiento (movements.json) con el que se mide lo que se pisa a pie: las salidas y la tierra del mapa."
+    },
+    "passMovement": {
+      "type": "string",
+      "description": "Tipo de movimiento (movements.json) que tiene que poder cruzar entre sierras: donde una cordillera corta su camino, se abre un paso."
     },
     "minSpawnDistance": {
       "type": "integer",

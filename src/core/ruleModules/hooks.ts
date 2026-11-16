@@ -252,6 +252,7 @@ export interface RuleModuleIds {
   counterattack: true;
   bounty: true;
   elevation: true;
+  relief: true;
 }
 
 /**

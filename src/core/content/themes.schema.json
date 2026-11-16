@@ -55,7 +55,22 @@
                 "type": ["string", "null"],
                 "description": "En lo que se convierte el agua junto a tierra (null = no cambia)."
               },
-              "deepWater": { "$ref": "#/definitions/terrain", "description": "En lo que se convierte el agua rodeada de agua." }
+              "deepWater": { "$ref": "#/definitions/terrain", "description": "En lo que se convierte el agua rodeada de agua." },
+              "mountains": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["terrain", "share", "spacing"],
+                "description": "Las cordilleras: se levantan donde el ruido de crestas es mas alto (sin el, el tema no tiene montañas).",
+                "properties": {
+                  "terrain": { "$ref": "#/definitions/terrain", "description": "El terreno de la montaña." },
+                  "share": { "type": "number", "minimum": 0, "maximum": 1, "description": "La parte de la tierra que es montaña." },
+                  "spacing": {
+                    "type": "number",
+                    "minimum": 2,
+                    "description": "Cada cuantas casillas cambia el ruido (lo largas que son las sierras)."
+                  }
+                }
+              }
             }
           }
         }
