@@ -64,18 +64,18 @@ const CORE_FACADES_ONLY = [
  * tests, no del juego: ningun fichero de src/ lo importa, con la ruta que sea (con o sin `.ts`, por alias).
  */
 /**
- * La capa del motor de la vista 3D: los unicos ficheros que pueden importar three.js. Hoy es la lista
- * de los que ya lo hacian; la reorganizacion (docs/PLAN-VISTA3D.md) los lleva a src/view3d/engine/,
- * saca de ellos la logica que aun mezclan y deja aqui solo esa carpeta. No añadir ficheros a mano: uno
- * nuevo que dibuje va al motor; uno que decida, a su sistema, sin three.js.
+ * La capa del motor de la vista 3D: los unicos ficheros que pueden importar three.js. Es la carpeta
+ * src/view3d/engine/ y el playground de modelos (una herramienta, usa el motor directamente). No añadir
+ * ficheros a mano: uno nuevo que dibuje va al motor; uno que decida, a su sistema (systems/), sin
+ * three.js; lo que se piden entre los dos, a un puerto (ports/).
  */
-const ENGINE_FILES = [
-  'src/view3d/engine/**/*.ts',
-  // La raiz de composicion aun crea objetos del motor: sale de aqui al pasarlos a engine/matchScene.ts.
-  'src/view3d/app/match3d.ts',
-  'src/view3d/playground/main.ts',
-  'src/view3d/playground/stage.ts',
-];
+const ENGINE_FILES = ['src/view3d/engine/**/*.ts', 'src/view3d/playground/main.ts', 'src/view3d/playground/stage.ts'];
+/** Los sistemas de la vista 3D (y los puertos) no conocen el motor: le piden por un puerto (ports/), que el motor implementa. */
+const SYSTEMS_ASK_BY_PORTS = {
+  group: ['**/engine', '**/engine/*', '**/engine/**'],
+  message:
+    'Un sistema de la vista 3D no importa el motor (src/view3d/engine/): pide lo que necesita por un puerto de src/view3d/ports/ que el motor implementa, y la raiz de composicion (app/) los junta (docs/ARQUITECTURA.md, "Vista 3D").',
+};
 /** Fuera del motor, la vista decide sin three.js y le pide lo que quiere por interfaces (puertos). */
 const ONLY_THE_ENGINE_DRAWS = {
   group: ['three', 'three/*'],
@@ -402,6 +402,16 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         { patterns: [...CORE_FACADES_ONLY, ...ROOT_STEPS, MEASURING_IS_NOT_THE_GAME, ONLY_THE_ENGINE_DRAWS] },
+      ],
+    },
+  },
+  {
+    // Sistemas y puertos de la vista 3D: sin three.js y sin el motor (solo por puertos).
+    files: ['src/view3d/systems/**/*.ts', 'src/view3d/ports/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [...CORE_FACADES_ONLY, ...ROOT_STEPS, MEASURING_IS_NOT_THE_GAME, ONLY_THE_ENGINE_DRAWS, SYSTEMS_ASK_BY_PORTS] },
       ],
     },
   },

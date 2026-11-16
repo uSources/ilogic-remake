@@ -2487,7 +2487,7 @@ const UNITS = {
   THelicopter: helicopter,
 };
 
-/** Los tipos con modelo (para el juego: src/view3d/glbModels.ts los carga todos). */
+/** Los tipos con modelo (para el juego: src/view3d/engine/pieces/glbModels.ts los carga todos). */
 export const UNIT_IDS = Object.keys(UNITS);
 
 export const MODELS = Object.fromEntries(

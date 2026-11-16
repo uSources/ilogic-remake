@@ -8,7 +8,7 @@ import type { InputCommand, InputCommandKind } from '../../../controls/inputComm
 import { keyCommand } from '../../../controls/keyboard';
 import { settings } from '../../../settings';
 import type { CameraControls } from '../camera/strategyCamera';
-import type { FrameListener } from '../../engine/core/world';
+import type { FrameListener } from '../../ports/frame';
 
 /** Lo que hace la rueda por cada pulsacion de las teclas de acercar y alejar. */
 const KEY_ZOOM_STEP = 250;
