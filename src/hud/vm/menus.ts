@@ -16,7 +16,8 @@ export interface MenuItemVM {
 }
 
 export interface MenuVM {
-  kind: 'unit' | 'game' | 'buy' | 'cargo';
+  /** `actions`: la barra de acciones de la unidad elegida (en fila, junto a ella). */
+  kind: 'actions' | 'unit' | 'game' | 'buy' | 'cargo';
   title?: string;
   subtitle?: string;
   /** Lineas extra (objetivo de la mision) en el panel de pausa. */

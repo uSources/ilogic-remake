@@ -88,9 +88,14 @@ export const help: HelpTexts = {
   controls: (keys: KeyLabels) => [
     ['Select a unit', '—', 'Click it'],
     ['Move it', '—', 'Click a blue tile (hover to see the path arrow and its ghost where it ends; the path follows the mouse)'],
-    ['Attack, capture, join, board', '—', 'Click the target and choose in the menu'],
-    ['Choose in a menu', 'Enter', 'Click'],
-    ['Back', keys.cancel, '—'],
+    [
+      'Attack, capture, join, board',
+      '—',
+      'With the unit selected, click the target: a red enemy, a building (goes and captures), a transport (boards) or a matching unit (joins)',
+    ],
+    ['Wait, repair, unload, undo...', 'Enter (the highlighted one)', 'The bar next to the selected unit: only what is valid there'],
+    ['Let go of the unit', keys.cancel, 'Click it again'],
+    ['Undo the last move', keys.cancel, '“Undo” in the bar'],
     ['Next unit that has not moved', keys.nextUnit, '—'],
     ['Move the camera', 'Arrows / WASD', 'Drag (left or middle button)'],
     ['Turn the camera', '—', 'Drag with the right button'],

@@ -1,10 +1,11 @@
 /**
- * Lo que hace la persona en el 3D, como en 2D pero con menos fases: tocar una unidad suya la elige y
- * enseña a donde llega (azul) y a quien puede atacar (rojo); tocar una casilla azul la mueve y abre
- * su menu (el del juego: availableActions, con «Atras»); tocar un enemigo en rojo va y le ataca;
- * tocar una fabrica propia abre la compra. Las reglas las dice siempre el nucleo: aqui solo se
- * mandan acciones por la sesion (`session.act`) y se animan sus sucesos. Tambien lleva los turnos
- * de los demas (la IA), animando cada cosa que hacen.
+ * Lo que hace la persona en el 3D. Tocar una unidad suya la elige: enseña a donde llega (azul), a
+ * quien puede atacar (rojo) y una barra con lo que puede hacer ahi (unitBar.ts). Con una elegida, un
+ * clic acierta solo segun lo que hay en la casilla (clickIntent.ts): ir, atacar, subir a un
+ * transporte, unirse, capturar al llegar a un edificio, o soltarla. Tocar una fabrica propia abre la
+ * compra. Las reglas las dice siempre el nucleo: aqui solo se mandan acciones por la sesion
+ * (`session.act`) y se animan sus sucesos. Tambien lleva los turnos de los demas (la IA), animando
+ * cada cosa que hacen.
  */
 import type { SoundPort } from '../../../audio/sounds';
 import { availableActions } from '../../../core/actions';
@@ -16,18 +17,19 @@ import {
   buyOptions,
   canBuyAt,
   canMoveNow,
-  canReach,
   canStillAct,
-  lastUndoableMove,
+  cargoUnits,
+  isOnMap,
   moveRange,
   reachableTiles,
   unitAt,
+  unloadTiles,
   type BuyOption,
   type MoveRange,
 } from '../../../core/rules';
 import type { GameSession } from '../../../core/session';
 import { showBanner, showToast, type MenuItemVM } from '../../../hud/store';
-import { buyItem, unitMenuItems, withBack, type ActionKey } from './menuItems';
+import { barItems, buyItem } from './menuItems';
 import { fmtNum, nameOf, t } from '../../../settings';
 import { buyBlockedText } from '../../../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
@@ -36,26 +38,29 @@ import { endSound } from '../sound/soundCues';
 import { attackPlan, type AttackPlan } from './attackPlan';
 import type { EventPlayer, MovePreview, TileMarks } from '../../ports/turn';
 import { pathFor, previewAt } from './movePreview';
+import { clickIntent, type ClickIntent } from './clickIntent';
+import { barOptions, SINGLE_ACTIONS, type BarOption } from './unitBar';
 
-/** Las opciones del menu de la unidad que el prototipo ya sabe hacer (las demas no salen). */
-const SUPPORTED_OPTIONS: ReadonlySet<ActionKey> = new Set<ActionKey>(['attack', 'capture', 'supply', 'wait', 'back']);
 /** En la compra, la primera fila es «Cancelar». */
 const CANCEL_ROW = 0;
 
 type Mode =
   | { kind: 'idle' }
-  /** `trail`: el camino trazado con el cursor (empieza en la unidad). */
-  | { kind: 'move'; unit: Unit; range: MoveRange; trail: Pos[] }
-  | { kind: 'unitMenu'; unit: Unit; options: ActionKey[]; selected: number }
-  | { kind: 'target'; unit: Unit; targets: Unit[] }
+  /**
+   * Una unidad propia elegida: `range`, a donde llega (null si ya no puede moverse); `trail`, el camino
+   * trazado con el cursor; `options`, su barra de acciones y `selected`, la señalada en ella.
+   */
+  | { kind: 'unit'; unit: Unit; range: MoveRange | null; trail: Pos[]; options: BarOption[]; selected: number }
+  /** Elegir la casilla donde bajar a `passenger` del transporte `unit`. */
+  | { kind: 'unload'; unit: Unit; passenger: Unit; tiles: Pos[] }
   | { kind: 'buy'; building: Building; options: BuyOption[]; selected: number };
 
-type MoveMode = Extract<Mode, { kind: 'move' }>;
+type UnitMode = Extract<Mode, { kind: 'unit' }>;
 
-/** El menu abierto, para la interfaz (el bocadillo del juego, junto a la casilla `at`). */
+/** El menu abierto, para la interfaz (junto a la casilla `at`). */
 export interface MenuView {
-  /** De la unidad, de compra o de pausa (este, de matchMenus.ts). */
-  kind: 'unit' | 'buy' | 'game';
+  /** La barra de la unidad, la compra o la pausa (esta, de matchMenus.ts). */
+  kind: 'actions' | 'buy' | 'game';
   title: string;
   subtitle?: string;
   /** Lineas extra (el objetivo de la mision, en la pausa). */
@@ -143,11 +148,10 @@ export class TurnControls {
     switch (mode.kind) {
       case 'idle':
         return this.tapIdle(pos);
-      case 'move':
-        return this.tapMoving(mode, pos);
-      case 'target':
-        return this.tapTarget(mode.unit, mode.targets, pos);
-      case 'unitMenu':
+      case 'unit':
+        return this.tapWithUnit(mode, pos);
+      case 'unload':
+        return this.tapUnload(mode.unit, mode.passenger, mode.tiles, pos);
       case 'buy':
         return void this.cancel();
     }
@@ -163,29 +167,54 @@ export class TurnControls {
 
   private chooseOwnUnit(unit: Unit): void {
     this.host.sounds.play('unit_select');
-    if (canMoveNow(unit)) return this.startMoving(unit);
-    if (canStillAct(unit)) return this.openUnitMenu(unit);
-    this.setMode({ kind: 'idle' });
+    this.select(unit);
   }
 
-  private startMoving(unit: Unit): void {
-    this.setMode({ kind: 'move', unit, range: moveRange(this.s, unit), trail: [{ x: unit.x, y: unit.y }] });
+  /**
+   * Elige la unidad (con su alcance, si aun se mueve, y su barra). Si ya no esta en el tablero (ha
+   * subido a un transporte, se ha unido a otra, ha caido) o no puede hacer nada mas, nada elegido.
+   */
+  private select(unit: Unit): void {
+    const isStillHere = this.s.units.includes(unit) && isOnMap(unit);
+    if (!isStillHere || !canStillAct(unit)) return this.setMode({ kind: 'idle' });
+    const range = canMoveNow(unit) ? moveRange(this.s, unit) : null;
+    const options = barOptions(this.s, this.host.viewer, unit);
+    // Encima de un edificio que se puede capturar, lo normal es capturar (Intro lo hace).
+    const selected = Math.max(0, options.indexOf('capture'));
+    this.setMode({ kind: 'unit', unit, range, trail: [{ x: unit.x, y: unit.y }], options, selected });
   }
 
-  private async tapMoving({ unit, range, trail }: MoveMode, pos: Pos): Promise<void> {
-    if (samePos(pos, unit)) return this.openUnitMenu(unit);
-    const plan = this.planAt(unit, range, pos);
-    if (plan) return this.moveAndAttack(plan, range, trail);
-    if (canReach(range, pos)) return this.moveTo(unit, pathFor(range, trail, pos));
-    this.setMode({ kind: 'idle' });
-    this.tapIdle(pos);
+  private async tapWithUnit(mode: UnitMode, pos: Pos): Promise<void> {
+    const intent = clickIntent(this.s, this.host.viewer, mode, pos, this.planAt(mode.unit, mode.range, pos));
+    await this.carryOut(mode, intent, pos);
   }
 
-  private async tapTarget(unit: Unit, targets: readonly Unit[], pos: Pos): Promise<void> {
-    const target = targets.find((candidate) => samePos(candidate, pos));
-    if (!target) return this.openUnitMenu(unit);
-    this.setMode({ kind: 'idle' });
-    await this.perform({ kind: 'attack', uid: unit.uid, target: target.uid });
+  /** Cumple lo que dice el clic (clickIntent.ts). */
+  private async carryOut(mode: UnitMode, intent: ClickIntent, pos: Pos): Promise<void> {
+    const { unit } = mode;
+    switch (intent.kind) {
+      case 'deselect':
+        return this.setMode({ kind: 'idle' });
+      case 'attack':
+        return this.moveAndAttack(intent.plan, mode);
+      case 'load':
+        return this.actThenSelect(unit, { kind: 'load', uid: unit.uid, into: intent.into.uid });
+      case 'merge':
+        return this.actThenSelect(unit, { kind: 'merge', uid: unit.uid, into: intent.into.uid });
+      case 'move':
+        return this.moveTo(mode, intent.to, intent.thenCapture);
+      case 'elsewhere':
+        this.setMode({ kind: 'idle' });
+        return this.tapIdle(pos);
+      default:
+        return intent satisfies never;
+    }
+  }
+
+  private async tapUnload(transport: Unit, passenger: Unit, tiles: readonly Pos[], pos: Pos): Promise<void> {
+    const to = tiles.find((tile) => samePos(tile, pos));
+    if (!to) return this.select(transport);
+    await this.actThenSelect(transport, { kind: 'unload', uid: transport.uid, passenger: passenger.uid, to });
   }
 
   /** El plan de ataque a un enemigo visible en `pos` (null si no hay o no se le puede atacar). */
@@ -199,10 +228,7 @@ export class TurnControls {
   /** Lo que la interfaz enseña como prevision de combate al pasar por `pos` (null si no hay combate ahi). */
   forecastAt(pos: Pos): AttackPlan | null {
     const mode = this.mode;
-    if (mode.kind === 'move') return this.planAt(mode.unit, mode.range, pos);
-    if (mode.kind !== 'target') return null;
-    const target = mode.targets.find((candidate) => samePos(candidate, pos));
-    return target ? { attacker: mode.unit, from: { x: mode.unit.x, y: mode.unit.y }, target } : null;
+    return mode.kind === 'unit' ? this.planAt(mode.unit, mode.range, pos) : null;
   }
 
   // ---- Acciones ----
@@ -223,28 +249,31 @@ export class TurnControls {
     return true;
   }
 
-  private async moveTo(unit: Unit, path: Pos[]): Promise<void> {
+  /** Hace la accion con la unidad y, si aun puede hacer algo, la deja elegida (con su barra al dia). */
+  private async actThenSelect(unit: Unit, action: GameAction): Promise<void> {
     this.setMode({ kind: 'idle' });
-    const to = path.at(-1) ?? { x: unit.x, y: unit.y };
-    if (!(await this.perform({ kind: 'move', uid: unit.uid, to, path }))) return;
-    if (canStillAct(unit)) this.openUnitMenu(unit);
+    if (await this.perform(action)) this.select(unit);
   }
 
-  private async moveAndAttack(plan: AttackPlan, range: MoveRange, trail: readonly Pos[]): Promise<void> {
+  /** Va a `to` por el camino trazado; si es un edificio ajeno y al llegar puede capturarlo, empieza. */
+  private async moveTo({ unit, range, trail }: UnitMode, to: Pos, thenCapture: boolean): Promise<void> {
+    if (!range) return;
+    this.setMode({ kind: 'idle' });
+    if (!(await this.perform({ kind: 'move', uid: unit.uid, to, path: pathFor(range, trail, to) }))) return;
+    const canCapture = thenCapture && availableActions(this.s, this.host.viewer, unit).includes('capture');
+    if (canCapture) return this.actThenSelect(unit, { kind: 'capture', uid: unit.uid });
+    this.select(unit);
+  }
+
+  private async moveAndAttack(plan: AttackPlan, { range, trail }: UnitMode): Promise<void> {
     const { attacker, from, target } = plan;
     this.setMode({ kind: 'idle' });
-    const mustMove = !samePos(from, attacker);
+    const mustMove = !samePos(from, attacker) && range;
     if (mustMove && !(await this.perform({ kind: 'move', uid: attacker.uid, to: from, path: pathFor(range, trail, from) }))) return;
-    await this.perform({ kind: 'attack', uid: attacker.uid, target: target.uid });
+    await this.actThenSelect(attacker, { kind: 'attack', uid: attacker.uid, target: target.uid });
   }
 
-  // ---- Menus ----
-
-  private openUnitMenu(unit: Unit): void {
-    const options = withBack(availableActions(this.s, this.host.viewer, unit)).filter((option) => SUPPORTED_OPTIONS.has(option));
-    // Encima de un edificio que se puede capturar, lo normal es capturar (como en 2D).
-    this.setMode({ kind: 'unitMenu', unit, options, selected: Math.max(0, options.indexOf('capture')) });
-  }
+  // ---- Barra de acciones y compra ----
 
   private openBuy(building: Building): void {
     const options = buyOptions(this.s, building);
@@ -252,46 +281,70 @@ export class TurnControls {
     this.setMode({ kind: 'buy', building, options, selected: firstAffordable >= 0 ? firstAffordable + 1 : CANCEL_ROW });
   }
 
-  /** El menu abierto, si hay uno. */
+  /** El menu abierto, si hay uno: la barra de la unidad elegida, la de bajar a un pasajero o la compra. */
   menu(): MenuView | null {
     const mode = this.mode;
-    if (mode.kind === 'unitMenu') {
-      const title = nameOf(unitTypeOf(this.s, mode.unit));
-      return { kind: 'unit', title, items: unitMenuItems(this.s, mode.unit, mode.options), selected: mode.selected, at: mode.unit };
+    switch (mode.kind) {
+      case 'unit':
+        return this.unitBar(mode);
+      case 'unload': {
+        const title = t('unloadPick').replace('{name}', nameOf(unitTypeOf(this.s, mode.passenger)));
+        return { kind: 'actions', title, items: [{ id: 'back', label: t('back') }], selected: 0, at: mode.unit };
+      }
+      case 'buy':
+        return this.buyMenu(mode.building, mode.options, mode.selected);
+      case 'idle':
+        return null;
+      default:
+        return mode satisfies never;
     }
-    if (mode.kind !== 'buy') return null;
-    const items = [{ id: 'cancel', label: t('cancel'), icon: null }, ...mode.options.map((option) => buyItem(this.s, option))];
-    const title = nameOf(buildingTypeOf(this.s, mode.building));
+  }
+
+  private unitBar({ unit, options, selected }: UnitMode): MenuView | null {
+    if (!options.length) return null;
+    const items = barItems(this.s, unit, options);
+    return { kind: 'actions', title: nameOf(unitTypeOf(this.s, unit)), items, selected, at: unit };
+  }
+
+  private buyMenu(building: Building, options: readonly BuyOption[], selected: number): MenuView {
+    const items = [{ id: 'cancel', label: t('cancel'), icon: null }, ...options.map((option) => buyItem(this.s, option))];
+    const title = nameOf(buildingTypeOf(this.s, building));
     const subtitle = `${t('funds')}: ${fmtNum(teamState(this.s, this.host.viewer).funds)}`;
-    return { kind: 'buy', title, subtitle, items, selected: mode.selected, at: mode.building };
+    return { kind: 'buy', title, subtitle, items, selected, at: building };
   }
 
   hoverMenu(index: number): void {
     const mode = this.mode;
-    if (mode.kind !== 'unitMenu' && mode.kind !== 'buy') return;
+    if (mode.kind !== 'unit' && mode.kind !== 'buy') return;
     this.setMode({ ...mode, selected: index });
   }
 
   pickMenu(index: number): void {
     if (this.isBusy) return;
     const mode = this.mode;
-    if (mode.kind === 'unitMenu') void this.pickUnitOption(mode.unit, mode.options[index]);
+    if (mode.kind === 'unit') void this.pickBarOption(mode.unit, mode.options[index]);
+    if (mode.kind === 'unload') this.select(mode.unit);
     if (mode.kind === 'buy') void this.pickBuy(mode.building, mode.options[index - 1]);
   }
 
   /** Elegir la opcion señalada (Intro). */
   acceptMenu(): void {
     const mode = this.mode;
-    if (mode.kind === 'unitMenu' || mode.kind === 'buy') this.pickMenu(mode.selected);
+    if (mode.kind === 'unit' || mode.kind === 'buy') this.pickMenu(mode.selected);
   }
 
-  private async pickUnitOption(unit: Unit, option: ActionKey | undefined): Promise<void> {
-    if (option === 'attack') return this.setMode({ kind: 'target', unit, targets: attackTargets(this.s, unit) });
-    if (option === 'back') return this.back(unit);
-    const action = UNIT_ACTIONS[option as keyof typeof UNIT_ACTIONS] as ((unit: Unit) => GameAction) | undefined;
-    if (!action) return;
-    this.setMode({ kind: 'idle' });
-    await this.perform(action(unit));
+  private async pickBarOption(unit: Unit, option: BarOption | undefined): Promise<void> {
+    if (!option) return;
+    if (option === 'unload') return this.startUnloading(unit);
+    const action = SINGLE_ACTIONS[option];
+    if (action) await this.actThenSelect(unit, action(unit));
+  }
+
+  /** Desembarcar: el primer pasajero que puede bajar, y en que casillas. */
+  private startUnloading(transport: Unit): void {
+    const passenger = cargoUnits(this.s, transport).find((cargo) => unloadTiles(this.s, transport, cargo).length > 0);
+    if (!passenger) return;
+    this.setMode({ kind: 'unload', unit: transport, passenger, tiles: unloadTiles(this.s, transport, passenger) });
   }
 
   private async pickBuy(building: Building, option: BuyOption | undefined): Promise<void> {
@@ -302,22 +355,16 @@ export class TurnControls {
     if (bought) this.host.sounds.play('spawn');
   }
 
-  /** «Atras»: deshace el movimiento (la accion 'undoMove' del nucleo) y vuelve a elegir a donde ir. */
-  private async back(unit: Unit): Promise<void> {
-    const canUndo = lastUndoableMove(this.s)?.uid === unit.uid;
-    if (canUndo && !(await this.perform({ kind: 'undoMove', uid: unit.uid }))) return;
-    if (canMoveNow(unit)) return this.startMoving(unit);
-    this.setMode({ kind: 'idle' });
-  }
-
-  /** Esc o tocar fuera: un paso atras en lo que se estaba haciendo. */
-  /** Deshace lo elegido (un paso atras); false si no habia nada elegido (Esc abre entonces la pausa). */
+  /**
+   * Esc: un paso atras. Con una unidad elegida que se acaba de mover, deshace el movimiento; si no, la
+   * suelta. false si no habia nada elegido (Esc abre entonces la pausa).
+   */
   cancel(): boolean {
     if (this.isBusy) return true;
     const mode = this.mode;
     if (mode.kind === 'idle') return false;
-    if (mode.kind === 'unitMenu') void this.back(mode.unit);
-    else if (mode.kind === 'target') this.openUnitMenu(mode.unit);
+    if (mode.kind === 'unit' && mode.options.includes('undo')) void this.actThenSelect(mode.unit, { kind: 'undoMove', uid: mode.unit.uid });
+    else if (mode.kind === 'unload') this.select(mode.unit);
     else this.setMode({ kind: 'idle' });
     return true;
   }
@@ -340,10 +387,10 @@ export class TurnControls {
 
   // ---- Señalar ----
 
-  /** La casilla señalada (raton encima): con una unidad elegida para mover, por donde iria y a donde llegaria. */
+  /** La casilla señalada (raton encima): con una unidad elegida que aun se mueve, por donde iria y a donde llegaria. */
   hover(pos: Pos | null): void {
     const mode = this.mode;
-    if (mode.kind !== 'move' || !pos || this.isBusy) return this.host.preview.show(null);
+    if (mode.kind !== 'unit' || !mode.range || !pos || this.isBusy) return this.host.preview.show(null);
     const attackFrom = this.planAt(mode.unit, mode.range, pos)?.from ?? null;
     const { trail, look } = previewAt(mode.unit.uid, mode.range, mode.trail, pos, attackFrom);
     this.mode = { ...mode, trail };
@@ -362,25 +409,24 @@ export class TurnControls {
     const mode = this.mode;
     const { marks } = this.host;
     this.host.preview.show(null);
-    marks.showReach(mode.kind === 'move' ? reachableTiles(mode.range) : []);
+    marks.showReach(this.reachTiles());
     marks.showTargets(this.targetTiles());
     marks.select('unit' in mode ? mode.unit : 'building' in mode ? mode.building : null);
   }
 
+  /** En azul: a donde llega la elegida, o donde se puede bajar al pasajero. */
+  private reachTiles(): Pos[] {
+    const mode = this.mode;
+    if (mode.kind === 'unload') return mode.tiles;
+    return mode.kind === 'unit' && mode.range ? reachableTiles(mode.range) : [];
+  }
+
   private targetTiles(): Pos[] {
     const mode = this.mode;
-    if (mode.kind === 'target') return mode.targets;
-    if (mode.kind !== 'move') return [];
-    return attackTargetsFromRange(this.s, mode.unit, mode.range).filter((target) => attackPlan(this.s, mode.unit, mode.range, target));
+    if (mode.kind !== 'unit') return [];
+    return attackTargetsFromRange(this.s, mode.unit, mode.range);
   }
 }
-
-/** Lo que manda cada opcion del menu que se cumple con una sola accion. */
-const UNIT_ACTIONS = {
-  capture: (unit: Unit): GameAction => ({ kind: 'capture', uid: unit.uid }),
-  supply: (unit: Unit): GameAction => ({ kind: 'supply', uid: unit.uid }),
-  wait: (unit: Unit): GameAction => ({ kind: 'wait', uid: unit.uid }),
-} as const;
 
 /** Los enemigos visibles a los que podria llegar a atacar este turno (moviendose o no). */
 function attackTargetsFromRange(s: Parameters<typeof attackTargets>[0], unit: Unit, range: MoveRange | null): Unit[] {
