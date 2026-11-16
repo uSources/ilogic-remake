@@ -10,12 +10,13 @@ attribute float aAlpha;
 attribute float aSize;
 attribute vec3 aColor;
 uniform float uScale;
+uniform float uNearest;
 varying float vAlpha;
 varying vec3 vColor;
 void main() {
   vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * viewPosition;
-  gl_PointSize = aSize * uScale / -viewPosition.z;
+  gl_PointSize = aSize * uScale / max(-viewPosition.z, uNearest);
   vAlpha = aAlpha;
   vColor = aColor;
 }
@@ -32,6 +33,9 @@ void main() {
 }
 `;
 
+/** Sin tope de cerca: solo evita dividir por cero. */
+const NO_NEAREST = 0.01;
+
 export class PixelPoints {
   readonly object: THREE.Points;
   readonly positions: Float32Array;
@@ -41,7 +45,14 @@ export class PixelPoints {
   readonly colors: Float32Array;
   private readonly material: THREE.ShaderMaterial;
 
-  constructor(readonly count: number) {
+  /**
+   * `nearest`: a menos de esa distancia de la camara (casillas) ya no crecen. Sin el, una particula que
+   * pasa pegada a la camara (la nieve, con la camara baja) tapa media pantalla.
+   */
+  constructor(
+    readonly count: number,
+    nearest = NO_NEAREST,
+  ) {
     this.positions = new Float32Array(count * 3);
     this.alphas = new Float32Array(count);
     this.sizes = new Float32Array(count);
@@ -54,7 +65,7 @@ export class PixelPoints {
     this.material = new THREE.ShaderMaterial({
       vertexShader: VERTEX,
       fragmentShader: FRAGMENT,
-      uniforms: { uColor: { value: new THREE.Color() }, uOpacity: { value: 1 }, uScale: { value: 1 } },
+      uniforms: { uColor: { value: new THREE.Color() }, uOpacity: { value: 1 }, uScale: { value: 1 }, uNearest: { value: nearest } },
       transparent: true,
       depthWrite: false,
     });

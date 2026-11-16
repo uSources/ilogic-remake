@@ -22,6 +22,8 @@ const FLAKE_SIZE = 0.11;
 /** Tamaño de las nubes de polvo de la tormenta de arena: casillas por cada pixel del estilo 2D. */
 const DUST_TILES_PER_PIXEL = 0.012;
 const FLASH_FADE = 4;
+/** A menos de esta distancia de la camara (casillas) los copos y el polvo ya no crecen: son tiempo, no piedras. */
+const NEAREST_PARTICLE = 12;
 
 interface Drop {
   position: THREE.Vector3;
@@ -45,8 +47,8 @@ export class WeatherView {
 
   constructor(overlayParent: HTMLElement, maxDrops = 1200) {
     this.streaks = streakLines(maxDrops);
-    this.flakes = new PixelPoints(maxDrops);
-    this.clouds = new PixelPoints(64);
+    this.flakes = new PixelPoints(maxDrops, NEAREST_PARTICLE);
+    this.clouds = new PixelPoints(64, NEAREST_PARTICLE);
     this.object.add(this.streaks, this.flakes.object, this.clouds.object);
     this.veil = overlay(overlayParent);
     this.flash = overlay(overlayParent);
