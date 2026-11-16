@@ -1,6 +1,6 @@
 /**
  * Lo que el turno (turnControls.ts, un sistema: decide sin three.js) pide al motor de la vista. Las
- * implementa el motor (highlights.ts, animations.ts) y las junta match3d.ts; los tests usan unas
+ * implementa el motor (highlights.ts; los sucesos, systems/events con engine/fx) y las junta match3d.ts; los tests usan unas
  * falsas que apuntan lo que se les pide (docs/PLAN-VISTA3D.md, "Los puertos").
  */
 import type { GameEvent, Pos } from '../core/model';

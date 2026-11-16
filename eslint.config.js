@@ -70,7 +70,6 @@ const CORE_FACADES_ONLY = [
  * nuevo que dibuje va al motor; uno que decida, a su sistema, sin three.js.
  */
 const ENGINE_FILES = [
-  'src/view3d/animations.ts',
   'src/view3d/badges.ts',
   'src/view3d/blocks.ts',
   'src/view3d/board.ts',

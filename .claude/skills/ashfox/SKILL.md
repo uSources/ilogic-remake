@@ -165,7 +165,7 @@ ASHFOX=<ejecutable> node tools/art/ashfox/sounds.mjs --export      # y los WAV (
 - Ashfox no oye: que compile no basta; el usuario tiene que escucharlos.
 - En el juego, sin depender de Web Audio: quien decide pide por el puerto `SoundPort`
   (`src/audio/sounds.ts`) y `src/audio/sfx.ts` es el que suena (lo junta `view3d/main.ts`). Que suena
-  con que cosa esta en tablas en `view3d/soundCues.ts`; lo piden `animations.ts` (pasos, disparos,
+  con que cosa esta en tablas en `view3d/soundCues.ts`; lo piden los pasos de los sucesos (`systems/events/eventSteps.ts`: pasos, disparos,
   golpes, caidas, captura), `turnControls.ts` (elegir unidad, comprar, tu turno, final) y
   `menuFlow.ts` (menus); los botones, con cualquier clic. Un sonido nuevo: en `models/sounds.mjs` y
   en `soundCues.ts`.

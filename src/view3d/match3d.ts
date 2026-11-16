@@ -4,7 +4,6 @@
  * junta todo: cada pieza vive en su modulo. La pausa y el final, en matchMenus.ts.
  */ import * as THREE from 'three';
 import { mapGrid } from '../core/mapGrid';
-import type { MovementMotion } from '../core/content';
 import type { Pos } from '../core/model';
 import { ui, type Anchor } from '../hud/store';
 import { BoardView } from './board';
@@ -12,7 +11,9 @@ import { CameraRig } from './cameraRig';
 import type { GameImages } from '../atlas';
 import type { GlbLibrary } from './glbModels';
 import { Highlights } from './highlights';
-import { playEvents } from './animations';
+import { playEvents } from './systems/events/timeline';
+import { BoardPieceStage } from './engine/fx/pieceStage';
+import { FxEffectStage } from './engine/fx/effectStage';
 import { installHudActions, publishHud } from './hudBridge';
 import { installKeys } from './keyInput';
 import { installPointer } from './pointerInput';
@@ -20,7 +21,8 @@ import { buildTerrain } from './terrain';
 import { TurnControls } from './turnControls';
 import { World } from './world';
 import { GroundMarks } from './groundMarks';
-import { ParticleSystem, type PuffKind } from './particles';
+import { ParticleSystem } from './particles';
+import type { PuffKind } from './ports/stage';
 import { SandDust } from './sandDust';
 import { WeatherView } from './weather3d';
 import { Wrecks } from './wrecks';
@@ -101,21 +103,23 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const marks = new GroundMarks();
   const wrecks = new Wrecks();
   world.scene.add(particles.object, marks.mesh, wrecks.object);
-  const animations = {
+  const animate = (seconds: number, step: (progress: number) => void) => world.animate(seconds, step);
+  const puff = (kind: PuffKind, at: THREE.Vector3, count: number) => particles.emit(kind, at, count);
+  const pieceStage = new BoardPieceStage({
     board,
-    sounds,
-    layer: effects,
-    animate: (seconds: number, step: (progress: number) => void) => world.animate(seconds, step),
-    puff: (kind: PuffKind, at: THREE.Vector3, count?: number) => particles.emit(kind, at, count),
-    mark: (at: THREE.Vector3, heading: number, motion: MovementMotion) => marks.leave(at, heading, motion),
-    scorch: (at: THREE.Vector3) => marks.scorch(at),
-    wreck: (model: THREE.Object3D) => wrecks.leave(model),
-  };
+    animate,
+    puff,
+    mark: (at, heading, motion) => marks.leave(at, heading, motion),
+    wreck: (model) => wrecks.leave(model),
+  });
+  const effectStage = new FxEffectStage({ board, layer: effects, animate, puff, scorch: (at) => marks.scorch(at) });
+  /** Los sucesos se ven con las piezas y los efectos del motor (systems/events dice que pasos lleva cada uno). */
+  const stages = { lookup: pieceStage, pieces: pieceStage, effects: effectStage, sounds };
   const controls = new TurnControls({
     session,
     viewer,
     marks: highlights,
-    events: { play: (events) => playEvents(events, animations) },
+    events: { play: (events) => playEvents(events, stages) },
     sounds,
     refresh,
     onOver: () => showEndSoon(),
@@ -234,7 +238,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     world,
     weather,
     sandDust,
-    animations,
+    stages,
     wrecks,
     ui,
     pause,

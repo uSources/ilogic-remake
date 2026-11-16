@@ -7,9 +7,8 @@
 import * as THREE from 'three';
 import { reducedMotion } from '../ui/motion';
 import { PixelPoints } from './pixelPoints';
+import type { PuffKind } from './ports/stage';
 import { WIND_DIRECTION } from './space';
-
-export type PuffKind = 'smoke' | 'darkSmoke' | 'dust' | 'blast' | 'gunSmoke';
 
 interface PuffSpec {
   colors: readonly number[];
