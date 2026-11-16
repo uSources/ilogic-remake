@@ -125,11 +125,11 @@ describe('la ayuda enseña las teclas del jugador', () => {
   });
 
   it('con cambios, las teclas nuevas (tambien en el objetivo)', () => {
-    const keys = keyLabels({ endTurn: 'KeyP', nextUnit: 'KeyY', orderHere: 'KeyJ' }, KEY_NAMES.en);
+    const keys = keyLabels({ endTurn: 'KeyP', nextUnit: 'KeyY', orderAttack: 'KeyJ' }, KEY_NAMES.en);
     const controls = HELP_TEXTS.en.controls(keys);
     expect(column(controls, 'End turn')).toBe('P');
     expect(column(controls, 'Next unit that has not moved')).toBe('Y');
-    expect(HELP_TEXTS.en.goalBasics(keys).join(' ')).toContain('keyboard: J');
+    expect(HELP_TEXTS.en.goalBasics(keys).join(' ')).toContain('keyboard: J,');
   });
 });
 

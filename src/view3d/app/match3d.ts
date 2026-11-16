@@ -23,6 +23,7 @@ import { installKeys } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
 import { TurnControls } from '../systems/turn/turnControls';
 import type { StartedGame } from './gameStart';
+import type { GroupMode } from '../../controls/inputCommands';
 
 const START_DISTANCE = 16;
 const START_YAW = Math.PI / 4;
@@ -52,7 +53,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   function publish(): void {
     const forecast = cursor ? controls.forecastAt(cursor) : null;
     const menu = pause.view(cursor ?? PAUSE_ANCHOR) ?? controls.menu();
-    publishHud(images, state, viewer, { cursor, busy: controls.busy, menu, forecast, anchorOf });
+    publishHud(images, state, viewer, { cursor, busy: controls.busy, menu, forecast, selected: controls.selectedUnits(), anchorOf });
   }
   function refresh(): void {
     scene.sync(state.weather?.kind ?? null);
@@ -118,7 +119,18 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     menuHover: (index) => (pause.isOpen ? pause.hover(index) : controls.hoverMenu(index)),
     menuClose: () => (pause.isOpen ? pause.close() : void controls.cancel()),
     openGameMenu: () => pause.open(),
+    multiSelect: () => controls.toggleAdding(),
+    selectSquad: (id) => controls.selectSquad(id),
+    renameSquad: (id, name) => void controls.renameSquad(id, name),
+    renameClose: () => ui.set({ rename: null }),
+    pickInSelection: (uid, shift, ctrl) => controls.pickInSelection(uid, shift, ctrl),
   });
+
+  /** Una tecla de grupo; pulsada dos veces seguidas, la camara va hasta el. */
+  async function groupKey(n: number, mode: GroupMode): Promise<void> {
+    const lookAt = await controls.groupKey(n, mode, performance.now());
+    if (lookAt) camera.lookAt(scene.groundOf(lookAt));
+  }
 
   /** Las unidades de quien mira que estan en el tablero (para el recuadro). */
   const ownUnitsOnBoard = () => state.units.filter((unit) => unit.team === viewer && isOnMap(unit));
@@ -152,6 +164,8 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     },
     cancel: escape,
     accept: () => (pause.isOpen ? pickPause() : controls.acceptMenu()),
+    group: (n, mode) => void groupKey(n, mode),
+    order: (order) => controls.orderKey(order),
   });
   scene.onFrame((seconds) => {
     camera.update(seconds);

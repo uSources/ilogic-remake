@@ -106,7 +106,10 @@ describe('turno 3D con puertos', () => {
     expect(events.played.map(kindsOf)).toContainEqual(expect.arrayContaining(['move']));
     expect(soldier).toMatchObject({ x: 6, y: 5 });
     expect(controls.menu()?.kind).toBe('actions');
-    expect(controls.menu()?.items.map((item) => item.id)).toEqual(['wait', 'undo', 'delete']);
+    const ids = controls.menu()?.items.map((item) => item.id) ?? [];
+    expect(ids[0]).toBe('wait');
+    expect(ids).toContain('orderToDefend');
+    expect(ids.slice(-2)).toEqual(['undo', 'delete']);
     expect(marks.selected).toMatchObject({ x: 6, y: 5 });
     expect(marks.reach).toEqual([]);
   });
@@ -246,7 +249,10 @@ describe('el clic que acierta y la barra de acciones', () => {
     const { soldier, controls } = await myTurn();
     await controls.tap(soldier);
     expect(controls.menu()?.kind).toBe('actions');
-    expect(controls.menu()?.items.map((item) => item.id)).toEqual(['wait', 'delete']);
+    const ids = controls.menu()?.items.map((item) => item.id) ?? [];
+    expect(ids[0]).toBe('wait');
+    expect(ids).not.toContain('undo');
+    expect(ids.at(-1)).toBe('delete');
   });
 
   it('tocar la propia unidad la suelta', async () => {
@@ -312,14 +318,14 @@ const shiftClick = { shift: true, ctrl: false, count: 1 };
 const doubleClick = { shift: false, ctrl: false, count: 2 };
 
 describe('elegir varias', () => {
-  it('Mayusculas + clic suma unidades: el grupo lleva un aro en cada una y no tiene barra', async () => {
+  it('Mayusculas + clic suma unidades: el grupo lleva un aro en cada una y su barra (ordenes, escuadra)', async () => {
     const { s, soldier, marks, controls } = await myTurn();
     const other = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 7 });
     await controls.tap(soldier);
     await controls.tap(other, shiftClick);
     expect(marks.group).toHaveLength(2);
     expect(marks.selected).toBeNull();
-    expect(controls.menu()).toBeNull();
+    expect(controls.menu()?.items.map((item) => item.id)).toContain('squadForm');
     await controls.tap(other, shiftClick);
     expect(marks.group).toEqual([]);
     expect(marks.selected).toMatchObject({ x: 5, y: 5 });
@@ -369,5 +375,74 @@ describe('elegir varias', () => {
     controls.selectBox([soldier, second], false);
     expect(controls.cancel()).toBe(true);
     expect(marks.group).toEqual([]);
+  });
+});
+
+const pick = (controls: { menu(): { items: { id: string }[] } | null; pickMenu(index: number): void }, id: string) =>
+  controls.pickMenu(controls.menu()!.items.findIndex((item) => item.id === id));
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+describe('ordenes y escuadras', () => {
+  it('orden desde la barra: se elige la casilla y la unidad la lleva', async () => {
+    const { soldier, controls } = await myTurn();
+    await controls.tap(soldier);
+    pick(controls, 'orderToDefend');
+    expect(controls.menu()?.title).toContain('casilla');
+    await controls.tap({ x: 9, y: 5 });
+    expect(soldier.standingOrder).toEqual({ kind: 'defend', at: { x: 9, y: 5 } });
+    expect(controls.selectedUnits()).toEqual([soldier]);
+  });
+
+  it('cancelar la orden la quita', async () => {
+    const { soldier, controls } = await myTurn();
+    await controls.tap(soldier);
+    pick(controls, 'orderToDefend');
+    await controls.tap({ x: 9, y: 5 });
+    pick(controls, 'cancelOrder');
+    await settle();
+    expect(soldier.standingOrder).toBeUndefined();
+  });
+
+  it('las teclas de orden van a lo elegido; Esc vuelve a lo elegido sin dar la orden', async () => {
+    const { soldier, controls } = await myTurn();
+    await controls.tap(soldier);
+    controls.orderKey('capture');
+    expect(controls.cancel()).toBe(true);
+    expect(soldier.standingOrder).toBeUndefined();
+    expect(controls.selectedUnits()).toEqual([soldier]);
+  });
+
+  it('formar escuadra con un grupo, y elegirla desde la bandeja', async () => {
+    const { s, soldier, controls } = await myTurn();
+    const second = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 7 });
+    controls.selectBox([soldier, second], false);
+    pick(controls, 'squadForm');
+    await settle();
+    expect(soldier.squad).not.toBeNull();
+    expect(second.squad).toBe(soldier.squad);
+    controls.cancel();
+    controls.selectSquad(soldier.squad!);
+    expect(controls.selectedUnits()).toHaveLength(2);
+  });
+
+  it('Ctrl + numero hace el grupo de esa tecla; el numero solo lo elige, y dos veces dice adonde mirar', async () => {
+    const { s, soldier, controls } = await myTurn();
+    const second = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 7 });
+    controls.selectBox([soldier, second], false);
+    await controls.groupKey(3, 'set', 0);
+    controls.cancel();
+    expect(controls.selectedUnits()).toEqual([]);
+    expect(await controls.groupKey(3, 'select', 1000)).toBeNull();
+    expect(controls.selectedUnits()).toHaveLength(2);
+    expect(await controls.groupKey(3, 'select', 1100)).not.toBeNull();
+  });
+
+  it('con «Elegir varias», cada toque en una unidad la suma', async () => {
+    const { s, soldier, marks, controls } = await myTurn();
+    const second = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 7 });
+    controls.toggleAdding();
+    await controls.tap(soldier);
+    await controls.tap(second);
+    expect(marks.group).toHaveLength(2);
   });
 });
