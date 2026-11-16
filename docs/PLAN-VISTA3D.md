@@ -23,8 +23,7 @@ ella desde lo que hay, en pasos pequeños: cada uno en su PR, con el juego igual
   - `cameraRig.ts`: la logica de la camara de estrategia (a donde mira, limites, suavizado) dentro
     del objeto de three.js.
   - `match3d.ts`: la raiz de composicion, pero tambien crea objetos del motor y reparte cosas a mano.
-- **Dependencias al reves**: `turnControls.ts` (sistema) importa `animations.ts` y `highlights.ts`
-  (motor) y usa sus clases; `keyInput.ts` y `pointerInput.ts` usan el tipo `CameraRig` entero.
+- **Dependencias al reves**: `keyInput.ts` y `pointerInput.ts` usan el tipo `CameraRig` entero.
 
 ## A donde vamos
 
@@ -111,7 +110,7 @@ Descartado, y por que:
 
 Cada paso es una PR; el juego se ve y se juega igual al final de cada uno.
 
-1. **Puertos para el turno.** `turnControls.ts` deja de importar `animations.ts` y `highlights.ts`:
+1. **Puertos para el turno** (hecho: `turnPorts.ts`, `tests/turnControls.test.ts`). `turnControls.ts` deja de importar `animations.ts` y `highlights.ts`:
    pide `TileMarks` y un `EventPlayer` (reproducir los sucesos de una accion). `match3d.ts` le da las
    implementaciones. Primeros tests del turno con puertos falsos. Si encaja, el turno ya como
    maquina de estados que devuelve efectos (ver "Como se hablan los sistemas").
