@@ -7,6 +7,38 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.11.0] - 2026-11-16 — Órdenes, grupos y sonido
+
+### Novedades
+- **Efectos de sonido**: pasos, disparos, golpes, explosiones, capturas, menús, el principio de tu turno y el final de la partida. Cada sonido tiene varias versiones para que no suene siempre igual. Se apagan en Opciones, «Efectos de sonido».
+- **Ves el camino antes de mover**: con una unidad elegida, al pasar el ratón por su alcance sale una flecha por el suelo con el camino y una copia transparente de la unidad donde llegaría. El camino sigue al ratón y la unidad va por él.
+- **El clic hace lo que toca**: con una unidad elegida, un clic en un enemigo lo ataca (moviéndose antes si hace falta), en un edificio ajeno va a capturarlo, en un transporte sube y en una unidad igual se une. Ya no se abre un menú al mover: sale al lado una barra con solo lo que vale ahí (esperar, reparar, desembarcar, deshacer...). Esc deshace el movimiento.
+- **Elegir varias unidades**: arrastra para dibujar un recuadro, Mayúsculas + clic suma o quita una y doble clic elige todas las de ese tipo. Con un grupo, un clic en un enemigo hace que le ataquen las que llegan, y en otra casilla las lleva allí.
+- **Órdenes y escuadras en 3D**: atacar, capturar o defender en una casilla (también con Q, C, G y X), escuadras con nombre y grupos con número (Ctrl + número para guardarlo, el número para elegirlo). Las órdenes se cumplen al terminar el turno.
+- **Ves lo que hará cada orden**: las unidades con orden llevan su letra encima, y al señalarlas se ve una flecha con su camino y a quién atacarán o qué capturarán. «Ver órdenes» (V) las enseña todas.
+
+### Interfaz
+- La cámara ya no se mueve arrastrando con el botón izquierdo (ahora dibuja el recuadro): se mueve con el botón central, WASD o llevando el ratón al borde de la pantalla. Con el dedo, arrastrar sigue moviéndola.
+
+### Todavía no
+- Aún no están en 3D: jugar en línea, el minimapa, los poderes de los generales y el tutorial.
+
+<!-- en -->
+
+### New
+- **Sound effects**: footsteps, shots, hits, explosions, captures, menus, the start of your turn and the end of the game. Each sound has several versions so it doesn't always sound the same. Turn them off in Options, “Sound effects”.
+- **See the path before moving**: with a unit selected, hovering over its range shows an arrow on the ground along the path and a see-through copy of the unit where it would end up. The path follows the mouse and the unit takes it.
+- **One click does the right thing**: with a unit selected, clicking an enemy attacks it (moving first if needed), an enemy building goes to capture it, a transport boards it and a unit of the same type joins it. No more menu after moving: a bar beside it shows only what makes sense there (wait, repair, unload, undo...). Esc undoes the move.
+- **Select several units**: drag to draw a box, Shift + click adds or removes one and double-click selects all of that type. With a group, clicking an enemy makes those in reach attack it, and clicking another tile sends them there.
+- **Orders and squads in 3D**: attack, capture or hold at a tile (also with Q, C, G and X), named squads and numbered groups (Ctrl + number to save one, the number to select it). Orders are carried out when the turn ends.
+- **See what each order will do**: units with an order carry its letter above them, and pointing at one shows an arrow along its path and whom it will attack or what it will capture. “Show orders” (V) shows them all.
+
+### Interface
+- Dragging with the left button no longer moves the camera (it now draws the box): move it with the middle button, WASD or by taking the mouse to the edge of the screen. With a finger, dragging still moves it.
+
+### Not yet
+- Still missing in 3D: online play, the minimap, generals' powers and the tutorial.
+
 ## [0.10.0] - 2026-11-15 — El juego en 3D
 
 ### Novedades
