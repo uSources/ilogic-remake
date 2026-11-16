@@ -12,6 +12,7 @@ import type { CameraPose, Point3 } from '../ports/camera';
 import type { FrameListener } from '../ports/frame';
 import type { EffectStage, PieceLookup, PieceStage, PuffKind } from '../ports/stage';
 import type { MovePreview, ScreenView, TileMarks } from '../ports/turn';
+import type { IntentMarks } from '../ports/orders';
 import type { ScreenBox, SelectionBoxView } from '../ports/pointer';
 import { ThreeCameraView } from './camera/cameraView';
 import { World } from './core/world';
@@ -19,6 +20,7 @@ import { ScreenBoxView } from './core/screenBox';
 import { FxEffectStage } from './fx/effectStage';
 import { Highlights } from './fx/highlights';
 import { MovePreviewView } from './fx/movePreview';
+import { IntentArrowsView } from './fx/intentArrows';
 import { ParticleSystem } from './fx/particles';
 import { BoardPieceStage } from './fx/pieceStage';
 import { WeatherView } from './fx/weather3d';
@@ -55,6 +57,7 @@ export class MatchScene implements ScreenView {
   private readonly terrain: TerrainView;
   private readonly highlights: Highlights;
   private readonly preview: MovePreviewView;
+  private readonly intents: IntentArrowsView;
   private readonly effects = new THREE.Group();
   private readonly particles = new ParticleSystem();
   private readonly marks = new GroundMarks();
@@ -72,6 +75,7 @@ export class MatchScene implements ScreenView {
     this.board = new BoardView(state, viewer, this.terrain, glbModels);
     this.highlights = new Highlights((pos) => this.board.groundOf(pos));
     this.preview = new MovePreviewView(this.board);
+    this.intents = new IntentArrowsView((pos) => this.board.groundOf(pos));
     this.weather = new WeatherView(container);
     this.sandDust = new SandDust(this.terrain.sandTiles, (pos) => this.board.groundOf(pos));
     this.cameraView = new ThreeCameraView(this.world.camera);
@@ -81,6 +85,7 @@ export class MatchScene implements ScreenView {
       this.board.object,
       this.highlights.object,
       this.preview.object,
+      this.intents.object,
       this.effects,
       this.weather.object,
       this.sandDust.object,
@@ -115,6 +120,11 @@ export class MatchScene implements ScreenView {
   /** La flecha del camino y el fantasma de la unidad que se va a mover. */
   get movePreview(): MovePreview {
     return this.preview;
+  }
+
+  /** Lo que haran las ordenes al terminar el turno. */
+  get intentMarks(): IntentMarks {
+    return this.intents;
   }
 
   /** El recuadro de seleccion mientras se arrastra. */

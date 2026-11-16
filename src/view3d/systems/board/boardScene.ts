@@ -7,11 +7,16 @@ import type { MovementMotion } from '../../../core/content';
 import { MAX_LIFE } from '../../../core/data';
 import { unitTypeOf } from '../../../core/gameContent';
 import { posKey } from '../../../core/geom';
-import type { Building, GameState, Pos, TeamId, Unit } from '../../../core/model';
+import type { Building, GameState, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
+import { gotoDestination, turnEndOrderOf } from '../../../core/squads';
 import { capturePointsOf, captureProgress, isOnMap, isShownTo, visibility } from '../../../core/rules';
 import type { Grid } from '../../../core/util/grid';
 import { isFriendly, ownerSideOf, sideOf, type OwnerSide } from '../../../ui/sides';
 import type { PuffKind } from '../../ports/stage';
+
+/** La letra de cada orden sobre la unidad que la lleva (como en 2D); «I», ir alli en varios turnos. */
+const ORDER_LETTERS: Readonly<Record<TurnEndOrderKind, string>> = { attack: 'A', capture: 'C', defend: 'D' };
+const GOTO_LETTER = 'I';
 
 /** Debajo de esta vida (de MAX_LIFE) una unidad echa humo gris; debajo de la otra, negro. */
 const SMOKES_BELOW = 50;
@@ -31,6 +36,8 @@ export interface UnitLook {
   readonly isSpent: boolean;
   /** Lo que le queda de vida (de 0 a 1) si esta herida; null si esta entera (sin barra). */
   readonly lifeLeft: number | null;
+  /** La letra de su orden permanente (solo las de quien mira; null sin orden). */
+  readonly orderLetter: string | null;
 }
 
 /** Una captura a medias que se ve: lo que le queda (de 0 a 1) y de que lado es quien captura. */
@@ -78,7 +85,15 @@ function unitLook(s: GameState, viewer: TeamId, seen: Grid<boolean>, unit: Unit)
     isVisible: isShownTo(viewer, unit, (pos) => seen.at(pos)),
     isSpent: unit.team === viewer && unit.turnState === 'done',
     lifeLeft: unit.life < MAX_LIFE ? unit.life / MAX_LIFE : null,
+    orderLetter: unit.team === viewer ? orderLetterOf(s, unit) : null,
   };
+}
+
+/** La letra de la orden que sigue la unidad (la suya o la de su escuadra). */
+function orderLetterOf(s: GameState, unit: Unit): string | null {
+  const order = turnEndOrderOf(s, unit);
+  if (order) return ORDER_LETTERS[order.kind];
+  return gotoDestination(unit) ? GOTO_LETTER : null;
 }
 
 function buildingLook(s: GameState, viewer: TeamId, seen: Grid<boolean>, building: Building): BuildingLook {

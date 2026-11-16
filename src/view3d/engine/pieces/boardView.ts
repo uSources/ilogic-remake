@@ -6,7 +6,7 @@
  */
 import * as THREE from 'three';
 import type { GameState, Pos, TeamId } from '../../../core/model';
-import { showBar } from './badges';
+import { showBar, showLetter } from './badges';
 import type { GlbLibrary } from './glbModels';
 import type { PuffSource } from '../fx/particles';
 import { tileToWorld } from '../core/space';
@@ -134,6 +134,7 @@ export class BoardView {
     piece.object.visible = look.isVisible;
     tint(piece.object, look.isSpent ? SPENT_TINT : 1);
     showBar(piece.lifeBar, look.lifeLeft);
+    showLetter(piece.orderBadge, look.orderLetter);
   }
 
   private addUnit(look: UnitLook): UnitPiece {

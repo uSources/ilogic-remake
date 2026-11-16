@@ -224,6 +224,11 @@ export class TurnControls {
     this.setMode({ kind: 'group', units: picked.units, options: groupBarOptions(this.s, this.host.viewer, picked.units), selected: 0 });
   }
 
+  /** «Elegir varias» con el dedo esta encendido. */
+  get adding(): boolean {
+    return this.isAdding;
+  }
+
   /** «Elegir varias» con el dedo: a partir de ahora cada toque en una unidad la suma o la quita (otra vez, como antes). */
   toggleAdding(): void {
     this.isAdding = !this.isAdding;

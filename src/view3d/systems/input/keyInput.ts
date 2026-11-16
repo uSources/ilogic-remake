@@ -24,6 +24,8 @@ export interface KeyHost {
   accept(): void;
   /** Teclas de grupo (1-9; con Ctrl lo hace, con Mayusculas lo añade). */
   group(n: number, mode: GroupMode): void;
+  /** Ver u ocultar lo que haran todas las ordenes al terminar el turno. */
+  intents(): void;
   /** Q, C, G: orden de atacar, capturar o defender (luego la casilla); X la quita. */
   order(order: 'attack' | 'capture' | 'defend' | 'cancel'): void;
 }
@@ -40,6 +42,7 @@ const KEY_ACTIONS: KeyActions = {
   zoom: (command, host) => host.camera.zoom(-command.dir * KEY_ZOOM_STEP),
   group: (command, host) => host.group(command.n, command.mode),
   order: (command, host) => host.order(command.order),
+  intents: (_command, host) => host.intents(),
 };
 
 type AnyKeyAction = (command: InputCommand, host: KeyHost) => void;
