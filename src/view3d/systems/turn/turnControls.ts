@@ -1,9 +1,13 @@
 /**
- * Lo que hace la persona en el 3D. Tocar una unidad suya la elige: enseña a donde llega (azul), a
- * quien puede atacar (rojo) y una barra con lo que puede hacer ahi (unitBar.ts). Con una elegida, un
- * clic acierta solo segun lo que hay en la casilla (clickIntent.ts): ir, atacar, subir a un
- * transporte, unirse, capturar al llegar a un edificio, o soltarla. Tocar una fabrica propia abre la
- * compra. Las reglas las dice siempre el nucleo: aqui solo se mandan acciones por la sesion
+ * Lo que hace la persona en el 3D, sin menus (docs/PLAN-INTERFAZ.md). Tocar una unidad suya la elige:
+ * enseña a donde llega (azul), a quien puede atacar (rojo) y, al lado, solo las fichas de lo que no se
+ * hace tocando el tablero (unitOptions.ts). Con una elegida, un clic acierta solo segun lo que hay en
+ * la casilla (clickIntent.ts): ir, atacar, subir a un transporte, unirse, capturar al llegar a un
+ * edificio; tocarla otra vez la deja como esta. Esperar es implicito: la que se ha movido y ya no
+ * puede hacer nada espera sola, y la que se deja (eligiendo otra o tocando fuera) tambien. Lo poco
+ * frecuente (ordenes, escuadras, esperar alli, deshacer, disolver) va en la rueda: clic derecho o
+ * mantener pulsado sobre ella; el clic derecho en otra casilla le da la orden que tiene sentido alli.
+ * Tocar una fabrica propia abre la compra. Las reglas las dice siempre el nucleo: aqui solo se mandan acciones por la sesion
  * (`session.act`) y se animan sus sucesos. Tambien lleva los turnos de los demas (la IA), animando
  * cada cosa que hacen.
  */
@@ -23,6 +27,7 @@ import {
   canStillAct,
   cargoUnits,
   isOnMap,
+  lastUndoableMove,
   moveRange,
   reachableTiles,
   unitAt,
@@ -32,7 +37,7 @@ import {
 } from '../../../core/rules';
 import type { GameSession } from '../../../core/session';
 import { showBanner, showToast, ui, type MenuItemVM } from '../../../hud/store';
-import { barItems, buyItem } from './menuItems';
+import { buyItem, optionItems } from './menuItems';
 import { fmtNum, nameOf, t } from '../../../settings';
 import { buyBlockedText } from '../../../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
@@ -42,7 +47,7 @@ import { attackPlan, type AttackPlan } from './attackPlan';
 import type { EventPlayer, MovePreview, ScreenView, TileMarks } from '../../ports/turn';
 import { pathFor, previewAt } from './movePreview';
 import { clickIntent, type ClickIntent } from './clickIntent';
-import { barAction, barOptions, groupBarOptions, ORDER_KINDS, type BarOption } from './unitBar';
+import { chipOptions, groupRadialOptions, optionAction, orderForTile, ORDER_KINDS, radialOptions, type UnitOption } from './unitOptions';
 import { isSelectable, pickedFrom } from './selection';
 
 /** En la compra, la primera fila es «Cancelar». */
@@ -56,11 +61,12 @@ type Mode =
   | { kind: 'idle' }
   /**
    * Una unidad propia elegida: `range`, a donde llega (null si ya no puede moverse); `trail`, el camino
-   * trazado con el cursor; `options`, su barra de acciones y `selected`, la señalada en ella.
+   * trazado con el cursor; `chips`, sus fichas; `radial`, su rueda si esta abierta; `selected`, la
+   * opcion señalada (de la rueda si esta abierta; si no, de las fichas).
    */
-  | { kind: 'unit'; unit: Unit; range: MoveRange | null; trail: Pos[]; options: BarOption[]; selected: number }
-  /** Varias unidades propias elegidas (Mayusculas + clic, doble clic o recuadro): un clic las lleva o ataca; su barra, ordenes y escuadras. */
-  | { kind: 'group'; units: Unit[]; options: BarOption[]; selected: number }
+  | { kind: 'unit'; unit: Unit; range: MoveRange | null; trail: Pos[]; chips: UnitOption[]; radial: UnitOption[] | null; selected: number }
+  /** Varias unidades propias elegidas (Mayusculas + clic, doble clic o recuadro): un clic las lleva o ataca; su rueda, ordenes y escuadras. */
+  | { kind: 'group'; units: Unit[]; radial: UnitOption[] | null; selected: number }
   /** Elegir la casilla de la orden `order` para estas unidades. */
   | { kind: 'order'; units: Unit[]; order: TurnEndOrderKind }
   /** Elegir la casilla donde bajar a `passenger` del transporte `unit`. */
@@ -68,11 +74,15 @@ type Mode =
   | { kind: 'buy'; building: Building; options: BuyOption[]; selected: number };
 
 type UnitMode = Extract<Mode, { kind: 'unit' }>;
+type GroupMode3D = Extract<Mode, { kind: 'group' }>;
 
 /** El menu abierto, para la interfaz (junto a la casilla `at`). */
 export interface MenuView {
-  /** La barra de la unidad, la compra o la pausa (esta, de matchMenus.ts). */
-  kind: 'actions' | 'buy' | 'game';
+  /**
+   * Las fichas junto a lo elegido, su rueda, una casilla que elegir (con «Atras»), la compra o la
+   * pausa (esta, de matchMenus.ts).
+   */
+  kind: 'chips' | 'radial' | 'prompt' | 'buy' | 'game';
   title: string;
   subtitle?: string;
   /** Lineas extra (el objetivo de la mision, en la pausa). */
@@ -163,6 +173,11 @@ export class TurnControls {
   /** Tocar una casilla; con Mayusculas, Ctrl o doble clic, cambia lo elegido (controls/selection.ts). */
   async tap(pos: Pos, mods: ClickMods = PLAIN_CLICK): Promise<void> {
     if (!this.isMyTurn) return;
+    if (this.closeRadial()) return;
+    await this.leavingMovedUnit(() => this.tapBoard(pos, mods));
+  }
+
+  private async tapBoard(pos: Pos, mods: ClickMods): Promise<void> {
     const isAddingTap = this.isAdding && !!unitAt(this.s, pos);
     if (mods.shift || mods.ctrl || mods.count >= 2 || isAddingTap)
       return this.clickSelect(pos, { ...mods, shift: mods.shift || isAddingTap });
@@ -212,7 +227,7 @@ export class TurnControls {
   /** Elegir las unidades de un recuadro (`add`: se suman a lo elegido). */
   selectBox(inside: readonly Unit[], add: boolean): void {
     if (!this.isMyTurn) return;
-    this.choose(boxSelect(this.selection, inside, add));
+    void this.leavingMovedUnit(() => this.choose(boxSelect(this.selection, inside, add)));
   }
 
   /** Deja elegidas esas: ninguna, una (con su barra) o un grupo. */
@@ -221,7 +236,7 @@ export class TurnControls {
     if (picked.kind === 'none') return this.setMode({ kind: 'idle' });
     if (picked.kind === 'one') return this.chooseOwnUnit(picked.unit);
     this.host.sounds.play('unit_select');
-    this.setMode({ kind: 'group', units: picked.units, options: groupBarOptions(this.s, this.host.viewer, picked.units), selected: 0 });
+    this.setMode({ kind: 'group', units: picked.units, radial: null, selected: 0 });
   }
 
   /** «Elegir varias» con el dedo esta encendido. */
@@ -236,7 +251,7 @@ export class TurnControls {
 
   /** Elegir las unidades de una escuadra (su boton en la bandeja). */
   selectSquad(id: number): void {
-    if (this.isMyTurn) this.choose(new Set(squadUnits(this.s, id).map((unit) => unit.uid)));
+    if (this.isMyTurn) void this.leavingMovedUnit(() => this.choose(new Set(squadUnits(this.s, id).map((unit) => unit.uid))));
   }
 
   /**
@@ -357,17 +372,44 @@ export class TurnControls {
   }
 
   /**
-   * Elige la unidad (con su alcance, si aun se mueve, y su barra). Si ya no esta en el tablero (ha
-   * subido a un transporte, se ha unido a otra, ha caido) o no puede hacer nada mas, nada elegido.
+   * Elige la unidad (con su alcance, si aun se mueve, y sus fichas). Si ya no esta en el tablero (ha
+   * subido a un transporte, se ha unido a otra, ha caido) o no puede hacer nada mas, nada elegido. Si
+   * se ha movido y ya no le queda nada que hacer (ni fichas ni a quien atacar), espera sola.
    */
   private select(unit: Unit): void {
-    const isStillHere = this.s.units.includes(unit) && isOnMap(unit);
-    if (!isStillHere || !canStillAct(unit)) return this.setMode({ kind: 'idle' });
+    if (!this.isStillHere(unit) || !canStillAct(unit)) return this.setMode({ kind: 'idle' });
     const range = this.rangeOf(unit);
-    const options = barOptions(this.s, this.host.viewer, unit);
+    const chips = chipOptions(this.s, this.host.viewer, unit);
+    if (this.hasNothingLeft(unit, range, chips)) return void this.waitThere(unit);
     // Encima de un edificio que se puede capturar, lo normal es capturar (Intro lo hace).
-    const selected = Math.max(0, options.indexOf('capture'));
-    this.setMode({ kind: 'unit', unit, range, trail: [{ x: unit.x, y: unit.y }], options, selected });
+    const selected = Math.max(0, chips.indexOf('capture'));
+    this.setMode({ kind: 'unit', unit, range, trail: [{ x: unit.x, y: unit.y }], chips, radial: null, selected });
+  }
+
+  private isStillHere(unit: Unit): boolean {
+    return this.s.units.includes(unit) && isOnMap(unit);
+  }
+
+  /** Ya se ha movido, no puede moverse mas y no tiene fichas ni a quien atacar desde alli. */
+  private hasNothingLeft(unit: Unit, range: MoveRange | null, chips: readonly UnitOption[]): boolean {
+    return unit.turnState === 'moved' && !range && !chips.length && !attackTargetsFromRange(this.s, unit, null).length;
+  }
+
+  /** Esperar implicito: la unidad acaba aqui su turno (se puede deshacer su movimiento con Ctrl+Z). */
+  private async waitThere(unit: Unit): Promise<void> {
+    this.setMode({ kind: 'idle' });
+    await this.perform({ kind: 'wait', uid: unit.uid });
+  }
+
+  /**
+   * Hace `next` (lo que cambia lo elegido) y, si la unidad que estaba elegida se habia movido y se ha
+   * dejado sin hacer nada mas, espera: dejarla es esperar.
+   */
+  private async leavingMovedUnit(next: () => void | Promise<void>): Promise<void> {
+    const before = this.mode.kind === 'unit' ? this.mode.unit : null;
+    await next();
+    const isLeft = !!before && !this.selectedUnits().includes(before) && before.turnState === 'moved';
+    if (isLeft && this.isStillHere(before) && this.isMyTurn) await this.perform({ kind: 'wait', uid: before.uid });
   }
 
   private async tapWithUnit(mode: UnitMode, pos: Pos): Promise<void> {
@@ -380,6 +422,7 @@ export class TurnControls {
     const { unit } = mode;
     switch (intent.kind) {
       case 'deselect':
+        // Tocarla otra vez la deja como esta (si se habia movido, espera: leavingMovedUnit).
         return this.setMode({ kind: 'idle' });
       case 'attack':
         this.setMode({ kind: 'idle' });
@@ -469,22 +512,25 @@ export class TurnControls {
     this.setMode({ kind: 'buy', building, options, selected: firstAffordable >= 0 ? firstAffordable + 1 : CANCEL_ROW });
   }
 
-  /** El menu abierto, si hay uno: la barra de la unidad elegida, la de bajar a un pasajero o la compra. */
+  /**
+   * Lo que sale junto a lo elegido, si hay algo: sus fichas o su rueda, el aviso de elegir casilla
+   * (bajar a un pasajero, la casilla de una orden) o la compra.
+   */
   menu(): MenuView | null {
     const mode = this.mode;
     switch (mode.kind) {
       case 'unit':
-        return this.unitBar(mode);
+        return this.unitMenu(mode);
       case 'unload': {
         const title = t('unloadPick').replace('{name}', nameOf(unitTypeOf(this.s, mode.passenger)));
-        return { kind: 'actions', title, items: [{ id: 'back', label: t('back') }], selected: 0, at: mode.unit };
+        return { kind: 'prompt', title, items: [{ id: 'back', label: t('back') }], selected: 0, at: mode.unit };
       }
       case 'buy':
         return this.buyMenu(mode.building, mode.options, mode.selected);
       case 'group':
-        return this.groupBar(mode.units, mode.options, mode.selected);
+        return this.groupRadial(mode);
       case 'order':
-        return { kind: 'actions', title: t('orderPick'), items: [{ id: 'back', label: t('back') }], selected: 0, at: mode.units[0]! };
+        return { kind: 'prompt', title: t('orderPick'), items: [{ id: 'back', label: t('back') }], selected: 0, at: mode.units[0]! };
       case 'idle':
         return null;
       default:
@@ -492,17 +538,19 @@ export class TurnControls {
     }
   }
 
-  private unitBar({ unit, options, selected }: UnitMode): MenuView | null {
+  /** La rueda si esta abierta; si no, las fichas (si tiene alguna). */
+  private unitMenu({ unit, chips, radial, selected }: UnitMode): MenuView | null {
+    const options = radial ?? chips;
     if (!options.length) return null;
-    const items = barItems(this.s, unit, options);
-    return { kind: 'actions', title: nameOf(unitTypeOf(this.s, unit)), items, selected, at: unit };
+    const title = nameOf(unitTypeOf(this.s, unit));
+    return { kind: radial ? 'radial' : 'chips', title, items: optionItems(this.s, unit, options), selected, at: unit };
   }
 
-  private groupBar(units: readonly Unit[], options: readonly BarOption[], selected: number): MenuView | null {
+  private groupRadial({ units, radial, selected }: GroupMode3D): MenuView | null {
     const [first] = units;
-    if (!options.length || !first) return null;
+    if (!radial?.length || !first) return null;
     const title = `${t('pickedTitle')} · ${units.length}`;
-    return { kind: 'actions', title, items: barItems(this.s, first, options), selected, at: first };
+    return { kind: 'radial', title, items: optionItems(this.s, first, radial), selected, at: first };
   }
 
   private buyMenu(building: Building, options: readonly BuyOption[], selected: number): MenuView {
@@ -521,8 +569,8 @@ export class TurnControls {
   pickMenu(index: number): void {
     if (this.isBusy) return;
     const mode = this.mode;
-    if (mode.kind === 'unit') void this.pickBarOption([mode.unit], mode.options[index]);
-    if (mode.kind === 'group') void this.pickBarOption(mode.units, mode.options[index]);
+    if (mode.kind === 'unit') void this.pickOption([mode.unit], (mode.radial ?? mode.chips)[index]);
+    if (mode.kind === 'group') void this.pickOption(mode.units, mode.radial?.[index]);
     if (mode.kind === 'unload') this.select(mode.unit);
     if (mode.kind === 'order') this.choose(this.selection);
     if (mode.kind === 'buy') void this.pickBuy(mode.building, mode.options[index - 1]);
@@ -534,15 +582,15 @@ export class TurnControls {
     if (mode.kind === 'unit' || mode.kind === 'group' || mode.kind === 'buy') this.pickMenu(mode.selected);
   }
 
-  /** Una opcion de la barra con estas unidades (una o un grupo). */
-  private async pickBarOption(units: readonly Unit[], option: BarOption | undefined): Promise<void> {
+  /** Una opcion (ficha o rueda) con estas unidades (una o un grupo). */
+  private async pickOption(units: readonly Unit[], option: UnitOption | undefined): Promise<void> {
     const [first] = units;
     if (!option || !first) return;
     if (option === 'unload') return this.startUnloading(first);
     if (option === 'squadRename') return this.openRename(units);
     const order = ORDER_KINDS[option];
     if (order) return this.setMode({ kind: 'order', units: [...units], order });
-    const action = barAction(this.s, this.host.viewer, units, option);
+    const action = optionAction(this.s, this.host.viewer, units, option);
     if (!action) return;
     if (units.length === 1) return this.actThenSelect(first, action);
     await this.performThenChoose(
@@ -571,14 +619,60 @@ export class TurnControls {
    * suelta. false si no habia nada elegido (Esc abre entonces la pausa).
    */
   cancel(): boolean {
-    if (this.isBusy) return true;
+    if (this.isBusy || this.closeRadial()) return true;
     const mode = this.mode;
     if (mode.kind === 'idle') return false;
-    if (mode.kind === 'unit' && mode.options.includes('undo')) void this.actThenSelect(mode.unit, { kind: 'undoMove', uid: mode.unit.uid });
+    if (mode.kind === 'unit' && lastUndoableMove(this.s)?.uid === mode.unit.uid)
+      void this.actThenSelect(mode.unit, { kind: 'undoMove', uid: mode.unit.uid });
     else if (mode.kind === 'unload') this.select(mode.unit);
     else if (mode.kind === 'order') this.choose(this.selection);
     else this.setMode({ kind: 'idle' });
     return true;
+  }
+
+  // ---- La rueda y el clic derecho ----
+
+  /**
+   * Clic derecho o mantener pulsado en `pos`. Sobre una unidad propia: su rueda (la del grupo si es
+   * del grupo elegido). En otra casilla, con algo elegido: la orden que tiene sentido alli
+   * (orderForTile: atacar, capturar o defender).
+   */
+  context(pos: Pos): void {
+    if (!this.isMyTurn) return;
+    const own = unitAt(this.s, pos);
+    const chosen = this.selectedUnits();
+    if (own && isSelectable(this.host.viewer, own)) return this.openRadialOf(own, chosen);
+    if (chosen.length) void this.giveOrderAt(chosen, orderForTile(this.s, this.host.viewer, pos), pos);
+  }
+
+  private openRadialOf(own: Unit, chosen: readonly Unit[]): void {
+    if (chosen.length > 1 && chosen.includes(own)) return this.openGroupRadial(chosen);
+    if (!chosen.includes(own)) this.chooseOwnUnit(own);
+    const mode = this.mode;
+    if (mode.kind !== 'unit' || mode.unit !== own) return;
+    const radial = radialOptions(this.s, this.host.viewer, own);
+    if (radial.length) this.setMode({ ...mode, radial, selected: 0 });
+  }
+
+  private openGroupRadial(units: readonly Unit[]): void {
+    const radial = groupRadialOptions(this.s, this.host.viewer, units);
+    if (radial.length) this.setMode({ kind: 'group', units: [...units], radial, selected: 0 });
+  }
+
+  /** Cierra la rueda si estaba abierta (lo elegido sigue elegido). true si lo estaba. */
+  private closeRadial(): boolean {
+    const mode = this.mode;
+    if ((mode.kind !== 'unit' && mode.kind !== 'group') || !mode.radial) return false;
+    this.setMode({ ...mode, radial: null, selected: 0 });
+    return true;
+  }
+
+  /** Ctrl+Z: deshace el ultimo movimiento propio (tambien de una unidad que ya espero) y la vuelve a elegir. */
+  undoLastMove(): void {
+    const last = lastUndoableMove(this.s);
+    const unit = last && this.s.units.find((candidate) => candidate.uid === last.uid);
+    if (!unit || unit.team !== this.host.viewer || !this.isMyTurn) return;
+    void this.actThenSelect(unit, { kind: 'undoMove', uid: unit.uid });
   }
 
   // ---- Elegir desde la interfaz ----
@@ -586,7 +680,7 @@ export class TurnControls {
   /** Elegir una unidad por su uid (la bandeja, Tab). */
   focusUnit(uid: number): void {
     const unit = this.s.units.find((candidate) => candidate.uid === uid);
-    if (unit && this.isMyTurn) this.chooseOwnUnit(unit);
+    if (unit && this.isMyTurn) void this.leavingMovedUnit(() => this.chooseOwnUnit(unit));
   }
 
   /** La siguiente unidad propia que aun puede moverse, despues de la elegida (null si no queda ninguna). */

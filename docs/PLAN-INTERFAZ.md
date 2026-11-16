@@ -5,7 +5,13 @@
 - Fase 1 (base visual: fichas de juguete): **hecha**. Letras, colores y forma en
   `src/hud/styles/base/base.css` y `panel.css`, piezas `Pill` y `Chip` (`src/hud/common/toy.tsx`),
   barra de arriba y fin del turno abajo a la derecha. La estética, en `docs/ESTETICA.md`, "Interfaz".
-- Fases 2 a 6: pendientes.
+- Fases 2 y 3 (sin barra, esperar implícito y la rueda): **hechas**, juntas (sin la rueda, quitar la
+  barra dejaba sin formar escuadras ni dar órdenes con el ratón). `systems/turn/unitOptions.ts`
+  (fichas, rueda y `orderForTile`), `hud/game/ActionChips.tsx` y `RadialMenu.tsx`; clic derecho y
+  mantener pulsado en `systems/input/pointerInput.ts`; F y Ctrl+Z en `keyInput.ts`. Cambio sobre el
+  plan: bajar carga sigue siendo una ficha (que elige la casilla después) y no casillas verdes, porque
+  con el transporte sin mover sus casillas de al lado también son «ir allí».
+- Fases 4 a 6: pendientes. Ver amenaza (T), en la fase 5.
 
 ## Contexto
 

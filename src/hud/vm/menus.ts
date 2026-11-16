@@ -7,8 +7,10 @@ export interface MenuItemVM {
   label: string;
   /** Texto a la derecha (precio, tecla...). */
   hint?: string;
-  /** Clave de imagen del juego (sprite de unidad). */
+  /** Clave de imagen del juego (sprite de unidad, icono de la interfaz). */
   icon?: string | null;
+  /** Sin dibujo: un simbolo corto en su lugar (fichas y rueda). */
+  glyph?: string;
   disabled?: boolean;
   danger?: boolean;
   /** Linea de detalle que se muestra al pie cuando esta seleccionado. */
@@ -16,8 +18,8 @@ export interface MenuItemVM {
 }
 
 export interface MenuVM {
-  /** `actions`: la barra de acciones de la unidad elegida (en fila, junto a ella). */
-  kind: 'actions' | 'unit' | 'game' | 'buy' | 'cargo';
+  /** `chips`: las fichas junto a lo elegido; `radial`: su rueda (clic derecho); `prompt`: elegir una casilla. */
+  kind: 'chips' | 'radial' | 'prompt' | 'unit' | 'game' | 'buy' | 'cargo';
   title?: string;
   subtitle?: string;
   /** Lineas extra (objetivo de la mision) en el panel de pausa. */

@@ -173,6 +173,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     tileAt: (x, y) => scene.tileAt(x, y),
     hover,
     tap: (pos, mods) => void controls.tap(pos, mods),
+    context: (pos) => controls.context(pos),
     boxSelect: (box, add) => controls.selectBox(scene.tilesInBox(ownUnitsOnBoard(), box), add),
     onFrame: (listener) => scene.onFrame(listener),
   });
@@ -188,6 +189,8 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     accept: () => (pause.isOpen ? pickPause() : controls.acceptMenu()),
     group: (n, mode) => void groupKey(n, mode),
     order: (order) => controls.orderKey(order),
+    orderHere: () => cursor && controls.context(cursor),
+    undo: () => controls.undoLastMove(),
     intents: toggleIntents,
   });
   scene.onFrame((seconds) => {

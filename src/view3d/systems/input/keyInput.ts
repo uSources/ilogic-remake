@@ -28,6 +28,10 @@ export interface KeyHost {
   intents(): void;
   /** Q, C, G: orden de atacar, capturar o defender (luego la casilla); X la quita. */
   order(order: 'attack' | 'capture' | 'defend' | 'cancel'): void;
+  /** F: la orden que tiene sentido en la casilla señalada (como el clic derecho). */
+  orderHere(): void;
+  /** Ctrl+Z: deshacer el ultimo movimiento. */
+  undo(): void;
 }
 
 type CommandOf<K extends InputCommandKind> = Extract<InputCommand, { kind: K }>;
@@ -43,6 +47,8 @@ const KEY_ACTIONS: KeyActions = {
   group: (command, host) => host.group(command.n, command.mode),
   order: (command, host) => host.order(command.order),
   intents: (_command, host) => host.intents(),
+  orderHere: (_command, host) => host.orderHere(),
+  undo: (_command, host) => host.undo(),
 };
 
 type AnyKeyAction = (command: InputCommand, host: KeyHost) => void;
