@@ -48,12 +48,6 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar estrellas al
    general o visión. Ver cómo se juegan primero (PR #47).
 
-## Órdenes y escuadras
-
-6. **Dar órdenes con un gesto en 3D.** En 2D estaba (PR #49: clic derecho, mantener pulsado o tecla
-   F, la orden que tiene sentido en esa casilla); en 3D las órdenes van por la barra y por Q, C, G y
-   X, y el mando `orderHere` (F) no hace nada.
-
 ## Equilibrio
 
 9. **Generales.** Con las reglas de ataque de la 0.7.0, Brisa pasó del 60 % al 71 % de victorias

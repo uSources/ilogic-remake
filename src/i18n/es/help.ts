@@ -76,7 +76,7 @@ export const help: HelpTexts = {
   goalBasics: (keys: KeyLabels) => [
     'Cada edificio tuyo da dinero al final de cada ronda. Con él compras unidades en fábricas, ciudades y aeropuertos libres.',
     'Sobre un edificio propio, tus unidades se reparan al empezar la ronda. El camión de suministros repara a los vehículos y aviones de al lado.',
-    `Órdenes: con una unidad (o un grupo) elegida, «Orden: atacar, capturar o defender allí» en su barra (con el teclado, ${keys.orderAttack}, ${keys.orderCapture} o ${keys.orderDefend}) y luego la casilla. La unidad lleva la letra de su orden (A, C, D; I si va a un sitio en varios turnos). Al señalar una unidad con orden ves lo que hará al terminar el turno: una flecha clara con el camino, un marco rojo sobre la unidad a la que va a atacar o uno dorado sobre el edificio que va a capturar («Ver órdenes» o ${keys.intents}: las de todas). Al terminar cada turno, las que tienen orden y no has usado la cumplen solas; al cumplirla se quedan quietas esperando otra. «Cancelar orden» (o ${keys.orderCancel}) la quita. Para elegir varias: un recuadro arrastrando con el botón izquierdo, Mayúsculas + clic o doble clic en una (todas las de su tipo); con el dedo, «Elegir varias», abajo. Con varias, un clic en una casilla las lleva allí y en un enemigo le atacan; su barra da órdenes y «Formar escuadra» (Alfa, Bravo...). Ctrl + número hace con lo elegido el grupo de esa tecla y el número solo lo vuelve a elegir (dos veces, la cámara va hasta él). Las escuadras salen abajo, junto a «Sin mover»: tócalas para elegirlas. Una escuadra con la misma orden va en formación: las rápidas esperan a las lentas (salvo para atacar algo a tiro) y, cerca del destino o del enemigo, cada una lucha por su cuenta. Una orden a toda la escuadra es de la escuadra; a solo algunas de sus unidades, esas van por su cuenta y, al cumplirla, vuelven solas a la orden de la escuadra. Si empiezas a capturar a mano con una unidad que tenía orden, sigue capturando hasta acabar.`,
+    `Órdenes: con una unidad (o un grupo) elegida, «Orden: atacar, capturar o defender allí» en su rueda (clic derecho), o clic derecho directamente en la casilla (con el teclado, ${keys.orderAttack}, ${keys.orderCapture} o ${keys.orderDefend}) y luego la casilla. La unidad lleva la letra de su orden (A, C, D; I si va a un sitio en varios turnos). Al señalar una unidad con orden ves lo que hará al terminar el turno: una flecha clara con el camino, un marco rojo sobre la unidad a la que va a atacar o uno dorado sobre el edificio que va a capturar («Ver órdenes» o ${keys.intents}: las de todas). Al terminar cada turno, las que tienen orden y no has usado la cumplen solas; al cumplirla se quedan quietas esperando otra. «Cancelar orden» (o ${keys.orderCancel}) la quita. Para elegir varias: un recuadro arrastrando con el botón izquierdo, Mayúsculas + clic o doble clic en una (todas las de su tipo); con el dedo, «Elegir varias», abajo. Con varias, un clic en una casilla las lleva allí y en un enemigo le atacan; su barra da órdenes y «Formar escuadra» (Alfa, Bravo...). Ctrl + número hace con lo elegido el grupo de esa tecla y el número solo lo vuelve a elegir (dos veces, la cámara va hasta él). Las escuadras salen abajo, junto a «Sin mover»: tócalas para elegirlas. Una escuadra con la misma orden va en formación: las rápidas esperan a las lentas (salvo para atacar algo a tiro) y, cerca del destino o del enemigo, cada una lucha por su cuenta. Una orden a toda la escuadra es de la escuadra; a solo algunas de sus unidades, esas van por su cuenta y, al cumplirla, vuelven solas a la orden de la escuadra. Si empiezas a capturar a mano con una unidad que tenía orden, sigue capturando hasta acabar.`,
   ],
   colorsTitle: 'Colores del mapa',
   // Los colores y los controles de la vista 3D: solo lo que hace hoy (lo que tenia el 2D y aun falta, en docs/IDEAS.md).
@@ -104,9 +104,20 @@ export const help: HelpTexts = {
       '—',
       'Con la unidad elegida, clic en el objetivo: un enemigo en rojo, un edificio (va y captura), un transporte (sube) o una unidad igual (se une)',
     ],
-    ['Esperar, reparar, desembarcar, deshacer...', 'Enter (la señalada)', 'La barra junto a la unidad elegida: solo sale lo que vale ahí'],
+    [
+      'Capturar si ya está encima, reparar, desembarcar',
+      'Enter (la señalada)',
+      'Las fichas junto a la unidad elegida: solo salen si hay algo así que hacer',
+    ],
+    ['Esperar', '—', 'Sola: al moverla, si ya no puede hacer nada más; si puede, al dejarla (clic fuera, clic en ella u otra unidad)'],
+    ['Órdenes, escuadras, esperar ahí, disolver', '—', 'La rueda: clic derecho (o mantener pulsado) en la unidad o en el grupo'],
+    [
+      'Orden en una casilla',
+      keys.orderHere,
+      'Clic derecho en la casilla con algo elegido: atacar al enemigo, capturar el edificio o defender ahí',
+    ],
     ['Soltar la unidad', keys.cancel, 'Clic en ella otra vez'],
-    ['Deshacer el último movimiento', keys.cancel, '«Deshacer» en la barra'],
+    ['Deshacer el último movimiento', `Ctrl+Z (o ${keys.cancel} con ella elegida)`, '«Deshacer» en la rueda'],
     ['Siguiente unidad sin mover', keys.nextUnit, '—'],
     ['Mover la cámara', 'Flechas / WASD', 'Arrastrar con el botón central, el ratón en el borde o arrastrar con el dedo'],
     ['Girar la cámara', '—', 'Arrastrar con el botón derecho'],

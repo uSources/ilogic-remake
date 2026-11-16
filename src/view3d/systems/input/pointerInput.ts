@@ -1,12 +1,14 @@
 /**
  * El raton (y el dedo) sobre el mundo 3D, como en los juegos de estrategia: con el boton izquierdo,
  * soltar sin arrastrar toca la casilla y arrastrar hace un recuadro para elegir varias; con el
- * central, arrastrar desplaza la camara; con el derecho, la gira alrededor del punto mirado; la rueda
- * acerca y aleja; con el raton quieto en el borde de la pantalla, la camara se desplaza hacia alli. Con
- * el dedo, arrastrar desplaza. Que hacer con la casilla tocada o el recuadro lo dice quien lo instala.
+ * central, arrastrar desplaza la camara; con el derecho, arrastrar la gira alrededor del punto mirado
+ * y soltarlo sin arrastrar es el gesto de contexto (la rueda o una orden); la rueda del raton acerca y
+ * aleja; con el raton quieto en el borde de la pantalla, la camara se desplaza hacia alli. Con el
+ * dedo, arrastrar desplaza y mantener pulsado sin moverse es el gesto de contexto. Que hacer con la
+ * casilla tocada, el gesto o el recuadro lo dice quien lo instala.
  */
 import type { ClickMods } from '../../../controls/selection';
-import { DOUBLE_MS } from '../../../controls/pointer';
+import { DOUBLE_MS, LONG_PRESS_MS } from '../../../controls/pointer';
 import type { Pos } from '../../../core/model';
 import type { FrameListener } from '../../ports/frame';
 import type { ScreenBox, SelectionBoxView } from '../../ports/pointer';
@@ -29,6 +31,8 @@ export interface PointerHost {
   hover(pos: Pos | null): void;
   /** Un clic sin arrastrar, con sus teclas y cuantas veces seguidas (2: doble clic). */
   tap(pos: Pos, mods: ClickMods): void;
+  /** Clic derecho sin arrastrar, o mantener pulsado con el dedo: la rueda o una orden alli. */
+  context(pos: Pos): void;
   /** Se ha soltado un recuadro; `add`: con Mayusculas o Ctrl, se suma a lo elegido. */
   boxSelect(box: ScreenBox, add: boolean): void;
   onFrame(listener: FrameListener): void;
@@ -36,24 +40,31 @@ export interface PointerHost {
 
 type DragKind = 'box' | 'pan' | 'orbit';
 
-/** Que hace cada boton (por `PointerEvent.button`): como arrastra y si soltarlo sin arrastrar toca la casilla. */
+/**
+ * Que hace cada boton (por `PointerEvent.button`): como arrastra, si soltarlo sin arrastrar toca la
+ * casilla (`taps`) o hace el gesto de contexto (`context`), y si mantenerlo quieto lo hace (`holds`).
+ */
 interface ButtonRole {
   drag: DragKind;
   taps: boolean;
+  context: boolean;
+  holds: boolean;
 }
 
 const BUTTON_ROLES: Readonly<Record<number, ButtonRole>> = {
-  0: { drag: 'box', taps: true },
-  1: { drag: 'pan', taps: false },
-  2: { drag: 'orbit', taps: false },
+  0: { drag: 'box', taps: true, context: false, holds: false },
+  1: { drag: 'pan', taps: false, context: false, holds: false },
+  2: { drag: 'orbit', taps: false, context: true, holds: false },
 };
-/** Con el dedo no hay recuadro: arrastrar desplaza (elegir varias con el dedo, con su boton). */
-const TOUCH_ROLE: ButtonRole = { drag: 'pan', taps: true };
+/** Con el dedo no hay recuadro: arrastrar desplaza (elegir varias con el dedo, con su boton) y mantener es el contexto. */
+const TOUCH_ROLE: ButtonRole = { drag: 'pan', taps: true, context: false, holds: true };
 
 interface Press extends ButtonRole {
   x: number;
   y: number;
   isDrag: boolean;
+  /** Ya hizo el gesto de contexto al mantenerlo: soltarlo no toca. */
+  isHeld: boolean;
 }
 
 /** El ultimo clic, para saber si el siguiente es doble. */
@@ -98,6 +109,21 @@ export function installPointer(canvas: HTMLCanvasElement, host: PointerHost): vo
   let lastTap: LastTap | null = null;
   /** Donde esta el raton sobre el lienzo (null fuera o con el dedo): para el borde. */
   let mouseAt: { x: number; y: number } | null = null;
+  let holdTimer: ReturnType<typeof setTimeout> | null = null;
+  const stopHold = () => {
+    if (holdTimer) clearTimeout(holdTimer);
+    holdTimer = null;
+  };
+  /** Mantener quieto (con el dedo): al cabo de LONG_PRESS_MS, el gesto de contexto en esa casilla. */
+  const startHold = (held: Press) => {
+    holdTimer = setTimeout(() => {
+      holdTimer = null;
+      const pos = held.isDrag ? null : host.tileAt(held.x, held.y);
+      if (!pos) return;
+      held.isHeld = true;
+      host.context(pos);
+    }, LONG_PRESS_MS);
+  };
 
   canvas.addEventListener('contextmenu', (event) => event.preventDefault());
   canvas.addEventListener('pointerdown', (event) => {
@@ -106,25 +132,32 @@ export function installPointer(canvas: HTMLCanvasElement, host: PointerHost): vo
     // Sin esto, el boton central abre el desplazamiento automatico del navegador.
     event.preventDefault();
     canvas.setPointerCapture(event.pointerId);
-    press = { ...role, x: event.clientX, y: event.clientY, isDrag: false };
+    press = { ...role, x: event.clientX, y: event.clientY, isDrag: false, isHeld: false };
+    if (role.holds) startHold(press);
   });
   canvas.addEventListener('pointermove', (event) => {
     mouseAt = event.pointerType === 'mouse' ? { x: event.clientX, y: event.clientY } : null;
     if (!press) return host.hover(host.tileAt(event.clientX, event.clientY));
-    if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > DRAG_THRESHOLD) press.isDrag = true;
+    if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > DRAG_THRESHOLD) {
+      press.isDrag = true;
+      stopHold();
+    }
     if (press.isDrag) drag(press, event, canvas, host);
   });
   canvas.addEventListener('pointerup', (event) => {
     const released = press;
     press = null;
-    if (!released) return;
+    stopHold();
+    if (!released || released.isHeld) return;
     const mods = { shift: event.shiftKey, ctrl: event.ctrlKey || event.metaKey };
     if (released.isDrag && released.drag === 'box') {
       host.box.show(null);
       return host.boxSelect(boxOf(released, event), mods.shift || mods.ctrl);
     }
-    const pos = released.taps && !released.isDrag ? host.tileAt(event.clientX, event.clientY) : null;
+    const pos = !released.isDrag ? host.tileAt(event.clientX, event.clientY) : null;
     if (!pos) return;
+    if (released.context) return host.context(pos);
+    if (!released.taps) return;
     const count = countTaps(lastTap, pos, event.timeStamp);
     lastTap = { pos, at: event.timeStamp, count };
     host.tap(pos, { ...mods, count });

@@ -2,7 +2,8 @@ import { Fragment, type ComponentChild } from 'preact';
 import { Pause } from '../menus/Pause';
 import { t } from '../../settings';
 import type { UIState } from '../state';
-import type { NetVM } from '../vm/menus';
+import type { MenuVM, NetVM } from '../vm/menus';
+import { ActionChips } from './ActionChips';
 import { Cards } from './Cards';
 import { CombatPanel } from './Combat';
 import { Forecast } from './Forecast';
@@ -12,6 +13,7 @@ import { Minimap } from './Minimap';
 import { MissionPanel } from './MissionPanel';
 import { MoveTip } from './MoveTip';
 import { PopMenu } from './PopMenu';
+import { RadialMenu } from './RadialMenu';
 import { SelectionPanel } from './SelectionPanel';
 import { EndTurnChip, TopBar } from './TopBar';
 import { Tray } from './Tray';
@@ -67,8 +69,16 @@ const GAME_PANELS: GamePanel[] = [
   { id: 'moveTip', render: (s) => s.moveTip && <MoveTip moveTip={s.moveTip} /> },
   { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },
   { id: 'combat', render: (s) => s.combat && <CombatPanel combat={s.combat} /> },
-  { id: 'menu', render: (s) => s.menu && (s.menu.kind === 'game' ? <Pause menu={s.menu} /> : <PopMenu menu={s.menu} />) },
+  { id: 'menu', render: (s) => s.menu && <MatchMenu menu={s.menu} /> },
 ];
+
+/** Lo que sale junto a lo elegido o encima de todo: fichas, rueda, pausa o un menu (compra, elegir casilla). */
+function MatchMenu({ menu }: { menu: MenuVM }) {
+  if (menu.kind === 'game') return <Pause menu={menu} />;
+  if (menu.kind === 'chips') return <ActionChips menu={menu} />;
+  if (menu.kind === 'radial') return <RadialMenu menu={menu} />;
+  return <PopMenu menu={menu} />;
+}
 
 /** Laboratorio de animaciones: solo su panel y lo que enseña un combate (el resto estorba). */
 const LAB_PANELS: GamePanel[] = [

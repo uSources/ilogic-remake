@@ -64,6 +64,8 @@ class FakeSounds implements SoundPort {
 }
 
 const kindsOf = (events: readonly GameEvent[]): string[] => events.map((event) => event.kind);
+/** Deja acabar lo que el turno lanza sin esperar (esperar implicito, deshacer). */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 /** Una partida vacia con un soldado propio en (5,5), ya en el turno de la persona. */
 async function myTurn() {
@@ -99,19 +101,28 @@ describe('turno 3D con puertos', () => {
     expect(sounds.heard).toContain('unit_select');
   });
 
-  it('tocar una casilla azul la mueve: los sucesos van al reproductor y sigue elegida con su barra', async () => {
+  it('tocar una casilla azul la mueve y, sin nada mas que hacer alli, espera sola (sin menu)', async () => {
     const { soldier, marks, events, controls } = await myTurn();
     await controls.tap(soldier);
     await controls.tap({ x: 6, y: 5 });
+    await settle();
     expect(events.played.map(kindsOf)).toContainEqual(expect.arrayContaining(['move']));
-    expect(soldier).toMatchObject({ x: 6, y: 5 });
-    expect(controls.menu()?.kind).toBe('actions');
-    const ids = controls.menu()?.items.map((item) => item.id) ?? [];
-    expect(ids[0]).toBe('wait');
-    expect(ids).toContain('orderToDefend');
-    expect(ids.slice(-2)).toEqual(['undo', 'delete']);
-    expect(marks.selected).toMatchObject({ x: 6, y: 5 });
-    expect(marks.reach).toEqual([]);
+    expect(soldier).toMatchObject({ x: 6, y: 5, turnState: 'done' });
+    expect(controls.menu()).toBeNull();
+    expect(marks.selected).toBeNull();
+  });
+
+  it('tras moverse, si aun puede atacar sigue elegida; dejarla (tocar fuera) es esperar', async () => {
+    const { s, soldier, controls } = await myTurn();
+    newUnit(s, SOLDIER, ENEMY, { x: 7, y: 5 });
+    await controls.tap(soldier);
+    await controls.tap({ x: 6, y: 5 });
+    expect(controls.selectedUnits()).toEqual([soldier]);
+    expect(soldier.turnState).toBe('moved');
+    await controls.tap({ x: 20, y: 20 });
+    await settle();
+    expect(soldier.turnState).toBe('done');
+    expect(controls.selectedUnits()).toEqual([]);
   });
 
   it('mientras se ven los sucesos el turno esta ocupado y no atiende', async () => {
@@ -122,21 +133,33 @@ describe('turno 3D con puertos', () => {
     expect(controls.busy).toBe(true);
     await controls.tap({ x: 5, y: 7 });
     expect(controls.cancel()).toBe(true);
+    events.hold = false;
     events.release();
     await moving;
+    await settle();
     expect(controls.busy).toBe(false);
     expect(soldier).toMatchObject({ x: 6, y: 5 });
   });
 
-  it('Esc tras moverla deshace el movimiento y vuelve a enseñar a donde llega', async () => {
+  it('Ctrl+Z deshace el ultimo movimiento aunque ya haya esperado, y la vuelve a elegir', async () => {
     const { soldier, marks, controls } = await myTurn();
     await controls.tap(soldier);
     await controls.tap({ x: 6, y: 5 });
-    expect(controls.cancel()).toBe(true);
-    await Promise.resolve();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await settle();
+    controls.undoLastMove();
+    await settle();
     expect(soldier).toMatchObject({ x: 5, y: 5 });
     expect(marks.reach).toContainEqual({ x: 6, y: 5 });
+  });
+
+  it('Esc con la unidad aun elegida tras moverla deshace el movimiento', async () => {
+    const { s, soldier, controls } = await myTurn();
+    newUnit(s, SOLDIER, ENEMY, { x: 7, y: 5 });
+    await controls.tap(soldier);
+    await controls.tap({ x: 6, y: 5 });
+    expect(controls.cancel()).toBe(true);
+    await settle();
+    expect(soldier).toMatchObject({ x: 5, y: 5 });
   });
 
   it('Esc despues de elegir quita las marcas; sin nada elegido dice que no habia nada', async () => {
@@ -244,15 +267,56 @@ describe('a donde llegaria (fantasma y flecha)', () => {
   });
 });
 
-describe('el clic que acierta y la barra de acciones', () => {
-  it('elegida, la barra enseña solo lo que vale ahi (sin moverse no hay deshacer; disolver, al final)', async () => {
+describe('el clic que acierta, las fichas y la rueda', () => {
+  it('elegida en campo abierto no salen fichas: todo se hace tocando el tablero', async () => {
     const { soldier, controls } = await myTurn();
     await controls.tap(soldier);
-    expect(controls.menu()?.kind).toBe('actions');
+    expect(controls.menu()).toBeNull();
+  });
+
+  it('encima de un edificio ajeno, la ficha de capturar (Intro la usa)', async () => {
+    const { s, soldier, controls } = await myTurn();
+    s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
+    await controls.tap(soldier);
+    expect(controls.menu()?.kind).toBe('chips');
+    expect(controls.menu()?.items.map((item) => item.id)).toEqual(['capture']);
+    controls.acceptMenu();
+    await settle();
+    expect(soldier.turnState).toBe('done');
+  });
+
+  it('la rueda (clic derecho en la unidad): esperar, ordenes y disolver al final; sin moverse no hay deshacer', async () => {
+    const { soldier, controls } = await myTurn();
+    controls.context(soldier);
+    expect(controls.menu()?.kind).toBe('radial');
     const ids = controls.menu()?.items.map((item) => item.id) ?? [];
     expect(ids[0]).toBe('wait');
+    expect(ids).toContain('orderToDefend');
     expect(ids).not.toContain('undo');
     expect(ids.at(-1)).toBe('delete');
+  });
+
+  it('tocar fuera o Esc cierra la rueda y la unidad sigue elegida', async () => {
+    const { soldier, controls } = await myTurn();
+    controls.context(soldier);
+    await controls.tap({ x: 9, y: 9 });
+    expect(controls.menu()).toBeNull();
+    expect(controls.selectedUnits()).toEqual([soldier]);
+    controls.context(soldier);
+    expect(controls.cancel()).toBe(true);
+    expect(controls.selectedUnits()).toEqual([soldier]);
+  });
+
+  it('clic derecho en otra casilla con algo elegido: la orden que tiene sentido alli', async () => {
+    const { s, soldier, controls } = await myTurn();
+    s.buildings.push({ type: 'City', owner: null, x: 12, y: 5, capture: null });
+    await controls.tap(soldier);
+    controls.context({ x: 9, y: 5 });
+    await settle();
+    expect(soldier.standingOrder).toEqual({ kind: 'defend', at: { x: 9, y: 5 } });
+    controls.context({ x: 12, y: 5 });
+    await settle();
+    expect(soldier.standingOrder).toEqual({ kind: 'capture', at: { x: 12, y: 5 } });
   });
 
   it('tocar la propia unidad la suelta', async () => {
@@ -280,9 +344,9 @@ describe('el clic que acierta y la barra de acciones', () => {
     expect(soldier).toMatchObject({ x: 7, y: 5 });
   });
 
-  it('esperar desde la barra la deja hecha y nada queda elegido', async () => {
+  it('esperar desde la rueda la deja hecha y nada queda elegido', async () => {
     const { soldier, marks, controls } = await myTurn();
-    await controls.tap(soldier);
+    controls.context(soldier);
     controls.pickMenu(controls.menu()!.items.findIndex((item) => item.id === 'wait'));
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(soldier.turnState).toBe('done');
@@ -298,12 +362,13 @@ describe('el clic que acierta y la barra de acciones', () => {
     expect(soldier.carrier).toBe(transport.uid);
   });
 
-  it('desembarcar: la barra del transporte lo ofrece y se elige la casilla', async () => {
+  it('desembarcar: la ficha del transporte lo ofrece y se elige la casilla', async () => {
     const { s, soldier, controls } = await myTurn();
     const transport = newUnit(s, unitTypeNamed('Transport'), PLAYER, { x: 7, y: 5 });
     await controls.tap(soldier);
     await controls.tap(transport);
     await controls.tap(transport);
+    expect(controls.menu()?.kind).toBe('chips');
     const unload = controls.menu()!.items.findIndex((item) => item.id === 'unload');
     expect(unload).toBeGreaterThanOrEqual(0);
     controls.pickMenu(unload);
@@ -318,14 +383,18 @@ const shiftClick = { shift: true, ctrl: false, count: 1 };
 const doubleClick = { shift: false, ctrl: false, count: 2 };
 
 describe('elegir varias', () => {
-  it('Mayusculas + clic suma unidades: el grupo lleva un aro en cada una y su barra (ordenes, escuadra)', async () => {
+  it('Mayusculas + clic suma unidades: el grupo lleva un aro en cada una y su rueda (ordenes, escuadra)', async () => {
     const { s, soldier, marks, controls } = await myTurn();
     const other = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 7 });
     await controls.tap(soldier);
     await controls.tap(other, shiftClick);
     expect(marks.group).toHaveLength(2);
     expect(marks.selected).toBeNull();
+    expect(controls.menu()).toBeNull();
+    controls.context(other);
+    expect(controls.menu()?.kind).toBe('radial');
     expect(controls.menu()?.items.map((item) => item.id)).toContain('squadForm');
+    controls.cancel();
     await controls.tap(other, shiftClick);
     expect(marks.group).toEqual([]);
     expect(marks.selected).toMatchObject({ x: 5, y: 5 });
@@ -380,12 +449,11 @@ describe('elegir varias', () => {
 
 const pick = (controls: { menu(): { items: { id: string }[] } | null; pickMenu(index: number): void }, id: string) =>
   controls.pickMenu(controls.menu()!.items.findIndex((item) => item.id === id));
-const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe('ordenes y escuadras', () => {
-  it('orden desde la barra: se elige la casilla y la unidad la lleva', async () => {
+  it('orden desde la rueda: se elige la casilla y la unidad la lleva', async () => {
     const { soldier, controls } = await myTurn();
-    await controls.tap(soldier);
+    controls.context(soldier);
     pick(controls, 'orderToDefend');
     expect(controls.menu()?.title).toContain('casilla');
     await controls.tap({ x: 9, y: 5 });
@@ -395,9 +463,10 @@ describe('ordenes y escuadras', () => {
 
   it('cancelar la orden la quita', async () => {
     const { soldier, controls } = await myTurn();
-    await controls.tap(soldier);
+    controls.context(soldier);
     pick(controls, 'orderToDefend');
     await controls.tap({ x: 9, y: 5 });
+    controls.context(soldier);
     pick(controls, 'cancelOrder');
     await settle();
     expect(soldier.standingOrder).toBeUndefined();
@@ -416,6 +485,7 @@ describe('ordenes y escuadras', () => {
     const { s, soldier, controls } = await myTurn();
     const second = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 7 });
     controls.selectBox([soldier, second], false);
+    controls.context(second);
     pick(controls, 'squadForm');
     await settle();
     expect(soldier.squad).not.toBeNull();

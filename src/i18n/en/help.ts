@@ -74,7 +74,7 @@ export const help: HelpTexts = {
   goalBasics: (keys: KeyLabels) => [
     'Each of your buildings pays you at the end of every round. Spend it on units at your free factories, cities and airports.',
     'Units standing on one of your buildings are repaired at the start of the round. The supply truck repairs adjacent vehicles and aircraft.',
-    `Orders: with a unit (or a group) selected, pick “Order: attack, capture or hold there” in its bar (keyboard: ${keys.orderAttack}, ${keys.orderCapture} or ${keys.orderDefend}), then the tile. The unit shows its order’s letter (A, C, D; I when travelling over several turns). Point at a unit with an order to see what it will do when you end the turn: a pale arrow with its path, a red frame on the unit it will attack or a gold one on the building it will capture (“Show orders” or ${keys.intents}: all of them). At the end of each turn, units with an order that you haven’t used carry it out by themselves; once done they stay put waiting for another. “Cancel order” (or ${keys.orderCancel}) removes it. To pick several: drag a box with the left button, Shift + click or double-click one (all of its type); touch: “Pick several”, at the bottom. With several, a click on a tile takes them there and on an enemy they attack it; their bar gives orders and “Form squad” (Alfa, Bravo...). Ctrl + number makes the selection that key’s group and the number alone picks it again (twice: the camera goes to it). Squads appear at the bottom next to “Not moved”: tap one to pick it. A squad with the same order moves in formation: fast units wait for slow ones (unless they can hit something in range) and, near the destination or the enemy, each fights on its own. An order to a whole squad belongs to the squad; to only some of its units, those go on their own and rejoin the squad’s order once done. If you start a capture by hand with a unit that had an order, it keeps capturing until done.`,
+    `Orders: with a unit (or a group) selected, pick “Order: attack, capture or hold there” in its wheel (right-click), or right-click the tile itself (keyboard: ${keys.orderAttack}, ${keys.orderCapture} or ${keys.orderDefend}), then the tile. The unit shows its order’s letter (A, C, D; I when travelling over several turns). Point at a unit with an order to see what it will do when you end the turn: a pale arrow with its path, a red frame on the unit it will attack or a gold one on the building it will capture (“Show orders” or ${keys.intents}: all of them). At the end of each turn, units with an order that you haven’t used carry it out by themselves; once done they stay put waiting for another. “Cancel order” (or ${keys.orderCancel}) removes it. To pick several: drag a box with the left button, Shift + click or double-click one (all of its type); touch: “Pick several”, at the bottom. With several, a click on a tile takes them there and on an enemy they attack it; their bar gives orders and “Form squad” (Alfa, Bravo...). Ctrl + number makes the selection that key’s group and the number alone picks it again (twice: the camera goes to it). Squads appear at the bottom next to “Not moved”: tap one to pick it. A squad with the same order moves in formation: fast units wait for slow ones (unless they can hit something in range) and, near the destination or the enemy, each fights on its own. An order to a whole squad belongs to the squad; to only some of its units, those go on their own and rejoin the squad’s order once done. If you start a capture by hand with a unit that had an order, it keeps capturing until done.`,
   ],
   colorsTitle: 'Map colours',
   // The 3D view's colors and controls: only what it does today (what the 2D had and is still missing, in docs/IDEAS.md).
@@ -98,9 +98,24 @@ export const help: HelpTexts = {
       '—',
       'With the unit selected, click the target: a red enemy, a building (goes and captures), a transport (boards) or a matching unit (joins)',
     ],
-    ['Wait, repair, unload, undo...', 'Enter (the highlighted one)', 'The bar next to the selected unit: only what is valid there'],
+    [
+      'Capture when already on it, repair, unload',
+      'Enter (the highlighted one)',
+      'The chips next to the selected unit: they only show up when there is something like that to do',
+    ],
+    [
+      'Wait',
+      '—',
+      'On its own: after moving, if it can do nothing else; if it can, when you leave it (click elsewhere, on it or on another unit)',
+    ],
+    ['Orders, squads, wait there, disband', '—', 'The wheel: right-click (or press and hold) the unit or the group'],
+    [
+      'Order on a tile',
+      keys.orderHere,
+      'Right-click the tile with something selected: attack the enemy, capture the building or hold there',
+    ],
     ['Let go of the unit', keys.cancel, 'Click it again'],
-    ['Undo the last move', keys.cancel, '“Undo” in the bar'],
+    ['Undo the last move', `Ctrl+Z (or ${keys.cancel} while selected)`, '“Undo” in the wheel'],
     ['Next unit that has not moved', keys.nextUnit, '—'],
     ['Move the camera', 'Arrows / WASD', 'Drag with the middle button, mouse at the edge or drag with a finger'],
     ['Turn the camera', '—', 'Drag with the right button'],

@@ -1,24 +1,49 @@
 /**
- * Los textos de los menus de la partida 3D: la barra de la unidad (sus acciones) y
- * el de compra (precio y datos de cada unidad), y lo que cobra un equipo cada dia (la barra de arriba).
+ * Los textos e iconos de lo que enseña la partida 3D: las fichas y la rueda de lo elegido (sus
+ * opciones), la compra (precio y datos de cada unidad) y lo que cobra un equipo cada dia (la barra de
+ * arriba).
  */
 import { buildingIncome, buildingsOf, upkeepOf, type BuyOption } from '../../../core/rules';
 import { buildingTypeOf } from '../../../core/gameContent';
 import type { GameState, TeamId, Unit } from '../../../core/model';
 import type { MenuItemVM } from '../../../hud/store';
-import { nameOf, t, type TextKey } from '../../../settings';
+import { nameOf, t } from '../../../settings';
 import { abilitiesVM, buyBlockedText, captureHintText, unitStatsText } from '../../../ui/hudModels';
 import { unitIconKey } from '../../../ui/sprites';
-import type { BarOption } from './unitBar';
+import type { UnitOption } from './unitOptions';
 
-/** La barra de acciones de la unidad, con su texto (en capturar, "20→10": puntos del edificio antes y despues). */
-export function barItems(s: GameState, unit: Unit, options: readonly BarOption[]): MenuItemVM[] {
-  return options.map((option) => ({
-    id: option,
-    label: t(option as TextKey),
-    danger: option === 'delete',
-    hint: option === 'capture' ? captureHintText(s, unit) : undefined,
-  }));
+/** Como se ve cada opcion en su ficha: un dibujo del juego o, si no hay, un simbolo. */
+const OPTION_LOOKS: { readonly [Option in UnitOption]: { icon: string } | { glyph: string } } = {
+  attack: { icon: 'ui/cmd_attack' },
+  capture: { icon: 'ui/captura' },
+  unload: { icon: 'ui/mk_cargo' },
+  supply: { icon: 'ui/ab_supplies' },
+  move: { glyph: '➜' },
+  wait: { glyph: 'Z' },
+  orderToAttack: { icon: 'ui/cmd_attack' },
+  orderToCapture: { icon: 'ui/cmd_capture' },
+  orderToDefend: { icon: 'ui/cmd_defend' },
+  cancelOrder: { glyph: '✕' },
+  squadForm: { glyph: '+' },
+  squadLeave: { glyph: '−' },
+  squadRename: { glyph: 'Aa' },
+  squadDisband: { glyph: '÷' },
+  undo: { glyph: '↶' },
+  delete: { glyph: '✖' },
+};
+
+/** Las opciones de lo elegido (fichas o rueda), con su texto (en capturar, "20→10": puntos del edificio antes y despues). */
+export function optionItems(s: GameState, unit: Unit, options: readonly UnitOption[]): MenuItemVM[] {
+  return options.map((option) => {
+    const look = OPTION_LOOKS[option];
+    return {
+      id: option,
+      label: t(option),
+      danger: option === 'delete',
+      hint: option === 'capture' ? captureHintText(s, unit) : undefined,
+      ...('icon' in look ? { icon: look.icon } : { glyph: look.glyph }),
+    };
+  });
 }
 
 /** Una unidad que se puede comprar: precio y, al señalarla, sus datos (y por que no, si no se puede). */

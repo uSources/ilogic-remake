@@ -88,36 +88,36 @@
   max-width: 360px;
 }
 
-/* La barra de acciones de la unidad elegida: en fila y compacta, junto a ella (no tapa el tablero). */
-.pop.pop-actions {
+/* Elegir una casilla (bajar a un pasajero, la de una orden): el aviso con «Atras», compacto junto a la unidad. */
+.pop.pop-prompt {
   min-width: 0;
   padding: 6px;
 }
-.pop-actions .title {
+.pop-prompt .title {
   padding: 2px 6px 6px;
   font-size: 14px;
 }
-.pop-actions .scroll {
+.pop-prompt .scroll {
   flex-direction: row;
   flex-wrap: wrap;
   gap: 4px;
   max-height: none;
 }
-.pop-actions .item {
+.pop-prompt .item {
   padding: 6px 10px;
   font-size: 15px;
 }
-.pop-actions .item.sel::before {
+.pop-prompt .item.sel::before {
   content: none;
 }
-.pop-actions .item.sel {
+.pop-prompt .item.sel {
   outline: 2px solid var(--gold);
 }
-.pop-actions .item .hint {
+.pop-prompt .item .hint {
   padding-left: 6px;
   font-size: 13px;
 }
-.pop-actions .sep {
+.pop-prompt .sep {
   width: 3px;
   height: auto;
   margin: 2px 2px;
