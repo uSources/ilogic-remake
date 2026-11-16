@@ -20,7 +20,6 @@ import {
   canStillAct,
   lastUndoableMove,
   moveRange,
-  pathTo,
   reachableTiles,
   unitAt,
   type BuyOption,
@@ -35,7 +34,8 @@ import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
 import { teamState } from '../../../core/teams';
 import { endSound } from '../sound/soundCues';
 import { attackPlan, type AttackPlan } from './attackPlan';
-import type { EventPlayer, TileMarks } from '../../ports/turn';
+import type { EventPlayer, MovePreview, TileMarks } from '../../ports/turn';
+import { pathFor, previewAt } from './movePreview';
 
 /** Las opciones del menu de la unidad que el prototipo ya sabe hacer (las demas no salen). */
 const SUPPORTED_OPTIONS: ReadonlySet<ActionKey> = new Set<ActionKey>(['attack', 'capture', 'supply', 'wait', 'back']);
@@ -44,10 +44,13 @@ const CANCEL_ROW = 0;
 
 type Mode =
   | { kind: 'idle' }
-  | { kind: 'move'; unit: Unit; range: MoveRange }
+  /** `trail`: el camino trazado con el cursor (empieza en la unidad). */
+  | { kind: 'move'; unit: Unit; range: MoveRange; trail: Pos[] }
   | { kind: 'unitMenu'; unit: Unit; options: ActionKey[]; selected: number }
   | { kind: 'target'; unit: Unit; targets: Unit[] }
   | { kind: 'buy'; building: Building; options: BuyOption[]; selected: number };
+
+type MoveMode = Extract<Mode, { kind: 'move' }>;
 
 /** El menu abierto, para la interfaz (el bocadillo del juego, junto a la casilla `at`). */
 export interface MenuView {
@@ -67,6 +70,8 @@ export interface TurnHost {
   viewer: TeamId;
   /** Las marcas del tablero (alcance, objetivos, lo elegido). */
   marks: TileMarks;
+  /** A donde llegaria la unidad elegida: flecha del camino y fantasma. */
+  preview: MovePreview;
   /** Enseña los sucesos de cada accion (las propias y las de los demas). */
   events: EventPlayer;
   /** Elegir unidad, comprar, tu turno y el final. */
@@ -139,7 +144,7 @@ export class TurnControls {
       case 'idle':
         return this.tapIdle(pos);
       case 'move':
-        return this.tapMoving(mode.unit, mode.range, pos);
+        return this.tapMoving(mode, pos);
       case 'target':
         return this.tapTarget(mode.unit, mode.targets, pos);
       case 'unitMenu':
@@ -158,16 +163,20 @@ export class TurnControls {
 
   private chooseOwnUnit(unit: Unit): void {
     this.host.sounds.play('unit_select');
-    if (canMoveNow(unit)) return this.setMode({ kind: 'move', unit, range: moveRange(this.s, unit) });
+    if (canMoveNow(unit)) return this.startMoving(unit);
     if (canStillAct(unit)) return this.openUnitMenu(unit);
     this.setMode({ kind: 'idle' });
   }
 
-  private async tapMoving(unit: Unit, range: MoveRange, pos: Pos): Promise<void> {
+  private startMoving(unit: Unit): void {
+    this.setMode({ kind: 'move', unit, range: moveRange(this.s, unit), trail: [{ x: unit.x, y: unit.y }] });
+  }
+
+  private async tapMoving({ unit, range, trail }: MoveMode, pos: Pos): Promise<void> {
     if (samePos(pos, unit)) return this.openUnitMenu(unit);
     const plan = this.planAt(unit, range, pos);
-    if (plan) return this.moveAndAttack(plan, range);
-    if (canReach(range, pos)) return this.moveTo(unit, range, pos);
+    if (plan) return this.moveAndAttack(plan, range, trail);
+    if (canReach(range, pos)) return this.moveTo(unit, pathFor(range, trail, pos));
     this.setMode({ kind: 'idle' });
     this.tapIdle(pos);
   }
@@ -214,17 +223,18 @@ export class TurnControls {
     return true;
   }
 
-  private async moveTo(unit: Unit, range: MoveRange, to: Pos): Promise<void> {
+  private async moveTo(unit: Unit, path: Pos[]): Promise<void> {
     this.setMode({ kind: 'idle' });
-    if (!(await this.perform({ kind: 'move', uid: unit.uid, to, path: pathTo(range, to) }))) return;
+    const to = path.at(-1) ?? { x: unit.x, y: unit.y };
+    if (!(await this.perform({ kind: 'move', uid: unit.uid, to, path }))) return;
     if (canStillAct(unit)) this.openUnitMenu(unit);
   }
 
-  private async moveAndAttack(plan: AttackPlan, range: MoveRange): Promise<void> {
+  private async moveAndAttack(plan: AttackPlan, range: MoveRange, trail: readonly Pos[]): Promise<void> {
     const { attacker, from, target } = plan;
     this.setMode({ kind: 'idle' });
     const mustMove = !samePos(from, attacker);
-    if (mustMove && !(await this.perform({ kind: 'move', uid: attacker.uid, to: from, path: pathTo(range, from) }))) return;
+    if (mustMove && !(await this.perform({ kind: 'move', uid: attacker.uid, to: from, path: pathFor(range, trail, from) }))) return;
     await this.perform({ kind: 'attack', uid: attacker.uid, target: target.uid });
   }
 
@@ -296,7 +306,7 @@ export class TurnControls {
   private async back(unit: Unit): Promise<void> {
     const canUndo = lastUndoableMove(this.s)?.uid === unit.uid;
     if (canUndo && !(await this.perform({ kind: 'undoMove', uid: unit.uid }))) return;
-    if (canMoveNow(unit)) return this.setMode({ kind: 'move', unit, range: moveRange(this.s, unit) });
+    if (canMoveNow(unit)) return this.startMoving(unit);
     this.setMode({ kind: 'idle' });
   }
 
@@ -328,6 +338,18 @@ export class TurnControls {
     return idle[(current + 1) % idle.length]?.uid ?? null;
   }
 
+  // ---- Señalar ----
+
+  /** La casilla señalada (raton encima): con una unidad elegida para mover, por donde iria y a donde llegaria. */
+  hover(pos: Pos | null): void {
+    const mode = this.mode;
+    if (mode.kind !== 'move' || !pos || this.isBusy) return this.host.preview.show(null);
+    const attackFrom = this.planAt(mode.unit, mode.range, pos)?.from ?? null;
+    const { trail, look } = previewAt(mode.unit.uid, mode.range, mode.trail, pos, attackFrom);
+    this.mode = { ...mode, trail };
+    this.host.preview.show(look);
+  }
+
   // ---- Marcas ----
 
   private setMode(mode: Mode): void {
@@ -339,6 +361,7 @@ export class TurnControls {
   private showMarks(): void {
     const mode = this.mode;
     const { marks } = this.host;
+    this.host.preview.show(null);
     marks.showReach(mode.kind === 'move' ? reachableTiles(mode.range) : []);
     marks.showTargets(this.targetTiles());
     marks.select('unit' in mode ? mode.unit : 'building' in mode ? mode.building : null);

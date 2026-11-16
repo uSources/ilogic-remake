@@ -4,7 +4,7 @@ import { GameSession, humanController, passiveController } from '@core/session';
 import type { GameEvent, Pos } from '@core/model';
 import type { SoundId, SoundPort } from '../src/audio/sounds';
 import { TurnControls } from '../src/view3d/systems/turn/turnControls';
-import type { EventPlayer, TileMarks } from '../src/view3d/ports/turn';
+import type { EventPlayer, MoveLook, MovePreview, TileMarks } from '../src/view3d/ports/turn';
 import { blankState, ENEMY, PLAYER, unitTypeNamed } from './helpers';
 
 /** El turno 3D sin navegador: las marcas, los sucesos y los sonidos son puertos falsos que apuntan lo que se les pide. */
@@ -44,6 +44,14 @@ class FakeEvents implements EventPlayer {
   }
 }
 
+/** Lo ultimo que se ha pedido enseñar de a donde llegaria la unidad (null: nada). */
+class FakePreview implements MovePreview {
+  look: MoveLook | null = null;
+  show(look: MoveLook | null): void {
+    this.look = look;
+  }
+}
+
 class FakeSounds implements SoundPort {
   readonly heard: SoundId[] = [];
   play(sound: SoundId): void {
@@ -60,10 +68,11 @@ async function myTurn() {
   const marks = new FakeMarks();
   const events = new FakeEvents();
   const sounds = new FakeSounds();
+  const preview = new FakePreview();
   const session = new GameSession(s, [humanController(), passiveController()]);
-  const controls = new TurnControls({ session, viewer: PLAYER, marks, events, sounds, refresh: () => {}, onOver: () => {} });
+  const controls = new TurnControls({ session, viewer: PLAYER, marks, preview, events, sounds, refresh: () => {}, onOver: () => {} });
   await controls.runUntilInput();
-  return { s, soldier, marks, events, sounds, controls };
+  return { s, soldier, marks, preview, events, sounds, controls };
 }
 
 describe('turno 3D con puertos', () => {
@@ -116,5 +125,90 @@ describe('turno 3D con puertos', () => {
     expect(marks.targets).toContainEqual(expect.objectContaining({ x: 10, y: 13 }));
     await controls.tap({ x: 10, y: 13 });
     expect(events.played.map(kindsOf)).toEqual([expect.arrayContaining(['move']), expect.arrayContaining(['attack'])]);
+  });
+});
+
+describe('a donde llegaria (fantasma y flecha)', () => {
+  it('sin unidad elegida no se enseña nada', async () => {
+    const { preview, controls } = await myTurn();
+    controls.hover({ x: 6, y: 5 });
+    expect(preview.look).toBeNull();
+  });
+
+  it('señalar una casilla a su alcance enseña el camino hasta alli', async () => {
+    const { soldier, preview, controls } = await myTurn();
+    await controls.tap(soldier);
+    controls.hover({ x: 7, y: 5 });
+    expect(preview.look).toEqual({
+      uid: soldier.uid,
+      path: [
+        { x: 5, y: 5 },
+        { x: 6, y: 5 },
+        { x: 7, y: 5 },
+      ],
+    });
+  });
+
+  it('el camino sigue al cursor, y la unidad va por donde se ha trazado', async () => {
+    const { soldier, preview, events, controls } = await myTurn();
+    await controls.tap(soldier);
+    controls.hover({ x: 5, y: 6 });
+    controls.hover({ x: 6, y: 6 });
+    controls.hover({ x: 6, y: 5 });
+    expect(preview.look?.path).toEqual([
+      { x: 5, y: 5 },
+      { x: 5, y: 6 },
+      { x: 6, y: 6 },
+      { x: 6, y: 5 },
+    ]);
+    await controls.tap({ x: 6, y: 5 });
+    const move = events.played.flat().find((event) => event.kind === 'move');
+    expect(move).toMatchObject({
+      path: [
+        { x: 5, y: 5 },
+        { x: 5, y: 6 },
+        { x: 6, y: 6 },
+        { x: 6, y: 5 },
+      ],
+    });
+  });
+
+  it('volver sobre el camino lo recorta; volver a la unidad no enseña nada', async () => {
+    const { soldier, preview, controls } = await myTurn();
+    await controls.tap(soldier);
+    controls.hover({ x: 6, y: 5 });
+    controls.hover({ x: 7, y: 5 });
+    controls.hover({ x: 6, y: 5 });
+    expect(preview.look?.path).toEqual([
+      { x: 5, y: 5 },
+      { x: 6, y: 5 },
+    ]);
+    controls.hover({ x: 5, y: 5 });
+    expect(preview.look).toBeNull();
+  });
+
+  it('fuera de su alcance no se enseña nada', async () => {
+    const { soldier, preview, controls } = await myTurn();
+    await controls.tap(soldier);
+    controls.hover({ x: 20, y: 20 });
+    expect(preview.look).toBeNull();
+  });
+
+  it('sobre un enemigo al que llega, el camino acaba donde dispararia', async () => {
+    const { s, preview, controls } = await myTurn();
+    const tank = newUnit(s, TANK, PLAYER, { x: 10, y: 10 });
+    newUnit(s, SOLDIER, ENEMY, { x: 10, y: 13 });
+    await controls.tap(tank);
+    controls.hover({ x: 10, y: 13 });
+    expect(preview.look?.path.at(-1)).toEqual(controls.forecastAt({ x: 10, y: 13 })?.from);
+    expect(preview.look?.path.at(-1)).not.toEqual({ x: 10, y: 10 });
+  });
+
+  it('al moverse o deshacer lo elegido, el fantasma se quita', async () => {
+    const { soldier, preview, controls } = await myTurn();
+    await controls.tap(soldier);
+    controls.hover({ x: 6, y: 5 });
+    controls.cancel();
+    expect(preview.look).toBeNull();
   });
 });
