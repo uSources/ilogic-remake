@@ -126,7 +126,7 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   ahi: `UNIT_MENU` (`actions/menu.ts`) dice con que acciones se cumple cada opcion y
   `availableActions(s, team, unit)` ofrece, en ese orden, las que tienen alguna que vale (la vista
   solo añade «Atras», en el sitio que dice `BACK_GOES_BEFORE`). Lo que se manda a unas unidades
-  elegidas (un grupo, la bandeja) sale igual de `SELECTION_MENU` y `canDoWithSelection`; las
+  elegidas (un grupo, una escuadra) sale igual de `SELECTION_MENU` y `canDoWithSelection`; las
   opciones que son las mismas con una sola unidad (las ordenes, quitarlas) salen de ahi tambien
   (`ORDER_OPTIONS` dice cual es cada orden), y mover un grupo es su plan (`groupMoveOrder`,
   `groupMoveStep`), que la vista cumple paso a paso (en 3D aun no hay grupos). La vista solo pregunta
@@ -1092,12 +1092,12 @@ src/view3d/
 | `ports/camera.ts`, `ports/frame.ts` | `CameraView` (situar la camara), `CameraPose`, `Point3`; el reloj (`FrameListener`) |
 | `systems/turn/` | el turno de la persona y los de los demas paso a paso (`turnControls.ts`); que hace un clic con una unidad elegida (`clickIntent.ts`: ir, atacar, capturar al llegar, subir, unirse); que sale junto a lo elegido (`unitOptions.ts`: las fichas, solo lo que no es tocar el tablero; la rueda del clic derecho, lo poco frecuente; la orden que tiene sentido en una casilla, `orderForTile`); el camino trazado y el fantasma (`movePreview.ts`); que se puede elegir (`selection.ts`); desde donde atacaria (`attackPlan.ts`); textos e iconos de las fichas, la rueda y la compra (`menuItems.ts`; los pinta el HUD: `ActionChips.tsx`, `RadialMenu.tsx` y `BuyGrid.tsx`). Esperar es implicito: la que se mueve y ya no puede hacer nada espera sola, y dejar una que se movio tambien (`leavingMovedUnit`). `MenuView.kind`: `chips`, `radial`, `prompt` (elegir casilla), `buy` o `game` (pausa) |
 | `systems/orders/` | lo que haran las ordenes al terminar el turno: cuales enseñar (`orderIntents.ts`, con `previewStandingOrders` del nucleo) |
-| `systems/threat/` | «Ver amenaza» (T o el icono de la bandeja): las casillas a las que puede disparar algun enemigo que se ve (`threatZone.ts`, con `threatMap` del nucleo, que no delata a los de la niebla); las pinta el motor por `ThreatMarks` (`ports/threat.ts`, en `engine/fx/highlights.ts`) |
+| `systems/threat/` | «Ver amenaza» (T o el menú de la partida): las casillas a las que puede disparar algun enemigo que se ve (`threatZone.ts`, con `threatMap` del nucleo, que no delata a los de la niebla); las pinta el motor por `ThreatMarks` (`ports/threat.ts`, en `engine/fx/highlights.ts`) |
 | `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
 | `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas |
 | `systems/camera/` | la camara de estrategia como logica (`StrategyCamera`): desplazar, acercar, girar, limites y suavizado; da su pose como datos |
 | `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`: grupos con numero, ordenes, «Ver órdenes») y raton o dedo sobre el mundo (`pointerInput.ts`: tocar, recuadro, doble clic, borde), a ordenes de la camara y del turno |
-| `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien las escuadras de la bandeja y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`) |
+| `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien el numero de «Fin del turno» y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`) |
 | `systems/sound/`, `systems/weather/` | que suena con cada cosa (`soundCues.ts`); como se ve cada clima (datos: `weatherStyles.ts`) |
 | `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
 | `engine/core/` | lienzo, escena, luz cartoon (y por clima) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`) |

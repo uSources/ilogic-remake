@@ -218,8 +218,11 @@ y estado: `docs/PLAN-INTERFAZ.md`.
 - **Letras**: Fredoka (redonda, para títulos, botones y cifras) y Nunito (texto). La letra píxel de
   2013 queda para el logo.
 - **Iconos**: los de píxel que ya hay, nítidos (`image-rendering: pixelated`), dentro de las fichas.
-- **Poca cosa en pantalla**: en las esquinas solo dinero, día, menú y fin del turno; lo demás sale
-  junto a lo que se toca y cuando hace falta.
+- **Poca cosa en pantalla**: solo cuatro piezas fijas, el dinero (su desglose al pasar el ratón), el
+  día con su clima, el menú y «Fin del turno» con su número de unidades sin mover (que lleva a la
+  siguiente). Nada de bandejas ni líneas de ayuda: lo demás sale junto a lo que se toca y cuando hace
+  falta (fichas, rueda, compra, ficha de la casilla), y lo de vez en cuando va en el menú (ver
+  amenaza, ver órdenes) o en la rueda (escuadras).
 - Todo sale de las variables de `src/hud/styles/base/base.css` y de las piezas de
   `src/hud/common/toy.tsx` (`Pill`, `Chip`): un color o una forma nuevos se añaden ahí, no sueltos en
   un componente.

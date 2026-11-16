@@ -103,6 +103,8 @@ export interface TurnHost {
   sounds: SoundPort;
   /** Que casillas se ven ahora (doble clic: todas las de ese tipo que se ven). */
   screen: ScreenView;
+  /** Se juega con el dedo: la rueda ofrece ademas «Elegir varias» (con raton hay recuadro y Mayusculas). */
+  touch?: boolean;
   /** La partida o lo elegido ha cambiado: volver a pintar piezas e interfaz. */
   refresh(): void;
   /** La partida se ha acabado (tras el cartel de victoria o derrota). */
@@ -245,6 +247,13 @@ export class TurnControls {
   /** «Elegir varias» con el dedo: a partir de ahora cada toque en una unidad la suma o la quita (otra vez, como antes). */
   toggleAdding(): void {
     this.isAdding = !this.isAdding;
+  }
+
+  /** «Elegir varias» desde la rueda: esta queda elegida y los toques siguientes suman o quitan. */
+  private startAdding(unit: Unit): void {
+    this.choose(new Set([unit.uid]));
+    this.isAdding = true;
+    this.host.refresh();
   }
 
   /** Elegir las unidades de una escuadra (su boton en la bandeja). */
@@ -589,6 +598,8 @@ export class TurnControls {
     if (!option || !first) return;
     if (option === 'unload') return this.startUnloading(first);
     if (option === 'squadRename') return this.openRename(units);
+    if (option === 'squadSelect' && first.squad != null) return this.selectSquad(first.squad);
+    if (option === 'pickSeveral') return this.startAdding(first);
     const order = ORDER_KINDS[option];
     if (order) return this.setMode({ kind: 'order', units: [...units], order });
     const action = optionAction(this.s, this.host.viewer, units, option);
@@ -651,7 +662,8 @@ export class TurnControls {
     if (!chosen.includes(own)) this.chooseOwnUnit(own);
     const mode = this.mode;
     if (mode.kind !== 'unit' || mode.unit !== own) return;
-    const radial = radialOptions(this.s, this.host.viewer, own);
+    const touchOnly: UnitOption[] = this.host.touch ? ['pickSeveral'] : [];
+    const radial = [...radialOptions(this.s, this.host.viewer, own), ...touchOnly];
     if (radial.length) this.setMode({ ...mode, radial, selected: 0 });
   }
 

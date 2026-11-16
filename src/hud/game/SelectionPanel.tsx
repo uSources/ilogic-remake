@@ -25,29 +25,25 @@ function PickedUnit({ unit }: { unit: PickedVM }) {
 }
 
 /**
- * [CAMBIO] Panel de lo elegido, como en los juegos de estrategia en tiempo real: un retrato por
- * unidad (por tipo) con su vida. Tab va pasando por ellas.
+ * Panel de lo elegido, como en los juegos de estrategia en tiempo real: cuantas y un retrato por
+ * unidad con su vida (clic: solo esa; Mayusculas: quitarla; Ctrl: solo las de su tipo). Sin textos de
+ * ayuda: los cuenta la ayuda del juego.
  */
 export function SelectionPanel({ selection }: { selection: SelectionVM }) {
-  const { units, types } = selection;
+  const { units } = selection;
   return (
     <div class="px picked" aria-label={t('pickedTitle')}>
       <div class="label picked-head">
         <span>
           {t('pickedTitle')} · {units.length}
         </span>
-        <span class="key-hint" style={{ color: 'var(--gold)' }}>
-          TAB
-        </span>
       </div>
-      <div class="picked-types">{types.map((type) => `${type.count} ${type.name}`).join(' · ')}</div>
       <div class="picked-grid">
         {units.slice(0, PICKED_MAX).map((unit) => (
           <PickedUnit key={unit.uid} unit={unit} />
         ))}
         {units.length > PICKED_MAX && <span class="more">+{units.length - PICKED_MAX}</span>}
       </div>
-      <div class="picked-hint">{t('pickedHint')}</div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { fmtNum, t, type TextKey } from '../../settings';
+import { Button } from '../common/buttons';
 import { Icon } from '../common/Icon';
 import { Chip, Pill } from '../common/toy';
 import { useTipToggle } from '../common/useTipToggle';
@@ -11,31 +12,13 @@ import { DayPanel, EconomyPanel } from './Breakdown';
 import { keyLabelOf } from '../keyLabels';
 import { canAct, canUseMenuButton } from './turn';
 
-/** " · 12/40" con el icono de mando (solo con la regla de puntos de mando). */
-function CommandPoints({ points }: { points: NonNullable<UIState['commandPoints']> }) {
-  return (
-    <span class="cmd" title={t('commandShort')}>
-      {' · '}
-      <Icon k="ui/mando" alt={t('commandShort')} cls="px-icon ico-sm" />
-      {points.used}/{points.max}
-    </span>
-  );
-}
-
-/** Dinero, ingresos por dia y edificios; al pasar por encima o tocarlo, el desglose. */
+/** El dinero; al pasar por encima o tocarlo, el desglose (ingresos, mantenimiento, puntos de mando). */
 function Funds({ s }: { s: UIState }) {
   const [isOpen, toggle, close] = useTipToggle();
   return (
     <Pill cls={`funds has-tip ${isOpen ? 'open' : ''}`} onClick={toggle} onPointerLeave={close}>
       <Icon k="ui/dinero" alt="" cls="px-icon coin" />
-      <div>
-        <div class="amount num">{fmtNum(s.funds)}</div>
-        <div class="sub">
-          {s.income < 0 ? '−' : '+'}
-          {fmtNum(Math.abs(s.income))} {t('perDay')} · {s.buildings} {t('buildingsN')}
-          {s.commandPoints ? <CommandPoints points={s.commandPoints} /> : null}
-        </div>
-      </div>
+      <span class="amount num">{fmtNum(s.funds)}</span>
       {s.economy && <EconomyPanel economy={s.economy} />}
     </Pill>
   );
@@ -53,7 +36,7 @@ function Day({ s }: { s: UIState }) {
         {t('day')} {s.day}
         {s.dayLimit ? <span class="dl">/{s.dayLimit}</span> : null}
       </span>
-      <span class={`t ${s.turn === 'enemy' ? 'enemy' : ''}`}>{t(TURN_TEXT[s.turn])}</span>
+      {s.turn !== 'own' && <span class={`t ${s.turn === 'enemy' ? 'enemy' : ''}`}>{t(TURN_TEXT[s.turn])}</span>}
       {s.weather && <WeatherChip weather={s.weather} />}
       {s.dayInfo && <DayPanel dayInfo={s.dayInfo} />}
     </Pill>
@@ -61,26 +44,34 @@ function Day({ s }: { s: UIState }) {
 }
 
 /**
- * Fin del turno, abajo a la derecha: la ficha grande, con cuantas unidades quedan sin mover y, al primer
- * clic con unidades sin mover, "¿Terminar?" en rojo.
+ * Fin del turno, abajo a la derecha: la ficha grande y, en su esquina, cuantas unidades quedan sin
+ * mover (pulsarlo lleva a la siguiente, como Tab). Al primer clic con unidades sin mover,
+ * "¿Terminar?" en rojo.
  */
 export function EndTurnChip({ s }: { s: UIState }) {
   const { pending, armed } = s.endTurn;
-  const pendingLabel = pending > 0 ? ` (${pending} ${t('endTurnIdle')})` : '';
+  const showsPending = canAct(s) && pending > 0;
   return (
     <div class="end-dock">
       <Chip
-        label={`${t('endTurn')}${pendingLabel}`}
+        label={`${t('endTurn')} (${keyLabelOf('endTurn')})`}
         text={armed ? t('endTurnConfirm') : t('endTurn')}
-        badge={canAct(s) && pending > 0 ? pending : null}
         tone={armed ? 'enemy' : 'own'}
         size="lg"
         cls={`end ${armed ? 'armed' : ''}`}
         disabled={!canAct(s)}
         onClick={() => ui.actions.endTurn()}
-      >
-        <span class="key">{keyLabelOf('endTurn')}</span>
-      </Chip>
+      />
+      {showsPending && (
+        <Button
+          class="end-pending num"
+          title={`${pending} ${t('endTurnIdle')} (${keyLabelOf('nextUnit')})`}
+          aria-label={`${pending} ${t('endTurnIdle')}`}
+          onClick={() => ui.actions.nextIdle()}
+        >
+          {pending}
+        </Button>
+      )}
     </div>
   );
 }

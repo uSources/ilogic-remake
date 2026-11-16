@@ -28,6 +28,9 @@ export const orders: Translation<typeof es> = {
   squad: 'Squad',
   squadForm: 'Form squad',
   squadRename: 'Rename',
+  /** En la rueda: elegir la escuadra de la unidad, y con el dedo, empezar a elegir varias. */
+  squadSelect: 'Pick its squad',
+  pickSeveral: 'Pick several',
   squadDisband: 'Disband squad',
   squadFormed: 'Squad formed',
   squadName: 'Squad name',

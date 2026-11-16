@@ -60,6 +60,8 @@ export interface HudActions {
   toggleIntents: () => void;
   /** «Ver amenaza»: a donde llegan los enemigos. */
   toggleThreat: () => void;
+  /** La siguiente unidad sin mover (el numero de «Fin del turno»). */
+  nextIdle: () => void;
 }
 
 const NOTHING_HIDDEN: ReadonlySet<number> = new Set();

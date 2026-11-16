@@ -207,18 +207,29 @@
   }
 }
 
-/* La bandeja: amenaza y ordenes como dos iconos; «Elegir varias» solo con el dedo. */
-.tray-toggles {
-  display: flex;
-  gap: 8px;
+/* El numero de «Fin del turno» (TopBar.tsx): cuantas quedan sin mover; pulsarlo lleva a la siguiente. */
+.end-pending {
+  position: absolute;
+  top: -12px;
+  right: -10px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px;
+  display: grid;
+  place-items: center;
+  background: #ffd23f;
+  color: var(--ink);
+  border: var(--outline) solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 3px 0 var(--ink);
+  font-size: 15px;
+  cursor: pointer;
+  pointer-events: auto;
 }
-.chip.tray-toggle {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 4px;
+.end-pending:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
 }
-@media (pointer: fine) {
-  .tray .multi {
-    display: none;
-  }
+.end-dock {
+  position: absolute;
 }
