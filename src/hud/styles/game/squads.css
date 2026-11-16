@@ -17,6 +17,7 @@
   gap: 2px 6px;
   padding: 4px 8px;
   border: 3px solid var(--ink);
+  border-radius: var(--radius-sm);
   background: var(--slot);
   color: var(--text);
   font-family: var(--body);
@@ -30,7 +31,7 @@
 }
 .tray .sq-name {
   font-family: var(--display);
-  color: #5fd6c6;
+  color: #0f8f7f;
 }
 .tray .sq-count {
   color: var(--muted);
@@ -42,7 +43,7 @@
 /* [CAMBIO] Cuantas van por su cuenta con otra orden. */
 .tray .sq-detached {
   flex-basis: 100%;
-  color: #ffb43a;
+  color: var(--gold);
 }
 .tray .multi {
   padding: 6px 10px;
@@ -51,9 +52,8 @@
 }
 .tray .multi.on {
   background: var(--sel);
-  color: #fff;
+  color: var(--text);
   box-shadow:
-    inset 3px 3px 0 var(--hi),
-    inset -3px -3px 0 var(--lo),
-    4px 4px 0 rgba(0, 0, 0, 0.45);
+    inset 0 -3px 0 var(--lo),
+    var(--lift);
 }

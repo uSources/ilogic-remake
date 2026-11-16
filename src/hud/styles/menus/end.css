@@ -14,40 +14,37 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  text-shadow: 3px 3px 0 #000;
-  animation: endIn 0.5s steps(5) both;
+  animation: endIn 0.5s ease-out both;
 }
 .end-title {
   font-family: var(--display);
+  font-weight: 700;
   font-size: clamp(36px, 8vw, 84px);
-  letter-spacing: 4px;
+  letter-spacing: 2px;
   line-height: 1;
+  /* Letras de juguete: relleno de color, borde de tinta y sombra dura debajo. */
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 6px 0 var(--ink);
 }
 .endscreen.won .end-title {
-  color: var(--gold);
-  text-shadow:
-    4px 4px 0 #7a4a00,
-    8px 8px 0 #000;
+  color: #ffcf33;
 }
 .endscreen.lost .end-title {
-  color: var(--red);
-  text-shadow:
-    4px 4px 0 #4a0f0c,
-    8px 8px 0 #000;
+  color: #ff6b61;
 }
 .endscreen.draw .end-title {
-  color: var(--text);
-  text-shadow:
-    4px 4px 0 #2a2a2a,
-    8px 8px 0 #000;
+  color: var(--panel);
 }
 .end-reason {
   font-family: var(--display);
+  font-weight: 600;
   font-size: 16px;
-  color: var(--text);
+  /* Va sobre el velo oscuro, no sobre una ficha: en crema. */
+  color: var(--panel);
 }
 .end-head .label {
-  color: var(--text);
+  color: var(--panel);
 }
 @keyframes endIn {
   from {
@@ -96,6 +93,7 @@
   height: 110px;
   background: var(--ink);
   border: 3px solid var(--ink);
+  border-radius: var(--radius-sm);
 }
 .chart .grid {
   stroke: #24314d;

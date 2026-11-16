@@ -142,7 +142,6 @@ export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, m
     tileAt: moment.cursor && !moment.menu ? moment.anchorOf(moment.cursor) : null,
     anyStandingOrder: anyStandingOrder(s, viewer),
     endTurn: { pending: idleUnits(s, viewer).length, armed: false },
-    hint: '',
   });
 }
 

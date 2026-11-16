@@ -38,10 +38,9 @@
   transform: translateY(-4px);
   border-color: var(--gold);
   box-shadow:
-    inset 3px 3px 0 var(--hi),
-    inset -3px -3px 0 var(--lo),
+    inset 0 -3px 0 var(--lo),
     0 0 0 3px var(--gold),
-    6px 8px 0 rgba(0, 0, 0, 0.5);
+    var(--lift);
 }
 .card .label {
   color: var(--gold);
@@ -53,6 +52,7 @@
   image-rendering: pixelated;
   background: var(--ink);
   border: 3px solid var(--ink);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,6 +81,7 @@
   gap: 4px;
   background: linear-gradient(#24314d, #1a2a1a);
   border: 3px solid var(--ink);
+  border-radius: var(--radius-sm);
   padding-bottom: 12px;
 }
 .card-art img {

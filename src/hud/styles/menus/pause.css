@@ -96,12 +96,6 @@ html.reduce-motion .home .logo {
   pointer-events: none;
   background: radial-gradient(ellipse at 50% 45%, rgba(11, 18, 32, 0.25) 0%, rgba(11, 18, 32, 0.6) 55%, rgba(5, 8, 14, 0.92) 100%);
 }
-.menu-veil::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.12) 0 2px, transparent 2px 4px);
-}
 .credits-box .cr-main {
   display: flex;
   align-items: center;

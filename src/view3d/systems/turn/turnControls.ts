@@ -38,7 +38,7 @@ import {
 import type { GameSession } from '../../../core/session';
 import { showBanner, showToast, ui, type MenuItemVM } from '../../../hud/store';
 import { buyItem, optionItems } from './menuItems';
-import { fmtNum, nameOf, t } from '../../../settings';
+import { fmtNum, nameOf, settings, t } from '../../../settings';
 import { buyBlockedText } from '../../../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
 import { teamState } from '../../../core/teams';
@@ -388,9 +388,12 @@ export class TurnControls {
     return this.s.units.includes(unit) && isOnMap(unit);
   }
 
-  /** Ya se ha movido, no puede moverse mas y no tiene fichas ni a quien atacar desde alli. */
+  /**
+   * Ya se ha movido, no puede moverse mas y no tiene fichas ni a quien atacar desde alli (y la
+   * persona quiere que espere sola: opcion «Esperar sola al soltar», `settings.autoWait`).
+   */
   private hasNothingLeft(unit: Unit, range: MoveRange | null, chips: readonly UnitOption[]): boolean {
-    return unit.turnState === 'moved' && !range && !chips.length && !attackTargetsFromRange(this.s, unit, null).length;
+    return settings.autoWait && unit.turnState === 'moved' && !range && !chips.length && !attackTargetsFromRange(this.s, unit, null).length;
   }
 
   /** Esperar implicito: la unidad acaba aqui su turno (se puede deshacer su movimiento con Ctrl+Z). */
@@ -406,7 +409,7 @@ export class TurnControls {
   private async leavingMovedUnit(next: () => void | Promise<void>): Promise<void> {
     const before = this.mode.kind === 'unit' ? this.mode.unit : null;
     await next();
-    const isLeft = !!before && !this.selectedUnits().includes(before) && before.turnState === 'moved';
+    const isLeft = settings.autoWait && !!before && !this.selectedUnits().includes(before) && before.turnState === 'moved';
     if (isLeft && this.isStillHere(before) && this.isMyTurn) await this.perform({ kind: 'wait', uid: before.uid });
   }
 

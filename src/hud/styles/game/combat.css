@@ -59,6 +59,7 @@
   height: 52px;
   background: var(--slot);
   border: 3px solid var(--ink);
+  border-radius: var(--radius-sm);
 }
 .cs-portrait img,
 .cs-portrait > .px-icon {

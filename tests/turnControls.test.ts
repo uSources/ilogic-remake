@@ -533,3 +533,24 @@ describe('comprar con fichas', () => {
     expect(s.units.some((unit) => unit.type === 'Car' && unit.x === 3 && unit.y === 3)).toBe(true);
   });
 });
+
+describe('esperar sola al soltar (opcion)', () => {
+  it('apagada, la unidad movida no espera sola: sigue elegida y dejarla tampoco la hace esperar', async () => {
+    const { settings } = await import('../src/settings');
+    const before = settings.autoWait;
+    settings.autoWait = false;
+    try {
+      const { soldier, controls } = await myTurn();
+      await controls.tap(soldier);
+      await controls.tap({ x: 6, y: 5 });
+      await settle();
+      expect(soldier.turnState).toBe('moved');
+      expect(controls.selectedUnits()).toEqual([soldier]);
+      await controls.tap({ x: 20, y: 20 });
+      await settle();
+      expect(soldier.turnState).toBe('moved');
+    } finally {
+      settings.autoWait = before;
+    }
+  });
+});

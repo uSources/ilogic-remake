@@ -103,7 +103,6 @@ export interface UIState {
   anyStandingOrder: boolean;
   toast: { text: string; id: number } | null;
   banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
-  hint: string;
   end: {
     /** Como ha acabado para quien mira. */
     outcome: EndOutcome;
@@ -218,7 +217,6 @@ export const initialState: UIState = {
   toast: null,
   banner: null,
   weather: null,
-  hint: '',
   end: null,
   dayLimit: null,
   helpRules: null,
