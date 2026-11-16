@@ -1,8 +1,9 @@
 /* Columna derecha: minimapa y bandeja */
+/* Encima de la ficha de fin del turno (endturn.css). */
 .side {
   position: absolute;
   right: 16px;
-  bottom: 16px;
+  bottom: 96px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -42,7 +43,7 @@
 @media (max-width: 720px) {
   .side {
     right: 10px;
-    bottom: 10px;
+    bottom: 80px;
   }
   .minimap {
     display: none;

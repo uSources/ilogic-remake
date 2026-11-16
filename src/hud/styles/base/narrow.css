@@ -65,8 +65,17 @@
     font-size: 14px;
     padding: 8px 10px;
   }
-  .px-btn.end .key {
+  .chip.end .key {
     display: none;
+  }
+  .chip.lg {
+    min-height: 52px;
+    padding: 6px 16px;
+    font-size: 18px;
+  }
+  .end-dock {
+    right: 10px;
+    bottom: 10px;
   }
   .menu-btn {
     width: 44px;

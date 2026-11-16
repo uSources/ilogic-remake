@@ -204,6 +204,26 @@ alas (aro del equipo, blanco y centro oscuro: lo que se ve desde arriba).
 
 Antes de inventar un color, usar uno de estos: así todas las unidades parecen del mismo juego.
 
+## Interfaz
+
+Decidido con el usuario (16-11-2026): **caja de juguete**, a juego con el tablero de bloques. Plan
+y estado: `docs/PLAN-INTERFAZ.md`.
+
+- **Fichas de plástico**: fondo crema (`--panel`), borde de tinta de 3 px (`--ink`, un morado casi
+  negro), esquinas redondas (`--radius` 16 px; botones 10 px; pastillas del todo) y una sombra dura
+  debajo (`--lift`), sin difuminar. Al pulsar, la ficha baja hasta su sombra.
+- **Colores**: azul de bando para lo propio y lo principal (`--blue-btn`), rojo para lo enemigo y lo
+  peligroso (`--red-btn`), dorado oscuro para resaltar texto (`--gold`) y amarillo para los números
+  de las esquinas. Texto en tinta sobre crema; blanco solo sobre azul o rojo.
+- **Letras**: Fredoka (redonda, para títulos, botones y cifras) y Nunito (texto). La letra píxel de
+  2013 queda para el logo.
+- **Iconos**: los de píxel que ya hay, nítidos (`image-rendering: pixelated`), dentro de las fichas.
+- **Poca cosa en pantalla**: en las esquinas solo dinero, día, menú y fin del turno; lo demás sale
+  junto a lo que se toca y cuando hace falta.
+- Todo sale de las variables de `src/hud/styles/base/base.css` y de las piezas de
+  `src/hud/common/toy.tsx` (`Pill`, `Chip`): un color o una forma nuevos se añaden ahí, no sueltos en
+  un componente.
+
 ## Cómo comprobarlo
 
 - Capturas de frente, de lado, de espaldas y **desde arriba como la cámara del juego** (elevación

@@ -1,6 +1,6 @@
 import { fmtNum, t, type TextKey } from '../../settings';
-import { Button } from '../common/buttons';
 import { Icon } from '../common/Icon';
+import { Chip, Pill } from '../common/toy';
 import { useTipToggle } from '../common/useTipToggle';
 import { WeatherIcon } from '../common/WeatherIcon';
 import type { UIState } from '../state';
@@ -26,7 +26,7 @@ function CommandPoints({ points }: { points: NonNullable<UIState['commandPoints'
 function Funds({ s }: { s: UIState }) {
   const [isOpen, toggle, close] = useTipToggle();
   return (
-    <div class={`px funds has-tip ${isOpen ? 'open' : ''}`} onClick={toggle} onPointerLeave={close}>
+    <Pill cls={`funds has-tip ${isOpen ? 'open' : ''}`} onClick={toggle} onPointerLeave={close}>
       <Icon k="ui/dinero" alt="" cls="px-icon coin" />
       <div>
         <div class="amount num">{fmtNum(s.funds)}</div>
@@ -37,7 +37,7 @@ function Funds({ s }: { s: UIState }) {
         </div>
       </div>
       {s.economy && <EconomyPanel economy={s.economy} />}
-    </div>
+    </Pill>
   );
 }
 
@@ -48,7 +48,7 @@ const TURN_TEXT: Record<Side, TextKey> = { own: 'yourTurn', ally: 'allyTurn', en
 function Day({ s }: { s: UIState }) {
   const [isOpen, toggle, close] = useTipToggle();
   return (
-    <div class={`day has-tip ${isOpen ? 'open' : ''}`} onClick={toggle} onPointerLeave={close}>
+    <Pill cls={`day has-tip ${isOpen ? 'open' : ''}`} onClick={toggle} onPointerLeave={close}>
       <span class="d">
         {t('day')} {s.day}
         {s.dayLimit ? <span class="dl">/{s.dayLimit}</span> : null}
@@ -56,45 +56,47 @@ function Day({ s }: { s: UIState }) {
       <span class={`t ${s.turn === 'enemy' ? 'enemy' : ''}`}>{t(TURN_TEXT[s.turn])}</span>
       {s.weather && <WeatherChip weather={s.weather} />}
       {s.dayInfo && <DayPanel dayInfo={s.dayInfo} />}
+    </Pill>
+  );
+}
+
+/**
+ * Fin del turno, abajo a la derecha: la ficha grande, con cuantas unidades quedan sin mover y, al primer
+ * clic con unidades sin mover, "¿Terminar?" en rojo.
+ */
+export function EndTurnChip({ s }: { s: UIState }) {
+  const { pending, armed } = s.endTurn;
+  const pendingLabel = pending > 0 ? ` (${pending} ${t('endTurnIdle')})` : '';
+  return (
+    <div class="end-dock">
+      <Chip
+        label={`${t('endTurn')}${pendingLabel}`}
+        text={armed ? t('endTurnConfirm') : t('endTurn')}
+        badge={canAct(s) && pending > 0 ? pending : null}
+        tone={armed ? 'enemy' : 'own'}
+        size="lg"
+        cls={`end ${armed ? 'armed' : ''}`}
+        disabled={!canAct(s)}
+        onClick={() => ui.actions.endTurn()}
+      >
+        <span class="key">{keyLabelOf('endTurn')}</span>
+      </Chip>
     </div>
   );
 }
 
-/** [CAMBIO] El aviso de unidades sin mover lo da el propio boton: cuantas quedan y, al primer clic, "¿Terminar?". */
-function EndTurnButton({ s }: { s: UIState }) {
-  const { pending, armed } = s.endTurn;
-  return (
-    <Button
-      class={`px-btn end ${armed ? 'armed' : ''}`}
-      disabled={!canAct(s)}
-      onClick={() => ui.actions.endTurn()}
-      title={pending > 0 ? `${pending} ${t('endTurnIdle')}` : undefined}
-    >
-      {armed ? t('endTurnConfirm') : t('endTurn')}
-      {canAct(s) && pending > 0 && <span class="pending num">{pending}</span>}
-      <span class="key">{keyLabelOf('endTurn')}</span>
-    </Button>
-  );
-}
-
-/** Barra de arriba: dinero (con su desglose), dia y clima, fin de turno y menu de la partida. */
+/** Barra de arriba: dinero (con su desglose) a la izquierda, dia y clima en medio y el menu a la derecha. */
 export function TopBar({ s }: { s: UIState }) {
   return (
     <div class="top">
       <Funds s={s} />
       <Day s={s} />
       <div class="spacer" />
-      <EndTurnButton s={s} />
-      <Button
-        class="px-btn plain menu-btn"
-        aria-label={t('gameMenu')}
-        disabled={!canUseMenuButton(s)}
-        onClick={() => ui.actions.openGameMenu()}
-      >
+      <Chip label={t('gameMenu')} cls="menu-btn" disabled={!canUseMenuButton(s)} onClick={() => ui.actions.openGameMenu()}>
         <i />
         <i />
         <i />
-      </Button>
+      </Chip>
     </div>
   );
 }

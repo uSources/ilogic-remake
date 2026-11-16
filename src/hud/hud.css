@@ -1,10 +1,11 @@
-/* Interfaz "retro pixel" (direccion A): paneles con bisel, tipografia pixel, sin redondeos. */
+/* Interfaz "caja de juguete" (docs/ESTETICA.md, "Interfaz"): fichas redondeadas, letra redonda. */
 
 /* La hoja va por partes en styles/ (una por panel o pantalla). El orden de los @import es el orden
    de la cascada de la hoja original: una regla de abajo gana a una de arriba con la misma
    especificidad, asi que no se reordenan sin comprobarlo (npm run shots). Lo nuevo, al final. */
 @import './styles/base/base.css';
 @import './styles/base/panel.css';
+@import './styles/base/toy.css';
 @import './styles/game/topbar.css';
 @import './styles/game/general.css';
 @import './styles/game/lab.css';

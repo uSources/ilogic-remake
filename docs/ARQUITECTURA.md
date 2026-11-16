@@ -743,7 +743,7 @@ pone la vista. Cada pieza en su sitio:
 | Paneles de la partida y donde va cada uno | `game/*.tsx`, colocados en `game/GameHud.tsx` (lista `GAME_PANELS`) |
 | Pantallas del menu, pausa y final | `menus/*.tsx` |
 | Dialogos (ayuda, novedades, nombre de escuadra) y avisos (carga, aviso, resumen, cartel) | `overlays/*.tsx` |
-| Piezas compartidas | `common/`: `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useFold`/`FoldMark`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
+| Piezas compartidas | `common/`: `Pill` y `Chip` (`toy.tsx`, las piezas "caja de juguete": pastillas de esquina y fichas que se pulsan), `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useFold`/`FoldMark`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
 | Estilos | `styles/<grupo>/<panel>.css`, juntados en orden por `hud.css` |
 
 - **Un panel nuevo**: su tipo en `vm/`, su campo en `UIState` (null = no se ve) y en `initialState`,
@@ -755,8 +755,10 @@ pone la vista. Cada pieza en su sitio:
   usa botones normales, porque ahi se escribe.
 - **Estilos**: cada hoja de `styles/` es un trozo seguido de la hoja de antes y `hud.css` las importa
   en ese orden, que es el de la cascada. Por eso hay alguna mezclada (`base/narrow.css`,
-  `legacy.css`): mover reglas de sitio puede cambiar quien gana. Lo nuevo va al final; los colores son
-  variables de `styles/base/base.css` (los mismos que `ui/palette.ts`).
+  `legacy.css`): mover reglas de sitio puede cambiar quien gana. Lo nuevo va al final; los colores,
+  radios, bordes y sombras son variables de `styles/base/base.css` (los colores, los mismos que
+  `ui/palette.ts`), y las letras (Fredoka y Nunito, en `fonts/`) van dentro del proyecto: el juego
+  funciona en un solo HTML y sin red. Como se ve, en `docs/ESTETICA.md`, "Interfaz".
 - **Textos**: `t('clave')` (de `settings.ts`, que solo la expone) busca en `src/i18n/`, un fichero por tema en `es/` y su
   traduccion con el mismo nombre en `en/` (tipada con `Translation`: si falta una clave, no
   compila). Un texto nuevo va al tema que toca en `es/` y luego en `en/`; las claves no se repiten

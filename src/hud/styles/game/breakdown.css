@@ -116,5 +116,6 @@
   display: block;
   width: 20px;
   height: 4px;
+  border-radius: 2px;
   background: var(--text);
 }

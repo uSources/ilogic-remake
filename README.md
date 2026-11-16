@@ -224,7 +224,8 @@ Los graficos se compilan antes de jugar, no mientras se juega. Hay dos clases:
 1. montañas y bosques, edificios, unidades con sus colores de bando, flores, cactus y muñecos de nieve
    (desde los dibujos ya guardados en `tools/art/`: no llama a ningun servicio de pago);
 2. los iconos de la interfaz (`tools/art/icons/iconos.txt` → `public/assets/img/ui`, claves `ui/vida`,
-   `ui/dinero`...) y la letra de titulos y botones (`tools/art/font/ilogic.txt` → `src/hud/fonts/ilogic.woff2`),
+   `ui/dinero`...) y la letra pixel del logo (`tools/art/font/ilogic.txt` → `src/hud/fonts/ilogic.woff2`; la de la interfaz,
+   Fredoka y Nunito, ya viene hecha en `src/hud/fonts/`),
    las dos dibujadas como rejillas de pixeles en texto: se retocan editando el `.txt`;
    retratos, habilidades, clima y banderin; los iconos de la app (pestaña, PWA y pantalla de inicio)
    a partir del Soldado azul nuevo (`tools/art/build_app_icons.py` → `public/icons`);

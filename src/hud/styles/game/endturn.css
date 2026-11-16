@@ -1,25 +1,25 @@
-/* [CAMBIO] Fin de turno: cuantas unidades quedan sin mover y, al primer clic, "¿Terminar?" en rojo. */
-.px-btn.end .pending {
-  display: inline-block;
-  min-width: 20px;
-  margin-left: 6px;
-  padding: 1px 5px;
-  background: var(--gold);
-  color: var(--ink);
-  font-size: 13px;
-  text-align: center;
+/* Fin del turno: la ficha grande abajo a la derecha (TopBar.tsx, EndTurnChip). Con unidades sin mover,
+   cuantas quedan en la esquina y, al primer clic, "¿Terminar?" en rojo que late. */
+.end-dock {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  pointer-events: none;
 }
-.px-btn.end.armed {
-  background: var(--red-btn);
-  animation: end-armed 0.5s steps(2) infinite alternate;
+.chip.end .key {
+  margin-left: 4px;
+}
+.chip.end.armed {
+  animation: end-armed 0.5s ease-in-out infinite alternate;
 }
 @keyframes end-armed {
   to {
-    filter: brightness(1.25);
+    filter: brightness(1.15);
+    transform: translateY(-2px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .px-btn.end.armed {
+  .chip.end.armed {
     animation: none;
   }
 }
