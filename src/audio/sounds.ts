@@ -1,7 +1,7 @@
 /**
  * Los efectos de sonido como los ve el juego: un nombre y un puerto para pedirlo, sin Web Audio.
  * Quien decide que suena (los menus, el turno, los sucesos) depende de `SoundPort`; quien lo hace
- * sonar es `sfx.ts` (Web Audio) y en los tests, uno falso. La raiz de composicion (`view3d/main.ts`)
+ * sonar es `sfx.ts` (Web Audio) y en los tests, uno falso. La raiz de composicion (`view3d/app/main.ts`)
  * junta los dos.
  */
 import { SOUND_VARIANTS } from './soundList';

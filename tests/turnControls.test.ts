@@ -3,8 +3,8 @@ import { newUnit } from '@core/measure';
 import { GameSession, humanController, passiveController } from '@core/session';
 import type { GameEvent, Pos } from '@core/model';
 import type { SoundId, SoundPort } from '../src/audio/sounds';
-import { TurnControls } from '../src/view3d/turnControls';
-import type { EventPlayer, TileMarks } from '../src/view3d/turnPorts';
+import { TurnControls } from '../src/view3d/systems/turn/turnControls';
+import type { EventPlayer, TileMarks } from '../src/view3d/ports/turn';
 import { blankState, ENEMY, PLAYER, unitTypeNamed } from './helpers';
 
 /** El turno 3D sin navegador: las marcas, los sucesos y los sonidos son puertos falsos que apuntan lo que se les pide. */

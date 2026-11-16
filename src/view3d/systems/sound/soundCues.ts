@@ -2,9 +2,9 @@
  * Que suena con cada cosa de la vista: pasos, disparos, capturas, menus y el final. Solo decide (tablas,
  * sin Web Audio ni three.js); lo hace sonar el `SoundPort` que reciba quien lo use.
  */
-import type { SoundId } from '../audio/sounds';
-import type { MovementMotion } from '../core/content';
-import type { MenuCommand } from '../controls/menu';
+import type { SoundId } from '../../../audio/sounds';
+import type { MovementMotion } from '../../../core/content';
+import type { MenuCommand } from '../../../controls/menu';
 
 /** El paso de cada forma de moverse, una vez por casilla. */
 export const STEP_SOUNDS: Readonly<Record<MovementMotion, SoundId>> = {

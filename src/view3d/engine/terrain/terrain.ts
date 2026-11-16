@@ -8,13 +8,13 @@
  * instanciada, y todo el relieve otra: el coste no crece con el tamaño del mapa.
  */
 import * as THREE from 'three';
-import type { TerrainType } from '../core/content';
-import { elevationAt } from '../core/elevation';
-import { terrainAt, themeOf } from '../core/gameContent';
-import { mapGrid } from '../core/mapGrid';
-import type { GameState, Pos } from '../core/model';
-import type { Grid } from '../core/util/grid';
-import type { GlbLibrary } from './glbModels';
+import type { TerrainType } from '../../../core/content';
+import { elevationAt } from '../../../core/elevation';
+import { terrainAt, themeOf } from '../../../core/gameContent';
+import { mapGrid } from '../../../core/mapGrid';
+import type { GameState, Pos } from '../../../core/model';
+import type { Grid } from '../../../core/util/grid';
+import type { GlbLibrary } from '../pieces/glbModels';
 import { buildRelief, type ReliefStyle, type ReliefView } from './relief';
 import { shoreSides, waterClock, waterMaterial } from './water';
 

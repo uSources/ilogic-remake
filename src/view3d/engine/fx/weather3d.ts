@@ -5,10 +5,10 @@
  * pantalla. Con «reducir el movimiento» solo queda el velo (como en 2D).
  */
 import * as THREE from 'three';
-import { reducedMotion } from '../ui/motion';
-import { STYLES, type Style } from './weatherStyles';
+import { reducedMotion } from '../../../ui/motion';
+import { STYLES, type Style } from '../../systems/weather/weatherStyles';
 import { PixelPoints } from './pixelPoints';
-import { WIND_DIRECTION as WIND } from './space';
+import { WIND_DIRECTION as WIND } from '../core/space';
 
 /** Cuantas casillas mide «una vista» de los estilos 2D (sus velocidades van en vistas por segundo). */
 const VIEW_TILES = 14;

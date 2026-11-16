@@ -6,8 +6,8 @@
 import * as THREE from 'three';
 import type { OwnerSide } from '../../ui/sides';
 import { ROTOR_SPEED } from '../engine/pieces/unitPiece';
-import type { GlbLibrary, GlbUnit, UnitClip } from '../glbModels';
-import { toonMaterial } from '../toon';
+import type { GlbLibrary, GlbUnit, UnitClip } from '../engine/pieces/glbModels';
+import { toonMaterial } from '../engine/core/toon';
 
 /** Un modelo del catalogo: una unidad o un edificio (id del contenido). */
 export interface ModelEntry {

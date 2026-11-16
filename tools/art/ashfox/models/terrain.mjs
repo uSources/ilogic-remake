@@ -1,7 +1,7 @@
 // El terreno y su decorado para Ashfox, a semejanza del terreno 2D (public/assets/img/wang):
 // hierba lima con flores y borde de tierra, bosque de copas verde oscuro, agua azul con vetas, nieve
 // con grietas azules y el decorado suelto (cactus, flores, muñeco de nieve). Las montañas y la arena
-// no son modelos: son relieve que dibuja el juego (src/view3d/relief.ts).
+// no son modelos: son relieve que dibuja el juego (src/view3d/engine/terrain/relief.ts).
 // Medidas en unidades de Ashfox: 16 = una casilla. Las casillas van de -8 a 8 en x y z y su cara de
 // arriba es el suelo; el decorado se apoya en y = 0 (encima de la casilla). Lo escribe generate.mjs.
 

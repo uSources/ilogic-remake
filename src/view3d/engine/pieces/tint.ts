@@ -3,7 +3,7 @@
  * comparten las demas.
  */
 import * as THREE from 'three';
-import { toonMaterial } from '../../toon';
+import { toonMaterial } from '../core/toon';
 
 /** El color de partida de una pieza (lo apunta la primera vez, antes de oscurecerla). */
 function baseColorOf(mesh: THREE.Object3D, material: THREE.MeshToonMaterial): THREE.Color {

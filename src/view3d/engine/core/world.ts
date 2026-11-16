@@ -4,6 +4,7 @@
  * propio requestAnimationFrame.
  */
 import * as THREE from 'three';
+import type { FrameListener } from '../../ports/frame';
 
 /**
  * La luz cartoon: un sol calido y fuerte, que pinta la cara iluminada, y un cielo frio y flojo, que
@@ -48,8 +49,6 @@ const WEATHER_MOODS: Readonly<Record<string, Mood>> = {
 };
 /** Lo que tarda (mas o menos, en segundos) en pasar la luz de un clima a la de otro. */
 const MOOD_SECONDS = 1.5;
-
-export type FrameListener = (seconds: number) => void;
 
 export class World {
   readonly renderer: THREE.WebGLRenderer;

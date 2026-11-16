@@ -4,10 +4,10 @@
  */
 import * as THREE from 'three';
 import type { OwnerSide } from '../../../ui/sides';
-import { newBadge } from '../../badges';
-import { buildModel } from '../../blocks';
-import type { GlbLibrary, GlbUnit } from '../../glbModels';
-import { buildingModelOf } from '../../models';
+import { newBadge } from './badges';
+import { buildModel } from './blocks';
+import type { GlbLibrary, GlbUnit } from './glbModels';
+import { buildingModelOf } from './models';
 import type { BuildingLook } from '../../systems/board/boardScene';
 import { SIDE_PAINT } from './sidePaint';
 

@@ -6,10 +6,10 @@
  * mandan acciones por la sesion (`session.act`) y se animan sus sucesos. Tambien lleva los turnos
  * de los demas (la IA), animando cada cosa que hacen.
  */
-import type { SoundPort } from '../audio/sounds';
-import { availableActions } from '../core/actions';
-import { samePos } from '../core/geom';
-import type { Building, GameAction, Pos, TeamId, Unit } from '../core/model';
+import type { SoundPort } from '../../../audio/sounds';
+import { availableActions } from '../../../core/actions';
+import { samePos } from '../../../core/geom';
+import type { Building, GameAction, Pos, TeamId, Unit } from '../../../core/model';
 import {
   attackTargets,
   buildingAt,
@@ -25,17 +25,17 @@ import {
   unitAt,
   type BuyOption,
   type MoveRange,
-} from '../core/rules';
-import type { GameSession } from '../core/session';
-import { showBanner, showToast, type MenuItemVM } from '../hud/store';
+} from '../../../core/rules';
+import type { GameSession } from '../../../core/session';
+import { showBanner, showToast, type MenuItemVM } from '../../../hud/store';
 import { buyItem, unitMenuItems, withBack, type ActionKey } from './menuItems';
-import { fmtNum, nameOf, t } from '../settings';
-import { buyBlockedText } from '../ui/hudModels';
-import { buildingTypeOf, unitTypeOf } from '../core/gameContent';
-import { teamState } from '../core/teams';
-import { endSound } from './soundCues';
+import { fmtNum, nameOf, t } from '../../../settings';
+import { buyBlockedText } from '../../../ui/hudModels';
+import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
+import { teamState } from '../../../core/teams';
+import { endSound } from '../sound/soundCues';
 import { attackPlan, type AttackPlan } from './attackPlan';
-import type { EventPlayer, TileMarks } from './turnPorts';
+import type { EventPlayer, TileMarks } from '../../ports/turn';
 
 /** Las opciones del menu de la unidad que el prototipo ya sabe hacer (las demas no salen). */
 const SUPPORTED_OPTIONS: ReadonlySet<ActionKey> = new Set<ActionKey>(['attack', 'capture', 'supply', 'wait', 'back']);

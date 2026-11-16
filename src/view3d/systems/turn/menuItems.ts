@@ -2,14 +2,14 @@
  * Los textos de los menus de la partida 3D: el de la unidad (sus acciones, con «Atras» en su sitio) y
  * el de compra (precio y datos de cada unidad), y lo que cobra un equipo cada dia (la barra de arriba).
  */
-import { buildingIncome, buildingsOf, upkeepOf, type BuyOption } from '../core/rules';
-import { buildingTypeOf } from '../core/gameContent';
-import type { UnitMenuOption } from '../core/actions';
-import type { GameState, TeamId, Unit } from '../core/model';
-import type { MenuItemVM } from '../hud/store';
-import { nameOf, t, type TextKey } from '../settings';
-import { abilitiesVM, buyBlockedText, captureHintText, unitStatsText } from '../ui/hudModels';
-import { unitIconKey } from '../ui/sprites';
+import { buildingIncome, buildingsOf, upkeepOf, type BuyOption } from '../../../core/rules';
+import { buildingTypeOf } from '../../../core/gameContent';
+import type { UnitMenuOption } from '../../../core/actions';
+import type { GameState, TeamId, Unit } from '../../../core/model';
+import type { MenuItemVM } from '../../../hud/store';
+import { nameOf, t, type TextKey } from '../../../settings';
+import { abilitiesVM, buyBlockedText, captureHintText, unitStatsText } from '../../../ui/hudModels';
+import { unitIconKey } from '../../../ui/sprites';
 
 /** Una opcion del menu de la unidad: las del nucleo y «Atras». */
 export type ActionKey = UnitMenuOption | 'back';

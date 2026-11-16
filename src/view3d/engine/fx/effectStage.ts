@@ -5,7 +5,7 @@
  */
 import type * as THREE from 'three';
 import type { EffectStage, PuffKind, Spot } from '../../ports/stage';
-import { floatingText, projectile, sparks, type FxHost } from '../../fx';
+import { floatingText, projectile, sparks, type FxHost } from './fx';
 import { worldOf, type SpotBoard } from './spots';
 
 export interface EffectStageHost extends FxHost {

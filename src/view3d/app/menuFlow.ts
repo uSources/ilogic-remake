@@ -3,28 +3,28 @@
  * campaña, cada una en `src/menu/` con su `...Host`), las opciones, las notas y la ayuda, y empieza
  * la partida elegida (gameStart.ts). Detras, la imagen del menu de siempre.
  */
-import { defaultContent } from '../core/content/default';
-import { loadGame } from '../core/defaultGames';
-import { settingsWith } from '../core/matchSettings';
-import type { Mission } from '../core/missions';
-import type { GameState } from '../core/model';
-import { imgUrl } from '../assets';
-import { playMusic } from '../audio/music';
-import type { SoundPort } from '../audio/sounds';
-import { menuKeyCommand, type MenuCommand, type MenuContext } from '../controls/menu';
-import { helpRulesForSettingsOnly } from '../hud/helpText';
-import { ui } from '../hud/store';
-import { CampaignScreen } from '../menu/campaignScreen';
-import { HomeScreen } from '../menu/homeScreen';
-import { OptionsPanel } from '../menu/optionsPanel';
-import { isTypingCode, SetupScreen } from '../menu/setupScreen';
-import { checkNotes, notesCommand, notesOpen } from '../patchNotes';
-import { matchConfigFor, randomSeed } from '../setup';
-import { readSave } from '../storage';
-import { terrainPalette, type TerrainPalette } from '../ui/terrainColors';
-import type { GameImages } from '../atlas';
+import { defaultContent } from '../../core/content/default';
+import { loadGame } from '../../core/defaultGames';
+import { settingsWith } from '../../core/matchSettings';
+import type { Mission } from '../../core/missions';
+import type { GameState } from '../../core/model';
+import { imgUrl } from '../../assets';
+import { playMusic } from '../../audio/music';
+import type { SoundPort } from '../../audio/sounds';
+import { menuKeyCommand, type MenuCommand, type MenuContext } from '../../controls/menu';
+import { helpRulesForSettingsOnly } from '../../hud/helpText';
+import { ui } from '../../hud/store';
+import { CampaignScreen } from '../../menu/campaignScreen';
+import { HomeScreen } from '../../menu/homeScreen';
+import { OptionsPanel } from '../../menu/optionsPanel';
+import { isTypingCode, SetupScreen } from '../../menu/setupScreen';
+import { checkNotes, notesCommand, notesOpen } from '../../patchNotes';
+import { matchConfigFor, randomSeed } from '../../setup';
+import { readSave } from '../../storage';
+import { terrainPalette, type TerrainPalette } from '../../ui/terrainColors';
+import type { GameImages } from '../../atlas';
 import { startGame } from './gameStart';
-import { menuSound } from './soundCues';
+import { menuSound } from '../systems/sound/soundCues';
 
 type Mode = 'home' | 'setup' | 'campaign';
 

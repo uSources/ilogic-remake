@@ -1,6 +1,6 @@
 /**
  * Datos que enseña la interfaz HTML durante la partida (fichas, prevision de combate, minimapa),
- * calculados a partir del estado. Sin efectos: la partida 3D los publica en el store (view3d/hudBridge.ts).
+ * calculados a partir del estado. Sin efectos: la partida 3D los publica en el store (view3d/systems/hud/hudBridge.ts).
  *
  * Van por panel en ui/models/ (con los tipos de hud/vm/ del mismo nombre) y se reexportan aqui:
  * las escenas y los tests los siguen importando de '../ui/hudModels'.

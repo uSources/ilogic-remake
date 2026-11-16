@@ -5,10 +5,10 @@
  * resto (moverlas, crecer, apagarse y reciclarlas) lo hace `update` en cada fotograma.
  */
 import * as THREE from 'three';
-import { reducedMotion } from '../ui/motion';
+import { reducedMotion } from '../../../ui/motion';
 import { PixelPoints } from './pixelPoints';
-import type { PuffKind } from './ports/stage';
-import { WIND_DIRECTION } from './space';
+import type { PuffKind } from '../../ports/stage';
+import { WIND_DIRECTION } from '../core/space';
 
 interface PuffSpec {
   colors: readonly number[];

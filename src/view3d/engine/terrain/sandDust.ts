@@ -5,10 +5,10 @@
  * cosa: weather3d.ts). Con «reducir el movimiento» no sale.
  */
 import * as THREE from 'three';
-import type { Pos } from '../core/model';
-import { reducedMotion } from '../ui/motion';
-import { PixelPoints } from './pixelPoints';
-import { WIND_DIRECTION } from './space';
+import type { Pos } from '../../../core/model';
+import { reducedMotion } from '../../../ui/motion';
+import { PixelPoints } from '../fx/pixelPoints';
+import { WIND_DIRECTION } from '../core/space';
 
 const GRAINS = 90;
 const GRAIN_COLOR = 0xffe4a8;
