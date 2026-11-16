@@ -7,6 +7,7 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { asset } from '../../../assets';
 import { isFriendly, type OwnerSide } from '../../../ui/sides';
 import { toonTextured } from '../core/toon';
@@ -54,6 +55,55 @@ export interface GlbUnit {
 
 const modelUrl = (file: string): string => asset(`assets/models/${file}.glb`);
 
+/**
+ * Ashfox exporta cada cubo como una primitiva y three.js hace una malla por primitiva: un tanque son
+ * unas 100 mallas de pocos triangulos, y cada una cuesta una llamada de dibujo (y otra para la
+ * sombra). Al cargar, las de un mismo nodo y material se juntan en una: se ve igual, y la animacion,
+ * que mueve los nodos y no las mallas, tampoco cambia.
+ */
+function joinPrimitives(scene: THREE.Object3D): void {
+  const nodes: THREE.Object3D[] = [];
+  scene.traverse((node) => {
+    if (leafMeshesOf(node).length > 1) nodes.push(node);
+  });
+  nodes.forEach(joinLeafMeshes);
+}
+
+/** Las mallas hijas de un nodo que no tienen nada debajo. */
+function leafMeshesOf(node: THREE.Object3D): THREE.Mesh[] {
+  return node.children.filter((child): child is THREE.Mesh => child instanceof THREE.Mesh && child.children.length === 0);
+}
+
+/** Junta las mallas hijas de `node` que comparten material en una sola (cada una, ya en su sitio). */
+function joinLeafMeshes(node: THREE.Object3D): void {
+  for (const [material, meshes] of meshesByMaterial(leafMeshesOf(node))) {
+    if (meshes.length < 2) continue;
+    const geometry = mergeGeometries(meshes.map(placedGeometry));
+    // Con atributos distintos no se pueden juntar: se quedan como estaban.
+    if (!geometry) continue;
+    const joined = new THREE.Mesh(geometry, material);
+    joined.name = meshes[0]?.name ?? '';
+    node.remove(...meshes);
+    node.add(joined);
+    meshes.forEach((mesh) => mesh.geometry.dispose());
+  }
+}
+
+function meshesByMaterial(meshes: readonly THREE.Mesh[]): Map<THREE.Material, THREE.Mesh[]> {
+  const groups = new Map<THREE.Material, THREE.Mesh[]>();
+  for (const mesh of meshes) {
+    const material = mesh.material as THREE.Material;
+    groups.set(material, [...(groups.get(material) ?? []), mesh]);
+  }
+  return groups;
+}
+
+/** La geometria de una malla movida a donde esta la malla dentro de su nodo. */
+function placedGeometry(mesh: THREE.Mesh): THREE.BufferGeometry {
+  mesh.updateMatrix();
+  return mesh.geometry.clone().applyMatrix4(mesh.matrix);
+}
+
 /** Pasa los materiales del GLB al cartoon del juego (con su textura pixel) y que den sombra. */
 function toToon(scene: THREE.Object3D): void {
   scene.traverse((node) => {
@@ -83,6 +133,7 @@ export interface GlbTypes {
 async function loadModel(loader: GLTFLoader, file: string): Promise<[string, LoadedModel] | null> {
   try {
     const gltf = await loader.loadAsync(modelUrl(file));
+    joinPrimitives(gltf.scene);
     toToon(gltf.scene);
     return [file, { scene: gltf.scene, clips: gltf.animations }];
   } catch {
