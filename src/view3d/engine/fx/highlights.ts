@@ -1,6 +1,6 @@
 /**
  * Las marcas sobre el tablero: a donde puede ir la unidad elegida (azul), a quien puede atacar (rojo),
- * la casilla bajo el puntero y el anillo de la unidad elegida. Solo dibujan lo que se les dice (no
+ * la casilla bajo el puntero, el anillo de la unidad elegida y los aros de un grupo elegido. Solo dibujan lo que se les dice (no
  * saben de reglas).
  */
 import * as THREE from 'three';
@@ -17,6 +17,8 @@ const REACH_INSET = 0.86;
 /** Un mapa no tiene mas casillas que esto a la vez en el alcance (40 x 40). */
 const MAX_REACH_TILES = 1600;
 const RING_PULSE_SPEED = 4;
+/** Un grupo elegido no tiene mas unidades que esto con aro. */
+const MAX_GROUP_RINGS = 64;
 
 export class Highlights {
   readonly object = new THREE.Group();
@@ -24,6 +26,7 @@ export class Highlights {
   private readonly attack: THREE.InstancedMesh;
   private readonly cursor: THREE.LineSegments;
   private readonly ring: THREE.Mesh;
+  private readonly groupRings: THREE.InstancedMesh;
   private time = 0;
 
   constructor(private readonly groundOf: (pos: Pos) => THREE.Vector3) {
@@ -31,7 +34,8 @@ export class Highlights {
     this.attack = marksMesh(ATTACK_COLOR);
     this.cursor = cursorMesh();
     this.ring = ringMesh();
-    this.object.add(this.reach, this.attack, this.cursor, this.ring);
+    this.groupRings = groupRingsMesh();
+    this.object.add(this.reach, this.attack, this.cursor, this.ring, this.groupRings);
   }
 
   showReach(tiles: readonly Pos[]): void {
@@ -61,6 +65,18 @@ export class Highlights {
   select(pos: Pos | null): void {
     this.ring.visible = pos !== null;
     if (pos) this.ring.position.copy(this.groundOf(pos)).add(new THREE.Vector3(0, LIFT * 3, 0));
+  }
+
+  /** Un aro a los pies de cada unidad del grupo elegido. */
+  showGroup(tiles: readonly Pos[]): void {
+    const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+    const shown = tiles.slice(0, MAX_GROUP_RINGS);
+    shown.forEach((pos, index) => {
+      const at = this.groundOf(pos).add(new THREE.Vector3(0, LIFT * 3, 0));
+      this.groupRings.setMatrixAt(index, new THREE.Matrix4().compose(at, flat, new THREE.Vector3(1, 1, 1)));
+    });
+    this.groupRings.count = shown.length;
+    this.groupRings.instanceMatrix.needsUpdate = true;
   }
 
   /** El anillo de la unidad elegida late (para encontrarla al girar la camara). */
@@ -96,4 +112,13 @@ function ringMesh(): THREE.Mesh {
   ring.rotation.x = -Math.PI / 2;
   ring.visible = false;
   return ring;
+}
+
+/** Los aros de un grupo: como el de la unidad elegida, quietos (son muchos y no hace falta buscarlos). */
+function groupRingsMesh(): THREE.InstancedMesh {
+  const material = new THREE.MeshBasicMaterial({ color: CURSOR_COLOR, transparent: true, opacity: 0.9, depthWrite: false });
+  const rings = new THREE.InstancedMesh(new THREE.RingGeometry(0.4, 0.48, 32), material, MAX_GROUP_RINGS);
+  rings.count = 0;
+  rings.frustumCulled = false;
+  return rings;
 }

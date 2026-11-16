@@ -17,6 +17,7 @@ class FakeMarks implements TileMarks {
   reach: readonly Pos[] = [];
   targets: readonly Pos[] = [];
   selected: Pos | null = null;
+  group: readonly Pos[] = [];
   showReach(tiles: readonly Pos[]): void {
     this.reach = tiles;
   }
@@ -25,6 +26,9 @@ class FakeMarks implements TileMarks {
   }
   select(pos: Pos | null): void {
     this.selected = pos;
+  }
+  showGroup(tiles: readonly Pos[]): void {
+    this.group = tiles;
   }
 }
 
@@ -70,7 +74,18 @@ async function myTurn() {
   const sounds = new FakeSounds();
   const preview = new FakePreview();
   const session = new GameSession(s, [humanController(), passiveController()]);
-  const controls = new TurnControls({ session, viewer: PLAYER, marks, preview, events, sounds, refresh: () => {}, onOver: () => {} });
+  const controls = new TurnControls({
+    session,
+    viewer: PLAYER,
+    marks,
+    preview,
+    events,
+    sounds,
+    // Toda la partida se ve en la pantalla de prueba.
+    screen: { isOnScreen: () => true },
+    refresh: () => {},
+    onOver: () => {},
+  });
   await controls.runUntilInput();
   return { s, soldier, marks, preview, events, sounds, controls };
 }
@@ -290,5 +305,69 @@ describe('el clic que acierta y la barra de acciones', () => {
     await controls.tap({ x: 7, y: 6 });
     expect(soldier.carrier).toBeNull();
     expect(soldier).toMatchObject({ x: 7, y: 6 });
+  });
+});
+
+const shiftClick = { shift: true, ctrl: false, count: 1 };
+const doubleClick = { shift: false, ctrl: false, count: 2 };
+
+describe('elegir varias', () => {
+  it('Mayusculas + clic suma unidades: el grupo lleva un aro en cada una y no tiene barra', async () => {
+    const { s, soldier, marks, controls } = await myTurn();
+    const other = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 7 });
+    await controls.tap(soldier);
+    await controls.tap(other, shiftClick);
+    expect(marks.group).toHaveLength(2);
+    expect(marks.selected).toBeNull();
+    expect(controls.menu()).toBeNull();
+    await controls.tap(other, shiftClick);
+    expect(marks.group).toEqual([]);
+    expect(marks.selected).toMatchObject({ x: 5, y: 5 });
+  });
+
+  it('doble clic elige todas las de ese tipo que se ven', async () => {
+    const { s, soldier, marks, controls } = await myTurn();
+    newUnit(s, SOLDIER, PLAYER, { x: 9, y: 9 });
+    newUnit(s, TANK, PLAYER, { x: 12, y: 12 });
+    await controls.tap(soldier);
+    await controls.tap(soldier, doubleClick);
+    expect(marks.group).toHaveLength(2);
+  });
+
+  it('el recuadro elige las de dentro; con Mayusculas, las suma', async () => {
+    const { s, soldier, marks, controls } = await myTurn();
+    const second = newUnit(s, SOLDIER, PLAYER, { x: 6, y: 7 });
+    const third = newUnit(s, SOLDIER, PLAYER, { x: 9, y: 9 });
+    controls.selectBox([soldier, second], false);
+    expect(marks.group).toHaveLength(2);
+    controls.selectBox([third], true);
+    expect(marks.group).toHaveLength(3);
+  });
+
+  it('un clic con el grupo las lleva hacia alli, y siguen elegidas', async () => {
+    const { s, soldier, marks, controls } = await myTurn();
+    const second = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 6 });
+    controls.selectBox([soldier, second], false);
+    await controls.tap({ x: 8, y: 5 });
+    expect(soldier.x + second.x).toBeGreaterThan(10);
+    expect(marks.group).toHaveLength(2);
+  });
+
+  it('un enemigo con el grupo: le atacan las que llegan', async () => {
+    const { s, soldier, events, controls } = await myTurn();
+    const tank = newUnit(s, TANK, PLAYER, { x: 6, y: 6 });
+    const enemy = newUnit(s, SOLDIER, ENEMY, { x: 6, y: 8 });
+    controls.selectBox([soldier, tank], false);
+    await controls.tap(enemy);
+    const attacks = events.played.flat().filter((event) => event.kind === 'attack');
+    expect(attacks.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('Esc suelta el grupo', async () => {
+    const { s, soldier, marks, controls } = await myTurn();
+    const second = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 6 });
+    controls.selectBox([soldier, second], false);
+    expect(controls.cancel()).toBe(true);
+    expect(marks.group).toEqual([]);
   });
 });

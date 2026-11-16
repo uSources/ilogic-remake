@@ -90,6 +90,11 @@ export const help: HelpTexts = {
   controls: (keys: KeyLabels) => [
     ['Elegir una unidad', '—', 'Clic en ella'],
     [
+      'Elegir varias',
+      '—',
+      'Recuadro arrastrando con el botón izquierdo; Mayúsculas + clic suma o quita una; doble clic: todas las de ese tipo que se ven. Con varias, un clic las lleva allí o ataca a un enemigo',
+    ],
+    [
       'Moverla',
       '—',
       'Clic en una casilla azul (al pasar por encima, la flecha del camino y su fantasma donde llega; el camino sigue al ratón)',
@@ -103,7 +108,7 @@ export const help: HelpTexts = {
     ['Soltar la unidad', keys.cancel, 'Clic en ella otra vez'],
     ['Deshacer el último movimiento', keys.cancel, '«Deshacer» en la barra'],
     ['Siguiente unidad sin mover', keys.nextUnit, '—'],
-    ['Mover la cámara', 'Flechas / WASD', 'Arrastrar (botón izquierdo o central)'],
+    ['Mover la cámara', 'Flechas / WASD', 'Arrastrar con el botón central, el ratón en el borde o arrastrar con el dedo'],
     ['Girar la cámara', '—', 'Arrastrar con el botón derecho'],
     ['Zoom', `${keys.zoomIn} / ${keys.zoomOut}`, 'Rueda'],
     ['Fin del turno', keys.endTurn, 'Botón de arriba'],

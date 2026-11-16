@@ -8,7 +8,8 @@
  * cada cosa que hacen.
  */
 import type { SoundPort } from '../../../audio/sounds';
-import { availableActions } from '../../../core/actions';
+import { availableActions, groupMoveOrder, groupMoveStep } from '../../../core/actions';
+import { boxSelect, clickSelect, EMPTY, type ClickMods, type Selection } from '../../../controls/selection';
 import { samePos } from '../../../core/geom';
 import type { Building, GameAction, Pos, TeamId, Unit } from '../../../core/model';
 import {
@@ -36,13 +37,16 @@ import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
 import { teamState } from '../../../core/teams';
 import { endSound } from '../sound/soundCues';
 import { attackPlan, type AttackPlan } from './attackPlan';
-import type { EventPlayer, MovePreview, TileMarks } from '../../ports/turn';
+import type { EventPlayer, MovePreview, ScreenView, TileMarks } from '../../ports/turn';
 import { pathFor, previewAt } from './movePreview';
 import { clickIntent, type ClickIntent } from './clickIntent';
 import { barOptions, SINGLE_ACTIONS, type BarOption } from './unitBar';
+import { isSelectable, pickedFrom } from './selection';
 
 /** En la compra, la primera fila es «Cancelar». */
 const CANCEL_ROW = 0;
+/** Un clic sin teclas. */
+const PLAIN_CLICK: ClickMods = { shift: false, ctrl: false, count: 1 };
 
 type Mode =
   | { kind: 'idle' }
@@ -51,6 +55,8 @@ type Mode =
    * trazado con el cursor; `options`, su barra de acciones y `selected`, la señalada en ella.
    */
   | { kind: 'unit'; unit: Unit; range: MoveRange | null; trail: Pos[]; options: BarOption[]; selected: number }
+  /** Varias unidades propias elegidas (Mayusculas + clic, doble clic o recuadro): un clic las lleva o ataca. */
+  | { kind: 'group'; units: Unit[] }
   /** Elegir la casilla donde bajar a `passenger` del transporte `unit`. */
   | { kind: 'unload'; unit: Unit; passenger: Unit; tiles: Pos[] }
   | { kind: 'buy'; building: Building; options: BuyOption[]; selected: number };
@@ -81,6 +87,8 @@ export interface TurnHost {
   events: EventPlayer;
   /** Elegir unidad, comprar, tu turno y el final. */
   sounds: SoundPort;
+  /** Que casillas se ven ahora (doble clic: todas las de ese tipo que se ven). */
+  screen: ScreenView;
   /** La partida o lo elegido ha cambiado: volver a pintar piezas e interfaz. */
   refresh(): void;
   /** La partida se ha acabado (tras el cartel de victoria o derrota). */
@@ -142,20 +150,96 @@ export class TurnControls {
 
   // ---- Tocar el tablero ----
 
-  async tap(pos: Pos): Promise<void> {
+  /** Tocar una casilla; con Mayusculas, Ctrl o doble clic, cambia lo elegido (controls/selection.ts). */
+  async tap(pos: Pos, mods: ClickMods = PLAIN_CLICK): Promise<void> {
     if (!this.isMyTurn) return;
+    if (mods.shift || mods.ctrl || mods.count >= 2) return this.clickSelect(pos, mods);
     const mode = this.mode;
     switch (mode.kind) {
       case 'idle':
         return this.tapIdle(pos);
       case 'unit':
         return this.tapWithUnit(mode, pos);
+      case 'group':
+        return this.tapWithGroup(mode.units, pos);
       case 'unload':
         return this.tapUnload(mode.unit, mode.passenger, mode.tiles, pos);
       case 'buy':
         return void this.cancel();
     }
   }
+
+  // ---- Elegir varias ----
+
+  /** Los uids de lo elegido ahora. */
+  private get selection(): Selection {
+    const mode = this.mode;
+    if (mode.kind === 'unit') return new Set([mode.unit.uid]);
+    return mode.kind === 'group' ? new Set(mode.units.map((unit) => unit.uid)) : EMPTY;
+  }
+
+  private clickSelect(pos: Pos, mods: ClickMods): void {
+    const hit = unitAt(this.s, pos);
+    const own = hit && isSelectable(this.host.viewer, hit) ? hit : null;
+    this.choose(clickSelect(this.selection, own, mods, (unit) => this.sameTypeOnScreen(unit)));
+  }
+
+  /** Las propias que se pueden elegir del mismo tipo que se ven en pantalla (doble clic). */
+  private sameTypeOnScreen(unit: Unit): Unit[] {
+    const isTwin = (other: Unit) => other.type === unit.type && isSelectable(this.host.viewer, other);
+    return this.s.units.filter((other) => isTwin(other) && this.host.screen.isOnScreen(other));
+  }
+
+  /** Elegir las unidades de un recuadro (`add`: se suman a lo elegido). */
+  selectBox(inside: readonly Unit[], add: boolean): void {
+    if (!this.isMyTurn) return;
+    this.choose(boxSelect(this.selection, inside, add));
+  }
+
+  /** Deja elegidas esas: ninguna, una (con su barra) o un grupo. */
+  private choose(uids: Selection): void {
+    const picked = pickedFrom(this.s, this.host.viewer, uids);
+    if (picked.kind === 'none') return this.setMode({ kind: 'idle' });
+    if (picked.kind === 'one') return this.chooseOwnUnit(picked.unit);
+    this.host.sounds.play('unit_select');
+    this.setMode({ kind: 'group', units: picked.units });
+  }
+
+  /**
+   * Con un grupo elegido: tocar un enemigo hace que le ataquen las que pueden (moviendose si hace
+   * falta, una tras otra); una unidad propia (del grupo o no) elige solo esa; cualquier otra casilla las lleva hacia alli,
+   * lo mas cerca que llegue cada una (primero las mas cercanas). Despues sigue elegido lo que quede.
+   */
+  private async tapWithGroup(units: readonly Unit[], pos: Pos): Promise<void> {
+    const own = unitAt(this.s, pos);
+    if (own?.team === this.host.viewer) return this.chooseOwnUnit(own);
+    const attackers = units.filter((unit) => this.planAt(unit, this.rangeOf(unit), pos));
+    this.setMode({ kind: 'idle' });
+    if (attackers.length) await this.attackTogether(attackers, pos);
+    else await this.moveTogether(units, pos);
+    this.choose(new Set(units.map((unit) => unit.uid)));
+  }
+
+  private async attackTogether(attackers: readonly Unit[], pos: Pos): Promise<void> {
+    for (const attacker of attackers) {
+      const plan = this.planAt(attacker, this.rangeOf(attacker), pos);
+      if (plan) await this.moveAndAttack(plan, this.rangeOf(attacker), []);
+    }
+  }
+
+  private async moveTogether(units: readonly Unit[], goal: Pos): Promise<void> {
+    for (const unit of groupMoveOrder(units, goal)) {
+      const step = groupMoveStep(this.s, unit, goal);
+      if (step) await this.perform(step);
+    }
+  }
+
+  /** A donde llega ahora (null si ya no puede moverse este turno). */
+  private rangeOf(unit: Unit): MoveRange | null {
+    return canMoveNow(unit) ? moveRange(this.s, unit) : null;
+  }
+
+  // ---- Una unidad ----
 
   private tapIdle(pos: Pos): void {
     const unit = unitAt(this.s, pos);
@@ -177,7 +261,7 @@ export class TurnControls {
   private select(unit: Unit): void {
     const isStillHere = this.s.units.includes(unit) && isOnMap(unit);
     if (!isStillHere || !canStillAct(unit)) return this.setMode({ kind: 'idle' });
-    const range = canMoveNow(unit) ? moveRange(this.s, unit) : null;
+    const range = this.rangeOf(unit);
     const options = barOptions(this.s, this.host.viewer, unit);
     // Encima de un edificio que se puede capturar, lo normal es capturar (Intro lo hace).
     const selected = Math.max(0, options.indexOf('capture'));
@@ -196,7 +280,9 @@ export class TurnControls {
       case 'deselect':
         return this.setMode({ kind: 'idle' });
       case 'attack':
-        return this.moveAndAttack(intent.plan, mode);
+        this.setMode({ kind: 'idle' });
+        if (await this.moveAndAttack(intent.plan, mode.range, mode.trail)) this.select(unit);
+        return;
       case 'load':
         return this.actThenSelect(unit, { kind: 'load', uid: unit.uid, into: intent.into.uid });
       case 'merge':
@@ -265,12 +351,12 @@ export class TurnControls {
     this.select(unit);
   }
 
-  private async moveAndAttack(plan: AttackPlan, { range, trail }: UnitMode): Promise<void> {
+  /** Va a donde dice el plan (por el camino trazado, si lo hay) y ataca. false si algo no vale. */
+  private async moveAndAttack(plan: AttackPlan, range: MoveRange | null, trail: readonly Pos[]): Promise<boolean> {
     const { attacker, from, target } = plan;
-    this.setMode({ kind: 'idle' });
     const mustMove = !samePos(from, attacker) && range;
-    if (mustMove && !(await this.perform({ kind: 'move', uid: attacker.uid, to: from, path: pathFor(range, trail, from) }))) return;
-    await this.actThenSelect(attacker, { kind: 'attack', uid: attacker.uid, target: target.uid });
+    if (mustMove && !(await this.perform({ kind: 'move', uid: attacker.uid, to: from, path: pathFor(range, trail, from) }))) return false;
+    return this.perform({ kind: 'attack', uid: attacker.uid, target: target.uid });
   }
 
   // ---- Barra de acciones y compra ----
@@ -294,6 +380,7 @@ export class TurnControls {
       case 'buy':
         return this.buyMenu(mode.building, mode.options, mode.selected);
       case 'idle':
+      case 'group':
         return null;
       default:
         return mode satisfies never;
@@ -412,6 +499,7 @@ export class TurnControls {
     marks.showReach(this.reachTiles());
     marks.showTargets(this.targetTiles());
     marks.select('unit' in mode ? mode.unit : 'building' in mode ? mode.building : null);
+    marks.showGroup(mode.kind === 'group' ? mode.units : []);
   }
 
   /** En azul: a donde llega la elegida, o donde se puede bajar al pasajero. */
@@ -421,10 +509,13 @@ export class TurnControls {
     return mode.kind === 'unit' && mode.range ? reachableTiles(mode.range) : [];
   }
 
+  /** En rojo: a quien puede atacar la elegida (o alguna del grupo) este turno. */
   private targetTiles(): Pos[] {
     const mode = this.mode;
-    if (mode.kind !== 'unit') return [];
-    return attackTargetsFromRange(this.s, mode.unit, mode.range);
+    if (mode.kind === 'unit') return attackTargetsFromRange(this.s, mode.unit, mode.range);
+    if (mode.kind !== 'group') return [];
+    const targets = mode.units.flatMap((unit) => attackTargetsFromRange(this.s, unit, this.rangeOf(unit)));
+    return [...new Set(targets)];
   }
 }
 
