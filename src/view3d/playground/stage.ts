@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 import type { OwnerSide } from '../../ui/sides';
-import { ROTOR_SPEED } from '../board';
+import { ROTOR_SPEED } from '../engine/pieces/unitPiece';
 import type { GlbLibrary, GlbUnit, UnitClip } from '../glbModels';
 import { toonMaterial } from '../toon';
 

@@ -6,7 +6,7 @@
 import { mapGrid } from '../core/mapGrid';
 import type { Pos } from '../core/model';
 import { ui, type Anchor } from '../hud/store';
-import { BoardView } from './board';
+import { BoardView } from './engine/pieces/boardView';
 import { CameraRig } from './cameraRig';
 import type { GameImages } from '../atlas';
 import type { GlbLibrary } from './glbModels';
