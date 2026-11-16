@@ -120,7 +120,8 @@ Cada paso es una PR; el juego se ve y se juega igual al final de cada uno.
    el que ejecuta esos pasos sobre `PieceStage` y `EffectStage`.
 3. **Separar `board.ts`** (hecho: `systems/board/boardScene.ts`, `engine/pieces/`; `tests/boardScene.test.ts`). `systems/board/`: que piezas hay y como se ven para quien mira (puro, con
    tests: niebla, vida, captura, tinte). `engine/pieces/`: crear, mover y quitar los objetos.
-4. **Separar `cameraRig.ts`.** `systems/camera/`: objetivo, distancia, giro, limites y suavizado
+4. **Separar `cameraRig.ts`** (hecho: `systems/camera/strategyCamera.ts`, `ports/camera.ts`,
+   `engine/camera/cameraView.ts`; `tests/strategyCamera.test.ts`). `systems/camera/`: objetivo, distancia, giro, limites y suavizado
    (puro, con tests). `engine/camera/`: aplicarlo a la camara de three.js. `keyInput` y
    `pointerInput` piden la logica, no el objeto del motor.
 5. **Mover a carpetas** (`app/`, `systems/`, `engine/`), sin cambiar codigo; si se renombra la

@@ -72,7 +72,6 @@ const CORE_FACADES_ONLY = [
 const ENGINE_FILES = [
   'src/view3d/badges.ts',
   'src/view3d/blocks.ts',
-  'src/view3d/cameraRig.ts',
   'src/view3d/fx.ts',
   'src/view3d/glbModels.ts',
   'src/view3d/groundMarks.ts',
