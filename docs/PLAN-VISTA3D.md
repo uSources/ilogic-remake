@@ -118,7 +118,7 @@ Cada paso es una PR; el juego se ve y se juega igual al final de cada uno.
    `ports/stage.ts`, `engine/fx/pieceStage.ts` y `effectStage.ts`; `tests/eventSteps.test.ts`). `systems/events/`: la tabla de cada suceso como pasos (mover por el
    camino, girar hacia, disparar, chispas, texto, esperar) sin three.js, con tests. `engine/fx/`:
    el que ejecuta esos pasos sobre `PieceStage` y `EffectStage`.
-3. **Separar `board.ts`.** `systems/board/`: que piezas hay y como se ven para quien mira (puro, con
+3. **Separar `board.ts`** (hecho: `systems/board/boardScene.ts`, `engine/pieces/`; `tests/boardScene.test.ts`). `systems/board/`: que piezas hay y como se ven para quien mira (puro, con
    tests: niebla, vida, captura, tinte). `engine/pieces/`: crear, mover y quitar los objetos.
 4. **Separar `cameraRig.ts`.** `systems/camera/`: objetivo, distancia, giro, limites y suavizado
    (puro, con tests). `engine/camera/`: aplicarlo a la camara de three.js. `keyInput` y

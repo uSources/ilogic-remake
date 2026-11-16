@@ -7,7 +7,8 @@ import * as THREE from 'three';
 import type { MovementMotion } from '../../../core/content';
 import type { Pos } from '../../../core/model';
 import type { PieceClip, PieceLookup, PieceStage, PuffKind, ShownPiece } from '../../ports/stage';
-import { tint, type UnitPiece } from '../../board';
+import { tint } from '../pieces/tint';
+import type { UnitPiece } from '../pieces/unitPiece';
 import { facingAngle } from '../../space';
 import { muzzleOf, type SpotBoard } from './spots';
 

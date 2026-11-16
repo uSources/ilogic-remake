@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
 import type { Spot } from '../../ports/stage';
-import type { UnitPiece } from '../../board';
+import type { UnitPiece } from '../pieces/unitPiece';
 
 /** Altura (sobre la pieza) de donde sale y a donde llega un disparo. */
 const MUZZLE_HEIGHT = 0.3;
