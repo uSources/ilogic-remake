@@ -3,15 +3,15 @@
 Lista viva de lo que se ha hablado para Ilogic y aún no está hecho (o se descartó, y por qué). Se
 actualiza al terminar cada cosa: lo hecho sale de aquí y va a las notas de versión (`CHANGELOG.md`).
 
-Estado a 16 de noviembre de 2026, con la versión 0.10.0 (el juego en 3D; la vista ya por sistemas, y en 3D el camino con fantasma, el clic que acierta con su barra, elegir varias, órdenes y escuadras). Ahora el foco es que la
-vista 3D tenga lo que tenía el 2D, con su forma por sistemas (`docs/PLAN-VISTA3D.md`), y un núcleo
-PvE bueno; el PvP, después.
+Estado a 16 de noviembre de 2026, con la versión 0.11.0 (efectos de sonido, la vista 3D por
+sistemas, y en 3D el camino con fantasma, el clic que acierta con su barra, elegir varias, órdenes,
+escuadras y las flechas de lo que hará cada orden). Ahora el foco es que la vista 3D tenga lo que
+tenía el 2D, con su forma por sistemas (`docs/ARQUITECTURA.md`, "Vista 3D"), y un núcleo PvE bueno;
+el PvP, después.
 
 ## En marcha
 
-| Qué | Dónde | Estado |
-|---|---|---|
-| Efectos de sonido con Ashfox, opciones y el tanque pesado | Rama `3d` (otra sesión) | A medias; tiene que traer `main` antes de su PR |
+Nada.
 
 ## Vista 3D (lo que tenía el 2D y aún falta)
 
@@ -48,13 +48,11 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar estrellas al
    general o visión. Ver cómo se juegan primero (PR #47).
 
-## Órdenes y escuadras (después de #46)
+## Órdenes y escuadras
 
-6. **Dar órdenes con un gesto:** hecho en la PR #49 (clic derecho, mantener pulsado o tecla F).
-7. **Flechas de intención.** Al empezar el turno, cada unidad con orden enseña qué va a hacer (mover
-   ahí, atacar a esa). Con las banderas y líneas de #46 quizá ya no haga falta: decidir jugando.
-8. **Las escuadras se mueven en formación.** Hoy cada unidad de una escuadra cumple la orden por su
-   cuenta; podrían esperar a la más lenta para llegar juntas.
+6. **Dar órdenes con un gesto en 3D.** En 2D estaba (PR #49: clic derecho, mantener pulsado o tecla
+   F, la orden que tiene sentido en esa casilla); en 3D las órdenes van por la barra y por Q, C, G y
+   X, y el mando `orderHere` (F) no hace nada.
 
 ## Equilibrio
 
@@ -113,8 +111,7 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
 
 ## Técnico
 
-11. **Controles.** Pasar al sistema común el borde de la pantalla y los menús: hecho en la PR #50.
-    Queda mirar si Tab funciona (en la pantalla final no mueve la selección, ni antes del cambio).
+11. **Tab en la pantalla final.** Mirar si Tab funciona (en la pantalla final no mueve la selección, ni antes del cambio).
 12. **Mando (gamepad).** Un adaptador más en `src/controls`; el hueco queda preparado en la PR #50
     (`docs/ARQUITECTURA.md`, «Mandos»).
 
