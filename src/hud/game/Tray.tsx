@@ -2,6 +2,7 @@ import { t } from '../../settings';
 import { Button } from '../common/buttons';
 import { FoldMark, useFold } from '../common/fold';
 import { Icon } from '../common/Icon';
+import { Chip } from '../common/toy';
 import { keyLabelOf } from '../keyLabels';
 import { ui } from '../store';
 import type { IdleVM, SquadVM } from '../vm/army';
@@ -48,9 +49,9 @@ function SquadButton({ squad }: { squad: SquadVM }) {
   );
 }
 
-/** Escuadras, o como hacer una si no hay ninguna. */
+/** Escuadras (sin ninguna, nada: como se hace una lo cuenta la ayuda). */
 function Squads({ squads }: { squads: SquadVM[] }) {
-  if (squads.length === 0) return <div class="squads-none">{t('squadsNone')}</div>;
+  if (squads.length === 0) return null;
   return (
     <div class="squads" aria-label={t('squads')}>
       {squads.map((squad) => (
@@ -66,7 +67,7 @@ function multiSelectLabel(picked: number | null): string {
   return picked > 0 ? `${t('multiOrders')} (${picked})` : t('multiOn');
 }
 
-/** Bandeja de la derecha: unidades sin mover, escuadras y los botones de elegir varias, amenaza y ordenes. */
+/** Bandeja de la derecha: unidades sin mover, escuadras, «Elegir varias» (con el dedo) y los iconos de amenaza y ordenes. */
 export function Tray({
   idle,
   threat,
@@ -107,35 +108,27 @@ export function Tray({
       >
         {multiSelectLabel(multi)}
       </Button>
-      <ToggleButton
-        cls="threat"
-        on={threat}
-        keyLabel={keyLabelOf('threat')}
-        long={threat ? t('threatOn') : t('threatOff')}
-        short={t('threatShort')}
-        onClick={() => actions.toggleThreat()}
-      />
-      {anyStandingOrder && (
-        <ToggleButton
-          cls="threat intents"
-          on={intents}
-          keyLabel={keyLabelOf('intents')}
-          long={intents ? t('intentsOn') : t('intentsOff')}
-          short={t('intentsShort')}
-          onClick={() => actions.toggleIntents()}
+      <div class="tray-toggles">
+        <Toggle
+          icon="ui/zona_r"
+          on={threat}
+          label={`${threat ? t('threatOn') : t('threatOff')} (${keyLabelOf('threat')})`}
+          onClick={() => actions.toggleThreat()}
         />
-      )}
+        {anyStandingOrder && (
+          <Toggle
+            icon="ui/flag_cmd_go"
+            on={intents}
+            label={`${intents ? t('intentsOn') : t('intentsOff')} (${keyLabelOf('intents')})`}
+            onClick={() => actions.toggleIntents()}
+          />
+        )}
+      </div>
     </div>
   );
 }
 
-/** Interruptor de la bandeja con su tecla y el texto largo o corto (segun el ancho, ver styles/). */
-function ToggleButton(props: { cls: string; on: boolean; keyLabel: string; long: string; short: string; onClick: () => void }) {
-  return (
-    <Button class={`px-btn plain ${props.cls} ${props.on ? 'on' : ''}`} onClick={props.onClick} aria-pressed={props.on}>
-      <span class="key">{props.keyLabel}</span>
-      <span class="long">{props.long}</span>
-      <span class="short">{props.short}</span>
-    </Button>
-  );
+/** Interruptor de la bandeja: un icono (azul si esta encendido) y su nombre y tecla al pasar el raton. */
+function Toggle(props: { icon: string; on: boolean; label: string; onClick: () => void }) {
+  return <Chip label={props.label} icon={props.icon} tone={props.on ? 'own' : 'plain'} cls="tray-toggle" onClick={props.onClick} />;
 }

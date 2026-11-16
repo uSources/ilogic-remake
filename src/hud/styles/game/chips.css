@@ -145,3 +145,80 @@
   font-family: var(--display);
   font-weight: 600;
 }
+
+/* La ficha de la casilla señalada (game/TileTip.tsx): lo justo; con Alt, la tarjeta entera. */
+.px.tile-tip {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  min-width: 150px;
+  pointer-events: none;
+  animation: tip-in 0.12s ease-out;
+}
+@keyframes tip-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+.tt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tt-icon {
+  width: 32px;
+  height: 32px;
+}
+.tt-name {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 16px;
+}
+.tt-life {
+  margin-left: auto;
+  font-size: 18px;
+}
+.tt-ground {
+  justify-content: space-between;
+  font-size: 14px;
+}
+.tt-stars {
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+.tt-more {
+  font-size: 11px;
+  color: var(--muted);
+}
+.px.tile-tip.detailed {
+  padding: 6px;
+}
+.tt-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .px.tile-tip {
+    animation: none;
+  }
+}
+
+/* La bandeja: amenaza y ordenes como dos iconos; «Elegir varias» solo con el dedo. */
+.tray-toggles {
+  display: flex;
+  gap: 8px;
+}
+.chip.tray-toggle {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 4px;
+}
+@media (pointer: fine) {
+  .tray .multi {
+    display: none;
+  }
+}

@@ -119,6 +119,8 @@ export const help: HelpTexts = {
     ['Soltar la unidad', keys.cancel, 'Clic en ella otra vez'],
     ['Deshacer el último movimiento', `Ctrl+Z (o ${keys.cancel} con ella elegida)`, '«Deshacer» en la rueda'],
     ['Siguiente unidad sin mover', keys.nextUnit, '—'],
+    ['Datos de una casilla', 'Alt (todos)', 'Parar el ratón encima un momento (con el dedo, tocarla)'],
+    ['Ver a dónde llegan los enemigos', keys.threat, 'El icono naranja de la bandeja'],
     ['Mover la cámara', 'Flechas / WASD', 'Arrastrar con el botón central, el ratón en el borde o arrastrar con el dedo'],
     ['Girar la cámara', '—', 'Arrastrar con el botón derecho'],
     ['Zoom', `${keys.zoomIn} / ${keys.zoomOut}`, 'Rueda'],

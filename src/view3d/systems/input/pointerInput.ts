@@ -158,6 +158,8 @@ export function installPointer(canvas: HTMLCanvasElement, host: PointerHost): vo
     if (!pos) return;
     if (released.context) return host.context(pos);
     if (!released.taps) return;
+    // Con el dedo no se pasa por encima: tocar tambien señala la casilla (su ficha, la prevision).
+    if (event.pointerType === 'touch') host.hover(pos);
     const count = countTaps(lastTap, pos, event.timeStamp);
     lastTap = { pos, at: event.timeStamp, count };
     host.tap(pos, { ...mods, count });

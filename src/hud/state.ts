@@ -1,7 +1,7 @@
 import type { HelpRules } from '../i18n/help';
 import type { TextKey } from '../settings';
 import type { EndOutcome, EndStatsVM } from './vm/end';
-import type { BySide, Side } from './vm/common';
+import type { Anchor, BySide, Side } from './vm/common';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
 import type { GeneralVM } from './vm/general';
@@ -81,6 +81,8 @@ export interface UIState {
   combat: CombatVM | null;
   moveTip: MoveTipVM | null;
   tile: TileVM | null;
+  /** Donde esta en la pantalla la casilla de `tile` (su ficha sale al lado); null: no se sabe (2D). */
+  tileAt: Anchor | null;
   cursorScreen: { x: number; y: number };
   idle: IdleVM[];
   /** [CAMBIO] Escuadras del jugador y la que se esta renombrando (null = ninguna). */
@@ -202,6 +204,7 @@ export const initialState: UIState = {
   combat: null,
   moveTip: null,
   tile: null,
+  tileAt: null,
   cursorScreen: { x: 0, y: 0 },
   idle: [],
   squads: [],

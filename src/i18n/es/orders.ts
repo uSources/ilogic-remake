@@ -1,6 +1,5 @@
 /** Ordenes, grupos, escuadras y seleccion de varias unidades. */
 export const orders = {
-  squadsNone: 'Grupo: elige con un recuadro y pulsa Ctrl + número',
   squadKeyHint: 'Tecla',
   groupMenu: 'Grupo',
   orderToAttack: 'Orden: atacar allí',

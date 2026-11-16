@@ -109,13 +109,6 @@
   .tray .all {
     display: none;
   }
-  .tray .threat .key,
-  .tray .threat .long {
-    display: none;
-  }
-  .tray .threat span.short {
-    display: inline;
-  }
   .forecast {
     width: 220px;
   }
@@ -139,12 +132,6 @@
   width: 24px;
   height: 24px;
 }
-.tray .threat {
-  padding: 6px 10px;
-  gap: 8px;
-  font-family: var(--body);
-  font-size: 13px;
-}
 .tray-head {
   display: flex;
   justify-content: space-between;
@@ -152,12 +139,6 @@
 }
 .tray .all {
   font-size: 14px;
-}
-.tray .threat .short {
-  display: none;
-}
-.tray .threat .key {
-  font-size: 12px;
 }
 .pop .item span {
   white-space: nowrap;

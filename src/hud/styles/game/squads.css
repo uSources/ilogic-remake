@@ -1,13 +1,5 @@
 /* [CAMBIO] Escuadras de la bandeja y boton "Elegir varias". */
 
-.tray .squads-none {
-  /* No ensancha la bandeja: se ajusta a su ancho. */
-  width: 0;
-  min-width: 100%;
-  margin: 4px 0;
-  font-size: 12px;
-  color: var(--muted);
-}
 .tray .squad .key {
   margin-right: 4px;
   padding: 0 4px;

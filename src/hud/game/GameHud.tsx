@@ -5,7 +5,6 @@ import type { UIState } from '../state';
 import type { MenuVM, NetVM } from '../vm/menus';
 import { ActionChips } from './ActionChips';
 import { BuyGrid } from './BuyGrid';
-import { Cards } from './Cards';
 import { CombatPanel } from './Combat';
 import { Forecast } from './Forecast';
 import { EnemyGeneral, GeneralPanel } from './GeneralPanel';
@@ -15,6 +14,7 @@ import { MissionPanel } from './MissionPanel';
 import { MoveTip } from './MoveTip';
 import { PopMenu } from './PopMenu';
 import { RadialMenu } from './RadialMenu';
+import { TileTip, tileTipKey } from './TileTip';
 import { SelectionPanel } from './SelectionPanel';
 import { EndTurnChip, TopBar } from './TopBar';
 import { Tray } from './Tray';
@@ -42,6 +42,8 @@ function NetLine({ net }: { net: NetVM }) {
 
 /** Con dos o mas unidades elegidas, su panel sustituye a las fichas de la casilla. */
 const showsSelection = (s: UIState) => !!s.selection && !s.busy;
+/** La ficha de la casilla señalada: en tu turno y sin otra cosa encima (menu, prevision de combate, lo elegido). */
+const showsTileTip = (s: UIState) => canAct(s) && !showsSelection(s) && !s.menu && !s.forecast;
 
 /** Columna de la derecha: minimapa y bandeja (sin mover, amenaza, escuadras...). */
 const SIDE_PANELS: GamePanel[] = [
@@ -64,7 +66,10 @@ const GAME_PANELS: GamePanel[] = [
   { id: 'mission', render: (s) => s.mission && isOwnTurn(s) && <MissionPanel mission={s.mission} /> },
   { id: 'hint', render: (s) => s.hint && <div class="hintline">{s.hint}</div> },
   { id: 'selection', render: (s) => showsSelection(s) && s.selection && <SelectionPanel selection={s.selection} /> },
-  { id: 'cards', render: (s) => !showsSelection(s) && canAct(s) && s.tile && <Cards tile={s.tile} /> },
+  {
+    id: 'tileTip',
+    render: (s) => showsTileTip(s) && s.tile && s.tileAt && <TileTip key={tileTipKey(s.tile)} tile={s.tile} at={s.tileAt} />,
+  },
   { id: 'side', render: (s) => <div class="side">{renderPanels(SIDE_PANELS, s)}</div> },
   { id: 'endTurn', render: (s) => <EndTurnChip s={s} /> },
   { id: 'moveTip', render: (s) => s.moveTip && <MoveTip moveTip={s.moveTip} /> },

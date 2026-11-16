@@ -23,6 +23,7 @@ import { installKeys } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
 import { TurnControls } from '../systems/turn/turnControls';
 import { OrderIntents } from '../systems/orders/orderIntents';
+import { ThreatZone } from '../systems/threat/threatZone';
 import type { StartedGame } from './gameStart';
 import type { GroupMode } from '../../controls/inputCommands';
 
@@ -62,12 +63,14 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
       selected: controls.selectedUnits(),
       adding: controls.adding,
       intents: intents.isShowingAll,
+      threat: threat.isShowing,
       anchorOf,
     });
   }
   function refresh(): void {
     scene.sync(state.weather?.kind ?? null);
     intents.update();
+    threat.update();
     publish();
   }
 
@@ -77,6 +80,12 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const intents = new OrderIntents({ session, viewer, marks: scene.intentMarks });
   function toggleIntents(): void {
     intents.toggleAll();
+    publish();
+  }
+  /** A donde llegan los enemigos que se ven (T o el icono de la bandeja). */
+  const threat = new ThreatZone({ session, viewer, marks: scene.threatMarks });
+  function toggleThreat(): void {
+    threat.toggle();
     publish();
   }
   const controls = new TurnControls({
@@ -141,6 +150,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
       publish();
     },
     toggleIntents,
+    toggleThreat,
     selectSquad: (id) => controls.selectSquad(id),
     renameSquad: (id, name) => void controls.renameSquad(id, name),
     renameClose: () => ui.set({ rename: null }),
@@ -192,6 +202,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     orderHere: () => cursor && controls.context(cursor),
     undo: () => controls.undoLastMove(),
     intents: toggleIntents,
+    threat: toggleThreat,
   });
   scene.onFrame((seconds) => {
     camera.update(seconds);
