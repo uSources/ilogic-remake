@@ -50,8 +50,6 @@ import { clickIntent, type ClickIntent } from './clickIntent';
 import { chipOptions, groupRadialOptions, optionAction, orderForTile, ORDER_KINDS, radialOptions, type UnitOption } from './unitOptions';
 import { isSelectable, pickedFrom } from './selection';
 
-/** En la compra, la primera fila es «Cancelar». */
-const CANCEL_ROW = 0;
 /** Un clic sin teclas. */
 const PLAIN_CLICK: ClickMods = { shift: false, ctrl: false, count: 1 };
 /** Pulsar la misma tecla de grupo dos veces en este tiempo lleva la camara hasta el. */
@@ -509,7 +507,7 @@ export class TurnControls {
   private openBuy(building: Building): void {
     const options = buyOptions(this.s, building);
     const firstAffordable = options.findIndex((option) => option.affordable);
-    this.setMode({ kind: 'buy', building, options, selected: firstAffordable >= 0 ? firstAffordable + 1 : CANCEL_ROW });
+    this.setMode({ kind: 'buy', building, options, selected: Math.max(0, firstAffordable) });
   }
 
   /**
@@ -554,7 +552,7 @@ export class TurnControls {
   }
 
   private buyMenu(building: Building, options: readonly BuyOption[], selected: number): MenuView {
-    const items = [{ id: 'cancel', label: t('cancel'), icon: null }, ...options.map((option) => buyItem(this.s, option))];
+    const items = options.map((option) => buyItem(this.s, option));
     const title = nameOf(buildingTypeOf(this.s, building));
     const subtitle = `${t('funds')}: ${fmtNum(teamState(this.s, this.host.viewer).funds)}`;
     return { kind: 'buy', title, subtitle, items, selected, at: building };
@@ -573,7 +571,7 @@ export class TurnControls {
     if (mode.kind === 'group') void this.pickOption(mode.units, mode.radial?.[index]);
     if (mode.kind === 'unload') this.select(mode.unit);
     if (mode.kind === 'order') this.choose(this.selection);
-    if (mode.kind === 'buy') void this.pickBuy(mode.building, mode.options[index - 1]);
+    if (mode.kind === 'buy') void this.pickBuy(mode.building, mode.options[index]);
   }
 
   /** Elegir la opcion señalada (Intro). */

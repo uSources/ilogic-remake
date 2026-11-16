@@ -516,3 +516,20 @@ describe('ordenes y escuadras', () => {
     expect(marks.group).toHaveLength(2);
   });
 });
+
+describe('comprar con fichas', () => {
+  it('tocar una fabrica propia abre la rejilla (sin «Cancelar»); un toque compra y tocar fuera cierra', async () => {
+    const { s, controls } = await myTurn();
+    s.buildings.push({ type: 'Factory', owner: PLAYER, x: 3, y: 3, capture: null });
+    await controls.tap({ x: 3, y: 3 });
+    const menu = controls.menu();
+    expect(menu?.kind).toBe('buy');
+    expect(menu?.items.map((item) => item.id)).not.toContain('cancel');
+    await controls.tap({ x: 9, y: 9 });
+    expect(controls.menu()).toBeNull();
+    await controls.tap({ x: 3, y: 3 });
+    pick(controls, 'buyCar');
+    await settle();
+    expect(s.units.some((unit) => unit.type === 'Car' && unit.x === 3 && unit.y === 3)).toBe(true);
+  });
+});

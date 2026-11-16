@@ -11,7 +11,9 @@
   mantener pulsado en `systems/input/pointerInput.ts`; F y Ctrl+Z en `keyInput.ts`. Cambio sobre el
   plan: bajar carga sigue siendo una ficha (que elige la casilla después) y no casillas verdes, porque
   con el transporte sin mover sus casillas de al lado también son «ir allí».
-- Fases 4 a 6: pendientes. Ver amenaza (T), en la fase 5.
+- Fase 4 (comprar con fichas): **hecha**. `hud/game/BuyGrid.tsx`: rejilla de retratos con su precio, sin
+  «Cancelar» (tocar fuera o Esc cierra); un toque compra.
+- Fases 5 y 6: pendientes. Ver amenaza (T), en la fase 5.
 
 ## Contexto
 
