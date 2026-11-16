@@ -22,7 +22,7 @@ import { PauseMenu, saveGame, showEndIfOver } from '../systems/hud/matchMenus';
 import { installKeys } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
 import { TurnControls } from '../systems/turn/turnControls';
-import { OrderIntents } from '../systems/orders/orderIntents';
+import { anyStandingOrder, OrderIntents } from '../systems/orders/orderIntents';
 import { ThreatZone } from '../systems/threat/threatZone';
 import type { StartedGame } from './gameStart';
 import type { GroupMode } from '../../controls/inputCommands';
@@ -96,9 +96,15 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     screen: scene,
     events: { play: (events) => playEvents(events, stages) },
     sounds,
+    touch: window.matchMedia('(pointer: coarse)').matches,
     refresh,
     onOver: () => showEndSoon(),
   });
+  /** La siguiente unidad sin mover (Tab o el numero de «Fin del turno»): elegirla y llevar la camara. */
+  function nextIdle(): void {
+    const uid = controls.nextIdleUnit();
+    if (uid !== null) focusUnit(uid);
+  }
   const options = new OptionsPanel(
     'game',
     () => publish(),
@@ -109,6 +115,11 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     viewer,
     endTurn: () => controls.endTurn(),
     openOptions: () => options.open(),
+    toggleThreat,
+    toggleIntents,
+    isThreatOn: () => threat.isShowing,
+    isIntentsOn: () => intents.isShowingAll,
+    hasOrders: () => anyStandingOrder(state, viewer),
     refresh: () => publish(),
   });
 
@@ -151,6 +162,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     },
     toggleIntents,
     toggleThreat,
+    nextIdle,
     selectSquad: (id) => controls.selectSquad(id),
     renameSquad: (id, name) => void controls.renameSquad(id, name),
     renameClose: () => ui.set({ rename: null }),
@@ -191,10 +203,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     camera,
     onFrame: (listener) => scene.onFrame(listener),
     endTurn: () => controls.endTurn(),
-    nextUnit: () => {
-      const uid = controls.nextIdleUnit();
-      if (uid !== null) focusUnit(uid);
-    },
+    nextUnit: nextIdle,
     cancel: escape,
     accept: () => (pause.isOpen ? pickPause() : controls.acceptMenu()),
     group: (n, mode) => void groupKey(n, mode),

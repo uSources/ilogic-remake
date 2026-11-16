@@ -46,9 +46,6 @@
   .funds .sub {
     display: none;
   }
-  .day {
-    top: 62px;
-  }
   .day span {
     font-size: 14px;
     padding: 6px 10px;
@@ -98,16 +95,6 @@
     width: 48px;
     height: 48px;
   }
-  .tray {
-    right: 10px;
-    bottom: 10px;
-    padding: 6px;
-  }
-  .tray .tray-head,
-  .tray .slots,
-  .tray .all {
-    display: none;
-  }
   .forecast {
     width: 220px;
   }
@@ -130,14 +117,6 @@
 .funds .coin {
   width: 24px;
   height: 24px;
-}
-.tray-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-}
-.tray .all {
-  font-size: 14px;
 }
 .pop .item span {
   white-space: nowrap;

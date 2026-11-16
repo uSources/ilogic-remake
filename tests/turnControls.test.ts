@@ -554,3 +554,19 @@ describe('esperar sola al soltar (opcion)', () => {
     }
   });
 });
+
+describe('la rueda tambien elige', () => {
+  it('una unidad de escuadra ofrece «Elegir su escuadra» y la elige entera', async () => {
+    const { s, soldier, controls } = await myTurn();
+    const second = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 7 });
+    controls.selectBox([soldier, second], false);
+    controls.context(second);
+    pick(controls, 'squadForm');
+    await settle();
+    await controls.tap(soldier);
+    expect(controls.selectedUnits()).toEqual([soldier]);
+    controls.context(soldier);
+    pick(controls, 'squadSelect');
+    expect(controls.selectedUnits()).toHaveLength(2);
+  });
+});

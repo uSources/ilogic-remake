@@ -12,8 +12,12 @@ import type { GameAction, GameState, Pos, TeamId, TurnEndOrderKind, Unit } from 
 import { buildingAt, lastUndoableMove, sightOf, visibleFoeAt } from '../../../core/rules';
 import { isAlliedOwner } from '../../../core/teams';
 
-/** Una opcion de lo elegido: las del nucleo para una unidad o para varias, y deshacer el movimiento. */
-export type UnitOption = UnitMenuOption | SelectionOption | 'undo';
+/**
+ * Una opcion de lo elegido: las del nucleo para una unidad o para varias, deshacer el movimiento, y
+ * dos de la vista que solo cambian lo elegido: elegir la escuadra de la unidad y, con el dedo, empezar
+ * a elegir varias.
+ */
+export type UnitOption = UnitMenuOption | SelectionOption | 'undo' | 'squadSelect' | 'pickSeveral';
 
 /** Las fichas de una unidad, en su orden: lo que no se hace tocando el tablero. */
 const CHIP_OPTIONS: readonly UnitMenuOption[] = ['capture', 'unload', 'supply'];
@@ -47,9 +51,10 @@ export function radialOptions(s: GameState, viewer: TeamId, unit: Unit): UnitOpt
   const core = availableActions(s, viewer, unit);
   const own = UNIT_RADIAL.filter((option) => core.includes(option));
   const selection = UNIT_SELECTION_RADIAL.filter((option) => canDoWithSelection(s, viewer, [unit], option, null));
+  const squad: UnitOption[] = unit.squad != null ? ['squadSelect'] : [];
   const undo: UnitOption[] = lastUndoableMove(s)?.uid === unit.uid ? ['undo'] : [];
   const danger: UnitOption[] = core.includes(DANGER) ? [DANGER] : [];
-  return [...own, ...selection, ...undo, ...danger];
+  return [...own, ...squad, ...selection, ...undo, ...danger];
 }
 
 /** La rueda de un grupo: ordenes y escuadras (formar una pide dos o mas: un grupo ya lo es). */

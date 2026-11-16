@@ -26,6 +26,9 @@ export const orders = {
   squad: 'Escuadra',
   squadForm: 'Formar escuadra',
   squadRename: 'Cambiar nombre',
+  /** En la rueda: elegir la escuadra de la unidad, y con el dedo, empezar a elegir varias. */
+  squadSelect: 'Elegir su escuadra',
+  pickSeveral: 'Elegir varias',
   squadDisband: 'Deshacer escuadra',
   squadFormed: 'Escuadra formada',
   squadName: 'Nombre de la escuadra',

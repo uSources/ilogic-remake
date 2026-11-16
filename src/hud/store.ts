@@ -67,6 +67,7 @@ const DEFAULT_ACTIONS: UIActions = {
   openGameMenu: noop,
   toggleThreat: noop,
   toggleIntents: noop,
+  nextIdle: noop,
   toggleMinimap: noop,
   minimapJump: noop,
   focusUnit: noop,

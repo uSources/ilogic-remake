@@ -34,6 +34,12 @@
     cascada) y los estilos de los paneles que el 3D aún no publica (minimapa, general, misión,
     combate), que se rehacen con las piezas nuevas al portarlos (`docs/IDEAS.md`, «Vista 3D»).
 
+- Después de la fase 6, una vuelta más para simplificar (pedida por el usuario: «súper limpia»):
+  fuera la bandeja (`Tray.tsx`). El número de «Fin del turno» lleva a la siguiente unidad sin mover
+  (como Tab); ver amenaza y ver órdenes van en el menú (y T y V); elegir una escuadra y, con el dedo,
+  «Elegir varias», en la rueda. Arriba solo el dinero (el desglose al pasar el ratón) y el día con su
+  clima («Turno enemigo» solo cuando no es el tuyo). El panel de un grupo, sin textos de ayuda.
+
 ## Contexto
 
 La interfaz HTML de la partida se diseñó para el 2D: barra de acciones al lado de la unidad, menú de

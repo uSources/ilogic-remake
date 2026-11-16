@@ -20,10 +20,10 @@ import { sideOf, type Side } from '../../../ui/sides';
 import { backToMenu, startGame, type GameStart } from '../../app/gameStart';
 import type { MenuView } from '../turn/turnControls';
 
-type PauseChoice = 'resume' | 'endTurn' | 'save' | 'options' | 'help' | 'surrender' | 'quit';
-const PAUSE_CHOICES: readonly PauseChoice[] = ['resume', 'endTurn', 'save', 'options', 'help', 'surrender', 'quit'];
+type PauseChoice = 'resume' | 'endTurn' | 'threat' | 'intents' | 'save' | 'options' | 'help' | 'surrender' | 'quit';
+const PAUSE_CHOICES: readonly PauseChoice[] = ['resume', 'endTurn', 'threat', 'intents', 'save', 'options', 'help', 'surrender', 'quit'];
 /** Atajo de teclado que se enseña junto a la opcion. */
-const PAUSE_KEY_HINT: Partial<Record<PauseChoice, string>> = { endTurn: 'E', resume: 'Esc', help: 'H' };
+const PAUSE_KEY_HINT: Partial<Record<PauseChoice, string>> = { endTurn: 'E', resume: 'Esc', help: 'H', threat: 'T', intents: 'V' };
 /** Lo que hay para pulsar otra vez y confirmar (milisegundos). */
 const CONFIRM_MS = 2500;
 
@@ -33,6 +33,13 @@ export interface PauseHost {
   readonly viewer: TeamId;
   endTurn(): void;
   openOptions(): void;
+  /** Ver amenaza y ver ordenes (sin sitio fijo en pantalla: la pausa, T y V). */
+  toggleThreat(): void;
+  toggleIntents(): void;
+  isThreatOn(): boolean;
+  isIntentsOn(): boolean;
+  /** Alguna unidad propia lleva orden (si no, «Ver órdenes» no sale). */
+  hasOrders(): boolean;
   /** Se ha abierto, cerrado o cambiado: volver a publicar la interfaz. */
   refresh(): void;
 }
@@ -72,7 +79,12 @@ export class PauseMenu {
   /** Las opciones en esta partida: guardar si su modo se guarda, rendirse si se puede perder. */
   private choices(): PauseChoice[] {
     const mode = gameModeOf(this.host.session.state);
-    return PAUSE_CHOICES.filter((choice) => (choice !== 'save' || mode.saves) && (choice !== 'surrender' || canBeLost(mode)));
+    const isOffered: Partial<Record<PauseChoice, boolean>> = {
+      save: mode.saves,
+      surrender: canBeLost(mode),
+      intents: this.host.hasOrders(),
+    };
+    return PAUSE_CHOICES.filter((choice) => isOffered[choice] !== false);
   }
 
   private choose(choice: PauseChoice): void {
@@ -83,6 +95,12 @@ export class PauseMenu {
       case 'endTurn':
         this.close();
         return host.endTurn();
+      case 'threat':
+        host.toggleThreat();
+        return this.close();
+      case 'intents':
+        host.toggleIntents();
+        return this.close();
       case 'save':
         if (saveGame(host.session.state)) showToast(t('saved'));
         return this.close();
@@ -103,6 +121,13 @@ export class PauseMenu {
     }
   }
 
+  /** El texto de cada opcion; los interruptores dicen lo que haran (ver u ocultar). */
+  private labelOf(choice: PauseChoice): string {
+    if (choice === 'threat') return t(this.host.isThreatOn() ? 'threatOn' : 'threatOff');
+    if (choice === 'intents') return t(this.host.isIntentsOn() ? 'intentsOn' : 'intentsOff');
+    return t(choice);
+  }
+
   /** La primera pulsacion avisa; la segunda, si llega a tiempo, lo hace. */
   private confirmTwice(choice: PauseChoice, warning: TextKey, run: () => void): void {
     const now = performance.now();
@@ -117,7 +142,7 @@ export class PauseMenu {
     const s = this.host.session.state;
     const items: MenuItemVM[] = this.choices().map((choice) => ({
       id: choice,
-      label: t(choice as TextKey),
+      label: this.labelOf(choice),
       hint: PAUSE_KEY_HINT[choice],
       danger: choice === 'quit' || choice === 'surrender',
     }));

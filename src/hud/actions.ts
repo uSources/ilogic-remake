@@ -56,6 +56,8 @@ export interface UIActions {
   handoffReady(): void;
   toggleThreat(): void;
   toggleIntents(): void;
+  /** La siguiente unidad sin mover (el numero de «Fin del turno»). */
+  nextIdle(): void;
   focusUnit(uid: number): void;
   /** [CAMBIO] Retrato del panel de lo elegido: solo esa (clic), quitarla (Mayusculas) o las de su tipo (Ctrl). */
   pickInSelection(uid: number, shift: boolean, ctrl: boolean): void;

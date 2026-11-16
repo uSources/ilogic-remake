@@ -29,6 +29,8 @@ const OPTION_LOOKS: { readonly [Option in UnitOption]: { icon: string } | { glyp
   squadRename: { glyph: 'Aa' },
   squadDisband: { glyph: '÷' },
   undo: { glyph: '↶' },
+  squadSelect: { glyph: '◎' },
+  pickSeveral: { glyph: '⊕' },
   delete: { glyph: '✖' },
 };
 

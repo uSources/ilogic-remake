@@ -14,7 +14,6 @@
 @import './styles/game/forecast.css';
 @import './styles/game/combat.css';
 @import './styles/game/cards.css';
-@import './styles/game/tray.css';
 @import './styles/overlays/notices.css';
 @import './styles/overlays/loading.css';
 @import './styles/base/narrow.css';
@@ -39,7 +38,6 @@
 @import './styles/game/general-narrow.css';
 @import './styles/menus/newgame-general.css';
 @import './styles/game/endturn.css';
-@import './styles/game/squads.css';
 @import './styles/overlays/rename.css';
 @import './styles/game/control-point.css';
 @import './styles/game/selection.css';
