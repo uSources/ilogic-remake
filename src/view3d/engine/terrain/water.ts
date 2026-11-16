@@ -9,9 +9,9 @@
  * que oscurece despues (el color de cada copia).
  */
 import * as THREE from 'three';
-import { terrainAt } from '../core/gameContent';
-import { isOnBoard } from '../core/mapGrid';
-import type { GameState, Pos } from '../core/model';
+import { terrainAt } from '../../../core/gameContent';
+import { isOnBoard } from '../../../core/mapGrid';
+import type { GameState, Pos } from '../../../core/model';
 
 const TEXELS_PER_TILE = 16;
 /** Lo que sube y baja la superficie (casillas). */

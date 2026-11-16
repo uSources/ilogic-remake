@@ -9,7 +9,7 @@ import type { Pos } from '../../../core/model';
 import type { PieceClip, PieceLookup, PieceStage, PuffKind, ShownPiece } from '../../ports/stage';
 import { tint } from '../pieces/tint';
 import type { UnitPiece } from '../pieces/unitPiece';
-import { facingAngle } from '../../space';
+import { facingAngle } from '../core/space';
 import { muzzleOf, type SpotBoard } from './spots';
 
 /** Segundos por casilla al moverse. */

@@ -3,7 +3,7 @@
  * propio y aliado, rojo lo enemigo, gris lo de nadie).
  */
 import type { OwnerSide } from '../../../ui/sides';
-import type { TeamPaint } from '../../blocks';
+import type { TeamPaint } from './blocks';
 
 /** La pintura de equipo de los modelos de bloques de cada lado. */
 export const SIDE_PAINT: Readonly<Record<OwnerSide, TeamPaint>> = {

@@ -4,13 +4,13 @@
  * Cada partida va en su propia carga de la pagina: el menu apunta lo que se ha elegido y recarga, y
  * salir al menu recarga sin nada. Asi no hay que deshacer a mano la escena 3D de la partida anterior.
  */
-import { screenControllers } from '../core/controllers';
-import { createMatch, loadGame } from '../core/defaultGames';
-import { skirmishConfig, type MatchConfig } from '../core/match';
-import type { TeamId } from '../core/model';
-import { GameSession } from '../core/session';
-import { duel, playerTeam } from '../core/teams';
-import { readSave } from '../storage';
+import { screenControllers } from '../../core/controllers';
+import { createMatch, loadGame } from '../../core/defaultGames';
+import { skirmishConfig, type MatchConfig } from '../../core/match';
+import type { TeamId } from '../../core/model';
+import { GameSession } from '../../core/session';
+import { duel, playerTeam } from '../../core/teams';
+import { readSave } from '../../storage';
 
 export type GameStart = { start: 'new'; match: MatchConfig } | { start: 'load' };
 

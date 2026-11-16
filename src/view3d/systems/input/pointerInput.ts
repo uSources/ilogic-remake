@@ -4,8 +4,8 @@
  * estrategia y los programas 3D); con el derecho, gira la camara alrededor del punto mirado; la rueda
  * acerca y aleja. Que hacer con la casilla tocada lo dice quien lo instala.
  */
-import type { Pos } from '../core/model';
-import type { CameraControls } from './systems/camera/strategyCamera';
+import type { Pos } from '../../../core/model';
+import type { CameraControls } from '../camera/strategyCamera';
 
 /** Se considera arrastre (y no toque) si el puntero se mueve mas de esto en pixeles. */
 const DRAG_THRESHOLD = 6;

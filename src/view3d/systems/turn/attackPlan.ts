@@ -3,10 +3,10 @@
  * su alcance mas cercana desde la que puede dispararle (si dispara despues de moverse). Puro: lo
  * dicen las reglas del nucleo (`fireOrigins`, `attackProblem`), aqui solo se elige la casilla.
  */
-import { posOf, samePos } from '../core/geom';
-import type { GameState, Pos, Unit } from '../core/model';
-import { attackProblem, fireOrigins, sightOf, type MoveRange } from '../core/rules';
-import { minBy } from '../core/util/pick';
+import { posOf, samePos } from '../../../core/geom';
+import type { GameState, Pos, Unit } from '../../../core/model';
+import { attackProblem, fireOrigins, sightOf, type MoveRange } from '../../../core/rules';
+import { minBy } from '../../../core/util/pick';
 
 export interface AttackPlan {
   attacker: Unit;

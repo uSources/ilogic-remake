@@ -70,25 +70,9 @@ const CORE_FACADES_ONLY = [
  * nuevo que dibuje va al motor; uno que decida, a su sistema, sin three.js.
  */
 const ENGINE_FILES = [
-  'src/view3d/badges.ts',
-  'src/view3d/blocks.ts',
-  'src/view3d/fx.ts',
-  'src/view3d/glbModels.ts',
-  'src/view3d/groundMarks.ts',
-  'src/view3d/highlights.ts',
-  'src/view3d/match3d.ts',
-  'src/view3d/particles.ts',
-  'src/view3d/pixelPoints.ts',
-  'src/view3d/relief.ts',
-  'src/view3d/sandDust.ts',
-  'src/view3d/space.ts',
-  'src/view3d/terrain.ts',
-  'src/view3d/toon.ts',
-  'src/view3d/water.ts',
-  'src/view3d/weather3d.ts',
-  'src/view3d/world.ts',
-  'src/view3d/wrecks.ts',
   'src/view3d/engine/**/*.ts',
+  // La raiz de composicion aun crea objetos del motor: sale de aqui al pasarlos a engine/matchScene.ts.
+  'src/view3d/app/match3d.ts',
   'src/view3d/playground/main.ts',
   'src/view3d/playground/stage.ts',
 ];

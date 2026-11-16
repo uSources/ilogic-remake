@@ -4,22 +4,22 @@
  */
 import '@fontsource/silkscreen/latin-400.css';
 import '@fontsource/pixelify-sans/latin-400.css';
-import '../hud/hud.css';
+import '../../hud/hud.css';
 import { render, h } from 'preact';
-import { asset } from '../assets';
-import { loadGameImages } from '../atlas';
-import { defaultContent } from '../core/content/default';
-import { installTabGuard } from '../controls/browserKeys';
-import { Hud } from '../hud/Hud';
-import { ui } from '../hud/store';
-import { registerServiceWorker } from '../pwa';
-import { applySettings } from '../settings';
-import { installSounds, webAudioSounds } from '../audio/sfx';
+import { asset } from '../../assets';
+import { loadGameImages } from '../../atlas';
+import { defaultContent } from '../../core/content/default';
+import { installTabGuard } from '../../controls/browserKeys';
+import { Hud } from '../../hud/Hud';
+import { ui } from '../../hud/store';
+import { registerServiceWorker } from '../../pwa';
+import { applySettings } from '../../settings';
+import { installSounds, webAudioSounds } from '../../audio/sfx';
 import { pendingStart, sessionFor } from './gameStart';
-import { GlbLibrary } from './glbModels';
+import { GlbLibrary } from '../engine/pieces/glbModels';
 import { playMatch } from './match3d';
 import { MenuFlow } from './menuFlow';
-import { TERRAIN_MODEL_FILES } from './terrain';
+import { TERRAIN_MODEL_FILES } from '../engine/terrain/terrain';
 
 const hudRoot = document.getElementById('hud')!;
 render(h(Hud, {}), hudRoot);

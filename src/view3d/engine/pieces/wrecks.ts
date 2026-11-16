@@ -4,7 +4,7 @@
  * desaparece. No son de la partida: no ocupan la casilla ni se pueden tocar (van aparte del tablero).
  */
 import * as THREE from 'three';
-import type { PuffSource } from './particles';
+import type { PuffSource } from '../fx/particles';
 
 /** Lo que duran los restos (segundos), los ultimos hundiendose. */
 const WRECK_SECONDS = 16;

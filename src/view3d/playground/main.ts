@@ -12,8 +12,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { defaultContent } from '../../core/content/default';
 import type { OwnerSide } from '../../ui/sides';
-import { GlbLibrary, type UnitClip } from '../glbModels';
-import { World } from '../world';
+import { GlbLibrary, type UnitClip } from '../engine/pieces/glbModels';
+import { World } from '../engine/core/world';
 import { installStyle, Panel, type Catalog } from './panel';
 import { Stage, type ModelEntry } from './stage';
 

@@ -3,22 +3,22 @@
  * opciones, ayuda, rendirse, salir) y la pantalla del final (resumen y botones: revancha, nueva,
  * siguiente mision...). Rendirse y salir piden pulsar dos veces.
  */
-import { missionById, type Mission } from '../core/missions';
-import { canBeLost, gameModeOf } from '../core/modes';
-import { rematchOf } from '../core/match';
-import { decidingFall, isDefeatReason, outcomeFor } from '../core/rules';
-import type { EndReason, GameState, Pos, TeamId } from '../core/model';
-import { screenEnd, type GameSession, type PersonEnd } from '../core/session';
-import { serialize } from '../core/save';
-import { bestDays, campaignMissions, markCompleted, objectiveText } from '../campaign';
-import { showToast, ui, type EndOutcome, type MenuItemVM } from '../hud/store';
-import { settings, t, type TextKey } from '../settings';
-import { randomSeed, seedToCode } from '../setup';
-import { deleteSave, writeSave } from '../storage';
-import { armyChartVM, endScoreVM, endStatsVM } from '../ui/hudModels';
-import { sideOf, type Side } from '../ui/sides';
-import { backToMenu, startGame, type GameStart } from './gameStart';
-import type { MenuView } from './turnControls';
+import { missionById, type Mission } from '../../../core/missions';
+import { canBeLost, gameModeOf } from '../../../core/modes';
+import { rematchOf } from '../../../core/match';
+import { decidingFall, isDefeatReason, outcomeFor } from '../../../core/rules';
+import type { EndReason, GameState, Pos, TeamId } from '../../../core/model';
+import { screenEnd, type GameSession, type PersonEnd } from '../../../core/session';
+import { serialize } from '../../../core/save';
+import { bestDays, campaignMissions, markCompleted, objectiveText } from '../../../campaign';
+import { showToast, ui, type EndOutcome, type MenuItemVM } from '../../../hud/store';
+import { settings, t, type TextKey } from '../../../settings';
+import { randomSeed, seedToCode } from '../../../setup';
+import { deleteSave, writeSave } from '../../../storage';
+import { armyChartVM, endScoreVM, endStatsVM } from '../../../ui/hudModels';
+import { sideOf, type Side } from '../../../ui/sides';
+import { backToMenu, startGame, type GameStart } from '../../app/gameStart';
+import type { MenuView } from '../turn/turnControls';
 
 type PauseChoice = 'resume' | 'endTurn' | 'save' | 'options' | 'help' | 'surrender' | 'quit';
 const PAUSE_CHOICES: readonly PauseChoice[] = ['resume', 'endTurn', 'save', 'options', 'help', 'surrender', 'quit'];

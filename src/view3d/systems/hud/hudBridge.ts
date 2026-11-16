@@ -5,20 +5,20 @@
  * y los menus son los del juego. Lo que la partida 3D aun no hace (escuadras, ordenes, generales)
  * sigue con sus valores de partida.
  */
-import { visibility, buildingsOf, canActNow, commandUsed } from '../core/rules';
-import type { GameState, Pos, TeamId } from '../core/model';
-import { unitTypeOf } from '../core/gameContent';
-import { teamState } from '../core/teams';
-import { helpRulesOfMatch } from '../hud/helpText';
-import { ui, type Anchor, type IdleVM, type UIState } from '../hud/store';
-import { teamIncome } from './menuItems';
-import { nameOf } from '../settings';
-import { dayInfoVM, economyVM, forecastVM, tileVM, weatherVM } from '../ui/hudModels';
-import { sideOf } from '../ui/sides';
-import { unitKey } from '../ui/sprites';
-import type { AttackPlan } from './attackPlan';
-import type { GameImages } from '../atlas';
-import type { MenuView } from './turnControls';
+import { visibility, buildingsOf, canActNow, commandUsed } from '../../../core/rules';
+import type { GameState, Pos, TeamId } from '../../../core/model';
+import { unitTypeOf } from '../../../core/gameContent';
+import { teamState } from '../../../core/teams';
+import { helpRulesOfMatch } from '../../../hud/helpText';
+import { ui, type Anchor, type IdleVM, type UIState } from '../../../hud/store';
+import { teamIncome } from '../turn/menuItems';
+import { nameOf } from '../../../settings';
+import { dayInfoVM, economyVM, forecastVM, tileVM, weatherVM } from '../../../ui/hudModels';
+import { sideOf } from '../../../ui/sides';
+import { unitKey } from '../../../ui/sprites';
+import type { AttackPlan } from '../turn/attackPlan';
+import type { GameImages } from '../../../atlas';
+import type { MenuView } from '../turn/turnControls';
 
 /** Lo que sabe la vista 3D y no la partida: la casilla señalada, si se anima algo, el menu y el combate a la vista. */
 export interface HudMoment {

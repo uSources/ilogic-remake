@@ -8,7 +8,7 @@ import type { MovementMotion } from '../../../core/content';
 import type { GameEvent, Pos } from '../../../core/model';
 import { t } from '../../../settings';
 import type { PieceLookup } from '../../ports/stage';
-import { captureSound, shotSound, STEP_SOUNDS } from '../../soundCues';
+import { captureSound, shotSound, STEP_SOUNDS } from '../sound/soundCues';
 import { feet, muzzle, sound, together, type AnimationStep } from './steps';
 
 /** De lejos (mas de una casilla) el disparo va en arco. */

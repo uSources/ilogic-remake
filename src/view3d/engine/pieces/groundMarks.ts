@@ -5,7 +5,7 @@
  * viejas dejan sitio a las nuevas) y que se encogen hasta borrarse al cabo de un rato.
  */
 import * as THREE from 'three';
-import type { MovementMotion } from '../core/content';
+import type { MovementMotion } from '../../../core/content';
 
 /** Como deja huella cada forma de moverse (movements.json, "motion"): de cada lado, ancho y largo (casillas). */
 const MARK_SHAPES: Readonly<Partial<Record<MovementMotion, { offset: number; width: number; length: number }>>> = {

@@ -4,11 +4,11 @@
  * desplazan la camara mientras se mantienen; el resto de ordenes que la partida 3D sabe hacer van a
  * KEY_ACTIONS (una nueva es una entrada mas).
  */
-import type { InputCommand, InputCommandKind } from '../controls/inputCommands';
-import { keyCommand } from '../controls/keyboard';
-import { settings } from '../settings';
-import type { CameraControls } from './systems/camera/strategyCamera';
-import type { FrameListener } from './world';
+import type { InputCommand, InputCommandKind } from '../../../controls/inputCommands';
+import { keyCommand } from '../../../controls/keyboard';
+import { settings } from '../../../settings';
+import type { CameraControls } from '../camera/strategyCamera';
+import type { FrameListener } from '../../engine/core/world';
 
 /** Lo que hace la rueda por cada pulsacion de las teclas de acercar y alejar. */
 const KEY_ZOOM_STEP = 250;

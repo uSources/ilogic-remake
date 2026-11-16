@@ -12,10 +12,10 @@
  * una casilla con relieve se pone en lo alto (`topAt`).
  */
 import * as THREE from 'three';
-import type { Pos } from '../core/model';
-import { Grid } from '../core/util/grid';
-import { WIND_DIRECTION } from './space';
-import { toonMaterial } from './toon';
+import type { Pos } from '../../../core/model';
+import { Grid } from '../../../core/util/grid';
+import { WIND_DIRECTION } from '../core/space';
+import { toonMaterial } from '../core/toon';
 
 export type ReliefShape = 'peak' | 'mesa' | 'dunes';
 

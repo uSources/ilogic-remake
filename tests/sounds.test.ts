@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { SOUND_IDS } from '../src/audio/sounds';
 import { SOUND_VARIANTS } from '../src/audio/soundList';
-import { captureSound, endSound, menuSound, shotSound, STEP_SOUNDS } from '../src/view3d/soundCues';
+import { captureSound, endSound, menuSound, shotSound, STEP_SOUNDS } from '../src/view3d/systems/sound/soundCues';
 
 const MOTIONS = ['march', 'drive', 'fly'] as const;
 

@@ -3,7 +3,7 @@
  * (x, ?, y) del mundo; la altura (eje y del mundo) la pone quien pregunta. Todo lo 3D pasa por aqui.
  */
 import * as THREE from 'three';
-import type { Pos } from '../core/model';
+import type { Pos } from '../../../core/model';
 
 export const tileToWorld = (pos: Pos, height: number): THREE.Vector3 => new THREE.Vector3(pos.x, height, pos.y);
 

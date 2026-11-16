@@ -6,11 +6,11 @@
  */
 import * as THREE from 'three';
 import type { GameState, Pos, TeamId } from '../../../core/model';
-import { showBar } from '../../badges';
-import type { GlbLibrary } from '../../glbModels';
-import type { PuffSource } from '../../particles';
-import { tileToWorld } from '../../space';
-import type { TerrainView } from '../../terrain';
+import { showBar } from './badges';
+import type { GlbLibrary } from './glbModels';
+import type { PuffSource } from '../fx/particles';
+import { tileToWorld } from '../core/space';
+import type { TerrainView } from '../terrain/terrain';
 import { boardScene, woundedUnits, type BuildingLook, type UnitLook } from '../../systems/board/boardScene';
 import { chimneyOf, newBuildingPiece, type BuildingPiece } from './buildingPiece';
 import { growIn, startPopping } from './growIn';

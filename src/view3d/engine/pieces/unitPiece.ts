@@ -4,10 +4,10 @@
  */
 import * as THREE from 'three';
 import type { MovementMotion } from '../../../core/content';
-import { newBadge } from '../../badges';
-import { buildModel } from '../../blocks';
-import type { GlbLibrary, GlbUnit } from '../../glbModels';
-import { unitModelOf } from '../../models';
+import { newBadge } from './badges';
+import { buildModel } from './blocks';
+import type { GlbLibrary, GlbUnit } from './glbModels';
+import { unitModelOf } from './models';
 import type { UnitLook } from '../../systems/board/boardScene';
 import { startPopping } from './growIn';
 import { SIDE_PAINT } from './sidePaint';

@@ -6,7 +6,7 @@
  * tanque, el rotor del helicoptero).
  */
 import * as THREE from 'three';
-import { toonBox } from './toon';
+import { toonBox } from '../core/toon';
 
 /** De que se pinta un bloque: el color de su equipo (claro u oscuro) o un material fijo. */
 export type BlockPaint =

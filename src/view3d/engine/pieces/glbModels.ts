@@ -7,9 +7,9 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { asset } from '../assets';
-import { isFriendly, type OwnerSide } from '../ui/sides';
-import { toonTextured } from './toon';
+import { asset } from '../../../assets';
+import { isFriendly, type OwnerSide } from '../../../ui/sides';
+import { toonTextured } from '../core/toon';
 
 /** Las animaciones que sabe pedir el juego; un modelo puede no tener alguna. */
 export type UnitClip = 'idle' | 'drive' | 'fire';

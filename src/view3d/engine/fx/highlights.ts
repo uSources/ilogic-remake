@@ -4,7 +4,7 @@
  * saben de reglas).
  */
 import * as THREE from 'three';
-import type { Pos } from '../core/model';
+import type { Pos } from '../../../core/model';
 
 /** Lo justo por encima del suelo para no parpadear con el (z-fighting). */
 const LIFT = 0.012;

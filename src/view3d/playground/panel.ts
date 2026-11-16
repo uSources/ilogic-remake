@@ -4,7 +4,7 @@
  * recien exportados. Cada control solo llama a su accion; quien la cumple es main.ts.
  */
 import type { OwnerSide } from '../../ui/sides';
-import type { UnitClip } from '../glbModels';
+import type { UnitClip } from '../engine/pieces/glbModels';
 import type { ModelDetails } from './stage';
 
 /** Lo que piden los controles. */
