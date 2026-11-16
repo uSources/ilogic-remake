@@ -3,7 +3,7 @@
 Lista viva de lo que se ha hablado para Ilogic y aún no está hecho (o se descartó, y por qué). Se
 actualiza al terminar cada cosa: lo hecho sale de aquí y va a las notas de versión (`CHANGELOG.md`).
 
-Estado a 15 de noviembre de 2026, con la versión 0.10.0 (el juego en 3D). Ahora el foco es que la
+Estado a 16 de noviembre de 2026, con la versión 0.10.0 (el juego en 3D; la vista ya por sistemas, y en 3D el camino con fantasma, el clic que acierta con su barra, elegir varias, órdenes y escuadras). Ahora el foco es que la
 vista 3D tenga lo que tenía el 2D, con su forma por sistemas (`docs/PLAN-VISTA3D.md`), y un núcleo
 PvE bueno; el PvP, después.
 
@@ -11,7 +11,6 @@ PvE bueno; el PvP, después.
 
 | Qué | Dónde | Estado |
 |---|---|---|
-| La vista 3D por sistemas, agnósticos al motor: la regla, ESLint y el plan | PR #97, `docs/PLAN-VISTA3D.md` | La regla y el plan, listos; los pasos 1 a 6, por hacer |
 | Efectos de sonido con Ashfox, opciones y el tanque pesado | Rama `3d` (otra sesión) | A medias; tiene que traer `main` antes de su PR |
 
 ## Vista 3D (lo que tenía el 2D y aún falta)
@@ -24,10 +23,6 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
     las pantallas de salas, `src/menu/online/`) ya están, pero el cliente iba enganchado a la
     escena 2D, que se quitó. Falta que la partida 3D juegue con la conexión (`OnlineMatch`) y dar al
     menú 3D su `openOnline`; hasta entonces la tarjeta «Jugar en línea» no sale.
-17. **Escuadras, órdenes permanentes, grupos y recuadro** (las reglas están en el núcleo). Del 2D
-    quedan, sin usar, piezas para esto: los gestos (`src/controls/pointer.ts`), la selección
-    (`src/controls/selection.ts`), el camino trazado con el cursor (`src/core/trail.ts`) y desde dónde
-    atacar (`src/core/targeting.ts`), con sus tests.
 18. **Poderes de los generales:** elegirlos y animarlos.
 19. **Minimapa dibujado** (el panel del HUD y la tecla M están, pero la vista 3D no lo rellena),
     tutorial y paneles de misión.

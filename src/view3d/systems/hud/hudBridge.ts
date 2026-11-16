@@ -19,6 +19,7 @@ import { unitKey } from '../../../ui/sprites';
 import type { AttackPlan } from '../turn/attackPlan';
 import type { GameImages } from '../../../atlas';
 import type { MenuView } from '../turn/turnControls';
+import { anyStandingOrder } from '../orders/orderIntents';
 
 /** Lo que sabe la vista 3D y no la partida: la casilla señalada, si se anima algo, el menu y el combate a la vista. */
 export interface HudMoment {
@@ -28,6 +29,10 @@ export interface HudMoment {
   forecast: AttackPlan | null;
   /** Lo elegido (el panel de lo elegido sale con dos o mas). */
   selected: readonly Unit[];
+  /** «Elegir varias» con el dedo esta encendido. */
+  adding: boolean;
+  /** «Ver órdenes» esta encendido. */
+  intents: boolean;
   /** El rectangulo de una casilla en la pantalla (para colocar bocadillos junto a ella). */
   anchorOf(pos: Pos): Anchor;
 }
@@ -49,6 +54,8 @@ export interface HudActions {
   renameClose: () => void;
   /** Un retrato del panel de lo elegido: solo esa, quitarla (Mayusculas) o las de su tipo (Ctrl). */
   pickInSelection: (uid: number, shift: boolean, ctrl: boolean) => void;
+  /** «Ver órdenes»: lo que haran todas las ordenes al terminar el turno. */
+  toggleIntents: () => void;
 }
 
 /** Linea de ayuda de abajo: los mandos del 3D (los del juego en 2D son otros). */
@@ -128,6 +135,9 @@ export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, m
     idle: idleList(textures, s, viewer),
     squads: squadsVM(s).filter((squad) => squadIsMine(s, viewer, squad.id)),
     selection: selectionOf(textures, s, viewer, moment.selected),
+    multi: moment.adding ? moment.selected.length : null,
+    intents: moment.intents,
+    anyStandingOrder: anyStandingOrder(s, viewer),
     endTurn: { pending: idleUnits(s, viewer).length, armed: false },
     hint: moment.busy ? '' : HINT_3D,
   });

@@ -80,7 +80,8 @@ se comparan los datos que devuelve o se le dan puertos falsos (`ports/`) que apu
 
 | Sistema | Como se prueba | Ejemplo |
 |---|---|---|
-| El turno (`systems/turn/`) | puertos falsos de marcas y sucesos (`TileMarks`, `EventPlayer`) y tocar casillas | `tests/turnControls.test.ts` |
+| El turno (`systems/turn/`) | puertos falsos (`TileMarks`, `MovePreview`, `EventPlayer`, `ScreenView`) y tocar casillas, recuadros, teclas de grupo y la barra | `tests/turnControls.test.ts`, `tests/clickIntent.test.ts` |
+| Las ordenes (`systems/orders/`) | `OrderIntents` con una sesion de verdad y un `IntentMarks` falso | `tests/orderIntents.test.ts` |
 | Los sucesos animados (`systems/events/`) | `stepsOf(suceso, piezas)` da los pasos como datos; `runSteps` con un motor falso que apunta las llamadas | `tests/eventSteps.test.ts` |
 | El tablero (`systems/board/`) | `boardScene(s, viewer)`: niebla, lados, vida, capturas | `tests/boardScene.test.ts` |
 | La camara (`systems/camera/`) | `StrategyCamera` y su `pose` tras `update(segundos)` | `tests/strategyCamera.test.ts` |

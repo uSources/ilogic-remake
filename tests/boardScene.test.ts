@@ -87,3 +87,13 @@ describe('los edificios del tablero', () => {
     expect(city?.capture?.left).toBeLessThan(1);
   });
 });
+
+describe('la letra de la orden', () => {
+  it('las propias con orden llevan su letra; sin orden, ninguna', () => {
+    const s = blankState({ fog: false });
+    const soldier = newUnit(s, SOLDIER, PLAYER, { x: 2, y: 2 });
+    expect(lookOf(s, soldier.uid)?.orderLetter).toBeNull();
+    act(s, PLAYER, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'attack', at: { x: 9, y: 9 } } });
+    expect(lookOf(s, soldier.uid)?.orderLetter).toBe('A');
+  });
+});

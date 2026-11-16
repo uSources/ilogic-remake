@@ -22,6 +22,7 @@ import { PauseMenu, saveGame, showEndIfOver } from '../systems/hud/matchMenus';
 import { installKeys } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
 import { TurnControls } from '../systems/turn/turnControls';
+import { OrderIntents } from '../systems/orders/orderIntents';
 import type { StartedGame } from './gameStart';
 import type { GroupMode } from '../../controls/inputCommands';
 
@@ -53,15 +54,31 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   function publish(): void {
     const forecast = cursor ? controls.forecastAt(cursor) : null;
     const menu = pause.view(cursor ?? PAUSE_ANCHOR) ?? controls.menu();
-    publishHud(images, state, viewer, { cursor, busy: controls.busy, menu, forecast, selected: controls.selectedUnits(), anchorOf });
+    publishHud(images, state, viewer, {
+      cursor,
+      busy: controls.busy,
+      menu,
+      forecast,
+      selected: controls.selectedUnits(),
+      adding: controls.adding,
+      intents: intents.isShowingAll,
+      anchorOf,
+    });
   }
   function refresh(): void {
     scene.sync(state.weather?.kind ?? null);
+    intents.update();
     publish();
   }
 
   /** Los sucesos se ven con las piezas y los efectos del motor (systems/events dice que pasos lleva cada uno). */
   const stages = { ...scene.stages, sounds };
+  /** Lo que haran las ordenes al terminar el turno (al señalar una unidad con orden, o todas con «Ver órdenes»). */
+  const intents = new OrderIntents({ session, viewer, marks: scene.intentMarks });
+  function toggleIntents(): void {
+    intents.toggleAll();
+    publish();
+  }
   const controls = new TurnControls({
     session,
     viewer,
@@ -119,7 +136,11 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     menuHover: (index) => (pause.isOpen ? pause.hover(index) : controls.hoverMenu(index)),
     menuClose: () => (pause.isOpen ? pause.close() : void controls.cancel()),
     openGameMenu: () => pause.open(),
-    multiSelect: () => controls.toggleAdding(),
+    multiSelect: () => {
+      controls.toggleAdding();
+      publish();
+    },
+    toggleIntents,
     selectSquad: (id) => controls.selectSquad(id),
     renameSquad: (id, name) => void controls.renameSquad(id, name),
     renameClose: () => ui.set({ rename: null }),
@@ -142,6 +163,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     cursor = pos;
     scene.hover(pos);
     controls.hover(pos);
+    intents.hover(pos);
     publish();
   }
 
@@ -166,6 +188,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     accept: () => (pause.isOpen ? pickPause() : controls.acceptMenu()),
     group: (n, mode) => void groupKey(n, mode),
     order: (order) => controls.orderKey(order),
+    intents: toggleIntents,
   });
   scene.onFrame((seconds) => {
     camera.update(seconds);

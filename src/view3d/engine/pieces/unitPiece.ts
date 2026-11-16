@@ -4,7 +4,7 @@
  */
 import * as THREE from 'three';
 import type { MovementMotion } from '../../../core/content';
-import { newBadge } from './badges';
+import { newBadge, newLetterBadge } from './badges';
 import { buildModel } from './blocks';
 import type { GlbLibrary, GlbUnit } from './glbModels';
 import { unitModelOf } from './models';
@@ -28,6 +28,8 @@ export interface UnitPiece {
   readonly turret: THREE.Object3D | null;
   readonly rotor: THREE.Object3D | null;
   readonly lifeBar: THREE.Sprite;
+  /** La letra de su orden permanente. */
+  readonly orderBadge: THREE.Sprite;
   /** El modelo GLB animado (Ashfox), si su tipo lo tiene; si no, es de bloques. */
   readonly glb: GlbUnit | null;
   /** Como se mueve (movements.json, "motion"): que huella deja y si levanta polvo. */
@@ -58,7 +60,8 @@ function unitModel(look: UnitLook, glbModels: GlbLibrary): UnitModel {
 export function newUnitPiece(look: UnitLook, glbModels: GlbLibrary): UnitPiece {
   const { object, body, badgeHeight, glb } = unitModel(look, glbModels);
   const lifeBar = newBadge(badgeHeight);
-  object.add(lifeBar);
+  const orderBadge = newLetterBadge(badgeHeight);
+  object.add(lifeBar, orderBadge);
   const piece: UnitPiece = {
     uid: look.uid,
     object,
@@ -66,6 +69,7 @@ export function newUnitPiece(look: UnitLook, glbModels: GlbLibrary): UnitPiece {
     turret: object.getObjectByName('turret') ?? null,
     rotor: object.getObjectByName('rotor') ?? null,
     lifeBar,
+    orderBadge,
     glb,
     motion: look.motion,
     popping: null,

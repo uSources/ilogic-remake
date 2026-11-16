@@ -8,16 +8,10 @@ import type { Pos } from '../../../core/model';
 import type { MoveLook, MovePreview } from '../../ports/turn';
 import { facingAngle } from '../core/space';
 import type { UnitPiece } from '../pieces/unitPiece';
+import { arrowHeadGeometry, arrowMaterial, arrowPoints, headMatrix, segmentGeometry, segmentMatrix, segmentsOf } from './arrowParts';
 
 const ARROW_COLOR = 0xffd447;
 const ARROW_OPACITY = 0.9;
-/** Por encima del suelo (casillas): sobre las marcas de alcance y el cursor. */
-const ARROW_LIFT = 0.05;
-const ARROW_WIDTH = 0.14;
-const ARROW_THICKNESS = 0.02;
-/** La punta de la flecha: lo ancha y lo larga que es. */
-const HEAD_WIDTH = 0.38;
-const HEAD_LENGTH = 0.32;
 /** Un camino no tiene mas pasos que esto (el movimiento mas largo cabe de sobra). */
 const MAX_SEGMENTS = 64;
 const GHOST_OPACITY = 0.45;
@@ -28,8 +22,6 @@ export interface MovePreviewBoard {
   pieceOf(uid: number): UnitPiece | undefined;
 }
 
-const FORWARD = new THREE.Vector3(0, 0, 1);
-
 export class MovePreviewView implements MovePreview {
   readonly object = new THREE.Group();
   private readonly segments: THREE.InstancedMesh;
@@ -37,15 +29,8 @@ export class MovePreviewView implements MovePreview {
   private ghost: { uid: number; object: THREE.Object3D } | null = null;
 
   constructor(private readonly board: MovePreviewBoard) {
-    // A dos caras: la punta es un triangulo plano y se ve desde arriba aunque mire al suelo.
-    const material = new THREE.MeshBasicMaterial({
-      color: ARROW_COLOR,
-      transparent: true,
-      opacity: ARROW_OPACITY,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-    this.segments = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, MAX_SEGMENTS);
+    const material = arrowMaterial(ARROW_COLOR, ARROW_OPACITY);
+    this.segments = new THREE.InstancedMesh(segmentGeometry(), material, MAX_SEGMENTS);
     this.segments.frustumCulled = false;
     this.segments.count = 0;
     this.head = new THREE.Mesh(arrowHeadGeometry(), material);
@@ -58,14 +43,14 @@ export class MovePreviewView implements MovePreview {
     this.segments.visible = hasPath;
     this.head.visible = hasPath;
     if (!look || !hasPath) return this.hideGhost();
-    const points = look.path.map((pos) => this.board.groundOf(pos).add(new THREE.Vector3(0, ARROW_LIFT, 0)));
+    const points = arrowPoints(look.path, (pos) => this.board.groundOf(pos));
     this.drawSegments(points);
     this.drawHead(points);
     this.placeGhost(look);
   }
 
   private drawSegments(points: readonly THREE.Vector3[]): void {
-    const steps = points.slice(1, MAX_SEGMENTS + 1).map((to, index) => [points[index]!, to] as const);
+    const steps = segmentsOf(points).slice(0, MAX_SEGMENTS);
     steps.forEach(([from, to], index) => this.segments.setMatrixAt(index, segmentMatrix(from, to)));
     this.segments.count = steps.length;
     this.segments.instanceMatrix.needsUpdate = true;
@@ -73,11 +58,7 @@ export class MovePreviewView implements MovePreview {
 
   /** La punta, en la casilla de llegada, hacia donde se llega. */
   private drawHead(points: readonly THREE.Vector3[]): void {
-    const end = points.at(-1)!;
-    const before = points.at(-2)!;
-    const direction = end.clone().sub(before).setY(0).normalize();
-    this.head.position.copy(end);
-    this.head.quaternion.setFromUnitVectors(FORWARD, direction);
+    headMatrix(points).decompose(this.head.position, this.head.quaternion, this.head.scale);
   }
 
   private placeGhost(look: MoveLook): void {
@@ -108,28 +89,6 @@ export class MovePreviewView implements MovePreview {
     disposeMaterials(this.ghost.object);
     this.ghost = null;
   }
-}
-
-/** Un tramo de flecha de un punto a otro: una caja estirada entre los dos. */
-function segmentMatrix(from: THREE.Vector3, to: THREE.Vector3): THREE.Matrix4 {
-  const delta = to.clone().sub(from);
-  const middle = from.clone().addScaledVector(delta, 0.5);
-  const turn = new THREE.Quaternion().setFromUnitVectors(FORWARD, delta.clone().normalize());
-  const size = new THREE.Vector3(ARROW_WIDTH, ARROW_THICKNESS, delta.length() + ARROW_WIDTH);
-  return new THREE.Matrix4().compose(middle, turn, size);
-}
-
-/** Un triangulo plano que apunta hacia +z, con la base en el centro de la casilla. */
-function arrowHeadGeometry(): THREE.BufferGeometry {
-  const shape = new THREE.Shape();
-  shape.moveTo(-HEAD_WIDTH / 2, 0);
-  shape.lineTo(HEAD_WIDTH / 2, 0);
-  shape.lineTo(0, HEAD_LENGTH);
-  shape.closePath();
-  const geometry = new THREE.ShapeGeometry(shape);
-  // De pie en el plano xy a tumbado en el suelo, apuntando hacia +z.
-  geometry.rotateX(Math.PI / 2);
-  return geometry;
 }
 
 /** Una copia del modelo de la pieza, translucida, sin barra de vida y a su tamaño (aunque este apareciendo). */

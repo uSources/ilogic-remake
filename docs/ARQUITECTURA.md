@@ -1084,21 +1084,23 @@ src/view3d/
 |---|---|
 | `app/main.ts`, `menuFlow.ts`, `gameStart.ts` | arranque, menu principal y empezar o cargar una partida |
 | `app/match3d.ts` | la partida: crea el motor (`MatchScene`) y los sistemas y los conecta; no dibuja ni decide |
-| `ports/turn.ts` | `TileMarks` (marcas del tablero) y `EventPlayer` (enseñar sucesos), para el turno |
+| `ports/turn.ts` | para el turno: `TileMarks` (alcance, objetivos, lo elegido y los aros de un grupo), `MovePreview` (flecha y fantasma), `EventPlayer` (enseñar sucesos) y `ScreenView` (si una casilla se ve) |
+| `ports/orders.ts`, `ports/pointer.ts` | `IntentMarks` (lo que haran las ordenes); `SelectionBoxView` (el recuadro de seleccion) |
 | `ports/stage.ts` | `PieceStage`, `EffectStage`, `PieceLookup` y los sitios (`Spot`), para los sucesos animados |
 | `ports/camera.ts`, `ports/frame.ts` | `CameraView` (situar la camara), `CameraPose`, `Point3`; el reloj (`FrameListener`) |
-| `systems/turn/` | el turno de la persona (elegir, mover, atacar, comprar, deshacer) y los de los demas paso a paso (`turnControls.ts`); desde donde atacaria (`attackPlan.ts`); textos de los menus de unidad y compra (`menuItems.ts`) |
+| `systems/turn/` | el turno de la persona y los de los demas paso a paso (`turnControls.ts`); que hace un clic con una unidad elegida (`clickIntent.ts`: ir, atacar, capturar al llegar, subir, unirse); la barra de acciones de una unidad o un grupo (`unitBar.ts`); el camino trazado y el fantasma (`movePreview.ts`); que se puede elegir (`selection.ts`); desde donde atacaria (`attackPlan.ts`); textos de la barra y la compra (`menuItems.ts`) |
+| `systems/orders/` | lo que haran las ordenes al terminar el turno: cuales enseñar (`orderIntents.ts`, con `previewStandingOrders` del nucleo) |
 | `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
 | `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas |
 | `systems/camera/` | la camara de estrategia como logica (`StrategyCamera`): desplazar, acercar, girar, limites y suavizado; da su pose como datos |
-| `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`) y raton o dedo sobre el mundo, a ordenes de la camara y del turno |
-| `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`), pausa y pantalla final (`matchMenus.ts`) |
+| `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`: grupos con numero, ordenes, «Ver órdenes») y raton o dedo sobre el mundo (`pointerInput.ts`: tocar, recuadro, doble clic, borde), a ordenes de la camara y del turno |
+| `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien las escuadras de la bandeja y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`) |
 | `systems/sound/`, `systems/weather/` | que suena con cada cosa (`soundCues.ts`); como se ve cada clima (datos: `weatherStyles.ts`) |
 | `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
-| `engine/core/` | lienzo, escena, luz cartoon (y por clima) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`) |
+| `engine/core/` | lienzo, escena, luz cartoon (y por clima) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`) |
 | `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas, agua, polvo de la arena |
 | `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, barras, restos y rodadas |
-| `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`), lluvia y nieve (`weather3d.ts`) |
+| `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`), la flecha y el fantasma al mover (`movePreview.ts`) y las flechas de las ordenes (`intentArrows.ts`; piezas comunes en `arrowParts.ts`), lluvia y nieve (`weather3d.ts`) |
 | `engine/camera/` | situa la camara de three.js en la pose que da `systems/camera` |
 
 - **La partida cambia con acciones**: `TurnControls` manda por la sesion (`session.act`) y enseña los
