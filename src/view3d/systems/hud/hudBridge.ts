@@ -2,18 +2,18 @@
  * La interfaz HTML del juego (hud/, Preact) sobre el mundo 3D: se publica en el mismo store (`ui`)
  * y con las piezas puras de ui/hudModels.ts (economyVM, dayInfoVM, weatherVM, tileVM, forecastVM,
  * los menus de la unidad y de compra...), asi la barra de arriba, las fichas, la prevision de combate
- * y los menus son los del juego. Lo que la partida 3D aun no hace (escuadras, ordenes, generales)
- * sigue con sus valores de partida.
+ * y los menus son los del juego: tambien las escuadras de la bandeja y el panel de lo elegido. Lo que
+ * la partida 3D aun no hace (generales) sigue con sus valores de partida.
  */
 import { visibility, buildingsOf, canActNow, commandUsed } from '../../../core/rules';
-import type { GameState, Pos, TeamId } from '../../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../../core/model';
 import { unitTypeOf } from '../../../core/gameContent';
 import { teamState } from '../../../core/teams';
 import { helpRulesOfMatch } from '../../../hud/helpText';
-import { ui, type Anchor, type IdleVM, type UIState } from '../../../hud/store';
+import { ui, type Anchor, type IdleVM, type SelectionVM, type UIState } from '../../../hud/store';
 import { teamIncome } from '../turn/menuItems';
 import { nameOf } from '../../../settings';
-import { dayInfoVM, economyVM, forecastVM, tileVM, weatherVM } from '../../../ui/hudModels';
+import { dayInfoVM, economyVM, forecastVM, squadsVM, tileVM, weatherVM } from '../../../ui/hudModels';
 import { sideOf } from '../../../ui/sides';
 import { unitKey } from '../../../ui/sprites';
 import type { AttackPlan } from '../turn/attackPlan';
@@ -26,6 +26,8 @@ export interface HudMoment {
   busy: boolean;
   menu: MenuView | null;
   forecast: AttackPlan | null;
+  /** Lo elegido (el panel de lo elegido sale con dos o mas). */
+  selected: readonly Unit[];
   /** El rectangulo de una casilla en la pantalla (para colocar bocadillos junto a ella). */
   anchorOf(pos: Pos): Anchor;
 }
@@ -39,6 +41,14 @@ export interface HudActions {
   menuClose: () => void;
   /** Abrir el menu de pausa (boton de la barra). */
   openGameMenu: () => void;
+  /** «Elegir varias» de la bandeja (con el dedo: cada toque suma o quita). */
+  multiSelect: () => void;
+  /** Una escuadra de la bandeja: elegir sus unidades. */
+  selectSquad: (id: number) => void;
+  renameSquad: (id: number, name: string) => void;
+  renameClose: () => void;
+  /** Un retrato del panel de lo elegido: solo esa, quitarla (Mayusculas) o las de su tipo (Ctrl). */
+  pickInSelection: (uid: number, shift: boolean, ctrl: boolean) => void;
 }
 
 /** Linea de ayuda de abajo: los mandos del 3D (los del juego en 2D son otros). */
@@ -55,6 +65,22 @@ function idleList(textures: GameImages, s: GameState, viewer: TeamId): IdleVM[] 
     icon: unitKey(textures, s, unit, viewer),
     name: nameOf(unitTypeOf(s, unit)),
   }));
+}
+
+/** El panel de lo elegido (con dos o mas): un retrato por unidad, ordenadas por tipo, y cuantas de cada tipo. */
+function selectionOf(textures: GameImages, s: GameState, viewer: TeamId, selected: readonly Unit[]): SelectionVM | null {
+  if (selected.length < 2) return null;
+  const byType = [...selected].sort((first, second) => first.type.localeCompare(second.type));
+  const units = byType.map((unit) => ({
+    uid: unit.uid,
+    icon: unitKey(textures, s, unit, viewer),
+    name: nameOf(unitTypeOf(s, unit)),
+    life: unit.life,
+    current: false,
+  }));
+  const names = units.map((unit) => unit.name);
+  const types = [...new Set(names)].map((name) => ({ name, count: names.filter((other) => other === name).length }));
+  return { units, types };
 }
 
 function tileCard(textures: GameImages, s: GameState, viewer: TeamId, moment: HudMoment) {
@@ -75,6 +101,9 @@ function forecastOf(textures: GameImages, s: GameState, viewer: TeamId, moment: 
   if (!plan || moment.busy) return null;
   return forecastVM(textures, s, viewer, plan.attacker, plan.from, plan.target, moment.anchorOf(plan.target));
 }
+
+const squadIsMine = (s: GameState, viewer: TeamId, id: number): boolean =>
+  s.squads?.some((squad) => squad.id === id && squad.team === viewer) ?? false;
 
 /** Publica el estado de la partida para la interfaz. */
 export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, moment: HudMoment): void {
@@ -97,6 +126,8 @@ export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, m
     menu: menuOf(moment),
     forecast: forecastOf(textures, s, viewer, moment),
     idle: idleList(textures, s, viewer),
+    squads: squadsVM(s).filter((squad) => squadIsMine(s, viewer, squad.id)),
+    selection: selectionOf(textures, s, viewer, moment.selected),
     endTurn: { pending: idleUnits(s, viewer).length, armed: false },
     hint: moment.busy ? '' : HINT_3D,
   });

@@ -9,9 +9,11 @@
  */
 import type { SoundPort } from '../../../audio/sounds';
 import { availableActions, groupMoveOrder, groupMoveStep } from '../../../core/actions';
-import { boxSelect, clickSelect, EMPTY, type ClickMods, type Selection } from '../../../controls/selection';
+import { boxSelect, clickSelect, type ClickMods, type Selection } from '../../../controls/selection';
 import { samePos } from '../../../core/geom';
-import type { Building, GameAction, Pos, TeamId, Unit } from '../../../core/model';
+import type { Building, GameAction, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
+import type { GroupMode } from '../../../controls/inputCommands';
+import { exactSquad, squadById, squadByKey, squadUnits, SQUAD_NAME_MAX } from '../../../core/squads';
 import {
   attackTargets,
   buildingAt,
@@ -29,7 +31,7 @@ import {
   type MoveRange,
 } from '../../../core/rules';
 import type { GameSession } from '../../../core/session';
-import { showBanner, showToast, type MenuItemVM } from '../../../hud/store';
+import { showBanner, showToast, ui, type MenuItemVM } from '../../../hud/store';
 import { barItems, buyItem } from './menuItems';
 import { fmtNum, nameOf, t } from '../../../settings';
 import { buyBlockedText } from '../../../ui/hudModels';
@@ -40,13 +42,15 @@ import { attackPlan, type AttackPlan } from './attackPlan';
 import type { EventPlayer, MovePreview, ScreenView, TileMarks } from '../../ports/turn';
 import { pathFor, previewAt } from './movePreview';
 import { clickIntent, type ClickIntent } from './clickIntent';
-import { barOptions, SINGLE_ACTIONS, type BarOption } from './unitBar';
+import { barAction, barOptions, groupBarOptions, ORDER_KINDS, type BarOption } from './unitBar';
 import { isSelectable, pickedFrom } from './selection';
 
 /** En la compra, la primera fila es «Cancelar». */
 const CANCEL_ROW = 0;
 /** Un clic sin teclas. */
 const PLAIN_CLICK: ClickMods = { shift: false, ctrl: false, count: 1 };
+/** Pulsar la misma tecla de grupo dos veces en este tiempo lleva la camara hasta el. */
+const GROUP_KEY_TWICE_MS = 450;
 
 type Mode =
   | { kind: 'idle' }
@@ -55,8 +59,10 @@ type Mode =
    * trazado con el cursor; `options`, su barra de acciones y `selected`, la señalada en ella.
    */
   | { kind: 'unit'; unit: Unit; range: MoveRange | null; trail: Pos[]; options: BarOption[]; selected: number }
-  /** Varias unidades propias elegidas (Mayusculas + clic, doble clic o recuadro): un clic las lleva o ataca. */
-  | { kind: 'group'; units: Unit[] }
+  /** Varias unidades propias elegidas (Mayusculas + clic, doble clic o recuadro): un clic las lleva o ataca; su barra, ordenes y escuadras. */
+  | { kind: 'group'; units: Unit[]; options: BarOption[]; selected: number }
+  /** Elegir la casilla de la orden `order` para estas unidades. */
+  | { kind: 'order'; units: Unit[]; order: TurnEndOrderKind }
   /** Elegir la casilla donde bajar a `passenger` del transporte `unit`. */
   | { kind: 'unload'; unit: Unit; passenger: Unit; tiles: Pos[] }
   | { kind: 'buy'; building: Building; options: BuyOption[]; selected: number };
@@ -99,6 +105,10 @@ export class TurnControls {
   private mode: Mode = { kind: 'idle' };
   /** Mientras se anima algo (o juega otro) no se atiende la entrada. */
   private isBusy = false;
+  /** «Elegir varias» (para el dedo): cada toque en una unidad la suma o la quita, como con Mayusculas. */
+  private isAdding = false;
+  /** La ultima tecla de grupo que eligio uno, y cuando: dos seguidas llevan la camara. */
+  private lastGroupKey: { n: number; at: number } | null = null;
 
   constructor(private readonly host: TurnHost) {}
 
@@ -153,7 +163,9 @@ export class TurnControls {
   /** Tocar una casilla; con Mayusculas, Ctrl o doble clic, cambia lo elegido (controls/selection.ts). */
   async tap(pos: Pos, mods: ClickMods = PLAIN_CLICK): Promise<void> {
     if (!this.isMyTurn) return;
-    if (mods.shift || mods.ctrl || mods.count >= 2) return this.clickSelect(pos, mods);
+    const isAddingTap = this.isAdding && !!unitAt(this.s, pos);
+    if (mods.shift || mods.ctrl || mods.count >= 2 || isAddingTap)
+      return this.clickSelect(pos, { ...mods, shift: mods.shift || isAddingTap });
     const mode = this.mode;
     switch (mode.kind) {
       case 'idle':
@@ -162,6 +174,8 @@ export class TurnControls {
         return this.tapWithUnit(mode, pos);
       case 'group':
         return this.tapWithGroup(mode.units, pos);
+      case 'order':
+        return this.giveOrderAt(mode.units, mode.order, pos);
       case 'unload':
         return this.tapUnload(mode.unit, mode.passenger, mode.tiles, pos);
       case 'buy':
@@ -171,11 +185,16 @@ export class TurnControls {
 
   // ---- Elegir varias ----
 
+  /** Las unidades elegidas ahora (para el panel de lo elegido). */
+  selectedUnits(): readonly Unit[] {
+    const mode = this.mode;
+    if (mode.kind === 'unit') return [mode.unit];
+    return mode.kind === 'group' || mode.kind === 'order' ? mode.units : [];
+  }
+
   /** Los uids de lo elegido ahora. */
   private get selection(): Selection {
-    const mode = this.mode;
-    if (mode.kind === 'unit') return new Set([mode.unit.uid]);
-    return mode.kind === 'group' ? new Set(mode.units.map((unit) => unit.uid)) : EMPTY;
+    return new Set(this.selectedUnits().map((unit) => unit.uid));
   }
 
   private clickSelect(pos: Pos, mods: ClickMods): void {
@@ -202,7 +221,85 @@ export class TurnControls {
     if (picked.kind === 'none') return this.setMode({ kind: 'idle' });
     if (picked.kind === 'one') return this.chooseOwnUnit(picked.unit);
     this.host.sounds.play('unit_select');
-    this.setMode({ kind: 'group', units: picked.units });
+    this.setMode({ kind: 'group', units: picked.units, options: groupBarOptions(this.s, this.host.viewer, picked.units), selected: 0 });
+  }
+
+  /** «Elegir varias» con el dedo: a partir de ahora cada toque en una unidad la suma o la quita (otra vez, como antes). */
+  toggleAdding(): void {
+    this.isAdding = !this.isAdding;
+  }
+
+  /** Elegir las unidades de una escuadra (su boton en la bandeja). */
+  selectSquad(id: number): void {
+    if (this.isMyTurn) this.choose(new Set(squadUnits(this.s, id).map((unit) => unit.uid)));
+  }
+
+  /**
+   * Un retrato del panel de lo elegido: solo esa; con Mayusculas, quitarla; con Ctrl, solo las de su
+   * tipo de entre las elegidas.
+   */
+  pickInSelection(uid: number, shift: boolean, ctrl: boolean): void {
+    const chosen = this.selectedUnits();
+    const unit = chosen.find((candidate) => candidate.uid === uid);
+    if (!unit || !this.isMyTurn) return;
+    const keep = shift ? chosen.filter((other) => other !== unit) : ctrl ? chosen.filter((other) => other.type === unit.type) : [unit];
+    this.choose(new Set(keep.map((other) => other.uid)));
+  }
+
+  /**
+   * Teclas de grupo (1-9): Ctrl hace de lo elegido el grupo de esa tecla, Mayusculas lo añade y sola
+   * elige el grupo. Devuelve la unidad a la que llevar la camara si se pulsa dos veces seguidas.
+   */
+  async groupKey(n: number, mode: GroupMode, now: number): Promise<Unit | null> {
+    if (!this.isMyTurn) return null;
+    const uids = [...this.selection];
+    if (mode !== 'select') {
+      if (uids.length) await this.performThenChoose({ kind: mode === 'set' ? 'setGroup' : 'addToGroup', uids, key: n }, uids);
+      return null;
+    }
+    const isTwice = this.lastGroupKey?.n === n && now - this.lastGroupKey.at <= GROUP_KEY_TWICE_MS;
+    this.lastGroupKey = { n, at: now };
+    const squad = squadByKey(this.s, this.host.viewer, n);
+    if (!squad) return null;
+    const units = squadUnits(this.s, squad.id);
+    this.choose(new Set(units.map((unit) => unit.uid)));
+    return isTwice ? (units[0] ?? null) : null;
+  }
+
+  /** Teclas de orden: atacar, capturar o defender alli (luego la casilla) o quitar la orden de lo elegido. */
+  orderKey(order: TurnEndOrderKind | 'cancel'): void {
+    const units = [...this.selectedUnits()];
+    if (!units.length || !this.isMyTurn) return;
+    if (order !== 'cancel') return this.setMode({ kind: 'order', units, order });
+    void this.performThenChoose(
+      { kind: 'cancelStandingOrder', uids: units.map((unit) => unit.uid) },
+      units.map((unit) => unit.uid),
+    );
+  }
+
+  /** La orden en la casilla tocada; despues siguen elegidas. */
+  private async giveOrderAt(units: readonly Unit[], order: TurnEndOrderKind, at: Pos): Promise<void> {
+    const uids = units.map((unit) => unit.uid);
+    await this.performThenChoose({ kind: 'giveStandingOrder', uids, order: { kind: order, at: { x: at.x, y: at.y } } }, uids);
+  }
+
+  /** Hace la accion y deja elegidas esas unidades (las que aun se puedan elegir). */
+  private async performThenChoose(action: GameAction, uids: readonly number[]): Promise<void> {
+    this.setMode({ kind: 'idle' });
+    await this.perform(action);
+    this.choose(new Set(uids));
+  }
+
+  /** Cambiar el nombre de la escuadra (la ventana de la interfaz lo pide). */
+  async renameSquad(id: number, name: string): Promise<void> {
+    ui.set({ rename: null });
+    const uids = squadUnits(this.s, id).map((unit) => unit.uid);
+    if (this.isMyTurn) await this.performThenChoose({ kind: 'renameSquad', squad: id, name }, uids);
+  }
+
+  private openRename(units: readonly Unit[]): void {
+    const squad = exactSquad(this.s, units);
+    if (squad) ui.set({ rename: { id: squad.id, name: squadById(this.s, squad.id)?.name ?? squad.name, max: SQUAD_NAME_MAX } });
   }
 
   /**
@@ -379,8 +476,11 @@ export class TurnControls {
       }
       case 'buy':
         return this.buyMenu(mode.building, mode.options, mode.selected);
-      case 'idle':
       case 'group':
+        return this.groupBar(mode.units, mode.options, mode.selected);
+      case 'order':
+        return { kind: 'actions', title: t('orderPick'), items: [{ id: 'back', label: t('back') }], selected: 0, at: mode.units[0]! };
+      case 'idle':
         return null;
       default:
         return mode satisfies never;
@@ -393,6 +493,13 @@ export class TurnControls {
     return { kind: 'actions', title: nameOf(unitTypeOf(this.s, unit)), items, selected, at: unit };
   }
 
+  private groupBar(units: readonly Unit[], options: readonly BarOption[], selected: number): MenuView | null {
+    const [first] = units;
+    if (!options.length || !first) return null;
+    const title = `${t('pickedTitle')} · ${units.length}`;
+    return { kind: 'actions', title, items: barItems(this.s, first, options), selected, at: first };
+  }
+
   private buyMenu(building: Building, options: readonly BuyOption[], selected: number): MenuView {
     const items = [{ id: 'cancel', label: t('cancel'), icon: null }, ...options.map((option) => buyItem(this.s, option))];
     const title = nameOf(buildingTypeOf(this.s, building));
@@ -402,29 +509,41 @@ export class TurnControls {
 
   hoverMenu(index: number): void {
     const mode = this.mode;
-    if (mode.kind !== 'unit' && mode.kind !== 'buy') return;
+    if (mode.kind !== 'unit' && mode.kind !== 'group' && mode.kind !== 'buy') return;
     this.setMode({ ...mode, selected: index });
   }
 
   pickMenu(index: number): void {
     if (this.isBusy) return;
     const mode = this.mode;
-    if (mode.kind === 'unit') void this.pickBarOption(mode.unit, mode.options[index]);
+    if (mode.kind === 'unit') void this.pickBarOption([mode.unit], mode.options[index]);
+    if (mode.kind === 'group') void this.pickBarOption(mode.units, mode.options[index]);
     if (mode.kind === 'unload') this.select(mode.unit);
+    if (mode.kind === 'order') this.choose(this.selection);
     if (mode.kind === 'buy') void this.pickBuy(mode.building, mode.options[index - 1]);
   }
 
   /** Elegir la opcion señalada (Intro). */
   acceptMenu(): void {
     const mode = this.mode;
-    if (mode.kind === 'unit' || mode.kind === 'buy') this.pickMenu(mode.selected);
+    if (mode.kind === 'unit' || mode.kind === 'group' || mode.kind === 'buy') this.pickMenu(mode.selected);
   }
 
-  private async pickBarOption(unit: Unit, option: BarOption | undefined): Promise<void> {
-    if (!option) return;
-    if (option === 'unload') return this.startUnloading(unit);
-    const action = SINGLE_ACTIONS[option];
-    if (action) await this.actThenSelect(unit, action(unit));
+  /** Una opcion de la barra con estas unidades (una o un grupo). */
+  private async pickBarOption(units: readonly Unit[], option: BarOption | undefined): Promise<void> {
+    const [first] = units;
+    if (!option || !first) return;
+    if (option === 'unload') return this.startUnloading(first);
+    if (option === 'squadRename') return this.openRename(units);
+    const order = ORDER_KINDS[option];
+    if (order) return this.setMode({ kind: 'order', units: [...units], order });
+    const action = barAction(this.s, this.host.viewer, units, option);
+    if (!action) return;
+    if (units.length === 1) return this.actThenSelect(first, action);
+    await this.performThenChoose(
+      action,
+      units.map((unit) => unit.uid),
+    );
   }
 
   /** Desembarcar: el primer pasajero que puede bajar, y en que casillas. */
@@ -452,6 +571,7 @@ export class TurnControls {
     if (mode.kind === 'idle') return false;
     if (mode.kind === 'unit' && mode.options.includes('undo')) void this.actThenSelect(mode.unit, { kind: 'undoMove', uid: mode.unit.uid });
     else if (mode.kind === 'unload') this.select(mode.unit);
+    else if (mode.kind === 'order') this.choose(this.selection);
     else this.setMode({ kind: 'idle' });
     return true;
   }
@@ -488,6 +608,7 @@ export class TurnControls {
 
   private setMode(mode: Mode): void {
     this.mode = mode;
+    if (mode.kind === 'idle') this.isAdding = false;
     this.showMarks();
     this.host.refresh();
   }
@@ -499,7 +620,7 @@ export class TurnControls {
     marks.showReach(this.reachTiles());
     marks.showTargets(this.targetTiles());
     marks.select('unit' in mode ? mode.unit : 'building' in mode ? mode.building : null);
-    marks.showGroup(mode.kind === 'group' ? mode.units : []);
+    marks.showGroup(mode.kind === 'group' || mode.kind === 'order' ? mode.units : []);
   }
 
   /** En azul: a donde llega la elegida, o donde se puede bajar al pasajero. */
