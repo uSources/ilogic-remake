@@ -11,9 +11,11 @@ import type { Anchor } from '../../hud/store';
 import type { CameraPose, Point3 } from '../ports/camera';
 import type { FrameListener } from '../ports/frame';
 import type { EffectStage, PieceLookup, PieceStage, PuffKind } from '../ports/stage';
-import type { MovePreview, TileMarks } from '../ports/turn';
+import type { MovePreview, ScreenView, TileMarks } from '../ports/turn';
+import type { ScreenBox, SelectionBoxView } from '../ports/pointer';
 import { ThreeCameraView } from './camera/cameraView';
 import { World } from './core/world';
+import { ScreenBoxView } from './core/screenBox';
 import { FxEffectStage } from './fx/effectStage';
 import { Highlights } from './fx/highlights';
 import { MovePreviewView } from './fx/movePreview';
@@ -41,7 +43,7 @@ export interface SceneStages {
   effects: EffectStage;
 }
 
-export class MatchScene {
+export class MatchScene implements ScreenView {
   readonly world: World;
   readonly board: BoardView;
   readonly weather: WeatherView;
@@ -57,6 +59,7 @@ export class MatchScene {
   private readonly particles = new ParticleSystem();
   private readonly marks = new GroundMarks();
   private readonly cameraView: ThreeCameraView;
+  private readonly selectionBox: ScreenBoxView;
 
   constructor(
     container: HTMLElement,
@@ -72,6 +75,7 @@ export class MatchScene {
     this.weather = new WeatherView(container);
     this.sandDust = new SandDust(this.terrain.sandTiles, (pos) => this.board.groundOf(pos));
     this.cameraView = new ThreeCameraView(this.world.camera);
+    this.selectionBox = new ScreenBoxView(container);
     this.world.scene.add(
       this.terrain.object,
       this.board.object,
@@ -111,6 +115,11 @@ export class MatchScene {
   /** La flecha del camino y el fantasma de la unidad que se va a mover. */
   get movePreview(): MovePreview {
     return this.preview;
+  }
+
+  /** El recuadro de seleccion mientras se arrastra. */
+  get box(): SelectionBoxView {
+    return this.selectionBox;
   }
 
   /** El lienzo donde se dibuja (y donde se toca). */
@@ -179,6 +188,30 @@ export class MatchScene {
     const ys = corners.map((corner) => canvas.top + ((1 - corner.y) / 2) * canvas.height);
     const [left, top] = [Math.min(...xs), Math.min(...ys)];
     return { x: left, y: top, w: Math.max(...xs) - left, h: Math.max(...ys) - top };
+  }
+
+  /** El punto de la pantalla (pixeles CSS de la ventana) del suelo de esa casilla; null si queda detras de la camara. */
+  screenOf(pos: Pos): { x: number; y: number } | null {
+    const point = this.board.groundOf(pos).project(this.world.camera);
+    if (point.z > 1) return null;
+    const canvas = this.canvas.getBoundingClientRect();
+    return { x: canvas.left + ((point.x + 1) / 2) * canvas.width, y: canvas.top + ((1 - point.y) / 2) * canvas.height };
+  }
+
+  /** La casilla se ve ahora en la pantalla. */
+  isOnScreen(pos: Pos): boolean {
+    const point = this.screenOf(pos);
+    if (!point) return false;
+    const canvas = this.canvas.getBoundingClientRect();
+    return point.x >= canvas.left && point.x <= canvas.right && point.y >= canvas.top && point.y <= canvas.bottom;
+  }
+
+  /** Las casillas de esa lista que quedan dentro del recuadro de la pantalla. */
+  tilesInBox<T extends Pos>(tiles: readonly T[], box: ScreenBox): T[] {
+    return tiles.filter((pos) => {
+      const point = this.screenOf(pos);
+      return !!point && point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom;
+    });
   }
 
   /** La casilla bajo un punto de la pantalla: la de la unidad si se toca una, si no la del terreno. */

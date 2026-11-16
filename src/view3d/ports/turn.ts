@@ -10,6 +10,13 @@ export interface TileMarks {
   showReach(tiles: readonly Pos[]): void;
   showTargets(tiles: readonly Pos[]): void;
   select(pos: Pos | null): void;
+  /** Un aro a los pies de cada unidad de un grupo elegido (vacio: ninguno). */
+  showGroup(tiles: readonly Pos[]): void;
+}
+
+/** Lo que el turno pregunta de la pantalla: si una casilla se ve ahora (doble clic: las de ese tipo que se ven). */
+export interface ScreenView {
+  isOnScreen(pos: Pos): boolean;
 }
 
 /** La unidad que se va a mover y el camino que seguiria; su fantasma va al final del camino. */

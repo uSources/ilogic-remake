@@ -87,6 +87,11 @@ export const help: HelpTexts = {
   head: ['Action', 'Keyboard', 'Mouse / touch'],
   controls: (keys: KeyLabels) => [
     ['Select a unit', '—', 'Click it'],
+    [
+      'Select several',
+      '—',
+      'Drag a box with the left button; Shift + click adds or removes one; double-click: all of that type on screen. With several, a click takes them there or attacks an enemy',
+    ],
     ['Move it', '—', 'Click a blue tile (hover to see the path arrow and its ghost where it ends; the path follows the mouse)'],
     [
       'Attack, capture, join, board',
@@ -97,7 +102,7 @@ export const help: HelpTexts = {
     ['Let go of the unit', keys.cancel, 'Click it again'],
     ['Undo the last move', keys.cancel, '“Undo” in the bar'],
     ['Next unit that has not moved', keys.nextUnit, '—'],
-    ['Move the camera', 'Arrows / WASD', 'Drag (left or middle button)'],
+    ['Move the camera', 'Arrows / WASD', 'Drag with the middle button, mouse at the edge or drag with a finger'],
     ['Turn the camera', '—', 'Drag with the right button'],
     ['Zoom', `${keys.zoomIn} / ${keys.zoomOut}`, 'Wheel'],
     ['End turn', keys.endTurn, 'Top button'],

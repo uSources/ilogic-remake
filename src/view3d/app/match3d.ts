@@ -6,6 +6,7 @@
  */
 import { mapGrid } from '../../core/mapGrid';
 import type { Pos } from '../../core/model';
+import { isOnMap } from '../../core/rules';
 import { screenEnd } from '../../core/session';
 import { ui } from '../../hud/store';
 import type { GameImages } from '../../atlas';
@@ -65,6 +66,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     viewer,
     marks: scene.tileMarks,
     preview: scene.movePreview,
+    screen: scene,
     events: { play: (events) => playEvents(events, stages) },
     sounds,
     refresh,
@@ -118,6 +120,9 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     openGameMenu: () => pause.open(),
   });
 
+  /** Las unidades de quien mira que estan en el tablero (para el recuadro). */
+  const ownUnitsOnBoard = () => state.units.filter((unit) => unit.team === viewer && isOnMap(unit));
+
   /** La casilla señalada: el cuadro amarillo, la ficha y la prevision de combate. */
   function hover(pos: Pos | null): void {
     const isSame = pos && cursor ? pos.x === cursor.x && pos.y === cursor.y : pos === cursor;
@@ -128,7 +133,15 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     publish();
   }
 
-  installPointer(scene.canvas, { camera, tileAt: (x, y) => scene.tileAt(x, y), hover, tap: (pos) => void controls.tap(pos) });
+  installPointer(scene.canvas, {
+    camera,
+    box: scene.box,
+    tileAt: (x, y) => scene.tileAt(x, y),
+    hover,
+    tap: (pos, mods) => void controls.tap(pos, mods),
+    boxSelect: (box, add) => controls.selectBox(scene.tilesInBox(ownUnitsOnBoard(), box), add),
+    onFrame: (listener) => scene.onFrame(listener),
+  });
   installKeys({
     camera,
     onFrame: (listener) => scene.onFrame(listener),
