@@ -6,6 +6,8 @@ export const actions = {
   supply: 'Reparar',
   wait: 'Esperar',
   back: 'Atrás',
+  undo: 'Deshacer',
+  unloadPick: 'Elige dónde bajar a {name}',
   delete: 'Disolver',
   cancel: 'Cancelar',
   buy: 'Comprar',

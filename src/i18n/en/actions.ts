@@ -8,6 +8,8 @@ export const actions: Translation<typeof es> = {
   supply: 'Repair',
   wait: 'Wait',
   back: 'Back',
+  undo: 'Undo',
+  unloadPick: 'Pick where to drop {name}',
   delete: 'Disband',
   cancel: 'Cancel',
   buy: 'Buy',

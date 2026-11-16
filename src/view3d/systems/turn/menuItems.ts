@@ -1,36 +1,23 @@
 /**
- * Los textos de los menus de la partida 3D: el de la unidad (sus acciones, con «Atras» en su sitio) y
+ * Los textos de los menus de la partida 3D: la barra de la unidad (sus acciones) y
  * el de compra (precio y datos de cada unidad), y lo que cobra un equipo cada dia (la barra de arriba).
  */
 import { buildingIncome, buildingsOf, upkeepOf, type BuyOption } from '../../../core/rules';
 import { buildingTypeOf } from '../../../core/gameContent';
-import type { UnitMenuOption } from '../../../core/actions';
 import type { GameState, TeamId, Unit } from '../../../core/model';
 import type { MenuItemVM } from '../../../hud/store';
 import { nameOf, t, type TextKey } from '../../../settings';
 import { abilitiesVM, buyBlockedText, captureHintText, unitStatsText } from '../../../ui/hudModels';
 import { unitIconKey } from '../../../ui/sprites';
+import type { BarOption } from './unitBar';
 
-/** Una opcion del menu de la unidad: las del nucleo y «Atras». */
-export type ActionKey = UnitMenuOption | 'back';
-/** «Atras» va justo antes de esta opcion (la de peligro, al final), o al final si no esta. */
-const BACK_GOES_BEFORE: UnitMenuOption = 'delete';
-
-/** Las opciones del nucleo, en su orden, con «Atras» en su sitio (BACK_GOES_BEFORE). */
-export function withBack(options: readonly UnitMenuOption[]): ActionKey[] {
-  const at = options.indexOf(BACK_GOES_BEFORE);
-  const cut = at < 0 ? options.length : at;
-  return [...options.slice(0, cut), 'back', ...options.slice(cut)];
-}
-
-/** Las opciones del menu de la unidad, con su texto. */
-export function unitMenuItems(s: GameState, unit: Unit | null, actions: readonly ActionKey[]): MenuItemVM[] {
-  return actions.map((action) => ({
-    id: action,
-    label: t(action as TextKey),
-    danger: action === 'delete',
-    // "20→10": puntos del edificio antes y despues de capturar este turno (reglas nuevas).
-    hint: action === 'capture' && unit ? captureHintText(s, unit) : undefined,
+/** La barra de acciones de la unidad, con su texto (en capturar, "20→10": puntos del edificio antes y despues). */
+export function barItems(s: GameState, unit: Unit, options: readonly BarOption[]): MenuItemVM[] {
+  return options.map((option) => ({
+    id: option,
+    label: t(option as TextKey),
+    danger: option === 'delete',
+    hint: option === 'capture' ? captureHintText(s, unit) : undefined,
   }));
 }
 

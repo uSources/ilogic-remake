@@ -84,13 +84,15 @@ describe('turno 3D con puertos', () => {
     expect(sounds.heard).toContain('unit_select');
   });
 
-  it('tocar una casilla azul la mueve: los sucesos van al reproductor y se abre su menu', async () => {
+  it('tocar una casilla azul la mueve: los sucesos van al reproductor y sigue elegida con su barra', async () => {
     const { soldier, marks, events, controls } = await myTurn();
     await controls.tap(soldier);
     await controls.tap({ x: 6, y: 5 });
     expect(events.played.map(kindsOf)).toContainEqual(expect.arrayContaining(['move']));
     expect(soldier).toMatchObject({ x: 6, y: 5 });
-    expect(controls.menu()?.kind).toBe('unit');
+    expect(controls.menu()?.kind).toBe('actions');
+    expect(controls.menu()?.items.map((item) => item.id)).toEqual(['wait', 'undo', 'delete']);
+    expect(marks.selected).toMatchObject({ x: 6, y: 5 });
     expect(marks.reach).toEqual([]);
   });
 
@@ -106,6 +108,17 @@ describe('turno 3D con puertos', () => {
     await moving;
     expect(controls.busy).toBe(false);
     expect(soldier).toMatchObject({ x: 6, y: 5 });
+  });
+
+  it('Esc tras moverla deshace el movimiento y vuelve a enseñar a donde llega', async () => {
+    const { soldier, marks, controls } = await myTurn();
+    await controls.tap(soldier);
+    await controls.tap({ x: 6, y: 5 });
+    expect(controls.cancel()).toBe(true);
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(soldier).toMatchObject({ x: 5, y: 5 });
+    expect(marks.reach).toContainEqual({ x: 6, y: 5 });
   });
 
   it('Esc despues de elegir quita las marcas; sin nada elegido dice que no habia nada', async () => {
@@ -210,5 +223,72 @@ describe('a donde llegaria (fantasma y flecha)', () => {
     controls.hover({ x: 6, y: 5 });
     controls.cancel();
     expect(preview.look).toBeNull();
+  });
+});
+
+describe('el clic que acierta y la barra de acciones', () => {
+  it('elegida, la barra enseña solo lo que vale ahi (sin moverse no hay deshacer; disolver, al final)', async () => {
+    const { soldier, controls } = await myTurn();
+    await controls.tap(soldier);
+    expect(controls.menu()?.kind).toBe('actions');
+    expect(controls.menu()?.items.map((item) => item.id)).toEqual(['wait', 'delete']);
+  });
+
+  it('tocar la propia unidad la suelta', async () => {
+    const { soldier, marks, controls } = await myTurn();
+    await controls.tap(soldier);
+    await controls.tap(soldier);
+    expect(marks.selected).toBeNull();
+    expect(controls.menu()).toBeNull();
+  });
+
+  it('con una elegida, tocar otra propia elige la otra', async () => {
+    const { s, soldier, marks, controls } = await myTurn();
+    const other = newUnit(s, SOLDIER, PLAYER, { x: 20, y: 20 });
+    await controls.tap(soldier);
+    await controls.tap(other);
+    expect(marks.selected).toMatchObject({ x: 20, y: 20 });
+  });
+
+  it('tocar un edificio ajeno a su alcance va y empieza a capturarlo', async () => {
+    const { s, soldier, events, controls } = await myTurn();
+    s.buildings.push({ type: 'City', owner: null, x: 7, y: 5, capture: null });
+    await controls.tap(soldier);
+    await controls.tap({ x: 7, y: 5 });
+    expect(events.played.map(kindsOf)).toEqual([expect.arrayContaining(['move']), expect.arrayContaining(['capture'])]);
+    expect(soldier).toMatchObject({ x: 7, y: 5 });
+  });
+
+  it('esperar desde la barra la deja hecha y nada queda elegido', async () => {
+    const { soldier, marks, controls } = await myTurn();
+    await controls.tap(soldier);
+    controls.pickMenu(controls.menu()!.items.findIndex((item) => item.id === 'wait'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(soldier.turnState).toBe('done');
+    expect(marks.selected).toBeNull();
+  });
+
+  it('tocar un transporte suyo al que llega: sube', async () => {
+    const { s, soldier, events, controls } = await myTurn();
+    const transport = newUnit(s, unitTypeNamed('Transport'), PLAYER, { x: 7, y: 5 });
+    await controls.tap(soldier);
+    await controls.tap(transport);
+    expect(events.played.map(kindsOf)).toContainEqual(expect.arrayContaining(['load']));
+    expect(soldier.carrier).toBe(transport.uid);
+  });
+
+  it('desembarcar: la barra del transporte lo ofrece y se elige la casilla', async () => {
+    const { s, soldier, controls } = await myTurn();
+    const transport = newUnit(s, unitTypeNamed('Transport'), PLAYER, { x: 7, y: 5 });
+    await controls.tap(soldier);
+    await controls.tap(transport);
+    await controls.tap(transport);
+    const unload = controls.menu()!.items.findIndex((item) => item.id === 'unload');
+    expect(unload).toBeGreaterThanOrEqual(0);
+    controls.pickMenu(unload);
+    expect(controls.menu()?.title).toContain('Soldado');
+    await controls.tap({ x: 7, y: 6 });
+    expect(soldier.carrier).toBeNull();
+    expect(soldier).toMatchObject({ x: 7, y: 6 });
   });
 });
