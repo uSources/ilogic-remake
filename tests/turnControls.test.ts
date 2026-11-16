@@ -4,7 +4,7 @@ import { GameSession, humanController, passiveController } from '@core/session';
 import type { GameEvent, Pos } from '@core/model';
 import type { SoundId, SoundPort } from '../src/audio/sounds';
 import { TurnControls } from '../src/view3d/systems/turn/turnControls';
-import type { EventPlayer, MoveLook, MovePreview, TileMarks } from '../src/view3d/ports/turn';
+import type { EventPlayer, MoveLook, MovePreview, ShotLook, TileMarks } from '../src/view3d/ports/turn';
 import { blankState, ENEMY, PLAYER, unitTypeNamed } from './helpers';
 
 /** El turno 3D sin navegador: las marcas, los sucesos y los sonidos son puertos falsos que apuntan lo que se les pide. */
@@ -15,11 +15,15 @@ const TANK = unitTypeNamed('Tank');
 /** Lo ultimo que se ha pedido enseñar en el tablero. */
 class FakeMarks implements TileMarks {
   reach: readonly Pos[] = [];
+  attackReach: readonly Pos[] = [];
   targets: readonly Pos[] = [];
   selected: Pos | null = null;
   group: readonly Pos[] = [];
   showReach(tiles: readonly Pos[]): void {
     this.reach = tiles;
+  }
+  showAttackReach(tiles: readonly Pos[]): void {
+    this.attackReach = tiles;
   }
   showTargets(tiles: readonly Pos[]): void {
     this.targets = tiles;
@@ -51,8 +55,12 @@ class FakeEvents implements EventPlayer {
 /** Lo ultimo que se ha pedido enseñar de a donde llegaria la unidad (null: nada). */
 class FakePreview implements MovePreview {
   look: MoveLook | null = null;
+  shot: ShotLook | null = null;
   show(look: MoveLook | null): void {
     this.look = look;
+  }
+  aim(shot: ShotLook | null): void {
+    this.shot = shot;
   }
 }
 
@@ -568,5 +576,47 @@ describe('la rueda tambien elige', () => {
     controls.context(soldier);
     pick(controls, 'squadSelect');
     expect(controls.selectedUnits()).toHaveLength(2);
+  });
+});
+
+describe('el tablero se lee: hasta donde ataca y el visor', () => {
+  it('al elegirla, el borde rojo marca hasta donde ataca, fuera de su alcance azul', async () => {
+    const { soldier, marks, controls } = await myTurn();
+    await controls.tap(soldier);
+    expect(marks.attackReach.length).toBeGreaterThan(0);
+    const inReach = marks.attackReach.filter((pos) => marks.reach.some((tile) => tile.x === pos.x && tile.y === pos.y));
+    expect(inReach).toEqual([]);
+    controls.cancel();
+    expect(marks.attackReach).toEqual([]);
+  });
+
+  it('la artilleria apunta en arco a un enemigo a tiro; de cerca no hay visor', async () => {
+    const { s, preview, controls } = await myTurn();
+    const gun = newUnit(s, unitTypeNamed('Artillery'), PLAYER, { x: 10, y: 10 });
+    const far = newUnit(s, SOLDIER, ENEMY, { x: 10, y: 13 });
+    await controls.tap(gun);
+    controls.hover(far);
+    expect(preview.shot).toEqual({ from: { x: 10, y: 10 }, to: { x: 10, y: 13 } });
+    controls.hover({ x: 11, y: 10 });
+    expect(preview.shot).toBeNull();
+  });
+
+  it('un disparo a la casilla de al lado no lleva visor', async () => {
+    const { s, soldier, preview, controls } = await myTurn();
+    const foe = newUnit(s, SOLDIER, ENEMY, { x: 6, y: 5 });
+    await controls.tap(soldier);
+    controls.hover(foe);
+    expect(preview.shot).toBeNull();
+  });
+
+  it('al soltarla, se quitan el camino y el visor', async () => {
+    const { s, preview, controls } = await myTurn();
+    const gun = newUnit(s, unitTypeNamed('Artillery'), PLAYER, { x: 10, y: 10 });
+    const far = newUnit(s, SOLDIER, ENEMY, { x: 10, y: 13 });
+    await controls.tap(gun);
+    controls.hover(far);
+    controls.cancel();
+    expect(preview.shot).toBeNull();
+    expect(preview.look).toBeNull();
   });
 });

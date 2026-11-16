@@ -5,9 +5,15 @@
  */
 import type { GameEvent, Pos } from '../../core/model';
 
-/** Las marcas del tablero que enseña el turno: a donde llega (azul), a quien ataca (rojo) y lo elegido. */
+/**
+ * Las marcas del tablero que enseña el turno: a donde llega (losas azules), hasta donde ataca (borde
+ * rojo), a quien puede atacar (una diana encima) y lo elegido.
+ */
 export interface TileMarks {
   showReach(tiles: readonly Pos[]): void;
+  /** Las casillas a las que podria disparar este turno, desde cualquier sitio al que llega. */
+  showAttackReach(tiles: readonly Pos[]): void;
+  /** Los enemigos a los que puede atacar ahora (su casilla). */
   showTargets(tiles: readonly Pos[]): void;
   select(pos: Pos | null): void;
   /** Un aro a los pies de cada unidad de un grupo elegido (vacio: ninguno). */
@@ -25,9 +31,17 @@ export interface MoveLook {
   readonly path: readonly Pos[];
 }
 
+/** Un disparo a distancia que se apunta: de la casilla desde donde dispara a la del objetivo. */
+export interface ShotLook {
+  readonly from: Pos;
+  readonly to: Pos;
+}
+
 /** Enseña a donde llegaria la unidad elegida: la flecha del camino y su fantasma al final (null: nada). */
 export interface MovePreview {
   show(look: MoveLook | null): void;
+  /** El visor de un disparo en arco al apuntar (null: ninguno). */
+  aim(shot: ShotLook | null): void;
 }
 
 /** Enseña los sucesos de una accion, en orden; acaba cuando han terminado de verse. */

@@ -2,13 +2,15 @@
  * A donde llegaria la unidad elegida si se la mandase a la casilla señalada, y por donde: el camino
  * que se traza con el cursor (core/trail.ts: se alarga casilla a casilla, se recorta al volver y salta
  * al mas corto si se pasa). Si se señala un enemigo al que puede atacar, el camino va hasta la casilla
- * desde donde dispararia. Puro: lo enseña el motor por el puerto `MovePreview` (ports/turn.ts).
+ * desde donde dispararia; si le dispara de lejos (en arco), tambien el visor del disparo. Puro: lo
+ * enseña el motor por el puerto `MovePreview` (ports/turn.ts).
  */
 import { samePos } from '../../../core/geom';
 import type { Pos } from '../../../core/model';
 import { canReach, pathTo, type MoveRange } from '../../../core/rules';
 import { extendTrail } from '../../../core/trail';
-import type { MoveLook } from '../../ports/turn';
+import type { MoveLook, ShotLook } from '../../ports/turn';
+import type { AttackPlan } from './attackPlan';
 
 /** El camino trazado despues de señalar una casilla, y lo que se enseña (null: nada). */
 export interface PreviewState {
@@ -39,4 +41,13 @@ export function pathFor(range: MoveRange, trail: readonly Pos[], to: Pos): Pos[]
   const last = trail.at(-1);
   const isTraced = trail.length > 1 && !!last && samePos(last, to) && samePos(trail[0]!, range.origin);
   return isTraced ? [...trail] : pathTo(range, to);
+}
+
+/** De mas lejos que esto (casillas, en linea recta) el disparo va en arco: lo mismo que su animacion (eventSteps.ts). */
+const ARC_FROM = 1.5;
+
+/** El visor del disparo de ese plan: solo si va en arco (de lejos); null si no hay plan o es de cerca. */
+export function arcShotOf(plan: AttackPlan | null): ShotLook | null {
+  if (!plan || Math.hypot(plan.target.x - plan.from.x, plan.target.y - plan.from.y) <= ARC_FROM) return null;
+  return { from: { ...plan.from }, to: { x: plan.target.x, y: plan.target.y } };
 }
