@@ -28,6 +28,8 @@ export interface KeyHost {
   intents(): void;
   /** Q, C, G: orden de atacar, capturar o defender (luego la casilla); X la quita. */
   order(order: 'attack' | 'capture' | 'defend' | 'cancel'): void;
+  /** T: ver u ocultar a donde llegan los enemigos. */
+  threat(): void;
   /** F: la orden que tiene sentido en la casilla señalada (como el clic derecho). */
   orderHere(): void;
   /** Ctrl+Z: deshacer el ultimo movimiento. */
@@ -48,6 +50,7 @@ const KEY_ACTIONS: KeyActions = {
   order: (command, host) => host.order(command.order),
   intents: (_command, host) => host.intents(),
   orderHere: (_command, host) => host.orderHere(),
+  threat: (_command, host) => host.threat(),
   undo: (_command, host) => host.undo(),
 };
 

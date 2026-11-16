@@ -1,6 +1,7 @@
 import { fmtNum, t } from '../../settings';
 import { pct, range } from '../common/format';
 import { Icon } from '../common/Icon';
+import { useAltHeld } from '../common/useAltHeld';
 import { Popover } from '../common/Popover';
 import type { ForecastVM } from '../vm/combat';
 
@@ -72,11 +73,45 @@ function GoldRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Prevision de combate junto al objetivo: daño, vida que le queda, contraataque y extras. */
+/** El contraataque en una linea: cuanto te devuelve, o que no hay. */
+function CounterLine({ counter }: { counter: ForecastVM['counter'] }) {
+  return (
+    <div class="row">
+      <span>{t('counter')}</span>
+      {counter ? (
+        <span style={{ color: 'var(--red-soft)' }}>{range(counter.low, counter.high)}</span>
+      ) : (
+        <span class="muted">{t('none')}</span>
+      )}
+    </div>
+  );
+}
+
+/** Lo que sale ademas con Alt: la vida que le queda, flanqueo, botin y como queda tu unidad. */
+function ForecastDetails({ forecast }: { forecast: ForecastVM }) {
+  return (
+    <>
+      <div class="row">
+        <span>{t('enemyLife')}</span>
+        <span style={{ color: 'var(--gold)' }}>
+          {forecast.lifeBefore} → {forecast.lifeAfter}
+        </span>
+      </div>
+      {forecast.flank > 0 && <GoldRow label={t('flank')} value={`+${Math.round(forecast.flank * 100)} %`} />}
+      {forecast.bounty > 0 && forecast.killChance > 0 && <GoldRow label={t('bounty')} value={`+${fmtNum(forecast.bounty)}`} />}
+      <CounterRows counter={forecast.counter} />
+    </>
+  );
+}
+
+/**
+ * Prevision de combate junto al objetivo, en lo justo: daño, vida que le queda, cuanto puede
+ * destruirlo y el contraataque. Con Alt, todo (docs/PLAN-INTERFAZ.md, fase 5).
+ */
 export function Forecast({ forecast }: { forecast: ForecastVM }) {
+  const isDetailed = useAltHeld();
   return (
     <Popover anchor={forecast.anchor} prefer="left" class="forecast" label={t('forecast')}>
-      <span class="label">{t('forecast')}</span>
       <div class="vs">
         <Icon k={forecast.attackerIcon} />
         <span class="range num">{range(forecast.low, forecast.high)}</span>
@@ -84,18 +119,11 @@ export function Forecast({ forecast }: { forecast: ForecastVM }) {
       </div>
       <EnemyLifeBar forecast={forecast} />
       <div class="row">
-        <span>{t('enemyLife')}</span>
-        <span style={{ color: 'var(--gold)' }}>
-          {forecast.lifeBefore} → {forecast.lifeAfter}
-        </span>
-      </div>
-      <div class="row">
         <span>{t('destroyIt')}</span>
         <span style={{ color: forecast.killChance >= LIKELY_KILL ? 'var(--gold)' : undefined }}>{pct(forecast.killChance)}</span>
       </div>
-      {forecast.flank > 0 && <GoldRow label={t('flank')} value={`+${Math.round(forecast.flank * 100)} %`} />}
-      {forecast.bounty > 0 && forecast.killChance > 0 && <GoldRow label={t('bounty')} value={`+${fmtNum(forecast.bounty)}`} />}
-      <CounterRows counter={forecast.counter} />
+      {isDetailed ? <ForecastDetails forecast={forecast} /> : <CounterLine counter={forecast.counter} />}
+      {!isDetailed && <div class="tt-more">{t('tipMore')}</div>}
     </Popover>
   );
 }

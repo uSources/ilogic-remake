@@ -13,6 +13,7 @@ import type { FrameListener } from '../ports/frame';
 import type { EffectStage, PieceLookup, PieceStage, PuffKind } from '../ports/stage';
 import type { MovePreview, ScreenView, TileMarks } from '../ports/turn';
 import type { IntentMarks } from '../ports/orders';
+import type { ThreatMarks } from '../ports/threat';
 import type { ScreenBox, SelectionBoxView } from '../ports/pointer';
 import { ThreeCameraView } from './camera/cameraView';
 import { World } from './core/world';
@@ -114,6 +115,11 @@ export class MatchScene implements ScreenView {
 
   /** Las marcas del tablero que pide el turno (alcance, objetivos, lo elegido). */
   get tileMarks(): TileMarks {
+    return this.highlights;
+  }
+
+  /** A donde llegan los enemigos («Ver amenaza»). */
+  get threatMarks(): ThreatMarks {
     return this.highlights;
   }
 

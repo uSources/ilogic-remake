@@ -117,6 +117,8 @@ export const help: HelpTexts = {
     ['Let go of the unit', keys.cancel, 'Click it again'],
     ['Undo the last move', `Ctrl+Z (or ${keys.cancel} while selected)`, '“Undo” in the wheel'],
     ['Next unit that has not moved', keys.nextUnit, '—'],
+    ['Tile details', 'Alt (all of them)', 'Rest the mouse on it for a moment (touch: tap it)'],
+    ['See where enemies can reach', keys.threat, 'The orange icon in the tray'],
     ['Move the camera', 'Arrows / WASD', 'Drag with the middle button, mouse at the edge or drag with a finger'],
     ['Turn the camera', '—', 'Drag with the right button'],
     ['Zoom', `${keys.zoomIn} / ${keys.zoomOut}`, 'Wheel'],

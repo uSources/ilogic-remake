@@ -40,10 +40,10 @@ export const turn: Translation<typeof es> = {
   allMoved: 'All moved',
   threatOn: 'Hide threat',
   threatOff: 'Show enemy threat',
-  threatShort: 'Threat',
   intentsOn: 'Hide orders',
   intentsOff: 'Show orders',
-  intentsShort: 'Orders',
+  /** La ficha de la casilla: con Alt, la tarjeta entera. */
+  tipMore: 'Alt: more',
   undone: 'Move undone',
   nothingToUndo: 'Nothing to undo',
   undoRevealed: 'It spotted enemies: it can no longer go back',

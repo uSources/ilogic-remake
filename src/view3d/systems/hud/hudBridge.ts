@@ -33,6 +33,8 @@ export interface HudMoment {
   adding: boolean;
   /** «Ver órdenes» esta encendido. */
   intents: boolean;
+  /** «Ver amenaza» encendido. */
+  threat: boolean;
   /** El rectangulo de una casilla en la pantalla (para colocar bocadillos junto a ella). */
   anchorOf(pos: Pos): Anchor;
 }
@@ -56,11 +58,10 @@ export interface HudActions {
   pickInSelection: (uid: number, shift: boolean, ctrl: boolean) => void;
   /** «Ver órdenes»: lo que haran todas las ordenes al terminar el turno. */
   toggleIntents: () => void;
+  /** «Ver amenaza»: a donde llegan los enemigos. */
+  toggleThreat: () => void;
 }
 
-/** Linea de ayuda de abajo: los mandos del 3D (los del juego en 2D son otros). */
-const HINT_3D =
-  'Clic: elegir, mover y atacar · Arrastrar: elegir varias · Botón central, WASD o el borde: desplazar · Botón derecho: girar · Rueda: acercar';
 const NOTHING_HIDDEN: ReadonlySet<number> = new Set();
 
 const idleUnits = (s: GameState, viewer: TeamId) => s.units.filter((unit) => unit.team === viewer && canActNow(unit));
@@ -137,9 +138,11 @@ export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, m
     selection: selectionOf(textures, s, viewer, moment.selected),
     multi: moment.adding ? moment.selected.length : null,
     intents: moment.intents,
+    threat: moment.threat,
+    tileAt: moment.cursor && !moment.menu ? moment.anchorOf(moment.cursor) : null,
     anyStandingOrder: anyStandingOrder(s, viewer),
     endTurn: { pending: idleUnits(s, viewer).length, armed: false },
-    hint: moment.busy ? '' : HINT_3D,
+    hint: '',
   });
 }
 

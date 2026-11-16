@@ -38,10 +38,10 @@ export const turn = {
   allMoved: 'Todas movidas',
   threatOn: 'Ocultar amenaza',
   threatOff: 'Ver amenaza enemiga',
-  threatShort: 'Amenaza',
   intentsOn: 'Ocultar órdenes',
   intentsOff: 'Ver órdenes',
-  intentsShort: 'Órdenes',
+  /** La ficha de la casilla: con Alt, la tarjeta entera. */
+  tipMore: 'Alt: más datos',
   undone: 'Movimiento deshecho',
   nothingToUndo: 'No hay nada que deshacer',
   undoRevealed: 'Ha descubierto enemigos: ya no puede volver',

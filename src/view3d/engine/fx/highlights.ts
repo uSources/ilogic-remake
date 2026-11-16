@@ -1,15 +1,20 @@
 /**
  * Las marcas sobre el tablero: a donde puede ir la unidad elegida (azul), a quien puede atacar (rojo),
+ * a donde llegan los enemigos (naranja, con «Ver amenaza»),
  * la casilla bajo el puntero, el anillo de la unidad elegida y los aros de un grupo elegido. Solo dibujan lo que se les dice (no
  * saben de reglas).
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
+import type { ThreatMarks } from '../../ports/threat';
 
 /** Lo justo por encima del suelo para no parpadear con el (z-fighting). */
 const LIFT = 0.012;
 const REACH_COLOR = 0x4fc3ff;
 const ATTACK_COLOR = 0xff4d45;
+const THREAT_COLOR = 0xff8a1f;
+/** La amenaza va debajo de las demas y mas suave: es un fondo, no una eleccion. */
+const THREAT_OPACITY = 0.4;
 const MARK_OPACITY = 0.6;
 const CURSOR_COLOR = 0xffd447;
 /** Las marcas de alcance son algo menores que la casilla: se ve la cuadricula entre ellas. */
@@ -20,10 +25,11 @@ const RING_PULSE_SPEED = 4;
 /** Un grupo elegido no tiene mas unidades que esto con aro. */
 const MAX_GROUP_RINGS = 64;
 
-export class Highlights {
+export class Highlights implements ThreatMarks {
   readonly object = new THREE.Group();
   private readonly reach: THREE.InstancedMesh;
   private readonly attack: THREE.InstancedMesh;
+  private readonly threat: THREE.InstancedMesh;
   private readonly cursor: THREE.LineSegments;
   private readonly ring: THREE.Mesh;
   private readonly groupRings: THREE.InstancedMesh;
@@ -32,10 +38,11 @@ export class Highlights {
   constructor(private readonly groundOf: (pos: Pos) => THREE.Vector3) {
     this.reach = marksMesh(REACH_COLOR);
     this.attack = marksMesh(ATTACK_COLOR);
+    this.threat = marksMesh(THREAT_COLOR, THREAT_OPACITY);
     this.cursor = cursorMesh();
     this.ring = ringMesh();
     this.groupRings = groupRingsMesh();
-    this.object.add(this.reach, this.attack, this.cursor, this.ring, this.groupRings);
+    this.object.add(this.threat, this.reach, this.attack, this.cursor, this.ring, this.groupRings);
   }
 
   showReach(tiles: readonly Pos[]): void {
@@ -44,6 +51,10 @@ export class Highlights {
 
   showTargets(tiles: readonly Pos[]): void {
     this.mark(this.attack, tiles);
+  }
+
+  showThreat(tiles: readonly Pos[]): void {
+    this.mark(this.threat, tiles);
   }
 
   private mark(marks: THREE.InstancedMesh, tiles: readonly Pos[]): void {
@@ -87,8 +98,8 @@ export class Highlights {
   }
 }
 
-function marksMesh(color: number): THREE.InstancedMesh {
-  const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: MARK_OPACITY, depthWrite: false });
+function marksMesh(color: number, opacity = MARK_OPACITY): THREE.InstancedMesh {
+  const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
   const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), material, MAX_REACH_TILES);
   mesh.count = 0;
   // Su esfera de recorte se calcula una vez, con el alcance vacio: sin esto no se veria nunca.

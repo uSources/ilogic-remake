@@ -13,7 +13,16 @@
   con el transporte sin mover sus casillas de al lado también son «ir allí».
 - Fase 4 (comprar con fichas): **hecha**. `hud/game/BuyGrid.tsx`: rejilla de retratos con su precio, sin
   «Cancelar» (tocar fuera o Esc cierra); un toque compra.
-- Fases 5 y 6: pendientes. Ver amenaza (T), en la fase 5.
+- Fase 5 (información cuando se pide): **hecha**.
+  - Ficha de la casilla (`hud/game/TileTip.tsx`): sale junto a ella al parar el ratón 400 ms (con el
+    dedo, al tocarla); con Alt, la tarjeta entera. Fuera las tarjetas fijas de abajo a la izquierda.
+  - Previsión de combate en lo justo (daño, vida, % de destruirlo, contraataque); el resto con Alt.
+  - Bandeja: sin mover y escuadras (sin el aviso de cómo hacerlas), amenaza y órdenes como iconos y
+    «Elegir varias» solo con el dedo. Se queda a la derecha, encima del fin del turno (con quien va).
+  - Ver amenaza (T) ya funciona en 3D: `systems/threat/threatZone.ts`, en naranja suave.
+  - Fuera la línea fija de ayuda de arriba.
+  - La vida en el tablero ya estaba: una barra sobre cada unidad herida (no hace falta el número).
+- Fase 6: pendiente.
 
 ## Contexto
 

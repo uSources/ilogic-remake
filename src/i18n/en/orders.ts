@@ -2,7 +2,6 @@ import type { orders as es } from '../es/orders';
 import type { Translation } from '../translation';
 
 export const orders: Translation<typeof es> = {
-  squadsNone: 'Group: box-select, then press Ctrl + number',
   squadKeyHint: 'Key',
   groupMenu: 'Group',
   orderToAttack: 'Order: attack there',

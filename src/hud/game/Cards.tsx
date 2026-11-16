@@ -103,7 +103,7 @@ function UnitNotes({ unit }: { unit: UnitVM }) {
   );
 }
 
-function UnitCard({ unit, folded = false }: { unit: UnitVM; folded?: boolean }) {
+export function UnitCard({ unit, folded = false }: { unit: UnitVM; folded?: boolean }) {
   return (
     <div class="px unitcard">
       <FoldMark folded={folded} />
@@ -218,7 +218,7 @@ function TerrainDetails({ tile }: { tile: TileVM }) {
   );
 }
 
-function TerrainCard({ tile, folded = false }: { tile: TileVM; folded?: boolean }) {
+export function TerrainCard({ tile, folded = false }: { tile: TileVM; folded?: boolean }) {
   return (
     <div class="px terrain">
       <FoldMark folded={folded} />
