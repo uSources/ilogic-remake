@@ -58,10 +58,10 @@
   font-size: 13px;
 }
 .item.disabled {
-  color: #67759a;
+  color: var(--muted);
 }
 .item.disabled .hint {
-  color: #67759a;
+  color: var(--muted);
 }
 .item.danger {
   color: var(--red-soft);

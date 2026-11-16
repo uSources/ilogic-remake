@@ -64,7 +64,6 @@ const GAME_PANELS: GamePanel[] = [
   { id: 'general', render: (s) => s.general && <GeneralPanel general={s.general} mine={isOwnTurn(s)} /> },
   { id: 'enemyGeneral', render: (s) => s.enemyGeneral && <EnemyGeneral general={s.enemyGeneral} /> },
   { id: 'mission', render: (s) => s.mission && isOwnTurn(s) && <MissionPanel mission={s.mission} /> },
-  { id: 'hint', render: (s) => s.hint && <div class="hintline">{s.hint}</div> },
   { id: 'selection', render: (s) => showsSelection(s) && s.selection && <SelectionPanel selection={s.selection} /> },
   {
     id: 'tileTip',

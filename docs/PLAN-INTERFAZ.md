@@ -22,7 +22,17 @@
   - Ver amenaza (T) ya funciona en 3D: `systems/threat/threatZone.ts`, en naranja suave.
   - Fuera la línea fija de ayuda de arriba.
   - La vida en el tablero ya estaba: una barra sobre cada unidad herida (no hace falta el número).
-- Fase 6: pendiente.
+- Fase 6 (lo demás con la misma estética): **hecha**.
+  - Cartel del día y de tu turno: una ficha grande que entra desde arriba (antes, una franja oscura).
+    Avisos como pastillas.
+  - Pausa sin las rayas de televisor; pantalla final con letras de juguete; los biselados que
+    quedaban (opciones, nueva partida, campaña, novedades, escuadras...) pasan a la forma de juguete y
+    los colores oscuros fijos a los de la paleta.
+  - Fuera la línea de ayuda de arriba también del estado de la interfaz (`hint`).
+  - El esperar implícito respeta la opción que ya había, «Esperar sola al soltar» (`settings.autoWait`).
+  - Se quedan: `styles/legacy.css` (sus reglas siguen en uso; moverlas solo cambiaría el orden de la
+    cascada) y los estilos de los paneles que el 3D aún no publica (minimapa, general, misión,
+    combate), que se rehacen con las piezas nuevas al portarlos (`docs/IDEAS.md`, «Vista 3D»).
 
 ## Contexto
 

@@ -43,8 +43,7 @@
     font-size: 18px;
     line-height: 18px;
   }
-  .funds .sub,
-  .hintline {
+  .funds .sub {
     display: none;
   }
   .day {
@@ -144,9 +143,6 @@
   white-space: nowrap;
 }
 @media (max-width: 1100px) {
-  .hintline {
-    display: none;
-  }
 }
 @keyframes bob {
   from {
