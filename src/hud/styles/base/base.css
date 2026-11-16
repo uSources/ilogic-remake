@@ -1,43 +1,57 @@
-/* Letras, colores (variables), pagina y #hud. */
+/* Letras, colores (variables), pagina y #hud. Estetica "caja de juguete" (docs/ESTETICA.md, "Interfaz"):
+   fichas redondeadas de plastico, borde oscuro, sombra dura, base crema y colores de bando. */
 
-/* Letra propia de titulos y botones (tools/art/font/ilogic.txt → npm run assets). Lo que no tiene
-   (★, ☰...) sale con Silkscreen. Nitida a 10, 20, 30 y 40 px. */
+/* Letras redondas (licencia OFL, fonts/*-OFL.txt), dentro del proyecto: el juego va en un solo HTML y
+   sin red. Fredoka para titulos, botones y cifras; Nunito para el texto. Solo el alfabeto latino. */
+@font-face {
+  font-family: 'Fredoka';
+  src: url('../../fonts/fredoka.woff2') format('woff2');
+  font-weight: 300 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Nunito';
+  src: url('../../fonts/nunito.woff2') format('woff2');
+  font-weight: 200 1000;
+  font-display: swap;
+}
+/* La letra pixel de 2013 (tools/art/font/ilogic.txt → npm run assets): queda para el logo. */
 @font-face {
   font-family: 'Ilogic';
   src: url('../../fonts/ilogic.woff2') format('woff2');
   font-display: block;
 }
-/* Cifras del texto con las de Ilogic: en Pixelify Sans, a tamaño pequeño, el 5 se confunde con el 8
-   ("Fondos: 5000" se leia "8000"). Solo las cifras (unicode-range); las letras siguen igual. */
-@font-face {
-  font-family: 'IlogicDigits';
-  src: url('../../fonts/ilogic.woff2') format('woff2');
-  font-display: block;
-  unicode-range: U+0030-0039;
-}
 :root {
-  --ink: #0b1220;
-  --panel: #1c2c4c;
-  --hi: #31497a;
-  --lo: #111b31;
-  --slot: #24314d;
-  --text: #f2f5ff;
-  --muted: #9fb2d8;
-  --blue: #3aa8ff;
-  --blue-btn: #1f6fd1;
-  --blue-hi: #5eb3ff;
-  --blue-lo: #134a8f;
-  --red: #ff4d45;
+  /* Tinta: bordes, sombras y texto. Crema: el plastico de las fichas. */
+  --ink: #2b2240;
+  --panel: #fff7e8;
+  --hi: #ffffff;
+  --lo: #eadcc0;
+  --slot: #f2e5ca;
+  --text: #2b2240;
+  --muted: #7a6e8e;
+  /* Bando propio (y botones principales) y bando enemigo (y peligro). */
+  --blue: #2f86f6;
+  --blue-btn: #3d8bff;
+  --blue-hi: #74adff;
+  --blue-lo: #2160c0;
+  --red: #ef4b43;
   --red-soft: #ff7a73;
-  --red-btn: #b8322c;
-  --red-hi: #ff6a62;
-  --red-lo: #7a1d19;
-  --gold: #ffd447;
-  --green: #4fd36a;
-  --sel: #2c5bb0;
-  --display: 'Ilogic', 'Silkscreen', 'Courier New', monospace;
-  --body: 'IlogicDigits', 'Pixelify Sans', 'Courier New', monospace;
-  color-scheme: dark;
+  --red-btn: #f0544a;
+  --red-hi: #ff8a82;
+  --red-lo: #b3302a;
+  --gold: #b97800;
+  --green: #36b45a;
+  --sel: #d6e6ff;
+  /* Forma de las fichas: radio, grosor del borde y la sombra dura de plastico. */
+  --radius: 16px;
+  --radius-sm: 10px;
+  --outline: 3px;
+  --lift: 0 4px 0 var(--ink);
+  --lift-pressed: 0 1px 0 var(--ink);
+  --display: 'Fredoka', 'Nunito', ui-rounded, system-ui, sans-serif;
+  --body: 'Nunito', ui-rounded, system-ui, sans-serif;
+  color-scheme: light;
 }
 
 html,
@@ -47,8 +61,6 @@ body {
   height: 100%;
   background: var(--ink);
   overflow: hidden;
-  /* La letra pixel trae la ligadura "fi" rota (salia "An", "edifAcios"): letras sueltas siempre. */
-  font-variant-ligatures: none;
 }
 #game {
   position: fixed;
@@ -66,7 +78,7 @@ body {
   font-family: var(--body);
   color: var(--text);
   font-size: 16px;
-  -webkit-font-smoothing: none;
+  -webkit-font-smoothing: antialiased;
   user-select: none;
 }
 #hud * {

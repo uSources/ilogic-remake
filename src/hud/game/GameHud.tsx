@@ -13,7 +13,7 @@ import { MissionPanel } from './MissionPanel';
 import { MoveTip } from './MoveTip';
 import { PopMenu } from './PopMenu';
 import { SelectionPanel } from './SelectionPanel';
-import { TopBar } from './TopBar';
+import { EndTurnChip, TopBar } from './TopBar';
 import { Tray } from './Tray';
 import { canAct, isOwnTurn } from './turn';
 
@@ -63,6 +63,7 @@ const GAME_PANELS: GamePanel[] = [
   { id: 'selection', render: (s) => showsSelection(s) && s.selection && <SelectionPanel selection={s.selection} /> },
   { id: 'cards', render: (s) => !showsSelection(s) && canAct(s) && s.tile && <Cards tile={s.tile} /> },
   { id: 'side', render: (s) => <div class="side">{renderPanels(SIDE_PANELS, s)}</div> },
+  { id: 'endTurn', render: (s) => <EndTurnChip s={s} /> },
   { id: 'moveTip', render: (s) => s.moveTip && <MoveTip moveTip={s.moveTip} /> },
   { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },
   { id: 'combat', render: (s) => s.combat && <CombatPanel combat={s.combat} /> },
