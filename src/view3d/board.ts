@@ -13,7 +13,8 @@ import { capturePointsOf, captureProgress, isOnMap, isShownTo, visibility } from
 import type { Grid } from '../core/util/grid';
 import { isFriendly, ownerSideOf, sideOf, type OwnerSide } from '../ui/sides';
 import { newBadge, showBar } from './badges';
-import type { PuffKind, PuffSource } from './particles';
+import type { PuffSource } from './particles';
+import type { PuffKind } from './ports/stage';
 import { buildModel, type TeamPaint } from './blocks';
 import type { GlbLibrary, GlbUnit } from './glbModels';
 import { buildingModelOf, unitModelOf } from './models';

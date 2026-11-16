@@ -125,12 +125,12 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   dispara con `firesAfterMove`, un combate hipotetico con `engagement(...)` (nunca copias de
   unidades), el daño con `damageModelOf`, numeros con `fmtNum`; en
   3D, casillas con `view3d/space.ts`, efectos de un momento con `view3d/fx.ts`, humo y polvo con
-  `ParticleSystem` (una clase mas en `PUFFS`) y un suceso animado con su entrada en `EVENT_ANIMATIONS`
-  (`view3d/animations.ts`).
+  `ParticleSystem` (una clase mas en `PUFFS`) y un suceso animado con su entrada en `EVENT_STEPS`
+  (`view3d/systems/events/eventSteps.ts`: sus pasos como datos; un paso nuevo, en `steps.ts` y `STEP_RUNNERS`).
 - **Extender sin abrir funciones grandes**: accion nueva = su forma en `GameAction` y en
   `ACTION_SHAPES` (`core/actions/shape.ts`, campo a campo), su suceso en `GameEvent` y su entrada en
   `ACTIONS` (`core/actions/`; y en `UNIT_MENU` si sale en el menu de la unidad, en `SELECTION_MENU`
-  si se manda a unas elegidas, y en `EVENT_ANIMATIONS` de la vista 3D); lo que se limpia tras cualquier
+  si se manda a unas elegidas, y en `EVENT_STEPS` de la vista 3D); lo que se limpia tras cualquier
   accion y cada ronda = entrada en `INVARIANTS` (`core/rules/invariants.ts`); lo que se mira antes
   de cualquiera = entrada en `ACTION_GUARDS`; una pieza de reglas que depende de un ajuste = un
   modulo de reglas (`core/ruleModules/`, entrada en `RULE_MODULES`) que aporta a las listas

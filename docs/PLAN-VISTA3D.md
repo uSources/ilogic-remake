@@ -114,7 +114,8 @@ Cada paso es una PR; el juego se ve y se juega igual al final de cada uno.
    pide `TileMarks` y un `EventPlayer` (reproducir los sucesos de una accion). `match3d.ts` le da las
    implementaciones. Primeros tests del turno con puertos falsos. Si encaja, el turno ya como
    maquina de estados que devuelve efectos (ver "Como se hablan los sistemas").
-2. **Separar `animations.ts`.** `systems/events/`: la tabla de cada suceso como pasos (mover por el
+2. **Separar `animations.ts`** (hecho: `systems/events/` con los pasos como datos y la linea de tiempo,
+   `ports/stage.ts`, `engine/fx/pieceStage.ts` y `effectStage.ts`; `tests/eventSteps.test.ts`). `systems/events/`: la tabla de cada suceso como pasos (mover por el
    camino, girar hacia, disparar, chispas, texto, esperar) sin three.js, con tests. `engine/fx/`:
    el que ejecuta esos pasos sobre `PieceStage` y `EffectStage`.
 3. **Separar `board.ts`.** `systems/board/`: que piezas hay y como se ven para quien mira (puro, con
