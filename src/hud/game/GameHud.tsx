@@ -4,6 +4,7 @@ import { t } from '../../settings';
 import type { UIState } from '../state';
 import type { MenuVM, NetVM } from '../vm/menus';
 import { ActionChips } from './ActionChips';
+import { BuyGrid } from './BuyGrid';
 import { Cards } from './Cards';
 import { CombatPanel } from './Combat';
 import { Forecast } from './Forecast';
@@ -72,11 +73,12 @@ const GAME_PANELS: GamePanel[] = [
   { id: 'menu', render: (s) => s.menu && <MatchMenu menu={s.menu} /> },
 ];
 
-/** Lo que sale junto a lo elegido o encima de todo: fichas, rueda, pausa o un menu (compra, elegir casilla). */
+/** Lo que sale junto a lo elegido o encima de todo: fichas, rueda, compra, pausa o el aviso de elegir casilla. */
 function MatchMenu({ menu }: { menu: MenuVM }) {
   if (menu.kind === 'game') return <Pause menu={menu} />;
   if (menu.kind === 'chips') return <ActionChips menu={menu} />;
   if (menu.kind === 'radial') return <RadialMenu menu={menu} />;
+  if (menu.kind === 'buy') return <BuyGrid menu={menu} />;
   return <PopMenu menu={menu} />;
 }
 
