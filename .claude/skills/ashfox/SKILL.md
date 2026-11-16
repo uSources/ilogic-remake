@@ -87,7 +87,7 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
   elegido. Desde la consola, `window.ilogicPlayground`.
 - Despues, **en el juego**: `npm run dev` y `/` (`?seed=` para una escaramuza directa en ese mapa,
   `?seed=2` es desierto y `?seed=7` nevado; `?elevation=0` sin relieve). Desde la consola,
-  `window.ilogic3d` (`board`, `rig`, `world`...). Tambien `GlbLibrary.load(...)` de `/src/view3d/glbModels.ts` y
+  `window.ilogic3d` (`board`, `camera`, `world`...). Tambien `GlbLibrary.load(...)` de `/src/view3d/glbModels.ts` y
   `lib.unit(id, 'own')` sirven para poner modelos en fila y mirarlos.
 - Al acabar, `npm run check`. Ashfox no entra en los tests: lo que se comprueba a ojo, se dice.
 

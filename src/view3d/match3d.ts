@@ -7,7 +7,8 @@ import { mapGrid } from '../core/mapGrid';
 import type { Pos } from '../core/model';
 import { ui, type Anchor } from '../hud/store';
 import { BoardView } from './engine/pieces/boardView';
-import { CameraRig } from './cameraRig';
+import { StrategyCamera } from './systems/camera/strategyCamera';
+import { ThreeCameraView } from './engine/camera/cameraView';
 import type { GameImages } from '../atlas';
 import type { GlbLibrary } from './glbModels';
 import { Highlights } from './highlights';
@@ -58,11 +59,13 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const grid = mapGrid(state);
   const center = new THREE.Vector3((grid.width - 1) / 2, 0, (grid.height - 1) / 2);
   world.lightArea(center, Math.max(grid.width, grid.height) * 0.75);
-  const bounds = new THREE.Box2(new THREE.Vector2(0, 0), new THREE.Vector2(grid.width - 1, grid.height - 1));
+  const bounds = { minX: 0, maxX: grid.width - 1, minZ: 0, maxZ: grid.height - 1 };
   /** La camara empieza mirando a la Base (o la primera unidad) de la persona. */
   const home = state.buildings.find((building) => building.owner === viewer) ?? state.units.find((unit) => unit.team === viewer);
   const startTarget = home ? board.groundOf(home) : center.clone();
-  const rig = new CameraRig(world.camera, { target: startTarget, distance: START_DISTANCE, yaw: START_YAW }, bounds);
+  const cameraView = new ThreeCameraView(world.camera);
+  const camera = new StrategyCamera({ target: startTarget, distance: START_DISTANCE, yaw: START_YAW }, bounds, cameraView.verticalFov);
+  cameraView.place(camera.pose);
 
   /** El rectangulo de una casilla en la pantalla (pixeles CSS de la ventana): sus cuatro esquinas de arriba proyectadas. */
   function anchorOf(pos: Pos): Anchor {
@@ -160,7 +163,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     const unit = state.units.find((candidate) => candidate.uid === uid);
     if (!unit) return;
     controls.focusUnit(uid);
-    rig.lookAt(board.groundOf(unit));
+    camera.lookAt(board.groundOf(unit));
   }
 
   installHudActions({
@@ -194,9 +197,9 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     publish();
   }
 
-  installPointer(world.renderer.domElement, { rig, tileAt, hover, tap: (pos) => void controls.tap(pos) });
+  installPointer(world.renderer.domElement, { camera, tileAt, hover, tap: (pos) => void controls.tap(pos) });
   installKeys({
-    rig,
+    camera,
     onFrame: (listener) => world.onFrame(listener),
     endTurn: () => controls.endTurn(),
     nextUnit: () => {
@@ -207,11 +210,13 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     accept: () => (pause.isOpen ? pickPause() : controls.acceptMenu()),
   });
   world.onFrame((seconds) => {
-    rig.update(seconds);
+    camera.update(seconds);
+    cameraView.place(camera.pose);
     highlights.update(seconds);
     board.update(seconds);
     terrain.update(seconds);
-    const { target, distance } = rig.focus;
+    const { target } = cameraView;
+    const { distance } = camera.pose;
     const viewportHeight = world.renderer.domElement.clientHeight;
     weather.update(seconds, target, distance * WEATHER_REACH, world.camera, viewportHeight);
     sandDust.update(seconds, target, distance * WEATHER_REACH, world.camera, viewportHeight);
@@ -234,7 +239,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     session,
     board,
     controls,
-    rig,
+    camera,
     world,
     weather,
     sandDust,

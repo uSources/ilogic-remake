@@ -7,14 +7,15 @@
 import type { InputCommand, InputCommandKind } from '../controls/inputCommands';
 import { keyCommand } from '../controls/keyboard';
 import { settings } from '../settings';
-import type { CameraRig } from './cameraRig';
+import type { CameraControls } from './systems/camera/strategyCamera';
 import type { FrameListener } from './world';
 
 /** Lo que hace la rueda por cada pulsacion de las teclas de acercar y alejar. */
 const KEY_ZOOM_STEP = 250;
 
 export interface KeyHost {
-  rig: CameraRig;
+  /** La camara como logica: la entrada pide desplazar y acercar, no mueve objetos del motor. */
+  camera: CameraControls;
   onFrame(listener: FrameListener): void;
   endTurn(): void;
   nextUnit(): void;
@@ -32,7 +33,7 @@ const KEY_ACTIONS: KeyActions = {
   nextUnit: (_command, host) => host.nextUnit(),
   cancel: (_command, host) => host.cancel(),
   accept: (_command, host) => host.accept(),
-  zoom: (command, host) => host.rig.zoom(-command.dir * KEY_ZOOM_STEP),
+  zoom: (command, host) => host.camera.zoom(-command.dir * KEY_ZOOM_STEP),
 };
 
 type AnyKeyAction = (command: InputCommand, host: KeyHost) => void;
@@ -59,6 +60,6 @@ export function installKeys(host: KeyHost): void {
   window.addEventListener('blur', () => held.clear());
   host.onFrame((seconds) => {
     const { right, forward } = panDirection(held);
-    if (right || forward) host.rig.panByKeys(right, forward, seconds);
+    if (right || forward) host.camera.panByKeys(right, forward, seconds);
   });
 }

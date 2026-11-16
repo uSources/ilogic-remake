@@ -5,7 +5,7 @@
  * acerca y aleja. Que hacer con la casilla tocada lo dice quien lo instala.
  */
 import type { Pos } from '../core/model';
-import type { CameraRig } from './cameraRig';
+import type { CameraControls } from './systems/camera/strategyCamera';
 
 /** Se considera arrastre (y no toque) si el puntero se mueve mas de esto en pixeles. */
 const DRAG_THRESHOLD = 6;
@@ -13,7 +13,8 @@ const DRAG_THRESHOLD = 6;
 const ORBIT_PER_PIXEL = 0.008;
 
 export interface PointerHost {
-  rig: CameraRig;
+  /** La camara como logica: la entrada pide desplazar, girar y acercar. */
+  camera: CameraControls;
   /** La casilla bajo ese punto de la pantalla (null fuera del mapa). */
   tileAt(clientX: number, clientY: number): Pos | null;
   hover(pos: Pos | null): void;
@@ -40,10 +41,10 @@ interface Press extends ButtonRole {
   isDrag: boolean;
 }
 
-function drag(press: Press, event: PointerEvent, canvas: HTMLCanvasElement, rig: CameraRig): void {
-  if (press.drag === 'orbit') return rig.orbit(-event.movementX * ORBIT_PER_PIXEL, event.movementY * ORBIT_PER_PIXEL);
-  const scale = rig.tilesPerPixel(canvas.clientHeight);
-  rig.pan(-event.movementX * scale, event.movementY * scale);
+function drag(press: Press, event: PointerEvent, canvas: HTMLCanvasElement, camera: CameraControls): void {
+  if (press.drag === 'orbit') return camera.orbit(-event.movementX * ORBIT_PER_PIXEL, event.movementY * ORBIT_PER_PIXEL);
+  const scale = camera.tilesPerPixel(canvas.clientHeight);
+  camera.pan(-event.movementX * scale, event.movementY * scale);
 }
 
 export function installPointer(canvas: HTMLCanvasElement, host: PointerHost): void {
@@ -60,7 +61,7 @@ export function installPointer(canvas: HTMLCanvasElement, host: PointerHost): vo
   canvas.addEventListener('pointermove', (event) => {
     if (!press) return host.hover(host.tileAt(event.clientX, event.clientY));
     if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > DRAG_THRESHOLD) press.isDrag = true;
-    if (press.isDrag) drag(press, event, canvas, host.rig);
+    if (press.isDrag) drag(press, event, canvas, host.camera);
   });
   canvas.addEventListener('pointerup', (event) => {
     const isTap = !!press?.taps && !press.isDrag;
@@ -68,5 +69,5 @@ export function installPointer(canvas: HTMLCanvasElement, host: PointerHost): vo
     const pos = isTap ? host.tileAt(event.clientX, event.clientY) : null;
     if (pos) host.tap(pos);
   });
-  canvas.addEventListener('wheel', (event) => host.rig.zoom(event.deltaY), { passive: true });
+  canvas.addEventListener('wheel', (event) => host.camera.zoom(event.deltaY), { passive: true });
 }
