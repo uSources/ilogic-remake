@@ -224,6 +224,36 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   `src/hud/common/toy.tsx` (`Pill`, `Chip`): un color o una forma nuevos se añaden ahí, no sueltos en
   un componente.
 
+## Cielo y fondo
+
+Decidido con el usuario (16-11-2026): el tablero es **una isla de juguete en un mar que llega al
+horizonte**, bajo un cielo de dibujo animado. Se eligió frente a una tierra de bloques alrededor (el
+tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
+
+- **Cielo en bandas**: una cúpula con seis bandas secas del horizonte (claro) al cenit (azul), sin
+  degradado suave, como la sombra de dos tonos de las piezas. Sol **cuadrado** de píxel con un halo.
+- **Nubes de bloques**: losas blancas con bultos encima, con el material cartoon, bajas y lejos del
+  mapa para que se vean por encima del mar al inclinar la cámara; pasan despacio con el viento.
+- **Mar**: un plano por debajo del agua del tablero (se ve el borde de tierra, como un acantilado)
+  que recibe la sombra del mapa. Para que el tablero se asiente en él y no parezca puesto encima
+  (primera versión, plana y de un solo azul: «no queda integrado»), el agua va en escalones de
+  casilla con el borde mellado: **bajío** claro pegado a la tierra, agua media y **hondo** del azul
+  del agua del tablero. Al pie de la tierra late una franja de **espuma** de píxel, y los brillos
+  son rayitas de tres píxeles que titilan (no líneas largas), solo cerca de la tierra. Los tonos van
+  por tema: templado, turquesa en el desierto, verdoso en el pantano y frío con nieve.
+- **Islotes de bloques** alrededor (14, siempre los mismos): playa baja y un cerro escalonado de la
+  tierra del tema, con su propio bajío y espuma. Dicen que el mapa es un trozo de un mundo.
+- **Niebla del horizonte**: del color de abajo del cielo, empieza pasado el mapa (nunca lo tapa) y
+  funde el mar con el cielo.
+- **Con el clima**: cielo, nubes y niebla cambian a la vez que la luz: gris y sin sol con lluvia,
+  oscuro con tormenta, blanco con nieve, ocre con la tormenta de arena.
+- Para ver el cielo, la cámara se puede inclinar hasta 12° sobre el suelo.
+- Las partículas del clima (copos, polvo) no crecen a menos de 12 casillas de la cámara: con la
+  cámara baja un copo pegado al objetivo tapaba media pantalla.
+- Código: `src/view3d/engine/core/sky.ts` (cielo y nubes), `engine/terrain/sea.ts` (mar),
+  `engine/terrain/islets.ts` (islotes) y los colores de cada clima en `engine/core/world.ts`
+  (`WEATHER_MOODS`).
+
 ## Cómo comprobarlo
 
 - Capturas de frente, de lado, de espaldas y **desde arriba como la cámara del juego** (elevación
