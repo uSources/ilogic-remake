@@ -31,6 +31,7 @@ import { GroundMarks } from './pieces/groundMarks';
 import { Wrecks } from './pieces/wrecks';
 import { SandDust } from './terrain/sandDust';
 import { buildTerrain, type TerrainView } from './terrain/terrain';
+import { Sea } from './terrain/sea';
 
 /** Cuanto alrededor de lo que se mira hay clima y polvo: un poco mas que lo que se ve. */
 const WEATHER_REACH = 0.9;
@@ -56,6 +57,7 @@ export class MatchScene implements ScreenView {
   /** El centro del mapa, en el suelo. */
   readonly center: Point3;
   private readonly terrain: TerrainView;
+  private readonly sea: Sea;
   private readonly highlights: Highlights;
   private readonly preview: MovePreviewView;
   private readonly intents: IntentArrowsView;
@@ -95,6 +97,8 @@ export class MatchScene implements ScreenView {
     const grid = mapGrid(state);
     const center = new THREE.Vector3((grid.width - 1) / 2, 0, (grid.height - 1) / 2);
     this.world.lightArea(center, Math.max(grid.width, grid.height) * LIGHT_REACH);
+    this.sea = new Sea(center, state.theme);
+    this.world.scene.add(this.sea.object);
     this.center = center;
     this.stages = this.buildStages();
   }
@@ -179,6 +183,7 @@ export class MatchScene implements ScreenView {
     this.highlights.update(seconds);
     this.board.update(seconds);
     this.terrain.update(seconds);
+    this.sea.update(seconds);
     const { target } = this.cameraView;
     const reach = pose.distance * WEATHER_REACH;
     const viewportHeight = this.canvas.clientHeight;

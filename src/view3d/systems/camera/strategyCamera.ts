@@ -11,8 +11,11 @@ const MAX_DISTANCE = 40;
 const degrees = (value: number): number => (value * Math.PI) / 180;
 /** Inclinacion de partida: bastante desde arriba para leer el tablero, sin perder el volumen de los bloques. */
 const START_PITCH = degrees(52);
-/** Ni a ras de suelo (se tapa todo con los bloques) ni del todo desde arriba (se pierde el volumen). */
-const MIN_PITCH = degrees(25);
+/**
+ * Ni del todo desde arriba (se pierde el volumen) ni a ras de suelo (se tapa todo con los bloques).
+ * Lo mas bajo deja ver el horizonte y el cielo por encima del mar.
+ */
+const MIN_PITCH = degrees(12);
 const MAX_PITCH = degrees(82);
 /** Lo rapido que alcanza la camara a donde se le pide (mas, mas brusco). */
 const FOLLOW_RATE = 10;
