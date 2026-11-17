@@ -15,6 +15,7 @@
   "minSpawnBuildable": 6,
   "minLandTiles": 200,
   "landMovement": "foot",
+  "passMovement": "vehicle",
   "minSpawnDistance": 14,
   "controlPoints": {
     "minLandShare": 0.6,

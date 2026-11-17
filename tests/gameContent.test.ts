@@ -21,7 +21,7 @@ function expensiveTanks(): GameContent {
 const TANK = unitTypeNamed('Tank');
 
 function newMatch(content: GameContent): GameState {
-  return generateGame(seededRng(7), {
+  return generateGame(seededRng(9), {
     size: 20,
     settings: settingsWith(defaultContent(), { fog: false }),
     content,

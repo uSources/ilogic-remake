@@ -122,7 +122,7 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
   ciudades, aguantar unos días, escoltar un convoy, destruir a todo el enemigo, asalto final).
   Las misiones están en `src/core/content/missions.json` y es fácil añadir más (skill `nueva-mision`).
 - **Reglas nuevas de movimiento:** el terreno cuesta (bosque, arena y nieve frenan a los vehículos;
-  acantilados y agua poco profunda, a la infantería), se atraviesan las unidades propias y, con
+  montañas y agua poco profunda, a la infantería), se atraviesan las unidades propias y, con
   niebla, el bosque esconde: si tu camino choca con un enemigo escondido, emboscada. Los edificios
   propios vigilan a su alrededor (la Base y la fortaleza 3 casillas, fábricas y aeropuertos 2, ciudades y pozos 1).
 - Opciones dentro de la partida (menú > Opciones): esperar sola al soltar, saltar a la siguiente

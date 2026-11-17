@@ -1,6 +1,6 @@
 /**
  * Generador de mapas aleatorios (RandomMap.java), como una lista de pasos (`MAP_STEPS`): el tema,
- * el terreno, el agua, las zonas de inicio, los edificios y unidades de cada salida, los neutrales y
+ * el terreno, las montañas, el agua, las zonas de inicio, los edificios y unidades de cada salida, los neutrales y
  * los puntos de control. [CAMBIO] las zonas de inicio se buscan al final, deben existir, estar
  * conectadas por tierra y separadas; si no, se genera otro mapa (en el original podian faltar o
  * solaparse).
@@ -17,6 +17,7 @@ import { pick, seedFromDraw, shuffleInPlace, type MatchSeeds } from '../util/ran
 import type { GameState, Pos, Rng, MatchSettings, TeamId } from '../model';
 import type { GameModeRegistry } from '../modes';
 import { areaScale, MAX_ATTEMPTS_FOR_LAND, ORIGINAL_MAP_SIDE, settingsOf } from './common';
+import { raiseMountains } from './mountains';
 import { growTerrain, shapeWater } from './terrain';
 import { findMoreSpawns, findSpawn } from './spawns';
 import { placeNeutralBuildings, placeStartingBuildings, placeStartingUnits } from './buildings';
@@ -100,6 +101,13 @@ const MAP_STEPS: readonly MapStep[] = [
     name: 'terreno',
     run: (draft) => {
       draft.landTiles = growTerrain(draft.s, draft.origin, themeOf(draft.s), draft.rng);
+      return true;
+    },
+  },
+  {
+    name: 'montañas',
+    run: (draft) => {
+      raiseMountains(draft.s, draft.rng);
       return true;
     },
   },

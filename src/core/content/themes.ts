@@ -26,7 +26,22 @@ export interface ThemeGenerator {
   shoreWater: string | null;
   /** En lo que se convierte el agua rodeada de agua. */
   deepWater: string;
+  /** Las cordilleras del tema (sin ellas, no hay montañas). */
+  mountains?: MountainRanges;
 }
+
+/** Como salen las montañas: en sierras, donde el ruido de crestas es mas alto. */
+export interface MountainRanges {
+  /** El terreno de la montaña (terrain.json). */
+  terrain: string;
+  /** La parte de la tierra que es montaña (0 a 1). */
+  share: number;
+  /** Cada cuantas casillas cambia el ruido: lo largas que son las sierras. */
+  spacing: number;
+}
+
+/** El lado mas corto del ruido de las sierras (con menos, cada casilla seria una montaña suelta). */
+const MIN_RANGE_SPACING = 2;
 
 /** Un tema de mapa en themes.json. */
 export interface ThemeDef {
@@ -58,6 +73,13 @@ function validateGenerator(scope: Scope, generator: ThemeGenerator | undefined, 
   scope.known('generator.deepWater', generator.deepWater, terrainIds, 'el terreno ');
   for (const field of ['narrowWater', 'shoreWater'] as const)
     if (generator[field] !== null) scope.known(`generator.${field}`, generator[field], terrainIds, 'el terreno ');
+  if (generator.mountains) validateMountains(scope, generator.mountains, terrainIds);
+}
+
+function validateMountains(scope: Scope, mountains: MountainRanges, terrainIds: ReadonlySet<string>): void {
+  scope.known('generator.mountains.terrain', mountains.terrain, terrainIds, 'el terreno ');
+  scope.num('generator.mountains.share', mountains.share, { min: 0, max: 1 });
+  scope.num('generator.mountains.spacing', mountains.spacing, { min: MIN_RANGE_SPACING });
 }
 
 export function validateThemes(themes: readonly ThemeDef[], terrainIds: ReadonlySet<string>, check: Checker): void {

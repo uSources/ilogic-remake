@@ -32,9 +32,14 @@ function withHill(hill: readonly Pos[], level: number): GameState {
 }
 
 describe('elevacion: las alturas del mapa', () => {
-  it('solo las lleva la partida con la regla', () => {
-    expect(elevatedMatch(5).elevation).toBeDefined();
-    expect(createMatch(skirmishConfig({ seed: 5, teams: duel('ai', 'ai') })).elevation).toBeUndefined();
+  it('las lleva toda partida, con la regla o sin ella (las montañas son lo alto)', () => {
+    const plain = createMatch(skirmishConfig({ seed: 5, teams: duel('ai', 'ai') }));
+    expect(plain.elevation).toEqual(elevatedMatch(5).elevation);
+    const mountains = [...mapGrid(plain).cells()].filter(
+      ({ pos }) => terrainAt(plain, pos).moveCost.vehicle === null && !terrainAt(plain, pos).isWater,
+    );
+    expect(mountains.length).toBeGreaterThan(0);
+    expect(mountains.some(({ pos }) => elevationAt(plain, pos) === MAX_ELEVATION)).toBe(true);
   });
 
   it('el agua esta abajo, entre vecinas hay como mucho un nivel y hay de todos', () => {

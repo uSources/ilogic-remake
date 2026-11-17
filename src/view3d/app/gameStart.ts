@@ -1,6 +1,6 @@
 /**
  * Como empieza cada partida 3D: nueva (con su configuracion, del menu), la guardada, o una escaramuza
- * directa con `?seed=` en la direccion (para probar: mismo mapa siempre; `?elevation=0` la quita).
+ * directa con `?seed=` en la direccion (para probar: mismo mapa siempre; `?elevation=0` quita lo que hace la altura).
  * Cada partida va en su propia carga de la pagina: el menu apunta lo que se ha elegido y recarga, y
  * salir al menu recarga sin nada. Asi no hay que deshacer a mano la escena 3D de la partida anterior.
  */

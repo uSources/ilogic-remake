@@ -188,13 +188,14 @@ movimiento de una unidad), `canMoveOn(unitType.movement, terrainAt(s, pos))`,
 | `mapLetters` | Que terreno es cada letra que depende del tema en los mapas en texto: `.` suelo, `T` bosque, `M` monte, `*` adorno |
 | `generator.terrainChance` | Mapas al azar: para cada terreno que sale en el tema, la probabilidad de partida (`base`) y lo que suma cada vecino igual (`perNeighbour`) |
 | `generator.openWater`, `narrowWater`, `shoreWater`, `deepWater` | Que terreno es el agua abierta, los pasos estrechos, la orilla y el agua profunda (null si el tema no la tiene) |
+| `generator.mountains` | Mapas al azar: las cordilleras. `terrain` (la montaña del tema), `share` (la parte de la tierra que es montaña) y `spacing` (cada cuantas casillas cambia el ruido: lo largas que son las sierras). Se levantan donde un ruido de crestas es mas alto, no casilla a casilla; sin el, el tema no tiene montañas |
 
 `mapgen.json` es lo que el generador pone en cada mapa: `startingUnits` y `startingBuildings` de cada
 salida, `neutralBuildings` (cuantos de cada tipo, `[minimo, maximo]`) y `neutralTotal`, y lo que tiene
 que tener una salida para valer (`spawnRadius`, `minSpawnWalkable`, `minSpawnBuildable`, y lo lejos
 que estan dos, `minSpawnDistance`) y un mapa (`minLandTiles`, medido con el movimiento de
-`landMovement`), y donde van los puntos de control (`controlPoints`: cuanta tierra tiene su zona,
-lo lejos que estan de las salidas y entre ellos, y el azar de su puntuacion). Reglas en `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios, puntos de control; los pasos en orden, `steps.ts`); un mapa sale siempre igual con la misma semilla (el
+`landMovement`), el movimiento que tiene que poder cruzar entre sierras (`passMovement`: donde una cordillera corta su camino se abre un paso por lo mas bajo de la cresta), y donde van los puntos de control (`controlPoints`: cuanta tierra tiene su zona,
+lo lejos que estan de las salidas y entre ellos, y el azar de su puntuacion). Reglas en `src/core/mapgen/` (un modulo por paso: terreno, montañas, salidas, edificios, puntos de control; los pasos en orden, `steps.ts`); un mapa sale siempre igual con la misma semilla (el
 codigo de mapa) y el mismo contenido.
 
 ## Clima

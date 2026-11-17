@@ -133,7 +133,7 @@ describe('la sala: una partida por la red como logica pura', () => {
   });
 
   it('un mensaje repetido (el mismo numero de orden, tras un corte) no se vuelve a hacer', () => {
-    const room = newRoom([{ controller: 'human' }, { controller: 'ai' }], 8);
+    const room = newRoom([{ controller: 'human' }, { controller: 'ai' }], 9);
     const table = new Table(room, tokensOf(room));
     table.joinAll();
     const client = table.clients[0]!;

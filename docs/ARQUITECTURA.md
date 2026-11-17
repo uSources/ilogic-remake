@@ -630,7 +630,8 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `ambush` | `ambush` | los enemigos que no se ven no cuentan al planear; al chocar, emboscada |
 | `counterattack` | `counterattack` | `MELEE_COUNTER`: quien contraataca |
 | `bounty` | `bounty` > 0 | el botin al destruir (`killRewards`: lo que se cobra, `killReward` de rules/economy.ts, que preguntan el panel de combate y la IA) |
-| `elevation` | `elevation` (apagado por defecto) | la altura de cada casilla al empezar (`matchSetup`, `elevationFor` de core/elevation.ts, en `GameState.elevation`), el acierto desde arriba o desde abajo (`elevationHit`), la vision desde lo alto (`elevationVision`) y lo que cuesta subir (`elevationClimb`: `enterCosts` recibe tambien la casilla de la que se viene); los aviones no lo notan |
+| `relief` | siempre | la altura de cada casilla al empezar (`matchSetup`, `elevationFor` de core/elevation.ts, en `GameState.elevation`): las montañas son lo alto y se ven como tal, con o sin la regla de elevacion |
+| `elevation` | `elevation` (apagado por defecto) | lo que hace la altura (la prepara `relief`): el acierto desde arriba o desde abajo (`elevationHit`), la vision desde lo alto (`elevationVision`) y lo que cuesta subir (`elevationClimb`: `enterCosts` recibe tambien la casilla de la que se viene); los aviones no lo notan |
 
 Las listas (`RuleHooks`, en `ruleModules/hooks.ts`, solo tipos): `hitModifiers`, `coverPiercing`,
 `counterRules`, `combatSteps` (con su `CombatStage`), `roundPhases` (con su `RoundStage`),
@@ -1069,7 +1070,7 @@ Dos clases de graficos:
 menu (`app/menuFlow.ts`, con las pantallas de `src/menu/`) o la partida pendiente (`app/gameStart.ts`).
 Cada partida va en su propia carga de pagina: el menu apunta lo elegido y recarga, y salir al menu
 recarga sin nada (asi no hay que deshacer a mano la escena 3D). `?seed=N` empieza una escaramuza
-directa y `?elevation=0` quita el relieve.
+directa y `?elevation=0` quita lo que hace la altura en el juego (el relieve se ve igual).
 
 La vista esta en cuatro carpetas, y cada cosa tiene su sitio:
 
@@ -1101,7 +1102,7 @@ src/view3d/
 | `systems/sound/`, `systems/weather/` | que suena con cada cosa (`soundCues.ts`); como se ve cada clima (datos: `weatherStyles.ts`) |
 | `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
 | `engine/core/` | lienzo, escena, luz cartoon (y por clima), cielo de bandas con nubes de bloques y niebla del horizonte (`sky.ts`) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`) |
-| `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas, agua, polvo de la arena, el mar alrededor del mapa con sus bajíos (`sea.ts`) y los islotes de bloques (`islets.ts`) |
+| `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas (`relief.ts`; los macizos, `massif.ts`; sus colores, `reliefColors.ts`), agua, polvo de la arena, el mar alrededor del mapa con sus bajíos (`sea.ts`) y los islotes de bloques (`islets.ts`) |
 | `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, barras, restos y rodadas |
 | `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`), la flecha y el fantasma al mover (`movePreview.ts`) y las flechas de las ordenes (`intentArrows.ts`; piezas comunes en `arrowParts.ts`), lluvia y nieve (`weather3d.ts`) |
 | `engine/camera/` | situa la camara de three.js en la pose que da `systems/camera` |
