@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import type { MovementMotion } from '../../../core/content';
+import { MAX_LIFE } from '../../../core/data';
 import type { Pos } from '../../../core/model';
 import type { PieceClip, PieceLookup, PieceStage, PuffKind, ShownPiece } from '../../ports/stage';
 import { tint } from '../pieces/tint';
@@ -40,6 +41,17 @@ const CHARRED = 0.22;
 const HOP_SECONDS = 0.4;
 const HOP = 0.12;
 const HOPS = 2;
+/** La vida que baja al recibir un golpe, y cuanto se hincha la chapa al empezar (1 = normal). */
+const LIFE_DRAIN_SECONDS = 0.9;
+const LIFE_PULSE = 0.35;
+/** La parte de la animacion en la que lo perdido brilla quieto antes de encogerse. */
+const LIFE_FLASH_HOLD = 0.3;
+
+/** Quieto mientras brilla y despues frena al llegar (de 0 a 1). */
+function drainEase(progress: number): number {
+  const shrinking = Math.max(0, (progress - LIFE_FLASH_HOLD) / (1 - LIFE_FLASH_HOLD));
+  return 1 - (1 - shrinking) ** 3;
+}
 
 /** Lo que necesita: las piezas, el reloj del mundo y donde quedan huellas, polvo y restos. */
 export interface PieceStageHost {
@@ -143,6 +155,18 @@ export class BoardPieceStage implements PieceStage, PieceLookup {
       piece.body.position.copy(rest);
       piece.body.position.x += Math.sin(progress * Math.PI * 2 * SHAKE_SWINGS) * SHAKE_WIDTH * (1 - progress);
     });
+  }
+
+  showLife(uid: number, life: number): void {
+    this.host.board.showLifeNow(uid, life >= MAX_LIFE ? null : life, 1);
+  }
+
+  async drainLife(uid: number, from: number, to: number): Promise<void> {
+    await this.host.animate(LIFE_DRAIN_SECONDS, (progress) => {
+      const shown = from + (to - from) * drainEase(progress);
+      this.host.board.showLifeDrop(uid, shown, to, 1 + LIFE_PULSE * (1 - progress));
+    });
+    this.host.board.showLifeNow(uid, to, 1);
   }
 
   async hop(uid: number): Promise<void> {

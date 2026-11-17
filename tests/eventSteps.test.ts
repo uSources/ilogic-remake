@@ -82,7 +82,16 @@ describe('pasos de cada suceso', () => {
 
   it('atacar: apunta, dispara, el blanco recibe el golpe', () => {
     const steps = stepsOf(attackEvent({}), new FakeLookup({ [SHOOTER]: shown('drive'), [TARGET]: shown('march') }));
-    expect(kindsOf(steps)).toEqual(['aim', 'sound', 'puff', 'together(recoil,projectile)', 'sound', 'together(sparks,shake,text)']);
+    expect(kindsOf(steps)).toEqual([
+      'lifeShown',
+      'lifeShown',
+      'aim',
+      'sound',
+      'puff',
+      'together(recoil,projectile)',
+      'sound',
+      'together(sparks,shake,lifeLoss,text)',
+    ]);
     expect(steps).toContainEqual({ kind: 'sound', sound: 'shot_cannon' });
     expect(steps.at(-1)).toMatchObject({ steps: expect.arrayContaining([expect.objectContaining({ kind: 'text', text: '−30' })]) });
   });
@@ -101,6 +110,15 @@ describe('pasos de cada suceso', () => {
     expect(steps.at(-1)).toMatchObject({ steps: [expect.anything(), { kind: 'fall', uid: TARGET, leavesWreck: false }] });
   });
 
+  it('la vida baja desde la de antes del combate: el blanco con el golpe, el atacante con el contraataque', () => {
+    const steps = stepsOf(attackEvent({ counter: 10 }), new FakeLookup({ [SHOOTER]: shown('drive'), [TARGET]: shown('march') }));
+    const drains = steps.flatMap((step) => (step.kind === 'together' ? step.steps : [step])).filter((step) => step.kind === 'lifeLoss');
+    expect(drains).toEqual([
+      { kind: 'lifeLoss', uid: TARGET, from: 100, to: 70 },
+      { kind: 'lifeLoss', uid: SHOOTER, from: 100, to: 90 },
+    ]);
+  });
+
   it('el contraataque va despues, del blanco al atacante', () => {
     const steps = stepsOf(attackEvent({ counter: 10 }), new FakeLookup({ [SHOOTER]: shown('drive'), [TARGET]: shown('march') }));
     const aims = steps.filter((step) => step.kind === 'aim');
@@ -112,7 +130,7 @@ describe('pasos de cada suceso', () => {
 
   it('un atacante que no se ve no dispara, pero el golpe se ve', () => {
     const steps = stepsOf(attackEvent({}), new FakeLookup({ [SHOOTER]: hidden('drive'), [TARGET]: shown('march') }));
-    expect(kindsOf(steps)).toEqual(['sound', 'together(sparks,shake,text)']);
+    expect(kindsOf(steps)).toEqual(['lifeShown', 'lifeShown', 'sound', 'together(sparks,shake,lifeLoss,text)']);
   });
 
   it('capturar: lo que le queda, o el edificio ya es suyo', () => {
@@ -152,6 +170,12 @@ class FakeStages implements PieceStage, EffectStage, SoundPort {
   }
   shake(uid: number): Promise<void> {
     return this.takes(`shake:${uid}`);
+  }
+  showLife(uid: number, life: number): void {
+    this.calls.push(`lifeShown:${uid}:${life}`);
+  }
+  drainLife(uid: number, from: number, to: number): Promise<void> {
+    return this.takes(`life:${uid}:${from}>${to}`);
   }
   hop(uid: number): Promise<void> {
     return this.takes(`hop:${uid}`);
@@ -231,6 +255,8 @@ describe('la linea de tiempo', () => {
     const lookup = new FakeLookup({ [SHOOTER]: shown('drive'), [TARGET]: shown('march') });
     await playEvents([attackEvent({})], { ...stagesOf(fake), lookup });
     expect(fake.calls).toEqual([
+      `lifeShown:${TARGET}:100`,
+      `lifeShown:${SHOOTER}:100`,
       `aim:${SHOOTER}>${TARGET}`,
       'sound:shot_cannon',
       'puff:gunSmoke',
@@ -239,6 +265,7 @@ describe('la linea de tiempo', () => {
       'sound:hit',
       'sparks',
       `shake:${TARGET}`,
+      `life:${TARGET}:100>70`,
       'text:−30',
     ]);
   });

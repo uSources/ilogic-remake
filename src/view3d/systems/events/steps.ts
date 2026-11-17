@@ -16,6 +16,10 @@ export type AnimationStep =
   | { kind: 'recoil'; uid: number }
   | { kind: 'projectile'; from: Spot; to: Spot; isArc: boolean }
   | { kind: 'shake'; uid: number }
+  /** La vida que se ve, sin animar: la de antes del combate (el tablero ya esta como queda despues). */
+  | { kind: 'lifeShown'; uid: number; life: number }
+  /** La vida baja de `from` a `to`: el porcentaje cuenta hacia abajo y los tramos se vacian. */
+  | { kind: 'lifeLoss'; uid: number; from: number; to: number }
   | { kind: 'hop'; uid: number }
   | { kind: 'fall'; uid: number; leavesWreck: boolean }
   | { kind: 'sparks'; at: Spot; power: number }
