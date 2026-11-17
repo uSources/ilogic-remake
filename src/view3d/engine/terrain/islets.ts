@@ -6,6 +6,8 @@
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
+import { toonVertexColored } from '../core/toon';
+import { columnsOf, visibleFacesGeometry } from './columnFaces';
 import { buildRelief } from './relief';
 import type { ReliefMap, ReliefStyle } from './reliefGrid';
 
@@ -111,11 +113,22 @@ function isletMesh(islet: Islet, style: ReliefStyle, random: () => number): THRE
   return view.mesh;
 }
 
-/** Los islotes, con la tierra del tema (id de themes.json): cada uno su malla, para que la camara deje fuera los que no se ven. */
+/** Un islote con solo las caras que se ven de sus columnas (y su color por vertice). */
+function visibleIsletMesh(mesh: THREE.InstancedMesh): THREE.Mesh {
+  const geometry = visibleFacesGeometry(columnsOf(mesh));
+  // Solo su geometria: el material es el cartoon blanco que comparte con el relieve del tablero.
+  mesh.geometry.dispose();
+  const visible = new THREE.Mesh(geometry, toonVertexColored());
+  visible.castShadow = true;
+  visible.receiveShadow = true;
+  return visible;
+}
+
+/** Los islotes, con la tierra del tema (id de themes.json): cada uno con solo sus caras visibles, para que la camara deje fuera los que no se ven. */
 export function buildIslets(islets: readonly Islet[], theme: string): THREE.Group {
   const style = isletStyle(ISLET_BY_THEME[theme] ?? GREEN_ISLET);
   const random = seededRandom(13);
   const group = new THREE.Group();
-  for (const islet of islets) group.add(isletMesh(islet, style, random));
+  for (const islet of islets) group.add(visibleIsletMesh(isletMesh(islet, style, random)));
   return group;
 }
