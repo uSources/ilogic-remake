@@ -19,8 +19,9 @@ const DAMAGE_COLOR = '#ff7a73';
 /** Lo que deja cada forma de moverse al caer: la infanteria se va (queda la mancha); vehiculos y aviones, sus restos. */
 const LEAVES_WRECK: Readonly<Record<MovementMotion, boolean>> = { march: false, drive: true, fly: true };
 const GUN_SMOKE_PUFFS = 4;
-const BLAST_PUFFS = 14;
-const FALL_SMOKE_PUFFS = 8;
+/** Lo grande que es la explosion de cada forma de moverse (1, la de un vehiculo). */
+const EXPLOSION_SIZE: Readonly<Record<MovementMotion, number>> = { march: 0.65, drive: 1, fly: 1 };
+const FALL_SMOKE_PUFFS = 10;
 const HIT_SPARKS = 1;
 const FALL_SPARKS = 1.6;
 const CAPTURE_PARTIAL = { color: '#fff1a8', sparks: 0.7 } as const;
@@ -95,13 +96,19 @@ const hitSteps = (uid: number, damage: number): AnimationStep[] => [
   ),
 ];
 
-/** Una unidad destruida estalla y deja una mancha quemada; despues, sus restos o nada (`sync` quita su pieza). */
+/**
+ * Una unidad destruida estalla: deja una mancha quemada, desaparece dentro de la explosion (con sus
+ * restos o sin nada; `sync` quita su pieza) y queda una columna de humo negro.
+ */
 const fallSteps = (uid: number, motion: MovementMotion): AnimationStep[] => [
   sound('explosion'),
-  { kind: 'puff', puff: 'blast', at: muzzle(uid), count: BLAST_PUFFS },
-  { kind: 'puff', puff: 'darkSmoke', at: muzzle(uid), count: FALL_SMOKE_PUFFS },
   { kind: 'scorch', at: feet(uid) },
-  together({ kind: 'sparks', at: muzzle(uid), power: FALL_SPARKS }, { kind: 'fall', uid, leavesWreck: LEAVES_WRECK[motion] }),
+  together(
+    { kind: 'explosion', at: muzzle(uid), ground: feet(uid), size: EXPLOSION_SIZE[motion] },
+    { kind: 'sparks', at: muzzle(uid), power: FALL_SPARKS },
+    { kind: 'fall', uid, leavesWreck: LEAVES_WRECK[motion] },
+  ),
+  { kind: 'puff', puff: 'darkSmoke', at: muzzle(uid), count: FALL_SMOKE_PUFFS },
 ];
 
 interface Hit {

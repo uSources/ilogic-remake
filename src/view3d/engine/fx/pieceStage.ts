@@ -30,10 +30,9 @@ const RECOIL = 0.12;
 const SHAKE_SECONDS = 0.25;
 const SHAKE_WIDTH = 0.05;
 const SHAKE_SWINGS = 3;
-const FALL_SECONDS = 0.5;
-/** Lo que vuelca (radianes) y lo que encoge una pieza que desaparece. */
-const VANISH_TILT = 1.4;
-const VANISH_SHRINK = 0.9;
+/** Lo que tarda en hincharse antes de reventar (lo justo para que se vea dentro del destello) y cuanto. */
+const BURST_SECONDS = 0.08;
+const BURST_SWELL = 0.18;
 /** Lo que se ladean y lo oscuros que quedan los restos (tanto por uno de su color). */
 const WRECK_TILT = 0.3;
 const CHARRED = 0.22;
@@ -156,30 +155,26 @@ export class BoardPieceStage implements PieceStage, PieceLookup {
     piece.body.position.y = rest;
   }
 
+  /** Se hincha un instante y revienta (la explosion la tapa); un vehiculo o avion deja sus restos. */
   async fall(uid: number, leavesWreck: boolean): Promise<void> {
     const piece = this.host.board.pieceOf(uid);
     if (!piece) return;
-    await (leavesWreck ? this.burnDown(piece) : this.vanish(piece));
+    const scale = piece.object.scale.x;
+    await this.host.animate(BURST_SECONDS, (progress) => piece.object.scale.setScalar(scale * (1 + progress * BURST_SWELL)));
+    piece.object.scale.setScalar(scale);
+    if (leavesWreck) this.leaveWreck(piece);
     piece.object.visible = false;
   }
 
-  /** Vuelca, se encoge y desaparece. */
-  private async vanish(piece: UnitPiece): Promise<void> {
-    await this.host.animate(FALL_SECONDS, (progress) => {
-      piece.body.rotation.z = progress * VANISH_TILT;
-      piece.object.scale.setScalar(1 - progress * VANISH_SHRINK);
-    });
-  }
-
-  /** Se ladea, se quema y cae al suelo (un avion, desde su altura); ahi quedan sus restos. */
-  private async burnDown(piece: UnitPiece): Promise<void> {
-    const ground = piece.object.position.y;
-    const height = new THREE.Box3().setFromObject(piece.object).min.y - ground;
-    await this.host.animate(FALL_SECONDS, (progress) => {
-      piece.body.rotation.z = progress * WRECK_TILT;
-      piece.object.position.y = ground - height * progress * progress;
-      tint(piece.object, 1 - progress * (1 - CHARRED));
-    });
-    this.host.wreck(piece.object);
+  /** Sus restos, quemados y algo ladeados, en el suelo (un avion cae desde su altura). */
+  private leaveWreck(piece: UnitPiece): void {
+    const { object, body } = piece;
+    const rest = { y: object.position.y, tilt: body.rotation.z };
+    body.rotation.z = WRECK_TILT;
+    object.position.y -= new THREE.Box3().setFromObject(object).min.y - rest.y;
+    tint(object, CHARRED);
+    this.host.wreck(object);
+    object.position.y = rest.y;
+    body.rotation.z = rest.tilt;
   }
 }

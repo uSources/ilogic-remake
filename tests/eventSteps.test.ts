@@ -97,8 +97,10 @@ describe('pasos de cada suceso', () => {
 
   it('si cae, estalla y se va (la infanteria, sin restos)', () => {
     const steps = stepsOf(attackEvent({ killed: true }), new FakeLookup({ [SHOOTER]: shown('drive'), [TARGET]: shown('march') }));
-    expect(kindsOf(steps).slice(-5)).toEqual(['sound', 'puff', 'puff', 'scorch', 'together(sparks,fall)']);
-    expect(steps.at(-1)).toMatchObject({ steps: [expect.anything(), { kind: 'fall', uid: TARGET, leavesWreck: false }] });
+    expect(kindsOf(steps).slice(-4)).toEqual(['sound', 'scorch', 'together(explosion,sparks,fall)', 'puff']);
+    expect(steps.at(-2)).toMatchObject({
+      steps: [{ kind: 'explosion', size: 0.65 }, expect.anything(), { kind: 'fall', uid: TARGET, leavesWreck: false }],
+    });
   });
 
   it('el contraataque va despues, del blanco al atacante', () => {
@@ -164,6 +166,9 @@ class FakeStages implements PieceStage, EffectStage, SoundPort {
   }
   sparks(): Promise<void> {
     return this.takes('sparks');
+  }
+  explosion(): Promise<void> {
+    return this.takes('explosion');
   }
   text(_at: Spot, text: string): Promise<void> {
     return this.takes(`text:${text}`);
