@@ -80,14 +80,21 @@ Lo que se ve de verdad (modelos, luz, efectos) se sigue mirando en el navegador.
 
 ## Capturas y rendimiento de la vista 3D
 
-- `npm run shots`: abre cinco escenas fijas (el menu, la partida de semilla 2013 con y sin elevacion, y
-  dos modelos del playground) con el reloj parado, las compara con `tests/visual/ref/` y deja el informe
-  en `tests/visual/out/index.html`. Avisa solo de cambios grandes (mas del 3 % de pixeles): lo pequeño,
-  como el borde de una unidad que se anima, se mira en el informe. Si el cambio es a proposito,
-  `npm run shots:update`. La primera vez: `npx playwright install chromium`.
-- `npm run perf`: tiempo de carga de la partida 2013, fotogramas por segundo, llamadas de dibujo,
-  triangulos y peso de los modelos, comparado con `tools/perf/baseline.json`. `--save` guarda una linea
-  base nueva. Son cifras de esta maquina y de su navegador: solo se comparan con la linea base de aqui.
+La primera vez: `npx playwright install chromium`.
+
+- `npm run shots`: nueve escenas fijas (menu en escritorio y movil; la partida de semilla 2013 en
+  calma, sin elevacion, con una unidad elegida, con lluvia y en movil; dos modelos del playground),
+  comparadas con `tests/visual/ref/`. Informe en `tests/visual/out/index.html` (ahora, referencia y en
+  rojo lo distinto). En la misma maquina cada captura sale igual pixel a pixel: el reloj de la pagina
+  va parado (Playwright) y `Math.random`, que reparte el reposo de las unidades, las particulas y la
+  lluvia, lleva semilla. Asi que cualquier cambio salta. Si es a proposito: `npm run shots:update`.
+  Una escena nueva es una entrada en `SCENES` (`tests/visual/shots.mjs`), con lo que hacer antes de la
+  captura (`act`, sin `await`: con el reloj parado no acabaria) y el tamaño de la ventana.
+- `npm run perf`: la partida 2013 en calma y con lluvia (carga, tiempo por fotograma: mediana, 5 % peor
+  y el peor; llamadas de dibujo, triangulos, geometrias, texturas) y el peso de los modelos, frente a
+  `tools/perf/baseline.json`. Usa la GPU de la maquina y sin el limite de 60 fps, asi que el tiempo es
+  lo que cuesta dibujar. Solo compara con una linea base de la misma GPU. `--save` guarda una nueva;
+  `--check` falla si algo empeora de mas (`LIMITS`: 10 % en lo que se cuenta, 30 % en el tiempo).
 
 ## Antes de tocar...
 

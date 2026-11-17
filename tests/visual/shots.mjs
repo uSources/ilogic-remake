@@ -1,3 +1,4 @@
+/* global window */
 // Capturas de la vista 3D: abre escenas fijas en el navegador (con el reloj falso de Playwright, para
 // que salgan iguales cada vez), las compara con las guardadas en tests/visual/ref/ y deja un informe.
 //
@@ -24,32 +25,82 @@ const only = process.argv
   .split(',');
 
 /**
- * Parte de pixeles distintos que se acepta. Los menus salen iguales; las escenas con animacion (unidades
- * que respiran, polvo, agua) cambian 0,2-2 % de pixeles en los bordes entre ejecuciones, asi que el umbral
- * solo avisa de cambios grandes (un modelo nuevo, un color distinto). Lo pequeño se mira en el informe.
+ * Parte de pixeles distintos que se acepta. Con el reloj parado y el azar con semilla, en la misma maquina
+ * cada captura sale igual pixel a pixel: el margen solo cubre el antialias (unos 100 pixeles). En otra
+ * maquina (CI) cambian las fuentes y la GPU por software, y solo se ven los cambios grandes.
  */
-const TOLERANCE = process.env.CI ? 0.06 : 0.03;
+const TOLERANCE = process.env.CI ? 0.06 : 0.0001;
 
-/** Escenas: nombre, pagina, y la condicion (en el navegador) que dice que ya se ha cargado. */
+const SEED = 2013;
+const DESKTOP = { width: 1280, height: 800 };
+const PHONE = { width: 390, height: 844 };
+
+/** Cambia Math.random por un generador con semilla (mulberry32); se ejecuta en la pagina. */
+function seedMathRandom(seed) {
+  let state = seed;
+  Math.random = () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const MENU_READY = 'document.querySelector("button") !== null';
+const GAME_READY = 'window.ilogic3d !== undefined';
+const PLAYGROUND_READY = 'window.ilogicPlayground !== undefined';
+
+// Lo que se hace en la pagina antes de la captura (corre en el navegador: sin await, que con el reloj
+// parado una promesa que espere un temporizador no acabaria nunca).
+/** Elige la primera unidad del jugador: se ven su alcance y por donde puede ir. */
+const selectFirstUnit = () => {
+  const { session, controls } = window.ilogic3d;
+  const unit = session.state.units.find((candidate) => candidate.team === 0);
+  void controls.tap({ x: unit.x, y: unit.y });
+};
+/** Lluvia: la luz del clima y las gotas. */
+const rain = () => {
+  window.ilogic3d.world.setWeather('Rain');
+  window.ilogic3d.weather.set('Rain');
+};
+
+/**
+ * Escenas: nombre, pagina, condicion (en el navegador) que dice que ya se ha cargado y, si hace falta,
+ * que hacer antes de la captura (`act`) y el tamaño de la ventana (`viewport`, por defecto escritorio).
+ */
 const SCENES = [
-  { name: 'menu', path: '/', ready: 'document.querySelector("button") !== null' },
-  { name: 'partida-2013', path: '/?seed=2013', ready: 'window.ilogic3d !== undefined' },
-  { name: 'partida-sin-elevacion', path: '/?seed=2013&elevation=0', ready: 'window.ilogic3d !== undefined' },
-  { name: 'modelo-tanque', path: '/units3d.html?model=Tank', ready: 'window.ilogicPlayground !== undefined' },
-  { name: 'modelo-soldado', path: '/units3d.html?model=Soldier', ready: 'window.ilogicPlayground !== undefined' },
+  { name: 'menu', path: '/', ready: MENU_READY },
+  { name: 'menu-movil', path: '/', ready: MENU_READY, viewport: PHONE },
+  { name: 'partida-2013', path: '/?seed=2013', ready: GAME_READY },
+  { name: 'partida-sin-elevacion', path: '/?seed=2013&elevation=0', ready: GAME_READY },
+  { name: 'partida-unidad-elegida', path: '/?seed=2013', ready: GAME_READY, act: selectFirstUnit },
+  { name: 'partida-lluvia', path: '/?seed=2013', ready: GAME_READY, act: rain },
+  { name: 'partida-movil', path: '/?seed=2013', ready: GAME_READY, viewport: PHONE },
+  { name: 'modelo-tanque', path: '/units3d.html?model=Tank', ready: PLAYGROUND_READY },
+  { name: 'modelo-soldado', path: '/units3d.html?model=Soldier', ready: PLAYGROUND_READY },
 ];
 
 /**
- * Espera a que la escena cargue (en tiempo real) con el reloj parado, y luego deja correr unos segundos
- * de animacion. Asi el tiempo que tarda la carga no cambia la captura.
+ * Espera a que la escena haya cargado. Primero deja que baje todo lo que pide la pagina (en tiempo real,
+ * con su reloj parado); si aun no esta, avanza el reloj en pasos cortos y fijos (el menu, por ejemplo,
+ * espera un temporizador para dejar la pantalla de carga) hasta que lo este.
  */
-async function settle(page, readyExpression) {
+async function waitUntilReady(page, readyExpression) {
   for (let attempt = 0; attempt < 400; attempt++) {
     // La pagina puede recargarse al empezar una partida: se espera a que cargue de nuevo.
-    if (await page.evaluate(readyExpression).catch(() => false)) break;
-    await page.waitForLoadState('load').catch(() => {});
+    await page.waitForLoadState('networkidle').catch(() => {});
+    if (await page.evaluate(readyExpression).catch(() => false)) return;
+    await page.clock.runFor(100).catch(() => {});
     await page.waitForTimeout(50);
   }
+  throw new Error(`La escena no ha cargado: ${readyExpression}`);
+}
+
+/**
+ * Deja correr unos segundos de animacion con el reloj falso: siempre los mismos, tarde lo que tarde la
+ * carga, asi que la captura sale igual cada vez.
+ */
+async function animate(page) {
   await page.clock.runFor(3000);
   await page.waitForTimeout(300);
 }
@@ -71,16 +122,22 @@ function compare(name, actual) {
 }
 
 async function captureScene(browser, base, scene, errors) {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
+  const phone = scene.viewport === PHONE;
+  const page = await browser.newPage({ viewport: scene.viewport ?? DESKTOP, deviceScaleFactor: 1, isMobile: phone, hasTouch: phone });
   page.on('pageerror', (e) => errors.push(`${scene.name}: ${e.message}`));
   // Las peticiones a fuera de localhost se cortan a proposito (ERR_FAILED): no son un fallo.
   page.on('console', (m) => m.type() === 'error' && !m.text().includes('ERR_FAILED') && errors.push(`${scene.name}: ${m.text()}`));
   // Sin red: las capturas no dependen de GitHub ni de fuentes externas.
   await page.route(/^https?:\/\/(?!localhost)/, (r) => r.abort());
+  // El azar de la vista (reposo de cada unidad, particulas, lluvia, polvo) sale de Math.random: con una
+  // semilla fija, cada carga sale igual. Se pone antes de cada carga de la pagina (tambien al recargar).
+  await page.addInitScript(seedMathRandom, SEED);
   await page.clock.install({ time: new Date('2026-01-01T12:00:00Z') });
   await page.clock.pauseAt(new Date('2026-01-01T12:00:01Z'));
   await page.goto(base + scene.path.slice(1));
-  await settle(page, scene.ready);
+  await waitUntilReady(page, scene.ready);
+  if (scene.act) await page.evaluate(scene.act);
+  await animate(page);
   const png = await page.screenshot();
   await page.close();
   return png;
