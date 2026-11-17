@@ -8,7 +8,6 @@
  * los tests empiezan sus partidas por aqui; las que se cargan, por `readSave`.
  */
 import { entryOf, type GameContent } from './content';
-import { appointGeneral } from './generals';
 import { changeSettings, newGameState } from './gameState';
 import { generateGame } from './mapgen';
 import { gameModeOf, type GameModeRegistry } from './modes';
@@ -23,10 +22,8 @@ import { matchSeedsFrom, seededRng } from './util/random';
 import type { GameModeId, GameSetup, GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 import { teamIds, type TeamSetup } from './teams';
 
-/** Un equipo de una partida nueva: quien lo juega, su alianza, su dinero y su general (id de generals.json, o ninguno). */
-export interface MatchTeam extends TeamSetup {
-  general?: string | null;
-}
+/** Un equipo de una partida nueva: quien lo juega, su alianza y su dinero. */
+export type MatchTeam = TeamSetup;
 
 /** Escaramuza: un mapa al azar (el de `map.seed`, de su lado y tema) con estas reglas y estos equipos. */
 export interface SkirmishConfig {
@@ -104,11 +101,6 @@ type MatchSetup<M extends GameModeId> = (config: MatchConfigOf<M>, context: Matc
 /** Lado del mapa al azar si no se dice otro (el de 2013). */
 export const DEFAULT_MAP_SIZE = 32;
 
-/** Los generales de cada equipo (los que no dicen ninguno se quedan sin general). */
-function appointGenerals(s: GameState, teams: readonly MatchTeam[]): void {
-  teams.forEach((team, id) => appointGeneral(s, id, team.general));
-}
-
 function skirmish(config: SkirmishConfig, { content, mapRng, modes }: MatchSetupContext): GameState {
   const { map } = config;
   const theme = map.theme === null ? null : entryOf(content.themes, map.theme, 'tema');
@@ -123,7 +115,6 @@ function skirmish(config: SkirmishConfig, { content, mapRng, modes }: MatchSetup
   });
   s.setup = { ...map };
   if (config.rotateStarts) rotateStarts(s, config.rotateStarts);
-  appointGenerals(s, config.teams);
   return s;
 }
 
@@ -161,7 +152,6 @@ function sandbox(config: SandboxConfig, { content, modes }: MatchSetupContext): 
     const unit = newUnit(s, entryOf(content.units, placed.type, 'unidad'), placed.team, placed.at);
     if (placed.life !== undefined) unit.life = placed.life;
   }
-  appointGenerals(s, config.teams);
   return s;
 }
 
@@ -195,12 +185,12 @@ export function buildMatch(config: MatchConfig, context: MatchSetupContext): Gam
 }
 
 /**
- * La revancha de una escaramuza: el mismo mapa, las mismas reglas y los mismos equipos con sus
- * generales (null si no es una escaramuza o no se sabe su mapa).
+ * La revancha de una escaramuza: el mismo mapa, las mismas reglas y los mismos equipos (null si no
+ * es una escaramuza o no se sabe su mapa).
  */
 export function rematchOf(s: GameState): SkirmishConfig | null {
   if (s.mode !== 'skirmish' || !s.setup) return null;
-  const teams = s.teams.map((team) => ({ controller: team.controller, alliance: team.alliance, general: team.general?.id ?? null }));
+  const teams = s.teams.map((team) => ({ controller: team.controller, alliance: team.alliance }));
   return { mode: 'skirmish', map: { ...s.setup }, settingChanges: { ...s.settings }, teams, firstTeam: s.turnOrder[0] };
 }
 

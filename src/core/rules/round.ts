@@ -73,7 +73,7 @@ export const ROUND_STAGES: readonly RoundStage[] = ['start', 'income', 'costs', 
 
 /**
  * Los pasos del fin de ronda de cualquier partida, cada uno en su momento. Lo que depende de la
- * partida (generales, puntos de control, mantenimiento, clima) lo aportan sus modulos de reglas
+ * partida (puntos de control, mantenimiento, clima) lo aportan sus modulos de reglas
  * (`roundPhasesOf`). Un sistema nuevo que actua cada ronda (moral, suministro...) es un paso de su
  * modulo, en el momento que le toque.
  */

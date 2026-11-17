@@ -109,11 +109,11 @@ describe('equipos: quien es enemigo de quien', () => {
     expect(playerTeam(blankState({}, [{ controller: 'ai' }, { controller: 'ai' }]))).toBe(0);
   });
 
-  it('cada equipo tiene lo suyo: dinero, general y estadisticas', () => {
+  it('cada equipo tiene lo suyo: dinero y estadisticas', () => {
     const teams = newTeams([{ controller: 'human', funds: 700 }, { controller: 'ai' }], 300);
-    expect(teams.map((team) => [team.id, team.alliance, team.funds, team.general])).toEqual([
-      [0, 0, 700, null],
-      [1, 1, 300, null],
+    expect(teams.map((team) => [team.id, team.alliance, team.funds])).toEqual([
+      [0, 0, 700],
+      [1, 1, 300],
     ]);
     expect(() => newTeams([{ controller: 'human' }], 300)).toThrow();
     // Todos en la misma alianza: nadie seria enemigo de nadie.

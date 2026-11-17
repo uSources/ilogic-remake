@@ -2,7 +2,7 @@
  * El dinero de cada equipo: la unica forma de cobrar (`earn`) y de pagar (`pay`), y el tope
  * (`capFunds`). Lo que pase del maximo (content.maxFunds) se pierde al acabar cada accion y cada
  * ronda, no a mitad: asi el mantenimiento se paga con lo cobrado ese dia, y da igual de donde venga
- * el dinero (edificios, puntos de control, botin, un poder del general).
+ * el dinero (edificios, puntos de control, botin).
  */
 import { teamState } from '../teams';
 import type { GameEvent, GameState, TeamId } from '../model';

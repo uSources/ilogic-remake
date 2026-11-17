@@ -175,7 +175,7 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
     expect(s.ruleset.modules).toContain(modeModule);
     expect(isRuleOn(s, 'testBonus')).toBe(true);
     expect(isRuleOn(s, 'flank')).toBe(false);
-    expect(hooksOf(s, 'hitModifiers').map((modifier) => modifier.id)).toEqual(['generals', 'modeBonus']);
+    expect(hooksOf(s, 'hitModifiers').map((modifier) => modifier.id)).toEqual(['modeBonus']);
     const attacker = newUnit(s, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     const defender = newUnit(s, unitTypeNamed('Tank'), 1, { x: 3, y: 2 });
     const plain = blankState({ ...PLAIN_SETTINGS, flankBonus: 0 });

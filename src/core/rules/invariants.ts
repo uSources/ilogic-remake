@@ -35,7 +35,7 @@ export const INVARIANTS: readonly Invariant[] = [
   { id: 'captures', restore: dropStaleCaptures },
   // Una escuadra sin unidades desaparece (y nadie se queda apuntado a una que no existe).
   { id: 'squads', restore: (s) => pruneSquads(s).map((squad) => squadEvent(s, null, squad, 'removed')) },
-  // Lo que pase del maximo de dinero se pierde (botin, poderes...: venga de donde venga).
+  // Lo que pase del maximo de dinero se pierde (botin, puntos de control...: venga de donde venga).
   { id: 'funds', restore: capFunds },
   // Lo que se puede deshacer es de unidades que siguen como las dejo su movimiento (si caen, o vuelven
   // a estar listas con la ronda nueva, ya no). Que otras acciones lo olviden es cosa de dispatch (keepsUndo).

@@ -5,7 +5,6 @@
  * sala en «Mis partidas» y, cuando la sala juega (o ya acabo), le pasa la conexion a la escena
  * (`OnlineHost.startOnline`).
  */
-import { defaultContent } from '../../core/content/default';
 import type { RoomStatus, SeatId } from '../../core/net';
 import { shownTeamNumber } from '../../core/teams';
 import { ui, type OnlineSeatVM, type OnlineVM } from '../../hud/store';
@@ -15,7 +14,7 @@ import { handToAi, lobbyOf, type CreatedSeat, type LobbyInfo } from '../../net/r
 import type { RoomPlay } from '../../net/roomClient';
 import type { FatalClose, LinkStatus } from '../../net/serverLink';
 import { serverUrl } from '../../net/serverUrl';
-import { settings, t, type TextKey } from '../../settings';
+import { t, type TextKey } from '../../settings';
 import { statusText, type KnownSeat, type OnlineScreens } from './shared';
 
 /** Cada cuanto se pregunta al servidor quien esta en la sala mientras se espera. */
@@ -34,15 +33,6 @@ const CLOSE_TEXT: Record<FatalClose, TextKey> = {
 };
 
 const API_ERROR_TEXT: Partial<Record<string, TextKey>> = { noSuchRoom: 'onlineNoSuchRoom', badToken: 'onlineBadToken' };
-
-const generalName = (id: string | null): string | null => {
-  const general = defaultContent().files.generals.find((candidate) => candidate.id === id);
-  return general ? general.name[settings.lang] : null;
-};
-
-/** El id del general de un equipo de la vista (su estado lleva `id`), o null. */
-const generalIdOf = (general: unknown): string | null =>
-  general && typeof general === 'object' && 'id' in general && typeof general.id === 'string' ? general.id : null;
 
 export class LobbyScreen {
   /** La sala en la que se esta, con lo que se sabe de ella. */
@@ -118,11 +108,9 @@ export class LobbyScreen {
     const isCreator = this.entry.seat === 0;
     const seats = (this.lobby?.seats ?? []).map((seat): OnlineSeatVM => {
       const invite = this.invites.find((candidate) => candidate.seat === seat.seat);
-      const general = this.match?.client.state ? generalName(generalIdOf(this.match.client.state.teams[seat.team]?.general)) : null;
       return {
         seat: seat.seat,
         label: `${t('onlineTeam')} ${shownTeamNumber(seat.team)}`,
-        general,
         kind: seat.kind,
         joined: seat.joined,
         isMe: seat.seat === this.entry?.seat,
@@ -133,7 +121,7 @@ export class LobbyScreen {
     const connection = t(
       this.linkStatus === 'online' ? 'onlineOnline' : this.linkStatus === 'reconnecting' ? 'onlineReconnecting' : 'onlineConnecting',
     );
-    const note = status === 'waiting' ? `${t('onlineWaitingAll')} ${t('onlineGeneralsNote')}` : statusText(status);
+    const note = status === 'waiting' ? t('onlineWaitingAll') : statusText(status);
     return { code: this.entry.code, status: statusText(status), seats, note, connection };
   }
 

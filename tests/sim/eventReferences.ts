@@ -36,10 +36,6 @@ const EVENT_REFERENCES: { readonly [K in GameEventKind]: ReferencesOf<K> } = {
   standingOrder: (event) => ({ uids: event.uids, privateTo: [event.actor] }),
   standingOrderDone: (event) => ({ uids: [event.uid], privateTo: [event.actor] }),
   squad: (event) => ({ uids: event.uids }),
-  power: (event) => ({
-    uids: [...event.hits.map((hit) => hit.uid), ...(event.heals ?? []).map((heal) => heal.uid)],
-    tiles: event.target ? [event.target] : [],
-  }),
   cargoLost: (event) => ({ uids: [event.transport, ...event.passengers] }),
   captureDropped: (event) => ({ uids: [event.uid], tiles: [event.at] }),
   fundsCapped: (event) => ({ privateTo: [event.team] }),

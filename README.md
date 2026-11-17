@@ -50,7 +50,7 @@ de Cloudflare: como publicarlo, en `server/README.md`) y que el juego sepa donde
 jugar con un servidor propio sin recompilar). Sin servidor, Inicio no ofrece «Jugar en línea».
 
 - **Crear sala**: Inicio → «Jugar en línea» → «Crear sala». Las opciones de una partida nueva, de 2 a
-  4 equipos, quien juega cada asiento (una persona o la IA) y con que general, y si se quiere un
+  4 equipos y quien juega cada asiento (una persona o la IA), y si se quiere un
   reloj por turno (al acabarse, el turno pasa solo) y cuanto esperar a los que no entran (pasado, su
   asiento lo juega la IA). La sala da un codigo y un enlace de invitacion por asiento de persona:
   copialos (o compartelos desde el movil) y reparte uno a cada amigo. La partida empieza cuando han
@@ -91,7 +91,7 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
 - Pulsa sobre una ciudad, fabrica o aeropuerto tuyo libre para comprar unidades.
 - Despues de mover, "Atras" deshace el movimiento.
 - **Aun no en la vista 3D** (estaban en la 2D): escuadras y ordenes, elegir varias, zona de amenaza,
-  minimapa, poderes de los generales, tutorial guiado, resumen de ronda, repetir el turno enemigo,
+  minimapa, tutorial guiado, resumen de ronda, repetir el turno enemigo,
   varias personas en la misma pantalla y gestos de dos dedos. Las reglas siguen igual.
 - **Ejército:** cada unidad ocupa puntos de mando (la infantería 1, lo más grande hasta 5) y el
   ejército no puede pasar de 30. Cada ronda se paga de mantenimiento el 10 % del precio de tus unidades
@@ -131,11 +131,6 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
   turno, amenaza, órdenes, zoom...; las flechas, Enter y los números son fijos); la ayuda y los
   botones enseñan las teclas elegidas.
 - **Clima** (reglas nuevas): cada pocos días cambia el tiempo para los dos bandos. La lluvia frena a los vehículos, la nevada a todo lo que va por tierra, la tormenta a los aviones y la tormenta de arena (desierto) a infantería y aviones; el mal tiempo quita visión y puntería. Arriba, junto al día, el clima de hoy, sus efectos (pasando por encima) y el de mañana si cambia. Se quita en Nueva partida → Personalizada; la campaña no lo usa. Números en `src/core/content/weather.json`.
-- **Generales**: en "Nueva partida" se puede elegir uno. Tiene una ventaja fija y una barra que se
-  carga con el daño que haces y recibes; con ella usa sus habilidades (una por turno). **Brisa**,
-  coronel del aire: sus aviones aciertan +10 %, *Reconocimiento* (ves todo el mapa la ronda) y
-  *Ataque aéreo* (−20 de vida a los enemigos en 3×3, sin destruirlos). La IA también puede llevar
-  general ("General enemigo") y lo usa.
 - **Veteranía** (reglas nuevas): una unidad que destruye enemigos gana estrellas (1, 3 y 6 bajas),
   cada una con +5 % de acierto y de defensa.
 - Al acabar la partida se ven estadisticas de los dos bandos (compras, bajas, capturas, gasto).
@@ -174,7 +169,6 @@ src/
     mapGrid.ts   El mapa de una partida como rejilla (el tamaño sale del estado)
     rules.ts     Reglas (fachada de rules/: movimiento, combate, captura, union, transporte, compra, fin de ronda)
     abilities.ts Lo que hace cada clase de habilidad de las unidades (ABILITY_EFFECTS)
-    generals.ts  Los generales; generalPowers.ts: sus poderes (POWER_EFFECTS)
     squads.ts    Escuadras y ordenes permanentes del jugador (fachada de squads/)
     targeting.ts Desde donde atacar; trail.ts: el camino trazado con el cursor
     ai.ts        Inteligencia artificial (fachada de ai/: un plan que propone cada accion, con su perfil

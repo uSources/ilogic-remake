@@ -8,7 +8,6 @@ import {
   DECIDERS_ONLY_PROPOSE,
   NO_DIRECT_DISPATCH,
   NO_NET,
-  NO_PLUGGED_PIECES_EXCEPT_POWERS,
   ONLY_THROUGH_RULE_MODULES,
 } from '../eslint.config.js';
 import * as rulesFacade from '@core/rules';
@@ -38,8 +37,6 @@ const FORBIDDEN = [
   '../util/../weather',
   '../weather.js',
   '../weather.ts',
-  '../generals',
-  '../generalPowers',
   '../abilities',
   '../../core/weather',
   '@core/weather',
@@ -64,7 +61,6 @@ const ALLOWED = [
   '../ruleModules/ruleset.js',
   '../content/abilities',
   '../model/weather',
-  '@core/content/generals',
   './combat',
   '../damage',
 ];
@@ -72,13 +68,7 @@ const ALLOWED = [
 describe('L7: las reglas y las acciones no importan las piezas que se enchufan (eslint.config.js)', () => {
   it.each(FORBIDDEN)('prohibe %s', (path) => expect(forbids(ONLY_THROUGH_RULE_MODULES, path)).toBe(true));
   it.each(ALLOWED)('deja %s', (path) => expect(forbids(ONLY_THROUGH_RULE_MODULES, path)).toBe(false));
-  it('la lista de acciones puede juntar la accion de los poderes, y nada mas', () => {
-    expect(forbids(NO_PLUGGED_PIECES_EXCEPT_POWERS, '../generalPowers')).toBe(false);
-    expect(forbids(NO_PLUGGED_PIECES_EXCEPT_POWERS, '../weather')).toBe(true);
-    expect(forbids(NO_PLUGGED_PIECES_EXCEPT_POWERS, '@core/ruleModules/flank')).toBe(true);
-  });
-
-  it('la configuracion de verdad pone el patron en las reglas y las acciones, y el de la excepcion en la lista de acciones', async () => {
+  it('la configuracion de verdad pone el patron en las reglas y las acciones (tambien en la lista de acciones)', async () => {
     const eslint = new ESLint({ overrideConfigFile: 'eslint.config.js' });
     const patternsFor = async (file: string) => {
       const config = (await eslint.calculateConfigForFile(file)) as { rules?: Record<string, unknown[]> };
@@ -87,9 +77,7 @@ describe('L7: las reglas y las acciones no importan las piezas que se enchufan (
     };
     expect(await patternsFor('src/core/rules/combat.ts')).toContainEqual(ONLY_THROUGH_RULE_MODULES);
     expect(await patternsFor('src/core/actions/movement.ts')).toContainEqual(ONLY_THROUGH_RULE_MODULES);
-    const actionList = await patternsFor('src/core/actions/registry.ts');
-    expect(actionList).toContainEqual(NO_PLUGGED_PIECES_EXCEPT_POWERS);
-    expect(actionList).not.toContainEqual(ONLY_THROUGH_RULE_MODULES);
+    expect(await patternsFor('src/core/actions/registry.ts')).toContainEqual(ONLY_THROUGH_RULE_MODULES);
   });
 });
 
@@ -124,7 +112,7 @@ describe('quien decide solo propone (DECIDERS_ONLY_PROPOSE, eslint.config.js)', 
 
   it('la configuracion de verdad lo pone en la IA y en autopilot/', async () => {
     const eslint = new ESLint({ overrideConfigFile: 'eslint.config.js' });
-    for (const file of ['src/core/ai/tactics.ts', 'src/core/ai.ts', 'src/core/ai/general.ts', 'src/core/autopilot/tactics.ts']) {
+    for (const file of ['src/core/ai/tactics.ts', 'src/core/ai.ts', 'src/core/autopilot/tactics.ts']) {
       const config = (await eslint.calculateConfigForFile(file)) as { rules?: Record<string, unknown[]> };
       const options = config.rules?.['no-restricted-imports']?.[1] as { patterns?: object[] } | undefined;
       for (const pattern of DECIDERS_ONLY_PROPOSE) expect(options?.patterns ?? []).toContainEqual(pattern);
@@ -155,8 +143,6 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     "import { formSquad } from '../squads/membership';",
     "import { endRound } from '../rules/round';",
     "import { advanceWeather, ensureWeather } from '../weather';",
-    "import { applyPower } from '../generalPowers';",
-    "import { appointGeneral, chargeFromCombat, generalsNewRound } from '../generals';",
     "import { recordEvents, recordEvent, sampleArmy } from '../stats.ts';",
     "import { changeSettings } from '../gameState';",
   ])('prohibe %s a quien decide', (code) => expect(forbidsIn('src/core/ai/example.js', code)).toBe(true));
@@ -169,7 +155,6 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     "import { assistTurn } from '../autopilot/standingOrders';",
     "import { weatherNow } from '../weather';",
     "import { armyValue } from '../stats';",
-    "import { generalOf } from '../generals';",
   ])('deja %s', (code) => expect(forbidsIn('src/core/ai/example.js', code)).toBe(false));
 
   it('la configuracion de verdad lo pone en quien decide, la sesion, los controladores y la vista', async () => {
@@ -257,7 +242,6 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
   }, 60_000);
 
   it.each([
-    ['tools/example.ts', "import { appointGeneral } from '@core/generals';"],
     ['tools/example.ts', "import { advanceWeather } from '@core/weather';"],
     // Un fichero de src/ que existe (el lint de src/ usa los tipos del proyecto); el texto es el de la prueba.
     ['src/setup.ts', "import { recordEvents } from './core/stats';"],

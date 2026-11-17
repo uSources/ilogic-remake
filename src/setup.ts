@@ -22,10 +22,6 @@ export interface NewGameOptions {
   command: number | null;
   /** Mantenimiento por ronda, tanto por uno del precio de las unidades. */
   upkeep: number;
-  /** General del jugador (id de generals.json; null = sin general). */
-  general: string | null;
-  /** General de la IA (id de generals.json; null = sin general). */
-  enemyGeneral: string | null;
   /** Quien juega el otro equipo: la IA u otra persona en esta misma pantalla (por turnos). */
   rival: ControllerKind;
   /** Codigo de mapa escrito por el jugador ('' = al azar). */
@@ -38,10 +34,7 @@ export type PresetId = 'normal' | 'quick' | 'custom';
 export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'custom'];
 
 /** Ajustes ya hechos (el tema del mapa no cambia: lo elige el jugador o la vista previa). */
-export const PRESETS: Record<
-  Exclude<PresetId, 'custom'>,
-  Omit<NewGameOptions, 'theme' | 'code' | 'preset' | 'general' | 'enemyGeneral' | 'rival'>
-> = {
+export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset' | 'rival'>> = {
   normal: { size: 32, fog: true, weather: true, funds: 5000, income: 1, dayLimit: null, command: 30, upkeep: 0.1 },
   quick: { size: 20, fog: true, weather: true, funds: 5000, income: 1.5, dayLimit: 20, command: 20, upkeep: 0.1 },
 };
@@ -60,8 +53,6 @@ export const DEFAULT_OPTIONS: NewGameOptions = {
   dayLimit: null,
   command: 30,
   upkeep: 0.1,
-  general: null,
-  enemyGeneral: null,
   rival: 'ai',
   code: '',
   preset: 'normal',
@@ -77,23 +68,13 @@ export const CHOICES = {
   dayLimit: [null, 20, 30, 40, 60] as const,
   command: [null, 20, 30, 40] as const,
   upkeep: [0, 0.05, 0.1, 0.15] as const,
-  /** Al azar o uno de themes.json, y sin general o uno de generals.json (se leen al pedirlos, no al cargar el modulo). */
+  /** Al azar o uno de themes.json (se lee al pedirlo, no al cargar el modulo). */
   get theme(): readonly (string | null)[] {
     return [null, ...defaultContent().themes.list.map((theme) => theme.id)];
-  },
-  get general(): readonly (string | null)[] {
-    return generalChoices();
-  },
-  get enemyGeneral(): readonly (string | null)[] {
-    return generalChoices();
   },
   rival: CONTROLLER_KINDS,
 };
 export type ChoiceKey = keyof typeof CHOICES;
-
-function generalChoices(): (string | null)[] {
-  return [null, ...defaultContent().files.generals.map((general) => general.id)];
-}
 
 const STORAGE_KEY = 'ilogic.newgame';
 
@@ -126,9 +107,9 @@ export function saveOptions(options: NewGameOptions): void {
 }
 
 /**
- * La partida nueva de estas opciones con el mapa de `seed`: la persona (con su general) contra la
- * IA u otra persona en esta pantalla (con el suyo). Contra la IA, es la misma que da la misma
- * semilla en `npm run play` (skirmishConfig).
+ * La partida nueva de estas opciones con el mapa de `seed`: la persona contra la IA u otra persona
+ * en esta pantalla. Contra la IA, es la misma que da la misma semilla en `npm run play`
+ * (skirmishConfig).
  */
 export function matchConfigFor(options: NewGameOptions, seed: number): SkirmishConfig {
   return skirmishConfig({
@@ -136,10 +117,7 @@ export function matchConfigFor(options: NewGameOptions, seed: number): SkirmishC
     size: options.size,
     theme: options.theme,
     settingChanges: settingChangesFor(options),
-    teams: [
-      { controller: 'human', general: options.general },
-      { controller: options.rival, general: options.enemyGeneral },
-    ],
+    teams: [{ controller: 'human' }, { controller: options.rival }],
   });
 }
 
@@ -190,12 +168,6 @@ function sizeLabel(value: unknown): string {
   return `${String(value)}×${String(value)}${note}`;
 }
 
-function generalLabel(value: unknown): string {
-  const general = defaultContent().files.generals.find((candidate) => candidate.id === value);
-  if (!general) return isSpanish() ? 'Sin general' : 'No general';
-  return `${general.name[settings.lang]} · ${general.title[settings.lang]}`;
-}
-
 /** Texto de cada valor de cada opcion, para la pantalla. */
 const CHOICE_LABELS: Record<ChoiceKey, (value: unknown) => string> = {
   size: sizeLabel,
@@ -208,8 +180,6 @@ const CHOICE_LABELS: Record<ChoiceKey, (value: unknown) => string> = {
   dayLimit: (value) => (value === null ? noLimit() : `${Number(value)} ${isSpanish() ? 'días' : 'days'}`),
   command: (value) => (value === null ? noLimit() : `${Number(value)}`),
   upkeep: (value) => (value === 0 ? (isSpanish() ? 'No' : 'Off') : percent(value)),
-  general: generalLabel,
-  enemyGeneral: generalLabel,
   rival: (value) => t(value === 'human' ? 'rivalHuman' : 'rivalAi'),
 };
 

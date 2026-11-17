@@ -56,5 +56,4 @@ export const online: Translation<typeof ES> = {
   onlineRejected: "The server didn't accept the move: syncing the game",
   onlineResynced: 'Game synced with the server',
   onlineNoSave: "Online games aren't saved here: they resume from the server",
-  onlineGeneralsNote: 'Whoever creates the room picks the general of each seat.',
 };

@@ -153,7 +153,7 @@ function checkGame(saved: SavedGame, content: GameContent, modes: GameModeRegist
 
 /** Lo opcional que este roto se arregla o se quita, en una partida que ya ha pasado checkGame. */
 function cleanGame(saved: SavedGame, { lists, frame }: CheckedGame): SavedGameState {
-  cleanTeams(frame.content, lists.teams);
+  cleanTeams(lists.teams);
   cleanUnits(frame, lists.units);
   cleanBuildings(frame, lists.buildings);
   cleanCounters(saved);

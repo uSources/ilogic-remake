@@ -18,7 +18,6 @@ export type {
 export type { Squad } from './squad';
 export type { UndoableMove } from './undo';
 export type { EndReason, GameModeId, MatchResult, VictoryRuleId } from './match';
-export type { GeneralState } from './general';
 export type { WeatherState } from './weather';
 export type { Objective, ObjectiveGoal, ObjectiveStatus } from './objective';
 export type {
@@ -30,16 +29,12 @@ export type {
   AttackPartsFitEvent,
   IncomeSource,
   IncomeSources,
-  PowerEventBase,
-  PowerEventParts,
-  PowerPartsFitEvent,
   CoreGameEvent,
   CoreGameEventKind,
   ModuleEvent,
   ModuleEvents,
   ModuleEventsAreNew,
   GameEventOf,
-  GeneralCharge,
   Healing,
   SquadChange,
   StandingOrderEnd,

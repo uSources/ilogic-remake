@@ -14,7 +14,6 @@ import { canCaptureAt, INVARIANTS, roundReport, targetProblem, unitById } from '
 import { endRound } from '@core/rules/round';
 import { newUnit } from '@core/measure';
 import { restoreInvariants } from '@core/rules/invariants';
-import { appointGeneral } from '@core/generals';
 import { teamState } from '@core/teams';
 import { manhattan } from '@core/geom';
 import { serialize } from '@core/save';
@@ -295,7 +294,6 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     const s = blankState(PLAIN_SETTINGS);
     const soldier = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     expectRejected(s, 7, { kind: 'wait', uid: soldier.uid }, 'notATeam');
-    expectRejected(s, 7, { kind: 'usePower', power: 'recon', target: null }, 'notATeam');
     expect(ACTION_GUARDS.map((guard) => guard.id)).toEqual(['shape', 'team', 'playing', 'turn', 'started', 'standing']);
   });
 
@@ -348,7 +346,6 @@ describe('dispatch: la unica via para cambiar la partida', () => {
       { kind: 'move', uid: soldier.uid, to: { x: 5, y: 7 }, path: [{ x: 5, y: 6.5 }] },
       { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'patrol', at: { x: 1, y: 1 } } },
       { kind: 'cancelStandingOrder', uids: soldier.uid },
-      { kind: 'usePower', power: 3, target: null },
       { kind: 'renameSquad', squad: 1 },
     ];
     for (const action of broken) expectRejected(s, 0, action as GameAction, 'badAction');
@@ -499,16 +496,6 @@ describe('sucesos completos', () => {
     expect(formed).toMatchObject({ kind: 'squad', actor: 0, change: 'formed', uids, name: 'Alfa', key: 1 });
     const order = { kind: 'defend', at: { x: 9, y: 9 } } as const;
     expect(act(s, 0, { kind: 'giveStandingOrder', uids, order })).toEqual([{ kind: 'standingOrder', actor: 0, uids, order }]);
-  });
-
-  it('el ataque cuenta la carga que gana cada general', () => {
-    const s = blankState(PLAIN_SETTINGS);
-    appointGeneral(s, 0, 'Brisa');
-    const tank = newUnit(s, TANK, 0, { x: 10, y: 10 });
-    const enemy = newUnit(s, SOLDIER, 1, { x: 10, y: 11 });
-    const [attack] = act(s, 0, { kind: 'attack', uid: tank.uid, target: enemy.uid });
-    expect(attack?.kind === 'attack' && attack.damage).toBeGreaterThan(0);
-    expect(attack).toMatchObject({ charge: [{ team: 0, amount: teamState(s, 0).general!.charge }] });
   });
 
   it('los pasajeros que caen con su transporte y el dinero que pasa del maximo tienen suceso', () => {

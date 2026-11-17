@@ -10,12 +10,11 @@
  *
  * | Modulo | Que va |
  * |---|---|
- * | `general` | el general de la IA: que poder usa y cuando (`choosePower`, `aiGeneral`) |
  * | `tactics` | ir a capturar, avanzar, moverse al azar |
  * | `fire` | plan de fuego concentrado y orden de juego |
  * | `unitTurn` | prioridades de cada unidad en el turno de la IA (`UNIT_BEHAVIOURS`) |
  * | `production` | que fabrica |
- * | `turn` | el turno completo (`aiTurn`): general, plan de fuego, cada unidad y la compra |
+ * | `turn` | el turno completo (`aiTurn`): plan de fuego, cada unidad y la compra |
  * | `profile` | como juega una IA (`AiProfile`: pesos, razones de ataque, comportamientos y su turno, `turn`) |
  * | `defaultProfile` | la IA del juego: `defaultAiProfile` |
  *
@@ -29,4 +28,3 @@ export { aiTurn } from './ai/turn';
 export { defaultAiProfile } from './ai/defaultProfile';
 export type { AiProfile, AiTurn } from './ai/profile';
 export { UNIT_BEHAVIOURS, type UnitBehaviour, type UnitTurnContext } from './ai/unitTurn';
-export { aiGeneral, choosePower, type PowerChoice } from './ai/general';

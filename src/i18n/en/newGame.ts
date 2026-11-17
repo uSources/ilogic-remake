@@ -2,8 +2,6 @@ import type { newGame as es } from '../es/newGame';
 import type { Translation } from '../translation';
 
 export const newGame: Translation<typeof es> = {
-  optGeneral: 'General',
-  optEnemyGeneral: 'Enemy general',
   optRival: 'Opponent',
   rivalAi: 'The AI',
   rivalHuman: 'Another person (on this screen)',

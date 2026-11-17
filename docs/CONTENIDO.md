@@ -11,7 +11,6 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 | `src/core/content/themes.json` | Los 5 temas de mapa (llanura, desierto...): que terreno es cada letra de los mapas en texto y con que probabilidad sale cada terreno en los mapas al azar |
 | `src/core/content/mapgen.json` | El generador de mapas al azar: unidades y edificios de salida, edificios neutrales y lo que tiene que tener cada salida |
 | `src/core/content/weather.json` | Los climas: cuanto quitan de movimiento, vision y punteria, cuantos dias duran y en que terreno salen |
-| `src/core/content/generals.json` | Los generales: ventaja fija, barra de carga y poderes (ataque aereo, reconocimiento...) |
 | `src/core/content/settings.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
 | `src/core/content/ai.json` | Pesos de la IA (cuanto valora matar, capturar, defender la Base...) |
 | `src/core/content/missions.json` | Las misiones de la campaña, en orden: mapa en texto, edificios, unidades y equipos (quien los juega, su dinero y su objetivo, si tiene; skill `nueva-mision`) |
@@ -217,46 +216,6 @@ El tiempo de cada dia sale de la semilla del mapa (la misma partida tiene siempr
 siguiente ya esta decidido: es el pronostico que se ve arriba. Reglas en `src/core/weather.ts`.
 Para probar sin el: `--set SETTINGS.weather=false`.
 
-## Generales
-
-`generals.json` tiene los generales que se pueden elegir en "Nueva partida". Cada uno tiene:
-
-| Campo | Que es |
-|---|---|
-| `id`, `name`, `title`, `description` | Nombre interno (lo guardan las partidas), nombre, cargo y lo que ve el jugador al elegirlo |
-| `passive` | Ventajas fijas: `{ "kind": "attack", "movement": ["air"], "factor": 1.1 }` = sus aviones aciertan un 10 % mas. `defense` con `factor` 0.9 = los enemigos le hacen un 10 % menos. Se filtran por `movement` y/o `units` (sin nada, a todas) |
-| `charge` | Barra: `max` estrellas; gana una por cada `per` de valor (precio × vida quitada / 100) que hace **o** recibe en combate |
-| `powers` | Poderes: `id`, `name`, `description`, `cost` (estrellas que gastan) y `effect`. Uno por turno |
-
-Efectos que hay (`effect.kind`):
-
-| Efecto | Que hace |
-|---|---|
-| `reveal` | Ve todo el mapa hasta que acaba la ronda |
-| `areaDamage` | Quita `damage` de vida a los enemigos en un cuadrado de lado `2 × radius + 1` alrededor de la casilla elegida; nunca los deja por debajo de `minLife` (no mata) |
-| `heal` | Sus unidades en el mapa (no las que van en un transporte) recuperan `amount` de vida (hasta 100). Con `movement` y/o `units`, solo esas (como en `passive`) |
-| `funds` | Consigue `amount` de dinero al momento (sin pasar del maximo, `maxFunds`) |
-
-Un general nuevo con efectos que ya existen es solo JSON. Un efecto nuevo es codigo: su forma en
-`GeneralEffect` y su validacion en `EFFECT_SHAPES` (`content/generals.ts`), su entrada en
-`POWER_EFFECTS` (`core/generalPowers.ts`: si necesita casilla, su area, como se aplica, que usa
-`applyPower`, el `apply` de la accion `usePower`, y lo que le vale a la IA, `aiValue`) (la vista 3D aun no anima los poderes ni deja usarlos: pendiente). Los
-"poderes" son del general (se usan una vez por turno); las "habilidades" son de las unidades
-(`abilities`, siempre activas).
-
-La IA usa a su general sin saber cual es (`core/ai/general.ts`): al empezar su turno valora cada
-poder que puede pagar (el daño en area, en el mejor cuadrado sobre los enemigos que ve; el
-reconocimiento, un valor fijo con niebla; curar, por la vida que recuperan sus unidades; el dinero,
-por lo que es) y usa la mejor si vale al menos `minPowerValue`
-(`ai.json`); con la barra llena, cualquiera que valga algo. Cada valoracion es el `aiValue` de su clase
-en `POWER_EFFECTS`: un efecto nuevo trae la suya y la IA no se toca.
-
-Para medir un general: `npm run generals -- --a Roca` (la IA con Roca contra la IA sin general, 80
-partidas en 40 mapas con los equipos cambiados; al dia 60 gana quien tenga mas puntos). `--b Brisa`
-los enfrenta (`--json` y `--from` distintos para sumar tandas en paralelo). Con 80 partidas el margen
-es de ±11: para comparar generales hacen falta 200-400. Ahora (01-11-2026, 400 partidas) los tres
-ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 %.
-
 ## Reglas e IA
 
 - `settings.json`: `defaults` son las reglas con las que empieza una partida nueva (la pantalla de nueva
@@ -300,8 +259,7 @@ ruta (`tools/balance/variant.ts`): `--set UNIT.move.Car=7 --set HIT_CHANCE.Tank.
 resuelto, su `build*` y ese tipo: `units.ts` (`UnitType`), `buildings.ts` (`BuildingType`),
 `terrain.ts` (`TerrainType`), `weather.ts` (`WeatherType`), `themes.ts` (`Theme`), `mapgen.ts`
 (`MapgenSettings`), `rules.ts`, `ai.ts`, `abilities.ts` (la validacion de cada clase de habilidad,
-`ABILITY_SHAPES`) y `generals.ts` (los generales y sus poderes se leen tal cual, ya validados:
-`s.content.generals`; la validacion de cada clase de efecto, `EFFECT_SHAPES`). Comparten `check.ts` (mensajes de error) y `types.ts`
+`ABILITY_SHAPES`). Comparten `check.ts` (mensajes de error) y `types.ts`
 (`UnitDef`, `MoveType`...). El resto:
 
 | Modulo | Que hace |
@@ -317,7 +275,7 @@ Una parte nueva = un JSON, su esquema y su modulo, sin tocar las demas.
 `GameContent` (ficheros y tablas) **congelado**, y `newGameState` y `readSave` lo ponen en el campo
 `GameState.content` (no se guarda: `serialize` escribe el resto). Las reglas y la IA lo leen por la partida:
 `unitTypeOf(s, unit).cost`, `buildingTypeOf(s, building).earning`, `terrainAt(s, pos)`, `themeOf(s)`,
-`s.content.generals` (los pesos de la IA, `s.content.ai`, los lee quien juega por su perfil: `defaultAiProfile(contenido).weights`); las reglas por defecto, `settingsWith(contenido, cambios)`;
+(los pesos de la IA, `s.content.ai`, los lee quien juega por su perfil: `defaultAiProfile(contenido).weights`); las reglas por defecto, `settingsWith(contenido, cambios)`;
 los nombres en pantalla, `nameOf(unitType)` (settings.ts: el nombre de la entrada en el idioma elegido). Nada lee el contenido al
 importar un modulo: el del juego es `defaultContent()` (content/default.ts, se carga la primera vez
 que se pide), y lo usan `createMatch`/`loadGame` (core/defaultGames.ts), la interfaz y las

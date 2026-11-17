@@ -19,12 +19,12 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 13;
+  version: 14;
   /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
   map: string[][];
   /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
   theme: string;
-  /** Los equipos, en orden: el puesto de cada uno es su numero (TeamId). Dinero, general y estadisticas son de cada uno. */
+  /** Los equipos, en orden: el puesto de cada uno es su numero (TeamId). Dinero y estadisticas son de cada uno. */
   teams: TeamState[];
   units: Unit[];
   buildings: Building[];

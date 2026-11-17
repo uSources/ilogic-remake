@@ -177,7 +177,7 @@ a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.d
 ### Crear una sala y entrar
 
 1. Pantalla «Crear sala» (`src/menu/online/createScreen.ts`): las opciones, los asientos (el 0 es
-   quien crea; los demas, persona o IA, con su general) y los relojes. «Empezar» →
+   quien crea; los demas, persona o IA) y los relojes. «Empezar» →
    `createRoom(base, { match: SkirmishChoices, turnSeconds?, waitingSeconds? })` (`src/net/roomApi.ts`,
    `POST /rooms`).
 2. `server/src/index.ts`, ruta `createRoom`: comprueba el cuerpo campo a campo (`isRoomRequest`,

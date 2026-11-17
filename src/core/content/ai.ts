@@ -15,8 +15,6 @@ export const AI_KEYS = [
   'enemyHqPreference',
   'ownedBuildingPreference',
   'minCapturers',
-  'minPowerValue',
-  'revealValue',
   'guardRadius',
   'controlPointHeadStart',
   'focusFireBonus',

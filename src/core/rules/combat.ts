@@ -105,7 +105,7 @@ function coverLeft(s: GameState, { attacker, defender }: Engagement): number {
 /**
  * Lo que da la probabilidad de acierto en cualquier partida: el poder del atacante contra ese tipo
  * (units.json) por la proteccion que le queda al defensor. Lo que cambia segun la partida (habilidades,
- * veterania, flanqueo, generales, clima) lo aportan sus modulos de reglas (`hitModifiersOf`).
+ * veterania, flanqueo, clima) lo aportan sus modulos de reglas (`hitModifiersOf`).
  */
 export const HIT_MODIFIERS: readonly HitModifier[] = [
   { id: 'power', factor: (s, { attacker, defender }) => basePower(s, attacker.unit, defender.unit) },

@@ -6,8 +6,7 @@ import { newUnit } from '@core/measure';
 import type { GameEvent, GameState, MatchSettings, TeamId } from '@core/model';
 import { eventsSeenBy, knowledgeOf, type Knowledge } from '@core/net';
 import { GameSession, runMatch } from '@core/session';
-import { teamIds, teamState, type TeamSetup } from '@core/teams';
-import { appointGeneral } from '@core/generals';
+import { teamIds, type TeamSetup } from '@core/teams';
 import { PRIVATE_KINDS } from './sim/eventReferences';
 import { expectReferencesKnown } from './sim/viewChecks';
 import { act, blankState, giveTurn, unitTypeNamed } from './helpers';
@@ -115,39 +114,6 @@ describe('la niebla de los sucesos: lo que ve un equipo de un paso', () => {
     expect(attack.combat.counterHit).toBeNull();
     expect(attack.combat.attackerType).toBe(ARTILLERY.id);
     expect(attack.target).toBe(mine.uid);
-  });
-
-  it('un poder de area solo nombra a las unidades que el equipo conoce (y la casilla si la ve)', () => {
-    const { s, mine } = fogged();
-    appointGeneral(s, 1, 'Brisa');
-    teamState(s, 1).general!.charge = 6;
-    const target = { x: 25, y: 24 };
-    const ours = newUnit(s, SOLDIER, 0, { x: 25, y: 23 });
-    ours.life = 50;
-    giveTurn(s, 1);
-    const { seen: shown, events } = seenBy(s, 0, () => act(s, 1, { kind: 'usePower', power: 'airstrike', target }));
-    const power = events.find((event) => event.kind === 'power');
-    expect(power?.hits.map((hit) => hit.uid)).toEqual([ours.uid]);
-    // El equipo 0 conoce a su propia unidad tocada: la ve.
-    const shownPower = shown.find((event) => event.kind === 'power');
-    expect(shownPower?.hits).toEqual(power?.hits);
-    expect(shownPower?.target).toEqual(target);
-    expect(mine.life).toBe(100);
-  });
-
-  it('un poder de area sobre unidades que el equipo no conoce: ni a quien toca ni donde', () => {
-    const s = blankState({ fog: true }, [{ controller: 'human' }, { controller: 'ai' }, { controller: 'ai' }]);
-    appointGeneral(s, 1, 'Brisa');
-    teamState(s, 1).general!.charge = 6;
-    newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
-    const victim = newUnit(s, SOLDIER, 2, { x: 25, y: 23 });
-    newUnit(s, SOLDIER, 1, { x: 25, y: 20 });
-    giveTurn(s, 1);
-    const { seen: shown, events } = seenBy(s, 0, () => act(s, 1, { kind: 'usePower', power: 'airstrike', target: { x: 25, y: 24 } }));
-    expect(events.find((event) => event.kind === 'power')?.hits.map((hit) => hit.uid)).toEqual([victim.uid]);
-    const shownPower = shown.find((event) => event.kind === 'power');
-    expect(shownPower).toMatchObject({ kind: 'power', general: 'Brisa', power: 'airstrike', hits: [] });
-    expect(shownPower).not.toHaveProperty('target');
   });
 
   it('un punto de control disputado solo lo esta para quien ve a quien lo disputa', () => {
@@ -311,12 +277,12 @@ describe('la niebla de los sucesos en partidas enteras: cada equipo solo ve lo q
     expect(playChecking([{ controller: 'ai' }, { controller: 'ai' }], { fog: false }, 14, 8)).toBeGreaterThan(50);
   }, 60_000);
 
-  it('con generales, clima y puntos de control, en dos alianzas', () => {
+  it('con clima y puntos de control, en dos alianzas', () => {
     const teams: MatchTeam[] = [
-      { controller: 'ai', alliance: 0, general: 'Brisa' },
-      { controller: 'ai', alliance: 1, general: 'Roca' },
-      { controller: 'ai', alliance: 0, general: 'Ambar' },
-      { controller: 'ai', alliance: 1, general: 'Brisa' },
+      { controller: 'ai', alliance: 0 },
+      { controller: 'ai', alliance: 1 },
+      { controller: 'ai', alliance: 0 },
+      { controller: 'ai', alliance: 1 },
     ];
     expect(playChecking(teams, { fog: true, weather: true, controlPoints: 2 }, 15, 8)).toBeGreaterThan(50);
   }, 60_000);

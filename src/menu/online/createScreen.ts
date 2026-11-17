@@ -1,6 +1,6 @@
 /**
  * «Crear sala»: las opciones de una partida nueva (las de "Personalizada" que valen por la red),
- * cuantos equipos y quien juega cada asiento (el primero es siempre quien crea) y con que general,
+ * cuantos equipos y quien juega cada asiento (el primero es siempre quien crea),
  * los relojes (por turno y de espera a los que faltan) y la miniatura del mapa. «Empezar» pide la
  * sala al servidor (`createRoom`) y entra en ella con el primer asiento.
  */
@@ -16,10 +16,9 @@ import { nameOf, settings, t, type TextKey } from '../../settings';
 import { mapThumb } from '../thumb';
 import type { OnlineScreens } from './shared';
 
-/** Un asiento al crear la sala: quien lo juega y su general (el primero es siempre quien crea). */
+/** Un asiento al crear la sala: quien lo juega (el primero es siempre quien crea). */
 interface SeatChoice {
   kind: ControllerKind;
-  general: string | null;
 }
 
 /** Las opciones de la partida que se piden al servidor (las de "Personalizada" que valen por la red). */
@@ -93,9 +92,7 @@ export class CreateScreen {
   /** Las filas del foco: cada opcion, los equipos y sus asientos, los relojes, otro mapa, volver y empezar. */
   rows(): string[][] {
     const options = MATCH_KEYS.map(({ k }) => [`${OPTION_PREFIX}${k}`]);
-    const seats = this.seats.flatMap((_, index) =>
-      index === 0 ? [[`${SEAT_PREFIX}0-general`]] : [[`${SEAT_PREFIX}${index}-kind`], [`${SEAT_PREFIX}${index}-general`]],
-    );
+    const seats = this.seats.flatMap((_, index) => (index === 0 ? [] : [[`${SEAT_PREFIX}${index}-kind`]]));
     return [...options, ['teams'], ...seats, ['turn'], ['wait'], ['reroll'], ['back', 'start']];
   }
 
@@ -167,25 +164,18 @@ export class CreateScreen {
       choices: TEAM_COUNTS.map(String),
       index: TEAM_COUNTS.indexOf(this.teams as (typeof TEAM_COUNTS)[number]),
     };
+    // El primer asiento es siempre quien crea: no tiene fila que elegir.
     const seatRows = this.seats.map((seat, index): OptionRowVM[] => {
-      const label = `${t('onlineSeat')} ${index + 1}`;
-      const kind: OptionRowVM = {
-        id: `${SEAT_PREFIX}${index}-kind`,
-        group: '',
-        label: index === 0 ? `${label} (${t('onlineYou')})` : label,
-        choices: SEAT_KINDS.map((candidate) => t(candidate === 'human' ? 'onlineSeatPerson' : 'onlineSeatAi')),
-        index: SEAT_KINDS.indexOf(seat.kind),
-      };
-      const generals = CHOICES.general;
-      const general: OptionRowVM = {
-        id: `${SEAT_PREFIX}${index}-general`,
-        group: '',
-        // El primer asiento es siempre quien crea: solo tiene general.
-        label: index === 0 ? `${label} (${t('onlineYou')}) · ${t('optGeneral')}` : t('optGeneral'),
-        choices: generals.map((candidate) => choiceLabel('general', candidate)),
-        index: Math.max(0, generals.indexOf(seat.general)),
-      };
-      return index === 0 ? [general] : [kind, general];
+      if (index === 0) return [];
+      return [
+        {
+          id: `${SEAT_PREFIX}${index}-kind`,
+          group: '',
+          label: `${t('onlineSeat')} ${index + 1}`,
+          choices: SEAT_KINDS.map((candidate) => t(candidate === 'human' ? 'onlineSeatPerson' : 'onlineSeatAi')),
+          index: SEAT_KINDS.indexOf(seat.kind),
+        },
+      ];
     });
     return [[teamsRow], ...seatRows];
   }
@@ -219,17 +209,14 @@ export class CreateScreen {
   }
 
   private setSeatChoice(id: string, wrap: (length: number) => number): void {
-    const [index, field] = id.slice(SEAT_PREFIX.length).split('-');
-    const seat = this.seats[Number(index)];
-    if (!seat) return;
-    if (field === 'kind') seat.kind = SEAT_KINDS[wrap(SEAT_KINDS.length)]!;
-    else seat.general = CHOICES.general[wrap(CHOICES.general.length)] ?? null;
+    const seat = this.seats[Number(id.slice(SEAT_PREFIX.length).split('-')[0])];
+    if (seat) seat.kind = SEAT_KINDS[wrap(SEAT_KINDS.length)]!;
   }
 
   private setTeams(count: number): void {
     this.teams = count;
     const kept = this.seats.slice(0, count);
-    while (kept.length < count) kept.push({ kind: kept.length === 0 ? 'human' : 'ai', general: null });
+    while (kept.length < count) kept.push({ kind: kept.length === 0 ? 'human' : 'ai' });
     this.seats = kept;
   }
 
@@ -249,7 +236,7 @@ export class CreateScreen {
       size: this.options.size,
       theme: this.options.theme,
       settingChanges: settingChangesFor(this.options),
-      teams: this.seats.map((seat) => ({ controller: seat.kind, general: seat.general })),
+      teams: this.seats.map((seat) => ({ controller: seat.kind })),
     };
   }
 

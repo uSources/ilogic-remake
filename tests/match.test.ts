@@ -34,20 +34,6 @@ describe('empezar una partida (core/match.ts, MatchConfig y createMatch)', () =>
     expect(s.teams.every((team) => team.stats.army.length === 1)).toBe(true);
   });
 
-  it('los generales de cada equipo vienen en la configuracion', () => {
-    const s = createMatch(
-      skirmishConfig({
-        seed: 4,
-        size: 20,
-        teams: [
-          { controller: 'human', general: 'Brisa' },
-          { controller: 'ai', general: null },
-        ],
-      }),
-    );
-    expect(s.teams.map((team) => team.general?.id ?? null)).toEqual(['Brisa', null]);
-  });
-
   const startOf = (s: GameState, team: number) => [
     s.units.filter((unit) => unit.team === team).map((unit) => [unit.type, unit.x, unit.y]),
     s.buildings.filter((building) => building.owner === team).map((building) => [building.x, building.y]),

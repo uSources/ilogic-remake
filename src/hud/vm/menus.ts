@@ -134,12 +134,8 @@ export interface SetupVM {
   presets: PresetVM[];
   /** Opciones de "Personalizada", con botones de segmento. */
   groups: { title: string; rows: OptionRowVM[] }[];
-  /** General del jugador (siempre a la vista, no solo en "Personalizada") y lo que hace. */
   /** Quien juega el otro equipo: la IA u otra persona en esta pantalla. */
   rival: OptionRowVM;
-  general: OptionRowVM | null;
-  enemyGeneral: OptionRowVM | null;
-  generalNote: string;
   code: string;
   codeError: boolean;
   /** Codigo del mapa que se ve en la vista previa. */
@@ -160,9 +156,8 @@ export interface CampaignItemVM {
 /** Un asiento de una sala por la red, como se ve en el vestibulo. */
 export interface OnlineSeatVM {
   seat: number;
-  /** "Equipo 1" y su general, si lo tiene. */
+  /** "Equipo 1". */
   label: string;
-  general: string | null;
   kind: 'person' | 'ai';
   joined: boolean;
   isMe: boolean;
@@ -184,7 +179,7 @@ export interface OnlineVM {
   mode: 'menu' | 'create' | 'join' | 'lobby';
   focus: string;
   rooms: OnlineRoomVM[];
-  /** Crear sala: las opciones de la partida, los asientos (quien y con que general) y los relojes. */
+  /** Crear sala: las opciones de la partida, los asientos (quien juega cada uno) y los relojes. */
   create: {
     groups: { title: string; rows: OptionRowVM[] }[];
     seats: OptionRowVM[][];

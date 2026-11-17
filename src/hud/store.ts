@@ -17,7 +17,6 @@ export type { Anchor, BySide, OwnerSide, Side, StatChipVM } from './vm/common';
 export type { EndOutcome, EndStatsVM } from './vm/end';
 export type { IdleVM, MoveTipVM, PickedVM, SelectionVM, SquadVM } from './vm/army';
 export type { CombatSideVM, CombatVM, ForecastVM } from './vm/combat';
-export type { GeneralPowerVM, GeneralVM } from './vm/general';
 export type { LabVM } from './vm/lab';
 export type {
   CampaignItemVM,
@@ -51,8 +50,6 @@ const DEFAULT_ACTIONS: UIActions = {
   labPlay: noop,
   labSet: noop,
   labExit: noop,
-  usePower: noop,
-  cancelPower: noop,
   mainMenuPick: noop,
   mainMenuHover: noop,
   menuPick: noop,

@@ -52,11 +52,6 @@ const CORE_FACADES_ONLY = [
     message:
       "Fuera del nucleo se usan sus fachadas ('core/rules', 'core/squads', 'core/actions', 'core/ai', 'core/autopilot', 'core/controllers', 'core/net'); la partida cambia con dispatch.",
   },
-  {
-    group: ['**/core/generalPowers', '@core/generalPowers'],
-    importNames: ['applyPower'],
-    message: "Un poder se usa con la accion 'usePower' (dispatch).",
-  },
 ];
 
 /**
@@ -155,8 +150,8 @@ export const DECIDERS_ONLY_PROPOSE = [
   },
 ];
 /**
- * Los pasos que cambian la partida y viven con las reglas (`rules/`, `squads/`, el clima, los generales
- * y sus poderes, las estadisticas): solo los llaman el
+ * Los pasos que cambian la partida y viven con las reglas (`rules/`, `squads/`, el clima, las
+ * estadisticas): solo los llaman el
  * `apply` de las acciones (actions/), los pasos de ronda y de turno, las INVARIANTS y lo que prepara
  * una partida. Quien decide (la IA, autopilot/), la sesion, los controladores, la vista y lo que
  * apunta (targeting, trail) solo preguntan: no los importan. Fuera del nucleo ya no se ven (las
@@ -182,8 +177,6 @@ const STEPS_BY_MODULE = {
   'squads/standingOrderSteps': ['giveStandingOrder', 'cancelStandingOrder', 'finishStandingOrder', 'keepCapturing', 'liftStandingOrder'],
   'squads/membership': ['pruneSquads', 'formSquad', 'setGroup', 'addToGroup', 'leaveSquad', 'renameSquad', 'disbandSquad'],
   weather: ['advanceWeather', 'ensureWeather'],
-  generals: ['appointGeneral', 'chargeFromCombat', 'generalsNewRound'],
-  generalPowers: ['applyPower'],
   stats: ['recordEvents', 'recordEvent', 'sampleArmy'],
   gameState: ['changeSettings'],
 };
@@ -202,7 +195,7 @@ function stepPattern([module, importNames]) {
 }
 export const APPLY_STEPS = Object.entries(STEPS_BY_MODULE).map(stepPattern);
 /**
- * Los pasos que viven en la raiz del nucleo (el clima, los generales, las estadisticas, los ajustes):
+ * Los pasos que viven en la raiz del nucleo (el clima, las estadisticas, los ajustes):
  * no tienen fachada que los esconda, asi que fuera del nucleo (src/ y tools/) se prohiben aqui.
  */
 const ROOT_STEPS = Object.entries(STEPS_BY_MODULE)
@@ -220,14 +213,12 @@ const AI_FILES = ['src/core/ai/**/*.ts', 'src/core/ai.ts'];
 const AUTOPILOT_FILES = ['src/core/autopilot/**/*.ts', 'src/core/autopilot.ts'];
 
 /**
- * L7: las reglas y las acciones no importan las piezas que se enchufan (generales, sus poderes, el
- * clima, las habilidades) ni los modulos de reglas concretos o su lista: preguntan a la partida por lo
+ * L7: las reglas y las acciones no importan las piezas que se enchufan (el clima, las habilidades) ni los modulos de reglas concretos o su lista: preguntan a la partida por lo
  * que aportan (ruleModules/ruleset.ts) y los tipos de lo que se puede aportar (ruleModules/hooks.ts).
  * Vale con cualquier forma de la ruta: la pieza es el ultimo trozo y lo de antes sube o es el nucleo
  * (`../`, `./../`, `../util/../`, `../../core/`, `@core/`), con o sin extension (`.ts`, `.js`). Lo del
- * contenido (`content/abilities`, `model/weather`) no es una pieza y si se puede. La lista de
- * acciones (actions/registry.ts) es la excepcion: junta la accion de los poderes, que vive con ellos.
- * Tampoco las fachadas (`../rules`, `../actions`, `@core/rules`...), que las reexportan. Lo prueba
+ * contenido (`content/abilities`, `model/weather`) no es una pieza y si se puede.
+ * Tambien las fachadas (`../rules`, `../actions`, `@core/rules`...), que las reexportan. Lo prueba
  * tests/lintImports.test.ts (los patrones y que la configuracion de verdad los pone).
  */
 const PIECE_PATH = '(^|/)(\\.\\.?|@?core)/';
@@ -235,13 +226,11 @@ const EXTENSION = '(\\.[jt]s)?$';
 const pluggedPieces = (pieces) => ({
   regex: `${PIECE_PATH}(${pieces})${EXTENSION}|${PIECE_PATH}ruleModules/(?!(hooks|ruleset)${EXTENSION})`,
   message:
-    'Las reglas y las acciones no importan generales, poderes, clima, habilidades ni modulos concretos: lo que aportan llega por GameState.ruleset (hooksOf, ruleModules/ruleset.ts).',
+    'Las reglas y las acciones no importan clima, habilidades ni modulos concretos: lo que aportan llega por GameState.ruleset (hooksOf, ruleModules/ruleset.ts).',
 });
 /** Las fachadas (rules.ts, actions.ts, un index) reexportan las piezas: por ahi tambien se saltaria L7. */
 const FACADES = 'rules|actions|index';
-export const ONLY_THROUGH_RULE_MODULES = pluggedPieces(`generals|generalPowers|weather|abilities|${FACADES}`);
-const ACTION_LIST_FILE = 'src/core/actions/registry.ts';
-export const NO_PLUGGED_PIECES_EXCEPT_POWERS = pluggedPieces(`generals|weather|abilities|${FACADES}`);
+export const ONLY_THROUGH_RULE_MODULES = pluggedPieces(`weather|abilities|${FACADES}`);
 
 /** Lo que se prohibe en todo el nucleo, tambien en la red. */
 const PURE_LIMITS = [...CORE_IS_PURE, MEASURING_IS_NOT_THE_GAME, UNCHECKED_ATTACK_ONLY_IN_MEASURE];
@@ -328,14 +317,7 @@ export default tseslint.config(
   {
     // Y las reglas y las acciones, ademas, sin las piezas que se enchufan (ONLY_THROUGH_RULE_MODULES).
     files: ['src/core/rules/**/*.ts', 'src/core/actions/**/*.ts'],
-    ignores: [ACTION_LIST_FILE],
     rules: { 'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, ONLY_THROUGH_RULE_MODULES] }] },
-  },
-  {
-    files: [ACTION_LIST_FILE],
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [...CORE_LIMITS, NO_DEFAULT_CONTENT, NO_AI, NO_PLUGGED_PIECES_EXCEPT_POWERS] }],
-    },
   },
   {
     // El modelo es la capa de abajo del nucleo: solo tipos, sin depender de nada (ni del contenido).

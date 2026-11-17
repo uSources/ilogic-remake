@@ -68,7 +68,7 @@ export interface AbilityEffect {
   readonly hooks: RuleHooks;
 }
 
-/** Lo que aporta cada clase de habilidad (el tipo obliga a que esten todas, como POWER_EFFECTS). */
+/** Lo que aporta cada clase de habilidad (el tipo obliga a que esten todas). */
 const ABILITY_HOOKS: { readonly [K in AbilityKind]: RuleHooks } = {
   // Escudo contra los disparos a distancia: hace fuertes a los grupos con quien lo lleva delante.
   guard: { hitModifiers: [{ id: 'guard', factor: guardFactor }] },

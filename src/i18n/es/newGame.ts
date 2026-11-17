@@ -1,7 +1,5 @@
 /** Nueva partida: modos y opciones del mapa y del ejercito. */
 export const newGame = {
-  optGeneral: 'General',
-  optEnemyGeneral: 'General enemigo',
   optRival: 'Rival',
   rivalAi: 'La IA',
   rivalHuman: 'Otra persona (en esta pantalla)',

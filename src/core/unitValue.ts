@@ -1,7 +1,6 @@
 /**
  * Lo que vale la vida de una unidad: su precio por la parte de la vida entera que es (una unidad
- * entera vale su precio). Lo usan la carga de los generales, lo que vale un poder para la IA y el valor de un
- * ejercito en las estadisticas.
+ * entera vale su precio). Lo usan la IA y el valor de un ejercito en las estadisticas.
  */
 import { MAX_LIFE } from './data';
 import { unitTypeOf } from './gameContent';

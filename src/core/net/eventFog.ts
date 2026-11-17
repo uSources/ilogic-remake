@@ -15,7 +15,7 @@
  * Lo que es de cada tipo de suceso es una entrada de `EVENT_FOG` (el compilador exige una por tipo,
  * tambien para los de los modulos: un suceso nuevo no compila sin la suya). Publico queda lo que la
  * partida anuncia a todos: los turnos, el dia, el clima, las rendiciones y las caidas, los puntos de
- * control y los poderes de los generales (su carga y su uso se ven en el estado de cada equipo).
+ * control.
  * Privado de cada alianza: sus ordenes, sus escuadras, sus ingresos y su mantenimiento, lo que pierde
  * por el tope de dinero y quien va dentro de sus transportes.
  */
@@ -138,14 +138,6 @@ const EVENT_FOG: { readonly [K in GameEventKind]: EventFogRule<K> } = {
   standingOrder: alliesOnly((event) => event.actor),
   standingOrderDone: alliesOnly((event) => event.actor),
   squad: (event, witness) => (witness.knowsSquad(event.squad) ? event : null),
-  // Que un general usa su poder es publico (su carga y su uso estan en el estado del equipo); a
-  // quien ha tocado o curado, solo las unidades que conoce, y la casilla elegida, si la ve.
-  power: (event, witness) => {
-    const { target, heals, ...rest } = event;
-    const seenTarget = target && witness.sees(target) ? { target } : {};
-    const seenHeals = heals ? { heals: witness.knownOf(heals) } : {};
-    return { ...rest, hits: witness.knownOf(event.hits), ...seenTarget, ...seenHeals };
-  },
   // Quien iba dentro de un transporte enemigo nunca se supo: solo los pasajeros que conocia.
   cargoLost: (event, witness) =>
     witness.knows(event.transport) ? { ...event, passengers: event.passengers.filter((uid) => witness.knows(uid)) } : null,

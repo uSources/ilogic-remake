@@ -54,12 +54,11 @@ describe('modulos de reglas (RULE_MODULES)', () => {
   });
 
   it('todos los modulos con interruptor estan en la prueba', () => {
-    const switched = RULE_MODULES.map((module) => module.id).filter((id) => id !== 'generals' && id !== 'noFog' && id !== 'relief');
+    const switched = RULE_MODULES.map((module) => module.id).filter((id) => id !== 'noFog' && id !== 'relief');
     expect(Object.keys(SWITCHED_OFF).sort()).toEqual([...switched].sort());
   });
 
-  it('los generales y el relieve van siempre; sin niebla, el modulo que lo enseña todo', () => {
-    expect(isRuleOn(blankState(DEFAULTS), 'generals')).toBe(true);
+  it('el relieve va siempre; sin niebla, el modulo que lo enseña todo', () => {
     expect(isRuleOn(blankState(DEFAULTS), 'relief')).toBe(true);
     expect(isRuleOn(blankState(DEFAULTS), 'noFog')).toBe(false);
     expect(isRuleOn(blankState(settingsWith(defaultContent(), { fog: false })), 'noFog')).toBe(true);
@@ -70,7 +69,7 @@ describe('modulos de reglas (RULE_MODULES)', () => {
     const expected = RULE_MODULES.filter((module) => module.isOn(s.settings)).flatMap((module) => module.hooks.hitModifiers ?? []);
     expect(hooksOf(s, 'hitModifiers')).toEqual(expected);
     const plain = blankState(settingsWith(defaultContent(), { abilities: false, veterancy: false, flankBonus: 0, weather: false }));
-    expect(hooksOf(plain, 'hitModifiers').map((modifier) => modifier.id)).toEqual(['generals']);
+    expect(hooksOf(plain, 'hitModifiers')).toEqual([]);
   });
 
   it('se resuelven una vez por partida: al crearla, al leerla y al cambiar sus ajustes', () => {
@@ -90,7 +89,7 @@ describe('modulos de reglas (RULE_MODULES)', () => {
   it('resolveRuleset: solo los que se enchufan con esos ajustes, con sus listas juntas en orden', () => {
     const ruleset = resolveRuleset(RULE_MODULES, settingsWith(defaultContent(), { weather: false }), GAME_MODES.skirmish);
     expect(ruleset.modules.map((module) => module.id)).not.toContain('weather');
-    expect(ruleset.hooks.roundPhases.map((phase) => phase.id)).toEqual(['generals', 'control', 'upkeep']);
+    expect(ruleset.hooks.roundPhases.map((phase) => phase.id)).toEqual(['control', 'upkeep']);
   });
 
   it('mergeHooks: cada lista con las entradas de todas las piezas, una detras de otra y en su orden', () => {

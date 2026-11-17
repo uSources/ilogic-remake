@@ -1,10 +1,9 @@
 /**
- * Pantalla de partida nueva: ajustes ya hechos, opciones de "Personalizada", generales, codigo de
+ * Pantalla de partida nueva: ajustes ya hechos, opciones de "Personalizada", codigo de
  * mapa y la vista previa del mapa que se jugara. Pide a la escena lo poco que usa (`SetupHost`).
  */
 import { themeOf } from '../core/gameContent';
 import type { MenuCommand } from '../controls/menu';
-import { defaultContent } from '../core/content/default';
 import { createMatch } from '../core/defaultGames';
 import { ui, type OptionRowVM, type PresetVM, type UIActions } from '../hud/store';
 import { nameOf, settings, t, type TextKey } from '../settings';
@@ -147,9 +146,6 @@ export class SetupScreen {
         presets: PRESET_IDS.map(presetVM),
         groups: this.customGroups(),
         rival: this.choiceRow('rival', 'optRival'),
-        general: hasGenerals() ? this.choiceRow('general', 'optGeneral') : null,
-        enemyGeneral: hasGenerals() ? this.choiceRow('enemyGeneral', 'optEnemyGeneral') : null,
-        generalNote: defaultContent().files.generals.find((general) => general.id === options.general)?.description[settings.lang] ?? '',
         code: this.code,
         codeError: this.codeError,
         mapCode: seedToCode(this.seed),
@@ -245,8 +241,8 @@ export class SetupScreen {
     }));
   }
 
-  /** Una opcion que no es de "Personalizada" (el rival, los generales): su fila. */
-  private choiceRow(key: 'rival' | 'general' | 'enemyGeneral', label: TextKey): OptionRowVM {
+  /** Una opcion que no es de "Personalizada" (el rival): su fila. */
+  private choiceRow(key: 'rival', label: TextKey): OptionRowVM {
     return {
       id: `${OPTION_PREFIX}${key}`,
       group: t(label),
@@ -286,7 +282,6 @@ export class SetupScreen {
 
   private rows(): string[][] {
     const rows: string[][] = [PRESET_IDS.map((preset) => `${PRESET_PREFIX}${preset}`), [`${OPTION_PREFIX}rival`]];
-    if (hasGenerals()) rows.push([`${OPTION_PREFIX}general`], [`${OPTION_PREFIX}enemyGeneral`]);
     if (this.options.preset === 'custom')
       for (const group of CUSTOM_GROUPS) for (const { k: key } of group.keys) rows.push([`${OPTION_PREFIX}${key}`]);
     rows.push(['code', 'reroll']);
@@ -311,5 +306,3 @@ export class SetupScreen {
     this.publish();
   }
 }
-
-const hasGenerals = (): boolean => defaultContent().files.generals.length > 0;

@@ -3,17 +3,16 @@
  * solo codigo todo lo que pasa (cada suceso, tambien los del fin de ronda, y el estado entero tras
  * cada ronda). Sirve para
  * reescribir codigo sin cambiar lo que hace: la huella de antes y la de despues tienen que ser
- * iguales. Mas estricta que tests/aiGolden.test.ts: varias reglas, tamaños, generales y escuadras
- * del jugador con ordenes.
+ * iguales. Mas estricta que tests/aiGolden.test.ts: varias reglas, tamaños y escuadras del jugador
+ * con ordenes.
  *
  *   npm run huella            imprime la huella de cada partida y la total
  *   npm run huella -- --total solo la total (para comparar de un vistazo)
  */
 import { createHash } from 'node:crypto';
 import { createMatch } from '@core/defaultGames';
-import { skirmishConfig, type MatchTeam } from '@core/match';
+import { skirmishConfig } from '@core/match';
 import { seededRng } from '@core/util/random';
-import { defaultContent } from '@core/content/default';
 import { isMatchOver, matchResult, teamUnits } from '@core/rules';
 import { serialize } from '@core/save';
 import { posOf } from '@core/geom';
@@ -25,7 +24,6 @@ import { commandLine } from './cliArgs';
 
 const MAX_DAYS = 30;
 const FIRST_DAY = 1;
-const GENERALS = defaultContent().generals;
 
 /** Reglas que se prueban: las de siempre y variantes que apagan las partes con mas condiciones. */
 const SETTING_SETS: readonly Partial<MatchSettings>[] = [
@@ -41,7 +39,6 @@ interface Scenario {
   seed: number;
   settings: Partial<MatchSettings>;
   size: number;
-  withGenerals: boolean;
   withSquad: boolean;
 }
 
@@ -50,8 +47,8 @@ function scenarios(): Scenario[] {
   let seed = 1;
   for (const settings of SETTING_SETS)
     for (const size of MAP_SIZES) {
-      list.push({ seed: seed++, settings, size, withGenerals: false, withSquad: true });
-      list.push({ seed: seed++, settings, size, withGenerals: true, withSquad: false });
+      list.push({ seed: seed++, settings, size, withSquad: true });
+      list.push({ seed: seed++, settings, size, withSquad: false });
     }
   return list;
 }
@@ -86,16 +83,10 @@ function controllersOf(s: GameState, scenario: Scenario): Controller[] {
   return controllersFor(s, new Map([[person, scenario.withSquad ? withSquad : aiController()]]));
 }
 
-/** Una persona contra la IA; con generales, cada equipo el de su numero en generals.json. */
-function teamsOf(scenario: Scenario): MatchTeam[] {
-  const generals = GENERALS.list;
-  return duel('human', 'ai').map((team, id) => (scenario.withGenerals ? { ...team, general: generals[id]?.id ?? null } : team));
-}
-
 function playScenario(scenario: Scenario): string {
   const rng = seededRng(scenario.seed);
   const s = createMatch(
-    skirmishConfig({ seed: scenario.seed, size: scenario.size, settingChanges: scenario.settings, teams: teamsOf(scenario) }),
+    skirmishConfig({ seed: scenario.seed, size: scenario.size, settingChanges: scenario.settings, teams: duel('human', 'ai') }),
     rng,
   );
 
@@ -123,7 +114,7 @@ for (const scenario of scenarios()) {
   total.update(fingerprint);
   if (!onlyTotal)
     console.log(
-      `${fingerprint}  semilla ${scenario.seed}, mapa ${scenario.size}, ${JSON.stringify(scenario.settings)}${scenario.withGenerals ? ', generales' : ''}${scenario.withSquad ? ', escuadra' : ''}`,
+      `${fingerprint}  semilla ${scenario.seed}, mapa ${scenario.size}, ${JSON.stringify(scenario.settings)}${scenario.withSquad ? ', escuadra' : ''}`,
     );
 }
 console.log(`huella total: ${total.digest('hex').slice(0, 16)}`);

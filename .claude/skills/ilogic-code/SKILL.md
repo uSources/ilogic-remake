@@ -98,7 +98,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   (`unit.type = 'Tank'`, `s.theme = 'Plains'`), nunca el puesto en el fichero.
 - **Equipos, no bandos**: ningun numero de equipo es especial (ni `team === 0` ni `team = 0` por
   defecto). Enemigo es `isHostile(s, a, b)` (otra alianza); lo de cada equipo, `teamState(s, team)`
-  (dinero, general, estadisticas); quien lo juega, su `controller`. Lo que actua por un equipo lo
+  (dinero, estadisticas); quien lo juega, su `controller`. Lo que actua por un equipo lo
   recibe (`playerView(s, team)`, `formSquad(s, team, units)`); como acaba la partida es
   igual para todos (`matchResult(s)`: quien gana, nada de 'won'/'lost' de un equipo). En la vista, el
   equipo que mira es `viewer` y la interfaz pinta por lado (`ui/sides.ts`). Ver `docs/ARQUITECTURA.md`, "Equipos".
@@ -155,9 +155,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   (`core/session`); habilidad de unidad nueva = su forma en `AbilityDef`, su validacion en
   `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta en `ABILITY_HOOKS` y su sitio
   en `ABILITY_ORDER` (`abilities.ts`; el compilador exige las dos);
-  efecto nuevo de un poder del general = su validacion en `EFFECT_SHAPES` (`content/generals.ts`) y
-  su entrada en `POWER_EFFECTS` (`generalPowers.ts`: casilla, area, efecto y `aiValue`; lo que apunta
-  en el suceso del poder, su campo en `PowerEventParts` con `declare module`); lo que cuenta un
+  lo que cuenta un
   suceso en las estadisticas = entrada en `STAT_COUNTERS` (stats.ts) o `statCounters` de un modulo;
   un ingreso nuevo del fin de ronda = su nombre en `IncomeSources`.
   La IA no tiene variables globales: lo del turno va en `PlayCtx` (equipo, perfil, `paths`,
@@ -219,7 +217,7 @@ npm run dev          # y abrir http://localhost:5173/ (o /?seed=2013) para proba
 ```
 
 - Reescribir sin cambiar comportamiento (refactor): `npm run huella` antes y despues; la "huella
-  total" tiene que ser la misma (24 partidas IA contra IA con varias reglas, generales y escuadras).
+  total" tiene que ser la misma (24 partidas IA contra IA con varias reglas, tamaños y escuadras).
 - Cambios de reglas o IA: `tests/aiGolden.test.ts` compara partidas IA contra IA con semilla fija.
   Si falla sin querer cambiar el comportamiento, es un fallo del refactor. Si el cambio es a
   proposito, actualizar con `npx vitest run -u tests/aiGolden.test.ts` y comprobar el equilibrio con

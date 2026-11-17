@@ -1,4 +1,3 @@
-import type { GeneralState } from './general';
 import type { TeamFall } from './defeat';
 import type { TeamStats } from './stats';
 
@@ -26,8 +25,6 @@ export interface TeamState {
   alliance: number;
   controller: ControllerKind;
   funds: number;
-  /** [CAMBIO] General del equipo (null = sin general). */
-  general: GeneralState | null;
   /** Estadisticas para la pantalla final. */
   stats: TeamStats;
   /** Se ha rendido (la accion 'surrender'): cuenta como derrotado, aunque le quede de todo. */

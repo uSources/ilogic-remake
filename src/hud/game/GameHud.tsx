@@ -7,7 +7,6 @@ import { ActionChips } from './ActionChips';
 import { BuyFan } from './BuyFan';
 import { CombatPanel } from './Combat';
 import { Forecast } from './Forecast';
-import { EnemyGeneral, GeneralPanel } from './GeneralPanel';
 import { LabPanel } from './LabPanel';
 import { Minimap } from './Minimap';
 import { MissionPanel } from './MissionPanel';
@@ -56,8 +55,6 @@ const SIDE_PANELS: GamePanel[] = [
 const GAME_PANELS: GamePanel[] = [
   { id: 'topBar', render: (s) => <TopBar s={s} /> },
   { id: 'net', render: (s) => s.net && <NetLine net={s.net} /> },
-  { id: 'general', render: (s) => s.general && <GeneralPanel general={s.general} mine={isOwnTurn(s)} /> },
-  { id: 'enemyGeneral', render: (s) => s.enemyGeneral && <EnemyGeneral general={s.enemyGeneral} /> },
   { id: 'mission', render: (s) => s.mission && isOwnTurn(s) && <MissionPanel mission={s.mission} /> },
   { id: 'selection', render: (s) => showsSelection(s) && s.selection && <SelectionPanel selection={s.selection} /> },
   {

@@ -7,7 +7,6 @@
 @import './styles/base/panel.css';
 @import './styles/base/toy.css';
 @import './styles/game/topbar.css';
-@import './styles/game/general.css';
 @import './styles/game/lab.css';
 @import './styles/game/breakdown.css';
 @import './styles/game/popmenu.css';
@@ -35,8 +34,6 @@
 @import './styles/overlays/notes.css';
 @import './styles/base/icons.css';
 @import './styles/game/fold.css';
-@import './styles/game/general-narrow.css';
-@import './styles/menus/newgame-general.css';
 @import './styles/game/endturn.css';
 @import './styles/overlays/rename.css';
 @import './styles/game/control-point.css';

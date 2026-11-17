@@ -12,8 +12,6 @@
   "enemyHqPreference": 12,
   "ownedBuildingPreference": 4,
   "minCapturers": 4,
-  "minPowerValue": 3000,
-  "revealValue": 500,
   "guardRadius": 4,
   "controlPointHeadStart": 6,
   "focusFireBonus": 100,

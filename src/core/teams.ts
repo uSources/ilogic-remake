@@ -105,7 +105,7 @@ export function duelTeams(s: GameState): [first: TeamId, second: TeamId] {
 
 export const emptyTeamStats = (): TeamStats => ({ built: 0, spent: 0, lost: 0, captured: 0, army: [] });
 
-/** Los equipos de una partida nueva, sin general (se elige despues: generals.ts). */
+/** Los equipos de una partida nueva. */
 export function newTeams(setups: readonly TeamSetup[], initialFunds: number): TeamState[] {
   if (setups.length < 2) throw new Error('Una partida necesita al menos dos equipos');
   const teams = setups.map((setup, id) => ({
@@ -113,7 +113,6 @@ export function newTeams(setups: readonly TeamSetup[], initialFunds: number): Te
     alliance: setup.alliance ?? id,
     controller: setup.controller,
     funds: setup.funds ?? initialFunds,
-    general: null,
     stats: emptyTeamStats(),
     resigned: false,
     fell: null,

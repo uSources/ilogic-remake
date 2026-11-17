@@ -6,14 +6,14 @@ import { cards } from './cards';
 import { combat } from './combat';
 import { economy } from './economy';
 import { orders } from './orders';
-import { general } from './general';
 import { weather } from './weather';
 import { options } from './options';
 import { menu } from './menu';
 import { newGame } from './newGame';
 import { online } from './online';
+import { lab } from './lab';
 
-export const EN_BY_FEATURE = { turn, actions, cards, combat, economy, orders, general, weather, options, menu, newGame, online };
+export const EN_BY_FEATURE = { turn, actions, cards, combat, economy, orders, weather, options, menu, newGame, online, lab };
 
 export const EN: Translation<typeof ES> = {
   ...turn,
@@ -22,10 +22,10 @@ export const EN: Translation<typeof ES> = {
   ...combat,
   ...economy,
   ...orders,
-  ...general,
   ...weather,
   ...options,
   ...menu,
   ...newGame,
   ...online,
+  ...lab,
 };

@@ -1,6 +1,6 @@
 /**
  * Contenido del juego en ficheros de configuracion (src/core/content/*.json): unidades, edificios,
- * terreno, tipos de movimiento, temas de mapa, generador de mapas, clima, generales, misiones, reglas
+ * terreno, tipos de movimiento, temas de mapa, generador de mapas, clima, misiones, reglas
  * por defecto y pesos de la IA.
  * Ver docs/CONTENIDO.md.
  *
@@ -12,7 +12,6 @@
 import { deepFreeze, mutableCopy, type DeepReadonly } from '../util/freeze';
 import aiFile from './ai.json';
 import buildingsFile from './buildings.json';
-import generalsFile from './generals.json';
 import mapgenFile from './mapgen.json';
 import missionsFile from './missions.json';
 import movementsFile from './movements.json';
@@ -24,7 +23,6 @@ import weatherFile from './weather.json';
 import { validateAi } from './ai';
 import { validateBuildings } from './buildings';
 import { Checker, uniqueIds } from './check';
-import { validateGenerals, type GeneralDef } from './generals';
 import { validateMapgen, type MapgenDef } from './mapgen';
 import { validateMissions, type MissionDef } from './missions';
 import { validateMovements, type MovementDef } from './movements';
@@ -50,7 +48,6 @@ export type { MountainRanges, TerrainChance, Theme, ThemeDef, ThemeGenerator } f
 export type { UnitAttack, UnitType } from './units';
 export { ABILITY_KINDS, ABILITY_SHAPES } from './abilities';
 export type { WeatherDef, WeatherType } from './weather';
-export type { GeneralPowerDef, GeneralDef, GeneralEffect, GeneralModifier, UnitFilter } from './generals';
 
 /** Lee los ficheros JSON del juego (sin validar). */
 export function readContentFiles(): Content {
@@ -63,7 +60,6 @@ export function readContentFiles(): Content {
     settings: settingsFile as unknown as SettingsFile,
     ai: aiFile,
     weather: (weatherFile as unknown as { weather: WeatherDef[] }).weather,
-    generals: (generalsFile as unknown as { generals: GeneralDef[] }).generals,
     missions: (missionsFile as unknown as { missions: MissionDef[] }).missions,
     movements: (movementsFile as unknown as { movements: MovementDef[] }).movements,
   };
@@ -97,14 +93,13 @@ export function validateContent(files: Content): string[] {
   validateSettings(files.settings, check);
   validateAi(files.ai, check);
   validateWeather(files.weather, context, check);
-  validateGenerals(files.generals, context, check);
   validateMissions(files.missions, context, check);
   return check.errors;
 }
 
 /**
  * El contenido de una partida: los ficheros tal cual (nombres, notas...) y sus tipos resueltos
- * (`units`, `buildings`, `terrain`, `themes`, `weather`, `generals`, por id con `entryOf`). Esta
+ * (`units`, `buildings`, `terrain`, `themes`, `weather`, por id con `entryOf`). Esta
  * congelado: nadie lo cambia mientras se juega. Cada partida lleva el suyo (ver core/gameContent.ts).
  */
 export type GameContent = Readonly<ResolvedContent> & { readonly files: DeepReadonly<Content> };

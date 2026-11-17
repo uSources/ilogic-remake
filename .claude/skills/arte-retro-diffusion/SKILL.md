@@ -1,6 +1,6 @@
 ---
 name: arte-retro-diffusion
-description: Use when creating or redoing 2D images for Ilogic (unit and building portraits, HUD icons, general portraits, terrain images used by the HUD and as reference for the 3D models) with Retro Diffusion, or when touching the image pipeline in tools/art. Covers cost rules, prompts that worked, the magenta team-color key and how images reach the HUD. 3D models are the ashfox skill.
+description: Use when creating or redoing 2D images for Ilogic (unit and building portraits, HUD icons, terrain images used by the HUD and as reference for the 3D models) with Retro Diffusion, or when touching the image pipeline in tools/art. Covers cost rules, prompts that worked, the magenta team-color key and how images reach the HUD. 3D models are the ashfox skill.
 ---
 
 # Graficos con Retro Diffusion
@@ -49,8 +49,7 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
 
 - Unidades: `units32/<Nombre>.png` → `public/assets/img/u/{b,i,r}_<Nombre>.png` (r mira a la izquierda).
 - Edificios: `buildings32/<Nombre>.png` → `flat/bld_{b,r,n}_<Nombre>.png` (la Base sin neutral).
-- Interfaz (`ui/`, lo compila `tools/art/rd_ui.py` a `public/assets/img/ui/`): retratos de general
-  `gen_<id>.png` 48x48 (magenta → `gen_b_`/`gen_r_`), habilidades `ab_<id>.png` 16x16, clima
+- Interfaz (`ui/`, lo compila `tools/art/rd_ui.py` a `public/assets/img/ui/`): clima
   `wx_<id>.png` 16x16, `zona.png` 16x16 y `flag.png` 16x24 (magenta → `_b`/`_r`/`_i`). Si falta uno,
   el juego usa lo de antes (inicial, SVG del clima, banderin por codigo).
 - **Fondo:** el quitafondos de RD (`remove_bg`) se come lo fino o blanco (gotas, copos, rayos, cajas

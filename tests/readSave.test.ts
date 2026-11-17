@@ -88,15 +88,13 @@ describe('readSave: los contadores rotos se arreglan', () => {
     expect(withCounters('Infinity').read).toEqual({ ok: false, error: 'notJson' });
   });
 
-  it('los equipos: comprobar solo mira; limpiar arregla el general y las estadisticas rotas', () => {
+  it('los equipos: comprobar solo mira; limpiar arregla las estadisticas rotas', () => {
     const saved = JSON.parse(serialize(blankState())) as { teams: Record<string, unknown>[] };
-    saved.teams[0]!.general = { id: 'ya-no-existe' };
     saved.teams[0]!.stats = 'rotas';
     const before = structuredClone(saved.teams);
     expect(hasValidTeams(saved.teams)).toBe(true);
     expect(saved.teams).toEqual(before);
-    cleanTeams(defaultContent(), saved.teams);
-    expect(saved.teams[0]!.general).toBeNull();
+    cleanTeams(saved.teams);
     expect(saved.teams[0]!.stats).not.toBe('rotas');
     expect(hasValidTeams([saved.teams[0]])).toBe(false);
     expect(hasValidTeams([saved.teams[0], { ...saved.teams[1], alliance: saved.teams[0]!.alliance }])).toBe(false);

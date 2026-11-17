@@ -99,8 +99,8 @@ export interface VictoryRule {
 }
 
 /**
- * Solo queda en pie una alianza: gana. Si caen las ultimas a la vez (se puede: un poder del general,
- * capturas en el mismo turno), empate. [CAMBIO] En 2013 perdia el jugador.
+ * Solo queda en pie una alianza: gana. Si caen las ultimas a la vez (se puede: capturas en el mismo
+ * turno), empate. [CAMBIO] En 2013 perdia el jugador.
  */
 function lastAllianceStanding(s: GameState): MatchResult | null {
   const standing = oneTeamPerAlliance(s, standingTeams(s));

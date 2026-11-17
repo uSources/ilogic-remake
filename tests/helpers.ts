@@ -64,13 +64,6 @@ export function fight(s: GameState, attacker: Unit, defender: Unit, dice: Dice):
   return uncheckedAttack(s, attacker, defender, dice);
 }
 
-/** El equipo usa un poder de su general por dispatch: el suceso, o null si no se puede. */
-export function usePower(s: GameState, team: TeamId, power: string, target: Pos | null = null): GameEventOf<'power'> | null {
-  const result = dispatch(s, team, { kind: 'usePower', power, target });
-  const event = result.ok ? result.events[0] : undefined;
-  return event?.kind === 'power' ? event : null;
-}
-
 /** Acaba la ronda y da su resumen (el que enseña la escena: lo cobrado, pagado, curado...). */
 export const endRoundReport = (s: GameState): RoundReport => roundReport(s, endRound(s));
 
