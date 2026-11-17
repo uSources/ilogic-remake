@@ -511,7 +511,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
 - **Un perfil que se le da**: como juega una IA es su `AiProfile` (`weights` de ai.json,
   `scoreTerms`, `behaviours` y su turno entero, `turn`: el del juego, `aiTurn`), que recibe su controlador (`aiController(perfil?)`; sin el, el del
   contenido de la partida: `defaultAiProfile`). Nada de la IA lee pesos de un sitio comun: dos IAs
-  con otros perfiles juegan a la vez (la arena). Las ordenes de la partida usan
+  con otros perfiles juegan a la vez. Las ordenes de la partida usan
   `autopilotProfileOf(contenido)`.
 - **Su azar, de la partida**: `decisionRngOf(vista)` (ver "El azar"): el mismo turno decide igual
   al cargar, al repetir o por la red.
@@ -570,7 +570,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   - un comportamiento de IA nuevo (un papel de unidad) es una entrada `{ id, when, run }` en
     `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`, los del perfil por defecto), en su sitio de la lista; `run`
     es un plan que devuelve si ha usado la unidad y suele llamar a un paso de `ai/tactics.ts`. Para
-    probarlo antes, un perfil con la lista nueva en la arena (`--candidate`);
+    probarlo antes, medirlo con `npm run balance`;
   - una razon nueva para preferir o evitar un ataque es un termino en `ATTACK_SCORE_TERMS`
     (`autopilot/scoring.ts`, los del perfil); una forma de pelear, un preset de `EngagementPolicy`
     (`autopilot/engagement.ts`); un tipo de orden permanente, su linea en `StandingOrderKinds`
@@ -586,14 +586,6 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
     (autopilot/, que usa las reglas) y cada capa tiene su entrada por tipo, sin ciclos; las une el
     compilador, no una lista que haya que acordarse de tocar;
   - algo mas que un equipo no sabe de la partida, una entrada en `FOG` (`playerView.ts`).
-- La arena (`npm run arena`) enfrenta dos perfiles de IA (`AiProfile`, ver "La IA"): cada uno se le da a
-  su controlador, asi que juegan a la vez sin copiar codigo ni cambiar nada global. La referencia es la
-  IA del juego con los pesos guardados en `improve/ai-baseline.json` (`--snapshot` guarda los de
-  ai.json). Un cambio de codigo de la IA (comportamientos, razones de ataque o el turno entero, el
-  `turn` del perfil) se prueba como perfil antes de ponerlo en src/core: un fichero de
-  `tools/improve/candidates/` (`--candidate`; `--rival` para enfrentarlo a otro).
-  `tests/arenaSnapshot.test.ts` comprueba que los pesos guardados son justo los que lee la IA y que
-  las dos juegan una partida corta.
 
 ### Modulos de reglas (`core/ruleModules/`)
 
@@ -711,7 +703,7 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
 
 ### Herramientas
 
-`tools/` (equilibrio, automejora, partida por texto, contenido) solo usa el nucleo, importado por su
+`tools/` (equilibrio, partida por texto, contenido) solo usa el nucleo, importado por su
 alias: `import { createMatch } from '@core/defaultGames'` (definido en `tsconfig.json` "paths" y en
 `vite.config.ts`; `tsx` lo entiende solo). ESLint prohibe que `tools/` importe nada mas de `src/`
 (vista 3D, interfaz, ajustes) o three.js/Preact, y que los tests importen el nucleo por ruta relativa.

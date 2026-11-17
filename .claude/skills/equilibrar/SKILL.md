@@ -5,7 +5,7 @@ description: Use when tuning game balance in Ilogic (prices, damage, terrain, in
 
 # Equilibrar el juego
 
-Herramienta: `npm run balance` (docs en `balance/README.md` y `docs/BALANCE.md`). Juega cientos de
+Herramienta: `npm run balance` (docs en `balance/README.md`). Juega cientos de
 partidas IA contra IA con las reglas reales.
 
 ```bash
@@ -28,7 +28,7 @@ Al aplicar un cambio:
    `ai.json`. Para probar sin tocar ficheros, una variante (`--set UNIT.cost.Tank=9500`,
    `HIT_CHANCE.Soldier.Tank=0.2`, `MOVE_COST.vehicle.Woods=3`, `AI.killBonus=60`) o `balance/variants/`.
 2. `npx vitest run -u tests/aiGolden.test.ts` (cambian las partidas de referencia, es lo esperado).
-3. Guardar el informe que lo justifica en `balance/reports/` y apuntarlo en `docs/BALANCE.md`.
+3. Guardar el informe que lo justifica en `balance/reports/`.
 4. Si cambia algo que el jugador nota, al CHANGELOG.
 
 Para mirar una partida concreta paso a paso: `npm run play -- --seed N -e "ai; ai; ai; map; status"`.
