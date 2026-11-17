@@ -1,6 +1,6 @@
 /**
  * Que hay sobre el tablero y como se ve para quien mira (`viewer`): que unidades se ven (niebla), de
- * que lado es cada pieza, cuales ya han jugado, su vida y como va cada captura. Solo decide (puro, sin
+ * que lado es cada pieza, cuales ya han jugado, su vida y como va cada captura (sus chapas). Solo decide (puro, sin
  * three.js); el motor (engine/pieces/boardView.ts) pone, mueve y quita los objetos para que se vea asi.
  */
 import type { MovementMotion } from '../../../core/content';
@@ -34,15 +34,19 @@ export interface UnitLook {
   readonly isVisible: boolean;
   /** Es de quien mira y ya ha hecho todo este turno: se ve oscurecida, se lee de un vistazo cual queda. */
   readonly isSpent: boolean;
-  /** Lo que le queda de vida (de 0 a 1) si esta herida; null si esta entera (sin barra). */
+  /** Lo que le queda de vida (de 0 a 1) si esta herida (el color de su chapa); null si esta entera. */
   readonly lifeLeft: number | null;
+  /** El numero de su chapa de vida (redondeado hacia arriba: viva, nunca 0) si esta herida; null si esta entera. */
+  readonly lifeShown: number | null;
   /** La letra de su orden permanente (solo las de quien mira; null sin orden). */
   readonly orderLetter: string | null;
 }
 
-/** Una captura a medias que se ve: lo que le queda (de 0 a 1) y de que lado es quien captura. */
+/** Una captura a medias que se ve: lo que le queda (de 0 a 1 y en puntos) y de que lado es quien captura. */
 export interface CaptureLook {
   readonly left: number;
+  /** Los puntos que le faltan (la chapa del edificio). */
+  readonly points: number;
   readonly side: OwnerSide;
 }
 
@@ -85,6 +89,7 @@ function unitLook(s: GameState, viewer: TeamId, seen: Grid<boolean>, unit: Unit)
     isVisible: isShownTo(viewer, unit, (pos) => seen.at(pos)),
     isSpent: unit.team === viewer && unit.turnState === 'done',
     lifeLeft: unit.life < MAX_LIFE ? unit.life / MAX_LIFE : null,
+    lifeShown: unit.life < MAX_LIFE ? Math.ceil(unit.life) : null,
     orderLetter: unit.team === viewer ? orderLetterOf(s, unit) : null,
   };
 }
@@ -115,7 +120,8 @@ function shownOwner(s: GameState, viewer: TeamId, seen: Grid<boolean>, building:
 function captureLook(s: GameState, viewer: TeamId, building: Building): CaptureLook | null {
   const capture = captureProgress(s, building);
   if (!capture) return null;
-  return { left: capture.left / capturePointsOf(s, building), side: sideOf(s, viewer, capture.team) };
+  const side = sideOf(s, viewer, capture.team);
+  return { left: capture.left / capturePointsOf(s, building), points: Math.ceil(capture.left), side };
 }
 
 /** El humo de las heridas de una unidad: gris de la mitad para abajo, negro de un cuarto para abajo. */

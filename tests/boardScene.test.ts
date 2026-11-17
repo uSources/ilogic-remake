@@ -35,12 +35,15 @@ describe('las unidades del tablero', () => {
     expect(lookOf(s, carried.uid)).toBeUndefined();
   });
 
-  it('la barra de vida solo si esta herida', () => {
+  it('la chapa de vida solo si esta herida, con su numero (nunca 0 mientras viva)', () => {
     const s = blankState({ fog: false });
     const soldier = newUnit(s, SOLDIER, PLAYER, { x: 2, y: 2 });
-    expect(lookOf(s, soldier.uid)?.lifeLeft).toBeNull();
+    expect(lookOf(s, soldier.uid)).toMatchObject({ lifeLeft: null, lifeShown: null });
     soldier.life = 40;
     expect(lookOf(s, soldier.uid)?.lifeLeft).toBeCloseTo(0.4);
+    expect(lookOf(s, soldier.uid)?.lifeShown).toBe(40);
+    soldier.life = 0.3;
+    expect(lookOf(s, soldier.uid)?.lifeShown).toBe(1);
   });
 
   it('la propia que ya ha hecho todo se ve oscurecida; la enemiga, nunca', () => {
@@ -85,6 +88,8 @@ describe('los edificios del tablero', () => {
     expect(city?.capture?.side).toBe('own');
     expect(city?.capture?.left).toBeGreaterThan(0);
     expect(city?.capture?.left).toBeLessThan(1);
+    const points = s.buildings.find((building) => building.x === 5 && building.y === 5)?.capture?.left;
+    expect(city?.capture?.points).toBe(Math.ceil(points ?? -1));
   });
 });
 

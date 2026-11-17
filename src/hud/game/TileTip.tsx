@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'preact/hooks';
-import { t } from '../../settings';
-import { stars } from '../common/format';
 import { Icon } from '../common/Icon';
 import { useAltHeld } from '../common/useAltHeld';
 import { Popover } from '../common/Popover';
@@ -11,8 +9,6 @@ import { TerrainCard, UnitCard } from './Cards';
 
 /** Lo que tarda en salir la ficha al parar el raton sobre una casilla: de paso, no estorba. */
 const TIP_DELAY_MS = 400;
-/** La defensa del terreno en estrellas: una por cada 10 %. */
-const DEFENSE_PER_STAR = 10;
 
 /** Sale al cabo de TIP_DELAY_MS desde que se monta (la casilla cambia: se vuelve a montar). */
 function useDelayed(ms: number): boolean {
@@ -24,26 +20,21 @@ function useDelayed(ms: number): boolean {
   return isReady;
 }
 
-/** Lo justo: la unidad (nombre y vida) y el terreno o edificio con su defensa. */
+/**
+ * Lo justo: la unidad (nombre y vida) o, sin unidad, el nombre del edificio o del terreno. La defensa
+ * ya se ve en el tablero (las estrellas sobre la casilla) y lo demas, con Alt.
+ */
 function TipSummary({ tile }: { tile: TileVM }) {
   const { unit, building, terrain } = tile;
+  if (!unit) return <div class="tt-row tt-ground">{building ? building.name : terrain.name}</div>;
   return (
-    <>
-      {unit && (
-        <div class="tt-row">
-          <Icon k={unit.icon} alt="" cls="px-icon tt-icon" />
-          <b class="tt-name">{unit.name}</b>
-          <span class="tt-life num" style={{ color: sidePaint(unit.side, 'text') }}>
-            {Math.max(0, Math.round(unit.life))}
-          </span>
-        </div>
-      )}
-      <div class="tt-row tt-ground">
-        <span>{building ? building.name : terrain.name}</span>
-        {terrain.defense > 0 && <span class="tt-stars">{stars(Math.round(terrain.defense / DEFENSE_PER_STAR))}</span>}
-      </div>
-      <div class="tt-more">{t('tipMore')}</div>
-    </>
+    <div class="tt-row">
+      <Icon k={unit.icon} alt="" cls="px-icon tt-icon" />
+      <b class="tt-name">{unit.name}</b>
+      <span class="tt-life num" style={{ color: sidePaint(unit.side, 'text') }}>
+        {Math.max(0, Math.round(unit.life))}
+      </span>
+    </div>
   );
 }
 

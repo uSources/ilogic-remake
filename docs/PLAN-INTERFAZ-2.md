@@ -120,7 +120,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
   - Esto lo decide `systems/board` (`UnitLook`) y lo dibuja `engine/pieces/badges.ts`.
 - Una pieza `Badge` en `src/hud/common/toy.tsx`, junto a `Pill` y `Chip`, sirve para todas las chapas.
 
-### Fase 3. Casilla y unidad sin tarjeta
+### Fase 3. Casilla y unidad sin tarjeta (hecha)
 - **Defensa**: al señalar una casilla, salen sobre ella sus estrellas como bloquecitos amarillos
   (pieza del motor, como la letra de la orden en `badges.ts`).
 - **Ficha de la casilla** (`TileTip.tsx`): se queda solo con el nombre y la vida de la unidad. La

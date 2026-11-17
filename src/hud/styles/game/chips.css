@@ -185,14 +185,6 @@
   justify-content: space-between;
   font-size: 14px;
 }
-.tt-stars {
-  color: var(--gold);
-  letter-spacing: 1px;
-}
-.tt-more {
-  font-size: 11px;
-  color: var(--muted);
-}
 .px.tile-tip.detailed {
   padding: 6px;
 }

@@ -1,12 +1,12 @@
 /**
  * Las piezas 3D del tablero (unidades y edificios), tal como dice systems/board/boardScene.ts que se
  * ven: `sync` pone las que faltan, quita las que ya no estan, deja cada una en su casilla y pone sus
- * marcas (vida, captura; y lo que perderia el enemigo al que se apunta, `previewHit`). Aqui no se decide nada de la partida: solo se crean y se mueven objetos (las
+ * marcas (las chapas de vida y de captura; y lo que perderia el enemigo al que se apunta, `previewHit`). Aqui no se decide nada de la partida: solo se crean y se mueven objetos (las
  * animaciones mueven las piezas y despues `sync` las deja donde dice la partida).
  */
 import * as THREE from 'three';
 import type { GameState, Pos, TeamId } from '../../../core/model';
-import { showBar, showLetter, showLoss } from './badges';
+import { showLetter, showLife, showLoss, showNumber } from './badges';
 import type { GlbLibrary } from './glbModels';
 import type { PuffSource } from '../fx/particles';
 import { tileToWorld } from '../core/space';
@@ -36,8 +36,8 @@ export class BoardView {
   private readonly buildings = new Map<string, BuildingPiece>();
   /** El enemigo al que se apunta ahora: su barra enseña lo que perderia (hasta que se deja de apuntar). */
   private hit: HitLook | null = null;
-  /** La barra normal de cada unidad (la del ultimo `sync`), para volver a ella al dejar de apuntar. */
-  private readonly lifeOf = new Map<number, number | null>();
+  /** La chapa de vida de cada unidad (la del ultimo `sync`), para volver a ella al dejar de apuntar. */
+  private readonly unitLooks = new Map<number, UnitLook>();
 
   constructor(
     private readonly s: GameState,
@@ -60,7 +60,7 @@ export class BoardView {
     const ground = this.groundOf(pos);
     for (const piece of this.units.values()) {
       if (piece.object.visible && piece.object.position.distanceTo(ground) < SAME_SPOT)
-        return piece.lifeBar.getWorldPosition(new THREE.Vector3()).add(OVERHEAD_GAP);
+        return piece.lifeBadge.getWorldPosition(new THREE.Vector3()).add(OVERHEAD_GAP);
     }
     return ground.add(EMPTY_OVERHEAD);
   }
@@ -109,11 +109,13 @@ export class BoardView {
     if (look) this.showLife(look.uid);
   }
 
+  /** Su chapa de vida o, si es a quien se apunta, la barra a rayas de lo que perderia. */
   private showLife(uid: number): void {
     const piece = this.units.get(uid);
-    if (!piece) return;
-    if (this.hit?.uid === uid) showLoss(piece.lifeBar, this.hit.lifeLeft, this.hit.lifeAfter);
-    else showBar(piece.lifeBar, this.lifeOf.get(uid) ?? null);
+    const look = this.unitLooks.get(uid);
+    if (!piece || !look) return;
+    if (this.hit?.uid === uid) return showLoss(piece.lifeBadge, this.hit.lifeLeft, this.hit.lifeAfter);
+    showLife(piece.lifeBadge, look.lifeShown, look.lifeLeft ?? 1);
   }
 
   /** Lo que se anima solo, sin sucesos: los rotores y las piezas que aparecen. */
@@ -144,7 +146,7 @@ export class BoardView {
       // Al cambiar de dueño (una captura) el edificio vuelve a crecer con sus colores nuevos.
       if (wasThere) startPopping(piece);
     }
-    showBar(piece.captureBar, look.capture?.left ?? null, look.capture ? CAPTURE_COLOR[look.capture.side] : undefined);
+    showNumber(piece.captureBadge, look.capture?.points ?? null, look.capture ? CAPTURE_COLOR[look.capture.side] : '');
   }
 
   private addBuilding(look: BuildingLook): BuildingPiece {
@@ -170,7 +172,7 @@ export class BoardView {
     piece.object.position.copy(this.groundOf(look.pos));
     piece.object.visible = look.isVisible;
     tint(piece.object, look.isSpent ? SPENT_TINT : 1);
-    this.lifeOf.set(look.uid, look.lifeLeft);
+    this.unitLooks.set(look.uid, look);
     this.showLife(look.uid);
     showLetter(piece.orderBadge, look.orderLetter);
   }
@@ -185,7 +187,7 @@ export class BoardView {
   private removeUnit(uid: number, piece: UnitPiece): void {
     this.object.remove(piece.object);
     this.units.delete(uid);
-    this.lifeOf.delete(uid);
+    this.unitLooks.delete(uid);
   }
 }
 

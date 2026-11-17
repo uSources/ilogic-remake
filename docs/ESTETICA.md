@@ -223,8 +223,20 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   siguiente). Nada de bandejas ni líneas de ayuda: lo demás sale junto a lo que se toca y cuando hace
   falta (fichas, rueda, compra, ficha de la casilla), y lo de vez en cuando va en el menú (ver
   amenaza, ver órdenes) o en la rueda (escuadras).
+- **Sobre el tablero, chapas y bloques** (`docs/PLAN-INTERFAZ-2.md`, fases 2 y 3; probado en el
+  navegador el 17-11-2026):
+  - La vida de una unidad herida es **un número en una chapa** (verde, amarilla o roja según lo que le
+    queda; número blanco con tinta), como en Wargroove. Se probó frente a la barra de antes: el número
+    se lee de lejos y sin contar píxeles, y la barra se confundía con la de la captura. Entera, nada.
+  - La barra queda solo para **lo que perdería** al apuntarle (a rayas), que es una proporción.
+  - La captura a medias, una chapa con **los puntos que le faltan**, del color de quien captura y a la
+    izquierda (encima está la unidad que captura, con su vida en el centro y su orden a la derecha).
+  - La defensa de la casilla señalada, **estrellas de bloque**: cubitos amarillos sombreados como un
+    vóxel, con borde de tinta, en fila al borde de la casilla y botando en ola. La ficha de la casilla
+    ya no las repite.
+  - La previsión de combate, **chapas de plástico** (`Badge`) encima de la barra de vida.
 - Todo sale de las variables de `src/hud/styles/base/base.css` y de las piezas de
-  `src/hud/common/toy.tsx` (`Pill`, `Chip`): un color o una forma nuevos se añaden ahí, no sueltos en
+  `src/hud/common/toy.tsx` (`Pill`, `Chip`, `Badge`): un color o una forma nuevos se añaden ahí, no sueltos en
   un componente.
 
 ## Cielo y fondo

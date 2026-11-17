@@ -43,7 +43,6 @@ export const turn: Translation<typeof es> = {
   intentsOn: 'Hide orders',
   intentsOff: 'Show orders',
   /** La ficha de la casilla: con Alt, la tarjeta entera. */
-  tipMore: 'Alt: more',
   undone: 'Move undone',
   nothingToUndo: 'Nothing to undo',
   undoRevealed: 'It spotted enemies: it can no longer go back',
