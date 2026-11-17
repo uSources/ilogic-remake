@@ -1,8 +1,7 @@
 /**
  * La pieza 3D de un edificio: su modelo GLB (Ashfox) si lo tiene, si no el de bloques, pintado del lado
  * del que se ve, con la barra de captura encima. Con una unidad encima deja sitio: encoge y se va a la
- * esquina de atras de su casilla (la que esta mas lejos de la camara), para que la unidad no lo atraviese
- * y se vea delante.
+ * esquina de atras de su casilla (`sharedTile.ts`), para que la unidad, delante, no lo atraviese.
  */
 import * as THREE from 'three';
 import type { OwnerSide } from '../../../ui/sides';
@@ -11,17 +10,16 @@ import { buildModel } from './blocks';
 import type { GlbLibrary, GlbUnit } from './glbModels';
 import { buildingModelOf } from './models';
 import type { BuildingLook } from '../../systems/board/boardScene';
+import { backCornerOf, settlingShare } from './sharedTile';
 import { SIDE_PAINT } from './sidePaint';
 
 const BADGE_HEIGHT = 1.0;
 /** Donde sale el humo de la chimenea de cada edificio que la tiene (id de buildings.json), en el modelo de Ashfox (1/16 de casilla). */
 const CHIMNEYS: Readonly<Record<string, THREE.Vector3>> = { Factory: new THREE.Vector3(5, 13, 5).divideScalar(16) };
 /** Su tamaño con una unidad encima (por uno). */
-const ROOM_MAKING_SIZE = 0.7;
+const ROOM_MAKING_SIZE = 0.8;
 /** Lo que se aparta hacia cada lado de la esquina de atras (en casillas): con su tamaño, sigue dentro de la casilla. */
-const ROOM_MAKING_SHIFT = 0.2;
-/** Lo rapido que encoge y se aparta (o vuelve) al llegar o irse una unidad (por segundo; mas, mas rapido). */
-const ROOM_MAKING_RATE = 8;
+const ROOM_MAKING_SHIFT = 0.14;
 /** Donde va el modelo en este fotograma (se reutiliza: nada nuevo en cada fotograma). */
 const roomShift = new THREE.Vector3();
 
@@ -58,21 +56,12 @@ export function newBuildingPiece(look: BuildingLook, ground: THREE.Vector3, glbM
  * unidad encima. `cameraForward`: hacia donde mira la camara; la esquina de atras es la de ese lado.
  */
 export function makeRoom(piece: BuildingPiece, cameraForward: THREE.Vector3, seconds: number): void {
-  const share = 1 - Math.exp(-ROOM_MAKING_RATE * seconds);
+  const share = settlingShare(seconds);
   const size = piece.isOccupied ? ROOM_MAKING_SIZE : 1;
-  if (piece.isOccupied) backCorner(cameraForward, roomShift).multiplyScalar(ROOM_MAKING_SHIFT);
+  if (piece.isOccupied) backCornerOf(cameraForward, roomShift).multiplyScalar(ROOM_MAKING_SHIFT);
   else roomShift.set(0, 0, 0);
   piece.model.scale.setScalar(THREE.MathUtils.lerp(piece.model.scale.x, size, share));
   piece.model.position.lerp(roomShift, share);
-}
-
-/**
- * La esquina de la casilla que queda detras mirando hacia `cameraForward` (x y z de -1 o 1), en
- * `target`. Va por esquinas y no siguiendo a la camara: si no, los edificios ocupados se moverian al
- * desplazarla.
- */
-function backCorner(cameraForward: THREE.Vector3, target: THREE.Vector3): THREE.Vector3 {
-  return target.set(cameraForward.x >= 0 ? 1 : -1, 0, cameraForward.z >= 0 ? 1 : -1);
 }
 
 /** Donde sale ahora el humo de su chimenea (null si no tiene). */

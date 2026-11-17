@@ -108,7 +108,7 @@ Lista completa de pasos (IA, equilibrio, tests de referencia, notas de parche): 
 | `repairedAt` | Edificios propios que la curan al empezar la ronda |
 | `heals` | Vida que cura a cada unidad propia de al lado con la orden "Reparar" (Suministros: `{ "Tank": 20, ... }`) |
 | `classicSprite` | Graficos de 2013: prefijo de imagen segun el terreno |
-| `modelSize` | Tamaño de su modelo 3D en el tablero, por uno (si no esta, 1): la infanteria 0,6, los tanques 0,9... (`docs/ESTETICA.md`, "Tamaños en el tablero") |
+| `modelSize` | Tamaño de su modelo 3D en el tablero, por uno (si no esta, 1): la infanteria 0,42, los tanques 0,62... (`docs/ESTETICA.md`, "Tamaños en el tablero") |
 | `abilities` | Habilidades pasivas (regla `abilities`), ver abajo |
 | `ai.support` | No combate: la IA tiene como mucho una |
 | `notes` | Comentario libre |

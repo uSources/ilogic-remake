@@ -11,7 +11,7 @@
       "command": 1,
       "move": 3,
       "vision": 4,
-      "modelSize": 0.6,
+      "modelSize": 0.42,
       "movement": "foot",
       "captures": true,
       "attack": {
@@ -56,7 +56,7 @@
       "command": 4,
       "move": 5,
       "vision": 6,
-      "modelSize": 0.9,
+      "modelSize": 0.62,
       "movement": "vehicle",
       "captures": false,
       "attack": {
@@ -100,7 +100,7 @@
       "command": 3,
       "move": 4,
       "vision": 6,
-      "modelSize": 0.95,
+      "modelSize": 0.65,
       "movement": "vehicle",
       "captures": false,
       "attack": {
@@ -144,7 +144,7 @@
       "command": 2,
       "move": 7,
       "vision": 7,
-      "modelSize": 0.75,
+      "modelSize": 0.5,
       "movement": "vehicle",
       "captures": false,
       "attack": {
@@ -193,7 +193,7 @@
       "command": 3,
       "move": 6,
       "vision": 6,
-      "modelSize": 0.8,
+      "modelSize": 0.55,
       "movement": "vehicle",
       "captures": false,
       "attack": {
@@ -237,7 +237,7 @@
       "command": 2,
       "move": 2,
       "vision": 0,
-      "modelSize": 1,
+      "modelSize": 0.65,
       "movement": "vehicle",
       "captures": false,
       "attack": null,
@@ -270,7 +270,7 @@
       "command": 1,
       "move": 3,
       "vision": 4,
-      "modelSize": 0.6,
+      "modelSize": 0.42,
       "movement": "foot",
       "captures": true,
       "attack": {
@@ -315,7 +315,7 @@
       "command": 2,
       "move": 6,
       "vision": 6,
-      "modelSize": 0.8,
+      "modelSize": 0.55,
       "movement": "vehicle",
       "captures": false,
       "attack": null,
@@ -346,7 +346,7 @@
       "command": 1,
       "move": 3,
       "vision": 4,
-      "modelSize": 0.6,
+      "modelSize": 0.42,
       "movement": "foot",
       "captures": true,
       "attack": {
@@ -397,7 +397,7 @@
       "command": 4,
       "move": 3,
       "vision": 4,
-      "modelSize": 0.8,
+      "modelSize": 0.55,
       "movement": "vehicle",
       "captures": false,
       "attack": {
@@ -441,7 +441,7 @@
       "command": 4,
       "move": 10,
       "vision": 10,
-      "modelSize": 0.85,
+      "modelSize": 0.6,
       "movement": "air",
       "captures": false,
       "attack": {
@@ -483,7 +483,7 @@
       "command": 5,
       "move": 9,
       "vision": 10,
-      "modelSize": 0.9,
+      "modelSize": 0.62,
       "movement": "air",
       "captures": false,
       "attack": {
@@ -510,7 +510,7 @@
       "command": 4,
       "move": 7,
       "vision": 8,
-      "modelSize": 1,
+      "modelSize": 0.72,
       "movement": "air",
       "captures": false,
       "attack": {
@@ -548,7 +548,7 @@
       "command": 2,
       "move": 5,
       "vision": 6,
-      "modelSize": 0.8,
+      "modelSize": 0.55,
       "movement": "vehicle",
       "captures": false,
       "attack": null,
@@ -600,7 +600,7 @@
       "command": 3,
       "move": 6,
       "vision": 7,
-      "modelSize": 0.9,
+      "modelSize": 0.62,
       "movement": "vehicle",
       "captures": false,
       "attack": {
@@ -633,7 +633,7 @@
       "command": 3,
       "move": 7,
       "vision": 7,
-      "modelSize": 0.9,
+      "modelSize": 0.62,
       "movement": "air",
       "captures": false,
       "attack": null,
@@ -658,7 +658,7 @@
       "command": 1,
       "move": 3,
       "vision": 4,
-      "modelSize": 0.6,
+      "modelSize": 0.42,
       "movement": "foot",
       "captures": true,
       "attack": {
@@ -709,7 +709,7 @@
       "command": 2,
       "move": 5,
       "vision": 6,
-      "modelSize": 0.6,
+      "modelSize": 0.45,
       "movement": "vehicle",
       "captures": true,
       "attack": {
@@ -759,7 +759,7 @@
       "command": 4,
       "move": 6,
       "vision": 6,
-      "modelSize": 0.8,
+      "modelSize": 0.55,
       "movement": "amphibious",
       "captures": false,
       "attack": {

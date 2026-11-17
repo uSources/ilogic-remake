@@ -159,20 +159,25 @@ cada unidad (`modelSize` en `units.json`, por uno):
 
 | Clase | Tamaño | Unidades |
 |---|---|---|
-| Infantería | 0,6 | soldado, bazuca, mortero, antidisturbios, moto |
-| Vehículos ligeros | 0,75–0,8 | jeep, transporte, suministros, lanzamisiles, tanque ligero, anfibio |
-| Tanques | 0,9 | tanque, antiaéreo |
-| Pesados | 0,95–1 | artillería, bloqueador |
-| Aviones | 0,85–1 | caza ligero, caza, helicóptero; el bombardero, el más grande |
+| Infantería | 0,42 (moto 0,45) | soldado, bazuca, mortero, antidisturbios, moto |
+| Vehículos ligeros | 0,5–0,55 | jeep, transporte, suministros, lanzamisiles, tanque ligero, anfibio |
+| Tanques | 0,62 | tanque, antiaéreo |
+| Pesados | 0,65 | artillería, bloqueador |
+| Aviones | 0,6–0,72 | caza ligero, caza, helicóptero; el bombardero, el más grande |
 
 Una unidad nueva entra en la clase que le toca. La regla de fondo: que el tamaño diga lo que pesa la
-unidad, con la infantería claramente la más pequeña.
+unidad, con la infantería claramente la más pequeña, y que **todas queden más bajas que los
+edificios** (como en Advance Wars): así, con una unidad encima, el edificio asoma por detrás.
+Se probó antes con la infantería a 0,6 y los tanques a 0,9 (un tanque tapaba la fábrica de debajo)
+y luego a 0,5 y 0,75 (aún descompensadas al lado de los edificios). Referencia: en Advance Wars
+(también en Re-Boot Camp) y Wargroove las unidades quedan claramente por debajo de los edificios.
 
-**Una unidad encima de un edificio** no lo atraviesa: el edificio encoge (0,7) y se aparta a la
-esquina de atrás de la casilla, la más lejos de la cámara, y la unidad queda delante
-(`makeRoom` en `src/view3d/engine/pieces/buildingPiece.ts`). Va por esquinas y no siguiendo a la
-cámara para que no se muevan al desplazarla; solo cambian de esquina al girarla. Si la unidad está
-en la niebla, el edificio no se mueve (no la delata).
+**Una unidad encima de un edificio**: cada uno se va a una esquina de la casilla, la unidad a la de
+delante (la más cerca de la cámara) y el edificio, encogido a 0,8, a la de atrás
+(`src/view3d/engine/pieces/sharedTile.ts`). Así no se atraviesan y se ven los dos. Va por esquinas y
+no siguiendo a la cámara para que no se muevan al desplazarla; solo cambian de esquina al girarla.
+Si la unidad está en la niebla, el edificio no se mueve (no la delata). Se probó y no gustó: solo
+encoger el edificio (la unidad lo tapaba) y hacerlo semitransparente (un borrón).
 
 ## Edificios
 

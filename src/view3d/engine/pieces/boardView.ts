@@ -16,7 +16,7 @@ import { chimneyOf, makeRoom, newBuildingPiece, type BuildingPiece } from './bui
 import { growIn, startPopping } from './growIn';
 import { CAPTURE_COLOR } from './sidePaint';
 import { tint } from './tint';
-import { newUnitPiece, ROTOR_SPEED, type UnitPiece } from './unitPiece';
+import { newUnitPiece, ROTOR_SPEED, stepAside, type UnitPiece } from './unitPiece';
 
 /** Lo que se oscurece una unidad propia que ya ha hecho todo (tanto por uno de su color). */
 const SPENT_TINT = 0.5;
@@ -80,13 +80,14 @@ export class BoardView {
   }
 
   /**
-   * Lo que se anima solo, sin sucesos: los rotores, las piezas que aparecen y los edificios que dejan
-   * sitio a la unidad de encima (hacia el fondo de lo que mira la camara: `cameraForward`).
+   * Lo que se anima solo, sin sucesos: los rotores, las piezas que aparecen y las unidades y edificios
+   * que comparten casilla, cada uno a su esquina segun hacia donde mira la camara (`cameraForward`).
    */
   update(seconds: number, cameraForward: THREE.Vector3): void {
     for (const piece of this.units.values()) {
       if (piece.rotor) piece.rotor.rotation.y += ROTOR_SPEED * seconds;
       piece.glb?.update(seconds);
+      stepAside(piece, cameraForward, seconds);
       if (piece.popping !== null) growIn(piece, seconds);
     }
     for (const piece of this.buildings.values()) {
@@ -137,6 +138,7 @@ export class BoardView {
     const piece = this.units.get(look.uid) ?? this.addUnit(look);
     piece.object.position.copy(this.groundOf(look.pos));
     piece.object.visible = look.isVisible;
+    piece.standsOnBuilding = look.standsOnBuilding;
     tint(piece.object, look.isSpent ? SPENT_TINT : 1);
     showBar(piece.lifeBar, look.lifeLeft);
     showLetter(piece.orderBadge, look.orderLetter);

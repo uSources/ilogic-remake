@@ -11,6 +11,7 @@ import type { GlbLibrary, GlbUnit } from './glbModels';
 import { unitModelOf } from './models';
 import type { UnitLook } from '../../systems/board/boardScene';
 import { startPopping } from './growIn';
+import { backCornerOf, settlingShare } from './sharedTile';
 import { SIDE_PAINT } from './sidePaint';
 
 /** Altura de la barra de vida sobre el suelo de un modelo de bloques (por encima de el y de su vuelo). */
@@ -35,9 +36,18 @@ export interface UnitPiece {
   readonly glb: GlbUnit | null;
   /** Como se mueve (movements.json, "motion"): que huella deja y si levanta polvo. */
   readonly motion: MovementMotion;
+  /** Esta encima de un edificio: se pone en la esquina de delante de la casilla (`sharedTile.ts`). */
+  standsOnBuilding: boolean;
   /** Segundos que lleva apareciendo (null: ya esta). */
   popping: number | null;
 }
+
+/** Lo que se aparta hacia cada lado de la esquina de delante, encima de un edificio (en casillas). */
+const STEP_ASIDE_SHIFT = 0.22;
+/** Donde va este fotograma, en el mundo y en la pieza (se reutilizan: nada nuevo en cada fotograma). */
+const asideInWorld = new THREE.Vector3();
+const asideInPiece = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
 
 interface UnitModel {
   object: THREE.Group;
@@ -77,8 +87,30 @@ export function newUnitPiece(look: UnitLook, glbModels: GlbLibrary): UnitPiece {
     orderBadge,
     glb,
     motion: look.motion,
+    standsOnBuilding: look.standsOnBuilding,
     popping: null,
   };
   startPopping(piece);
   return piece;
+}
+
+/**
+ * Un fotograma mas apartandose (o volviendo al centro): encima de un edificio, hacia la esquina de
+ * delante de la casilla segun `cameraForward`. Se mueven el cuerpo y sus marcas, no la pieza, que es la
+ * que llevan las animaciones; y en la pieza, que puede estar girada, la esquina se pasa a su giro.
+ */
+export function stepAside(piece: UnitPiece, cameraForward: THREE.Vector3, seconds: number): void {
+  if (piece.standsOnBuilding) backCornerOf(cameraForward, asideInWorld).multiplyScalar(-STEP_ASIDE_SHIFT);
+  else asideInWorld.set(0, 0, 0);
+  asideInPiece.copy(asideInWorld).applyAxisAngle(UP, -piece.object.rotation.y);
+  const share = settlingShare(seconds);
+  settleToward(piece.body, share);
+  settleToward(piece.lifeBar, share);
+  settleToward(piece.orderBadge, share);
+}
+
+/** Acerca `part` a `asideInPiece` por el suelo (su altura, la de vuelo o la del salto, no se toca). */
+function settleToward(part: THREE.Object3D, share: number): void {
+  part.position.x = THREE.MathUtils.lerp(part.position.x, asideInPiece.x, share);
+  part.position.z = THREE.MathUtils.lerp(part.position.z, asideInPiece.z, share);
 }

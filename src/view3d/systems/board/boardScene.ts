@@ -1,7 +1,7 @@
 /**
  * Que hay sobre el tablero y como se ve para quien mira (`viewer`): que unidades se ven (niebla), de
- * que lado es cada pieza, cuales ya han jugado, su vida, como va cada captura y que edificios tienen una
- * unidad encima (dejan sitio para que no se atraviesen). Solo decide (puro, sin
+ * que lado es cada pieza, cuales ya han jugado, su vida, como va cada captura y que unidades y edificios
+ * comparten casilla (cada uno se aparta a una esquina para que no se atraviesen). Solo decide (puro, sin
  * three.js); el motor (engine/pieces/boardView.ts) pone, mueve y quita los objetos para que se vea asi.
  */
 import type { MovementMotion } from '../../../core/content';
@@ -10,7 +10,7 @@ import { unitTypeOf } from '../../../core/gameContent';
 import { posKey } from '../../../core/geom';
 import type { Building, GameState, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
 import { gotoDestination, turnEndOrderOf } from '../../../core/squads';
-import { capturePointsOf, captureProgress, isOnMap, isShownTo, visibility } from '../../../core/rules';
+import { buildingAt, capturePointsOf, captureProgress, isOnMap, isShownTo, visibility } from '../../../core/rules';
 import type { Grid } from '../../../core/util/grid';
 import { isFriendly, ownerSideOf, sideOf, type OwnerSide } from '../../../ui/sides';
 import type { PuffKind } from '../../ports/stage';
@@ -32,6 +32,8 @@ export interface UnitLook {
   readonly motion: MovementMotion;
   /** Tamaño de su modelo en el tablero, por uno (units.json, "modelSize"). */
   readonly modelSize: number;
+  /** Esta encima de un edificio: se pone delante y el edificio detras, para que se vean los dos. */
+  readonly standsOnBuilding: boolean;
   readonly pos: Pos;
   /** La niebla no la tapa. */
   readonly isVisible: boolean;
@@ -89,6 +91,7 @@ function unitLook(s: GameState, viewer: TeamId, seen: Grid<boolean>, unit: Unit)
     side: sideOf(s, viewer, unit.team),
     motion: unitTypeOf(s, unit).motion,
     modelSize: unitTypeOf(s, unit).modelSize,
+    standsOnBuilding: buildingAt(s, unit) !== undefined,
     pos: { x: unit.x, y: unit.y },
     isVisible: isShownTo(viewer, unit, (pos) => seen.at(pos)),
     isSpent: unit.team === viewer && unit.turnState === 'done',

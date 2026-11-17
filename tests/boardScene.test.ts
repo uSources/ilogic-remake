@@ -91,6 +91,15 @@ describe('los edificios del tablero', () => {
     expect(cityAt(25)?.isOccupied).toBe(false);
   });
 
+  it('la unidad encima de un edificio lo sabe (se pone delante); la de al lado, no', () => {
+    const s = blankState({ fog: false });
+    s.buildings.push({ type: 'City', owner: null, x: 2, y: 2, capture: null });
+    const onCity = newUnit(s, SOLDIER, PLAYER, { x: 2, y: 2 });
+    const beside = newUnit(s, SOLDIER, PLAYER, { x: 3, y: 2 });
+    expect(lookOf(s, onCity.uid)?.standsOnBuilding).toBe(true);
+    expect(lookOf(s, beside.uid)?.standsOnBuilding).toBe(false);
+  });
+
   it('una captura a medias: lo que le queda, del lado de quien captura', () => {
     const s = blankState({ fog: false });
     s.buildings.push({ type: 'City', owner: null, x: 5, y: 5, capture: null });
