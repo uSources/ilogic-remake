@@ -1,0 +1,33 @@
+{
+  "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4 Max, Unspecified Version)",
+  "scenarios": {
+    "partida": {
+      "loadMs": 767,
+      "fps": 691,
+      "frameP50Ms": 1.7,
+      "frameP95Ms": 2.5,
+      "frameWorstMs": 3.1,
+      "drawCalls": 50,
+      "triangles": 156964,
+      "geometries": 72,
+      "textures": 24
+    },
+    "partida-lluvia": {
+      "loadMs": 561,
+      "fps": 682.1,
+      "frameP50Ms": 1.3,
+      "frameP95Ms": 2.5,
+      "frameWorstMs": 3,
+      "drawCalls": 51,
+      "triangles": 156964,
+      "geometries": 73,
+      "textures": 24
+    }
+  },
+  "assets": {
+    "models": 78,
+    "modelKB": 12560,
+    "biggestModelKB": 369
+  },
+  "measuredAt": "2026-11-17T18:36:25.841Z"
+}

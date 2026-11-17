@@ -78,6 +78,24 @@ se comparan los datos que devuelve o se le dan puertos falsos (`ports/`) que apu
 
 Lo que se ve de verdad (modelos, luz, efectos) se sigue mirando en el navegador.
 
+## Capturas y rendimiento de la vista 3D
+
+La primera vez: `npx playwright install chromium`.
+
+- `npm run shots`: nueve escenas fijas (menu en escritorio y movil; la partida de semilla 2013 en
+  calma, sin elevacion, con una unidad elegida, con lluvia y en movil; dos modelos del playground),
+  comparadas con `tests/visual/ref/`. Informe en `tests/visual/out/index.html` (ahora, referencia y en
+  rojo lo distinto). En la misma maquina cada captura sale igual pixel a pixel: el reloj de la pagina
+  va parado (Playwright) y `Math.random`, que reparte el reposo de las unidades, las particulas y la
+  lluvia, lleva semilla. Asi que cualquier cambio salta. Si es a proposito: `npm run shots:update`.
+  Una escena nueva es una entrada en `SCENES` (`tests/visual/shots.mjs`), con lo que hacer antes de la
+  captura (`act`, sin `await`: con el reloj parado no acabaria) y el tamaño de la ventana.
+- `npm run perf`: la partida 2013 en calma y con lluvia (carga, tiempo por fotograma: mediana, 5 % peor
+  y el peor; llamadas de dibujo, triangulos, geometrias, texturas) y el peso de los modelos, frente a
+  `tools/perf/baseline.json`. Usa la GPU de la maquina y sin el limite de 60 fps, asi que el tiempo es
+  lo que cuesta dibujar. Solo compara con una linea base de la misma GPU. `--save` guarda una nueva;
+  `--check` falla si algo empeora de mas (`LIMITS`: 10 % en lo que se cuenta, 30 % en el tiempo).
+
 ## Antes de tocar...
 
 - **Graficos**: nunca a mano en `public/assets/atlas`; skill `arte-retro-diffusion` (y **no gastar
