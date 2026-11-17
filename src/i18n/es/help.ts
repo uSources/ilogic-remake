@@ -81,9 +81,13 @@ export const help: HelpTexts = {
   colorsTitle: 'Colores del mapa',
   // Los colores y los controles de la vista 3D: solo lo que hace hoy (lo que tenia el 2D y aun falta, en docs/IDEAS.md).
   colors: (_keys: KeyLabels) => [
-    ['#4fc3ff', 'Adonde puede ir la unidad elegida'],
-    ['#ff4d45', 'Objetivos de ataque'],
-    ['#ffd447', 'La casilla señalada'],
+    ['#2e7dff', 'Adonde puede ir la unidad elegida (losas azules con borde claro)'],
+    ['#ff4d45', 'Hasta donde ataca (marco rojo; una diana en los enemigos a tiro)'],
+    [
+      '#d8262a',
+      'Ver amenaza: a donde llegan los enemigos (velo rojo con borde); al señalar una unidad tuya, una flecha roja desde cada enemigo que podría atacarla',
+    ],
+    ['#ffd447', 'La casilla señalada y sus estrellas de defensa (bloques amarillos)'],
   ],
   controlsTitle: 'Controles',
   head: ['Acción', 'Teclado', 'Ratón / táctil'],
@@ -105,6 +109,16 @@ export const help: HelpTexts = {
       'Con la unidad elegida, clic en el objetivo: un enemigo en rojo, un edificio (va y captura), un transporte (sube) o una unidad igual (se une)',
     ],
     [
+      'Previsión de un ataque',
+      'Alt: la tarjeta con todo',
+      'Al pasar por encima del enemigo: una chapa con el daño sobre él (dorada si lo más probable es destruirlo, con calavera y % si puede caer) y otra con el contraataque a los pies de tu unidad; su barra de vida enseña a rayas lo que perdería',
+    ],
+    [
+      'Comprar',
+      '—',
+      'Clic en una fábrica, ciudad o aeropuerto tuyo libre: los retratos salen en abanico y un clic compra. Lo que no puedes pagar sale apagado con lo que falta; la chapa del centro dice cómo se mueve, su alcance y contra qué es buena',
+    ],
+    [
       'Capturar si ya está encima, reparar, desembarcar',
       'Enter (la señalada)',
       'Las fichas junto a la unidad elegida: solo salen si hay algo así que hacer',
@@ -124,7 +138,11 @@ export const help: HelpTexts = {
     ['Mover la cámara', 'Flechas / WASD', 'Arrastrar con el botón central, el ratón en el borde o arrastrar con el dedo'],
     ['Girar la cámara', '—', 'Arrastrar con el botón derecho'],
     ['Zoom', `${keys.zoomIn} / ${keys.zoomOut}`, 'Rueda'],
-    ['Fin del turno', keys.endTurn, 'Botón de arriba'],
+    [
+      'Fin del turno',
+      keys.endTurn,
+      'Botón de abajo a la derecha. Con unidades sin mover, la primera vez saltan para que las veas y pide otra pulsación («¿Terminar?»)',
+    ],
   ],
 
   close: 'Cerrar',

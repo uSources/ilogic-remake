@@ -54,12 +54,20 @@ export function Report({ report }: { report: NonNullable<UIState['report']> }) {
   );
 }
 
-/** Cartel grande de cambio de turno o de dia. */
+/**
+ * El cartel del dia, de tu turno o del final: una banderola de tela de juguete en el color del bando
+ * que cae colgada de su barra, se balancea y se va (docs/PLAN-INTERFAZ-2.md, fase 6). Lleva lo grande
+ * («Día 4»), lo pequeño («Tu turno») y, si el clima ha cambiado, su icono grande.
+ */
 export function Banner({ banner }: { banner: NonNullable<UIState['banner']> }) {
   return (
     <div class={`banner ${banner.tone === 'red' ? 'red' : ''}`} aria-live="polite">
-      <span class="s">{banner.small}</span>
-      <span class="b">{banner.big}</span>
+      <span class="banner-rod" />
+      <div class="banner-cloth">
+        <span class="b">{banner.big}</span>
+        {banner.weather && <WeatherIcon id={banner.weather} cls="px-icon banner-weather" />}
+        <span class="s">{banner.small}</span>
+      </div>
     </div>
   );
 }

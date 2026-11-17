@@ -4,7 +4,7 @@
  */
 import * as THREE from 'three';
 import type { OwnerSide } from '../../../ui/sides';
-import { newBadge } from './badges';
+import { newCaptureBadge } from './badges';
 import { buildModel } from './blocks';
 import type { GlbLibrary, GlbUnit } from './glbModels';
 import { buildingModelOf } from './models';
@@ -17,7 +17,7 @@ const CHIMNEYS: Readonly<Record<string, THREE.Vector3>> = { Factory: new THREE.V
 
 export interface BuildingPiece {
   readonly object: THREE.Group;
-  readonly captureBar: THREE.Sprite;
+  readonly captureBadge: THREE.Sprite;
   /** El lado con el que se pinto: si cambia, se vuelve a construir. */
   readonly side: OwnerSide;
   /** Su modelo de Ashfox (con lo que se mueve: radares, banderas, la bomba del pozo), si lo tiene. */
@@ -33,9 +33,9 @@ export function newBuildingPiece(look: BuildingLook, ground: THREE.Vector3, glbM
   const glb = glbModels.building(look.type, look.side);
   const object = glb?.object ?? buildModel(buildingModelOf(look.type), SIDE_PAINT[look.side]);
   object.position.copy(ground);
-  const captureBar = newBadge(BADGE_HEIGHT);
-  object.add(captureBar);
-  return { object, captureBar, side: look.side, glb, type: look.type, popping: null };
+  const captureBadge = newCaptureBadge(BADGE_HEIGHT);
+  object.add(captureBadge);
+  return { object, captureBadge, side: look.side, glb, type: look.type, popping: null };
 }
 
 /** Donde sale ahora el humo de su chimenea (null si no tiene). */

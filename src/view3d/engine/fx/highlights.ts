@@ -2,13 +2,12 @@
  * Las marcas sobre el tablero, como piezas de juguete que se apoyan en las casillas: a donde puede ir
  * la unidad elegida (losas azules con un borde claro por fuera), hasta donde ataca (un marco rojo en
  * cada casilla), a quien puede atacar (una diana de pixel bajo el enemigo), a donde llegan los
- * enemigos (naranja, con «Ver amenaza»), la casilla señalada (cuatro esquinas que no dejan dudas), el
+ * enemigos (con «Ver amenaza»: un velo rojo con un borde rojo por fuera del area), la casilla señalada (cuatro esquinas que no dejan dudas), el
  * anillo de la unidad elegida y los aros de un grupo. Solo dibujan lo que se les dice (no saben de
  * reglas). Las piezas, en markParts.ts; el contorno, en tileOutline.ts.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
-import type { ThreatMarks } from '../../ports/threat';
 import type { TileMarks } from '../../ports/turn';
 import { bullseyeMesh, cornerCursor, flatMaterial, frameSides, instanced, slabMatrix, stripMatrix, unitBox } from './markParts';
 import { outlineSides } from './tileOutline';
@@ -23,16 +22,15 @@ const REACH_EDGE_COLOR = 0xeaf6ff;
 const ATTACK_COLOR = 0xff4d45;
 /** El relleno de las casillas a tiro: un velo, lo que manda es el marco. */
 const ATTACK_FILL_OPACITY = 0.16;
-const THREAT_COLOR = 0xff8a1f;
-/** La amenaza va debajo de las demas y mas suave: es un fondo, no una eleccion. */
-const THREAT_OPACITY = 0.4;
+/** La amenaza: un rojo mas oscuro que el de atacar; va debajo de las demas y suave (es un fondo, no una eleccion). */
+const THREAT_COLOR = 0xd8262a;
+const THREAT_OPACITY = 0.22;
 const CURSOR_COLOR = 0xffd447;
 /** Las losas son algo menores que la casilla: se ve la cuadricula entre ellas. */
 const SLAB_INSET = 0.92;
 /** El marco rojo, un poco hacia dentro del borde de la casilla. */
 const FRAME_INSET = 0.44;
 const FRAME_LENGTH = 0.88;
-const THREAT_INSET = 0.86;
 /** Un mapa no tiene mas casillas que esto a la vez en el alcance (40 x 40). */
 const MAX_TILES = 1600;
 /** Un grupo elegido, o los enemigos a tiro, no son mas que esto. */
@@ -47,13 +45,14 @@ const BULLSEYE_SIZE = 1.02;
 const UP = new THREE.Vector3(0, 1, 0);
 const FLAT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
 
-export class Highlights implements TileMarks, ThreatMarks {
+export class Highlights implements TileMarks {
   readonly object = new THREE.Group();
   private readonly reach = instanced(unitBox(), flatMaterial(REACH_COLOR, REACH_OPACITY), MAX_TILES);
   private readonly reachEdges = instanced(unitBox(), flatMaterial(REACH_EDGE_COLOR, 1), MAX_TILES);
   private readonly attackFill = instanced(unitBox(), flatMaterial(ATTACK_COLOR, ATTACK_FILL_OPACITY), MAX_TILES);
   private readonly attackFrames = instanced(unitBox(), flatMaterial(ATTACK_COLOR, 1), MAX_TILES * frameSides.length);
-  private readonly threat = instanced(new THREE.PlaneGeometry(1, 1), flatMaterial(THREAT_COLOR, THREAT_OPACITY), MAX_TILES);
+  private readonly threat = instanced(unitBox(), flatMaterial(THREAT_COLOR, THREAT_OPACITY), MAX_TILES);
+  private readonly threatEdges = instanced(unitBox(), flatMaterial(THREAT_COLOR, 1), MAX_TILES);
   private readonly targets = bullseyeMesh(MAX_RINGS);
   private readonly cursor = cornerCursor(CURSOR_COLOR);
   private readonly ring: THREE.Mesh;
@@ -64,7 +63,7 @@ export class Highlights implements TileMarks, ThreatMarks {
   constructor(private readonly groundOf: (pos: Pos) => THREE.Vector3) {
     this.ring = ringMesh();
     this.groupRings = instanced(ringGeometry(), ringMaterial(), MAX_RINGS);
-    this.object.add(this.threat, this.reach, this.reachEdges, this.attackFill, this.attackFrames, this.targets);
+    this.object.add(this.threat, this.threatEdges, this.reach, this.reachEdges, this.attackFill, this.attackFrames, this.targets);
     this.object.add(this.cursor, this.ring, this.groupRings);
   }
 
@@ -111,12 +110,15 @@ export class Highlights implements TileMarks, ThreatMarks {
     );
   }
 
+  /** Un velo rojo en cada casilla amenazada (seguido, sin cuadricula) y un borde rojo por fuera del area. */
   showThreat(tiles: readonly Pos[]): void {
-    const size = new THREE.Vector3(THREAT_INSET, THREAT_INSET, 1);
+    const shown = tiles.slice(0, MAX_TILES);
     place(
       this.threat,
-      tiles.slice(0, MAX_TILES).map((pos) => new THREE.Matrix4().compose(this.lifted(pos), FLAT, size)),
+      shown.map((pos) => slabMatrix(this.lifted(pos), 1, LIFT)),
     );
+    const edges = outlineSides(shown).map(({ pos, side }) => stripMatrix(this.lifted(pos, LIFT * 1.5), side, 0.5, 1));
+    place(this.threatEdges, edges.slice(0, MAX_TILES));
   }
 
   hover(pos: Pos | null): void {

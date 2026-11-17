@@ -25,62 +25,109 @@
     opacity: 0;
   }
 }
-/* Cartel del dia, de tu turno, de victoria o derrota: una ficha grande que entra desde arriba y se va. */
+/* El cartel del dia, de tu turno o del final (overlays/Notices.tsx): una banderola de tela en el color
+   del bando, colgada de una barra de tinta, que cae desde arriba, se balancea y vuelve a subir. */
 .banner {
   position: absolute;
   left: 50%;
-  top: 34%;
-  translate: -50% -50%;
+  /* Cuelga por debajo de la barra de arriba (el dia y el clima siguen a la vista). */
+  top: 76px;
+  translate: -50% 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 14px 36px 16px;
-  background: var(--panel);
+  transform-origin: 50% 0;
+  pointer-events: none;
+  animation: banner 2.2s ease-out forwards;
+}
+.banner-rod {
+  width: 236px;
+  height: 14px;
   border: var(--outline) solid var(--ink);
-  border-radius: 24px;
-  box-shadow:
-    inset 0 -6px 0 var(--lo),
-    0 6px 0 var(--ink);
-  animation: banner 1.6s ease-out forwards;
+  border-radius: 999px;
+  background: #8a5a35;
+  box-shadow: 0 3px 0 var(--ink);
+  z-index: 1;
+}
+.banner-cloth {
+  --cloth: var(--blue-btn);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 196px;
+  margin-top: -4px;
+  padding: 20px 16px 46px;
+  border: var(--outline) solid var(--ink);
+  border-top: none;
+  background: repeating-linear-gradient(90deg, transparent 0 22px, rgba(0, 0, 0, 0.07) 22px 24px), var(--cloth);
+  color: #fff;
+  /* Cola de golondrina: la tela acaba en dos puntas. */
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
+  filter: drop-shadow(0 4px 0 var(--ink));
+}
+.banner.red .banner-cloth {
+  --cloth: var(--red-btn);
+}
+.banner .b {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: 1px;
+  text-shadow: 0 3px 0 var(--ink);
 }
 .banner .s {
   font-family: var(--display);
   font-weight: 600;
-  font-size: 16px;
-  color: var(--muted);
+  font-size: 15px;
   text-transform: uppercase;
   letter-spacing: 1px;
+  opacity: 0.92;
 }
-.banner .b {
-  padding: 4px 22px;
-  border-radius: 999px;
-  background: var(--blue-btn);
-  color: #fff;
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 36px;
-  letter-spacing: 1px;
-}
-.banner.red .b {
-  background: var(--red-btn);
+.banner-weather {
+  width: 56px;
+  height: 56px;
+  margin: 4px 0;
+  padding: 4px;
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
 }
 @keyframes banner {
   0% {
-    opacity: 0;
-    transform: translateY(-24px) scale(0.92);
+    transform: translateY(-160%) rotate(0deg);
   }
-  14% {
-    opacity: 1;
-    transform: none;
+  16% {
+    transform: translateY(0) rotate(4deg);
   }
-  78% {
-    opacity: 1;
+  26% {
+    transform: rotate(-3deg);
+  }
+  36% {
+    transform: rotate(1.5deg);
+  }
+  46%,
+  80% {
     transform: none;
   }
   100% {
-    opacity: 0;
-    transform: translateY(-12px);
+    transform: translateY(-160%);
     visibility: hidden;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation-name: banner-fade;
+  }
+}
+@keyframes banner-fade {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  10%,
+  85% {
+    opacity: 1;
   }
 }

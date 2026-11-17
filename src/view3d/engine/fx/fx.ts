@@ -65,12 +65,17 @@ export async function sparks(host: FxHost, at: THREE.Vector3, power = 1): Promis
 }
 
 const TEXT_FONT = "bold 36px 'Silkscreen', monospace";
-const TEXT_HEIGHT = 48;
-const TEXT_PADDING = 12;
-/** Alto del texto en el mundo (casillas); el ancho, el que pida el texto. */
-const TEXT_WORLD_HEIGHT = 0.3;
+const TEXT_HEIGHT = 60;
+const TEXT_PADDING = 20;
+/** La chapa: tinta por fuera, crema por dentro (como las chapas del HUD) y la sombra dura debajo. */
+const CHIP_INK = '#2b2240';
+const CHIP_FILL = '#fff6e0';
+const CHIP_BORDER = 5;
+const CHIP_SHADOW = 6;
+/** Alto de la chapa en el mundo (casillas); el ancho, el que pida el texto. */
+const TEXT_WORLD_HEIGHT = 0.36;
 
-/** El texto dibujado con su borde oscuro, en un lienzo tan ancho como pida. */
+/** El texto (en su color, con borde de tinta) sobre una chapa redonda, en un lienzo tan ancho como pida. */
 function textTexture(text: string, color: string): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   const measure = canvas.getContext('2d')!;
@@ -78,20 +83,31 @@ function textTexture(text: string, color: string): THREE.CanvasTexture {
   canvas.width = Math.ceil(measure.measureText(text).width) + TEXT_PADDING * 2;
   canvas.height = TEXT_HEIGHT;
   const draw = canvas.getContext('2d')!;
+  const chipHeight = TEXT_HEIGHT - CHIP_SHADOW;
+  const radius = chipHeight / 2;
+  draw.fillStyle = CHIP_INK;
+  draw.beginPath();
+  draw.roundRect(0, CHIP_SHADOW, canvas.width, chipHeight, radius);
+  draw.roundRect(0, 0, canvas.width, chipHeight, radius);
+  draw.fill();
+  draw.fillStyle = CHIP_FILL;
+  draw.beginPath();
+  draw.roundRect(CHIP_BORDER, CHIP_BORDER, canvas.width - CHIP_BORDER * 2, chipHeight - CHIP_BORDER * 2, radius - CHIP_BORDER);
+  draw.fill();
   draw.font = TEXT_FONT;
   draw.textAlign = 'center';
   draw.textBaseline = 'middle';
-  draw.lineWidth = 8;
-  draw.strokeStyle = '#0b1220';
-  draw.strokeText(text, canvas.width / 2, 26);
+  draw.lineWidth = 7;
+  draw.strokeStyle = CHIP_INK;
+  draw.strokeText(text, canvas.width / 2, chipHeight / 2 + 2);
   draw.fillStyle = color;
-  draw.fillText(text, canvas.width / 2, 26);
+  draw.fillText(text, canvas.width / 2, chipHeight / 2 + 2);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
-/** Un texto (el daño, lo que queda de una captura) que sube desde `at` y se desvanece. */
+/** Una chapa con un texto (el daño, lo que se cobra, lo que queda de una captura) que sube desde `at` y se desvanece. */
 export async function floatingText(host: FxHost, at: THREE.Vector3, text: string, color: string): Promise<void> {
   const map = textTexture(text, color);
   const material = new THREE.SpriteMaterial({ map, depthTest: false, transparent: true });

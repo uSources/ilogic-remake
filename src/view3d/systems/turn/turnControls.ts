@@ -116,6 +116,8 @@ export class TurnControls {
   private mode: Mode = { kind: 'idle' };
   /** Mientras se anima algo (o juega otro) no se atiende la entrada. */
   private isBusy = false;
+  /** El clima del ultimo cartel del dia (undefined: aun ninguno). */
+  private bannerWeather: string | null | undefined = undefined;
   /** «Elegir varias» (para el dedo): cada toque en una unidad la suma o la quita, como con Mayusculas. */
   private isAdding = false;
   /** La ultima tecla de grupo que eligio uno, y cuando: dos seguidas llevan la camara. */
@@ -149,7 +151,7 @@ export class TurnControls {
       this.host.refresh();
     }
     this.isBusy = false;
-    showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
+    showBanner(t('yourTurn'), `${t('day')} ${this.s.day}`, 'blue', this.weatherIfChanged());
     this.host.sounds.play('turn_start');
     this.host.refresh();
   }
@@ -159,6 +161,14 @@ export class TurnControls {
     this.setMode({ kind: 'idle' });
     this.host.session.finishInput(this.host.viewer);
     void this.runUntilInput();
+  }
+
+  /** El clima de hoy si no es el del ultimo cartel (el primero, siempre): va grande en la banderola. */
+  private weatherIfChanged(): string | null {
+    const weather = this.s.weather?.kind ?? null;
+    const isNew = weather !== this.bannerWeather;
+    this.bannerWeather = weather;
+    return isNew ? weather : null;
   }
 
   private finish(won: boolean): void {
@@ -565,9 +575,10 @@ export class TurnControls {
   }
 
   private buyMenu(building: Building, options: readonly BuyOption[], selected: number): MenuView {
-    const items = options.map((option) => buyItem(this.s, option));
+    const { funds } = teamState(this.s, this.host.viewer);
+    const items = options.map((option) => buyItem(this.s, option, funds));
     const title = nameOf(buildingTypeOf(this.s, building));
-    const subtitle = `${t('funds')}: ${fmtNum(teamState(this.s, this.host.viewer).funds)}`;
+    const subtitle = `${t('funds')}: ${fmtNum(funds)}`;
     return { kind: 'buy', title, subtitle, items, selected, at: building };
   }
 

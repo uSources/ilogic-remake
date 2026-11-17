@@ -1,5 +1,8 @@
 # Plan: interfaz limpia para la partida 3D
 
+> Historia: este plan ya está hecho. La interfaz siguió con [`PLAN-INTERFAZ-2.md`](PLAN-INTERFAZ-2.md)
+> («mesa de juego»).
+
 ## Estado (16-11-2026)
 
 - Fase 1 (base visual: fichas de juguete): **hecha**. Letras, colores y forma en
