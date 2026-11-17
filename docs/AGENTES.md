@@ -54,7 +54,7 @@ linea empieza por `error:` y el programa sale con 1.
 - `/`: el menu principal (Inicio, Nueva partida, Campaña, Opciones). Cada partida va en su propia carga
   de la pagina: al empezar una se recarga, y salir al menu tambien (`src/view3d/app/gameStart.ts`).
 - `/?seed=2013`: una escaramuza directa (la persona contra la IA) con ese mapa; `&elevation=0`, sin la
-  regla de altura. Siempre el mismo mapa: sirve para comparar antes y despues.
+  regla de altura (el relieve se ve igual). Siempre el mismo mapa: sirve para comparar antes y despues.
 - `/units3d.html`: el playground de modelos (todas las unidades y edificios, sus animaciones, luz por
   clima; `?model=Tank&side=enemy`). Desde la consola, `window.ilogicPlayground`.
 

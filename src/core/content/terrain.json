@@ -94,11 +94,11 @@
       }
     },
     {
-      "id": "SandCliff",
+      "id": "SandMountain",
       "textLetter": "M",
       "name": {
-        "es": "Acantilado",
-        "en": "Cliff"
+        "es": "Meseta",
+        "en": "Mesa"
       },
       "protection": 0.8,
       "hides": false,
@@ -130,11 +130,11 @@
       }
     },
     {
-      "id": "GrassCliff",
+      "id": "GrassMountain",
       "textLetter": "^",
       "name": {
-        "es": "Acantilado",
-        "en": "Cliff"
+        "es": "Montaña",
+        "en": "Mountain"
       },
       "protection": 0.8,
       "hides": false,
@@ -222,11 +222,11 @@
       }
     },
     {
-      "id": "SnowCliff",
+      "id": "SnowMountain",
       "textLetter": "%",
       "name": {
-        "es": "Acantilado nevado",
-        "en": "Snowy cliff"
+        "es": "Montaña nevada",
+        "en": "Snowy mountain"
       },
       "protection": 0.8,
       "hides": false,

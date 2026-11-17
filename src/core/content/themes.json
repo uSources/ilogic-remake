@@ -10,7 +10,7 @@
       "mapLetters": {
         ".": "Grass",
         "T": "Woods",
-        "M": "GrassCliff",
+        "M": "GrassMountain",
         "*": "Flowers"
       },
       "generator": {
@@ -30,16 +30,17 @@
           "Flowers": {
             "base": 0.03,
             "perNeighbour": 0.01
-          },
-          "GrassCliff": {
-            "base": 0.02,
-            "perNeighbour": -0.05
           }
         },
         "openWater": "Water",
         "narrowWater": "SWater",
         "shoreWater": null,
-        "deepWater": "DWater"
+        "deepWater": "DWater",
+        "mountains": {
+          "terrain": "GrassMountain",
+          "share": 0.07,
+          "spacing": 7
+        }
       }
     },
     {
@@ -51,7 +52,7 @@
       "mapLetters": {
         ".": "Sand",
         "T": "Cactus",
-        "M": "SandCliff",
+        "M": "SandMountain",
         "*": "Sand"
       },
       "generator": {
@@ -67,16 +68,17 @@
           "Cactus": {
             "base": 0.03,
             "perNeighbour": -0.05
-          },
-          "SandCliff": {
-            "base": 0.03,
-            "perNeighbour": -0.05
           }
         },
         "openWater": "Water",
         "narrowWater": "SWater",
         "shoreWater": null,
-        "deepWater": "DWater"
+        "deepWater": "DWater",
+        "mountains": {
+          "terrain": "SandMountain",
+          "share": 0.06,
+          "spacing": 7
+        }
       }
     },
     {
@@ -88,7 +90,7 @@
       "mapLetters": {
         ".": "Grass",
         "T": "Woods",
-        "M": "GrassCliff",
+        "M": "GrassMountain",
         "*": "Flowers"
       },
       "generator": {
@@ -108,16 +110,17 @@
           "Flowers": {
             "base": 0.01,
             "perNeighbour": 0.005
-          },
-          "GrassCliff": {
-            "base": 0.02,
-            "perNeighbour": -0.05
           }
         },
         "openWater": "Water",
         "narrowWater": "SWater",
         "shoreWater": null,
-        "deepWater": "DWater"
+        "deepWater": "DWater",
+        "mountains": {
+          "terrain": "GrassMountain",
+          "share": 0.08,
+          "spacing": 7
+        }
       }
     },
     {
@@ -129,7 +132,7 @@
       "mapLetters": {
         ".": "Grass",
         "T": "Woods",
-        "M": "GrassCliff",
+        "M": "GrassMountain",
         "*": "Flowers"
       },
       "generator": {
@@ -145,16 +148,17 @@
           "Woods": {
             "base": 0.05,
             "perNeighbour": 0.02
-          },
-          "GrassCliff": {
-            "base": 0.01,
-            "perNeighbour": -0.05
           }
         },
         "openWater": "Water",
         "narrowWater": "SWater",
         "shoreWater": null,
-        "deepWater": "DWater"
+        "deepWater": "DWater",
+        "mountains": {
+          "terrain": "GrassMountain",
+          "share": 0.04,
+          "spacing": 7
+        }
       }
     },
     {
@@ -166,7 +170,7 @@
       "mapLetters": {
         ".": "Snow",
         "T": "SnowWood",
-        "M": "SnowCliff",
+        "M": "SnowMountain",
         "*": "Frosty"
       },
       "generator": {
@@ -183,10 +187,6 @@
             "base": 0.015,
             "perNeighbour": -0.05
           },
-          "SnowCliff": {
-            "base": 0.02,
-            "perNeighbour": -0.05
-          },
           "SnowWood": {
             "base": 0.05,
             "perNeighbour": 0.03
@@ -195,7 +195,12 @@
         "openWater": "Water",
         "narrowWater": null,
         "shoreWater": "Ice",
-        "deepWater": "DWater"
+        "deepWater": "DWater",
+        "mountains": {
+          "terrain": "SnowMountain",
+          "share": 0.09,
+          "spacing": 7
+        }
       }
     }
   ]

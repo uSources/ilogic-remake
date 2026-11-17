@@ -253,6 +253,22 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   `src/hud/common/toy.tsx` (`Pill`, `Chip`, `Badge`): un color o una forma nuevos se añaden ahí, no sueltos en
   un componente.
 
+## Montañas
+
+Decidido con el usuario (16-11-2026): ya no hay acantilados sueltos, casilla a casilla. Las montañas
+son **sierras de verdad**, lo alto del mapa, y se ven como macizos que siguen la cordillera:
+
+- **Forma**: una montaña sola es un pico; una sierra larga, una cresta; una ancha, más alta por el
+  medio. Las faldas se salen un poco a las casillas de al lado y tapan el borde. Ruido encima: cimas
+  separadas a lo largo de la cresta y ladera rugosa (columnas de voxels de 2 píxeles de Ashfox).
+- **Color que varía**: por alturas (hierba en las faldas, monte bajo, roca, nieve en lo más alto),
+  con el borde entre bandas mellado, **roca pelada en las laderas empinadas** y manchas más claras y
+  más oscuras por el macizo. Nunca una montaña de un solo color.
+- **Por tema**: verdes con nieve arriba (llanura, bosque, pantano), gris azulado y nieve (nevado) y
+  **mesetas** en terrazas planas a capas de colores, como un cañón (desierto).
+- Datos de cada estilo en `TERRAIN_PIECES` (`terrain.ts`); forma en `massif.ts`; color en
+  `reliefColors.ts`.
+
 ## Cielo y fondo
 
 Decidido con el usuario (16-11-2026): el tablero es **una isla de juguete en un mar que llega al

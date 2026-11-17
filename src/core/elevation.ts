@@ -1,8 +1,9 @@
 /**
- * [CAMBIO] La altura de cada casilla (ajuste `elevation`; el original era plano): un nivel de 0 a
- * `MAX_ELEVATION` en `GameState.elevation` (map[x][y], como el terreno). Lo prepara el modulo de
- * reglas al empezar la partida (`elevationFor`) y no cambia. Aqui solo se calcula y se pregunta; lo
- * que hace la altura en el juego (acierto, vision, subir) es del modulo (ruleModules/elevation.ts).
+ * [CAMBIO] La altura de cada casilla (el original era plano): un nivel de 0 a `MAX_ELEVATION` en
+ * `GameState.elevation` (map[x][y], como el terreno). La tiene toda partida: la prepara el modulo del
+ * relieve al empezar (`elevationFor`, ruleModules/relief.ts) y no cambia; las montañas son lo alto.
+ * Aqui solo se calcula y se pregunta; lo que hace la altura en el juego (acierto, vision, subir) va
+ * con el ajuste `elevation` (ruleModules/elevation.ts).
  *
  * Las alturas salen del propio mapa (su terreno), sin azar de la partida: el mismo mapa da siempre
  * las mismas, sea una escaramuza, una mision o una partida cargada.
@@ -13,6 +14,7 @@ import { createLayer, mapGrid } from './mapGrid';
 import type { GameState, Pos } from './model';
 import type { Grid, GridBounds } from './util/grid';
 import { seededRng } from './util/random';
+import { valueNoise } from './util/valueNoise';
 
 /** El nivel mas alto (los niveles van de 0, el del agua, a este). */
 export const MAX_ELEVATION = 2;
@@ -39,28 +41,8 @@ function mapSeed(s: GameState): number {
   return hash >>> 0;
 }
 
-/** Un relieve suave de 0 a 1: valores al azar cada HILL_SPACING casillas, interpolados entre medias. */
-function smoothRelief(s: GameState): Grid<number> {
-  const rng = seededRng(mapSeed(s));
-  const grid = mapGrid(s);
-  const lattice = Array.from({ length: Math.ceil(grid.width / HILL_SPACING) + 2 }, () =>
-    Array.from({ length: Math.ceil(grid.height / HILL_SPACING) + 2 }, () => rng()),
-  );
-  const relief = createLayer(s, 0);
-  relief.forEach((_, pos) => relief.set(pos, interpolate(lattice, pos.x / HILL_SPACING, pos.y / HILL_SPACING)));
-  return relief;
-}
-
-/** El valor entre los cuatro puntos de la red que rodean (x, y), con transicion suave. */
-function interpolate(lattice: readonly (readonly number[])[], x: number, y: number): number {
-  const [cellX, cellY] = [Math.floor(x), Math.floor(y)];
-  const ease = (t: number) => t * t * (3 - 2 * t);
-  const [u, v] = [ease(x - cellX), ease(y - cellY)];
-  const at = (dx: number, dy: number) => lattice[cellX + dx]?.[cellY + dy] ?? 0;
-  const top = at(0, 0) + (at(1, 0) - at(0, 0)) * u;
-  const bottom = at(0, 1) + (at(1, 1) - at(0, 1)) * u;
-  return top + (bottom - top) * v;
-}
+/** Un relieve suave de 0 a 1 (las colinas), que sale del terreno del mapa. */
+const smoothRelief = (s: GameState): Grid<number> => valueNoise(mapGrid(s), HILL_SPACING, seededRng(mapSeed(s)));
 
 /** El nivel que pide el relieve en una casilla: 0 en el agua; las montañas, arriba del todo. */
 function wantedLevel(s: GameState, pos: Pos, relief: number): number {
