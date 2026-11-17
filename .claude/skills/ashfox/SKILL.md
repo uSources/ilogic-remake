@@ -49,7 +49,7 @@ ni los GLB (`public/assets/models/`): se regeneran.
 
 1. **Referencia 2D**: los modelos se parecen al arte del juego. Unidades en `public/assets/img/u/`
    (`b_` azul, `r_` rojo), edificios en `public/assets/img/flat/bld_*`, terreno en
-   `public/assets/img/wang/` y montañas en `flat/mount_*`. Para verlas, una hoja de contacto
+   `public/assets/img/wang/` (las montañas no tienen referencia 2D: son relieve). Para verlas, una hoja de contacto
    ampliada con Pillow (vecino mas cercano) y leerla como imagen.
 2. **CLI de Ashfox**: pide **Node 24** (el juego va con 22), asi que no esta en el `package.json`.
    Se instala fuera del repo (el scratchpad vale):

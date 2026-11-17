@@ -1057,7 +1057,7 @@ enlace, y los dos ven lo mismo. Esta en el workflow de capturas (informativo).
 Dos clases de graficos:
 
 - **Imagenes de la interfaz** (iconos, retratos, terreno de las miniaturas): `tools/art/` (dibujos
-  guardados de PixelLab y Retro Diffusion) → `npm run assets` → `public/assets/img/` (cada imagen) →
+  guardados de Retro Diffusion) → `npm run assets` → `public/assets/img/` (cada imagen) →
   `public/assets/atlas/` (2 paginas). Las carga `src/atlas.ts` (`loadGameImages`, `GameImages`: `url`
   para un `<img>`, `draw` en un lienzo), sin motor de juego. Ver README, "Graficos".
 - **Modelos 3D** (unidades, edificios, casillas y decorado): fuentes en `tools/art/ashfox/` → `.glb`

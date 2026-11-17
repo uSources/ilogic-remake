@@ -42,14 +42,13 @@ Precios orientativos (2026): RD Pro 32x32 ≈ 0,18 $; reduccion K-Centroid ≈ 0
 
 ```
 encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inbox/X.png
-  → revisar con el usuario → mover a tools/art/retrodiffusion/units32/ (o buildings32/, decor/...)
+  → revisar con el usuario → mover a tools/art/retrodiffusion/units32/ (o buildings32/)
   → npm run assets (rd_units32.py quita el fondo blanco unido al borde y saca b_/i_/r_)
   → mirarlo en la interfaz (npm run dev) → commit
 ```
 
 - Unidades: `units32/<Nombre>.png` → `public/assets/img/u/{b,i,r}_<Nombre>.png` (r mira a la izquierda).
 - Edificios: `buildings32/<Nombre>.png` → `flat/bld_{b,r,n}_<Nombre>.png` (la Base sin neutral).
-- Flores y cactus: hojas de 96x32 (3 piezas) en `decor/`; muñecos de nieve `snow_rd.png`.
 - Interfaz (`ui/`, lo compila `tools/art/rd_ui.py` a `public/assets/img/ui/`): retratos de general
   `gen_<id>.png` 48x48 (magenta → `gen_b_`/`gen_r_`), habilidades `ab_<id>.png` 16x16, clima
   `wx_<id>.png` 16x16, `zona.png` 16x16 y `flag.png` 16x24 (magenta → `_b`/`_r`/`_i`). Si falta uno,
@@ -74,7 +73,6 @@ encargo.json → tools/art/rd/generate.py --yes → tools/art/retrodiffusion/inb
 - Retratos: pasar un retrato ya aprobado como referencia para que salgan con el mismo encuadre;
   sin ella RD a veces pinta un paisaje detras.
 - Nunca editar a mano `public/assets/atlas/` ni lo que genera `npm run assets`.
-- Lo que no se usa del 2013 esta en `tools/art/sin_usar_2013/` (no se publica).
 
 Ejemplo de encargo (`/tmp/encargo.json`, fuera del repo):
 

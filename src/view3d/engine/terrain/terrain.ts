@@ -44,7 +44,7 @@ interface TerrainPiece {
 }
 
 /**
- * Los relieves, con sus colores por alturas (a semejanza de las montañas del 2D: flat/mount_*) y la roca
+ * Los relieves, con sus colores por alturas y la roca
  * de sus laderas empinadas: hierba en las faldas, monte bajo, roca y nieve en las cimas mas altas.
  */
 const GREEN_MOUNTAIN: ReliefStyle = {
