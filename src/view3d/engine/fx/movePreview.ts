@@ -1,20 +1,36 @@
 /**
- * A donde llegaria la unidad elegida (ports/turn.ts, `MovePreview`): una flecha por el suelo a lo
- * largo del camino y, al final, un fantasma de la unidad (su modelo, translucido) mirando hacia donde
- * llega. Solo dibuja lo que se le dice: el camino lo decide systems/turn/movePreview.ts.
+ * A donde llegaria la unidad elegida (ports/turn.ts, `MovePreview`): una flecha de bloques por el suelo
+ * a lo largo del camino, con su contorno de tinta, y al final un fantasma de la unidad (su modelo,
+ * translucido) mirando hacia donde llega. Al apuntar de lejos, el visor del disparo en arco
+ * (aimArc.ts). Solo dibuja lo que se le dice: el camino y el disparo los decide
+ * systems/turn/movePreview.ts.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
-import type { MoveLook, MovePreview } from '../../ports/turn';
+import type { MoveLook, MovePreview, ShotLook } from '../../ports/turn';
 import { facingAngle } from '../core/space';
 import type { UnitPiece } from '../pieces/unitPiece';
-import { arrowHeadGeometry, arrowMaterial, arrowPoints, headMatrix, segmentGeometry, segmentMatrix, segmentsOf } from './arrowParts';
+import { AimArc } from './aimArc';
+import {
+  arrowHeadGeometry,
+  arrowMaterial,
+  arrowPoints,
+  BLOCK_ARROW,
+  BLOCK_ARROW_INK,
+  headMatrix,
+  segmentGeometry,
+  segmentMatrix,
+  segmentsOf,
+  type ArrowStyle,
+} from './arrowParts';
+import { INK_COLOR } from './markParts';
 
 const ARROW_COLOR = 0xffd447;
-const ARROW_OPACITY = 0.9;
 /** Un camino no tiene mas pasos que esto (el movimiento mas largo cabe de sobra). */
 const MAX_SEGMENTS = 64;
 const GHOST_OPACITY = 0.45;
+/** Altura (sobre el suelo) de la boca de donde sale el disparo y de donde llega. */
+const MUZZLE_HEIGHT = 0.35;
 
 /** Lo que necesita: el suelo de cada casilla y la pieza de cada unidad (para copiar su modelo). */
 export interface MovePreviewBoard {
@@ -22,43 +38,66 @@ export interface MovePreviewBoard {
   pieceOf(uid: number): UnitPiece | undefined;
 }
 
-export class MovePreviewView implements MovePreview {
-  readonly object = new THREE.Group();
-  private readonly segments: THREE.InstancedMesh;
-  private readonly head: THREE.Mesh;
-  private ghost: { uid: number; object: THREE.Object3D } | null = null;
+/** Una capa de la flecha (la de tinta, debajo, o la amarilla): sus tramos y su punta. */
+class ArrowLayer {
+  readonly segments: THREE.InstancedMesh;
+  readonly head: THREE.Mesh;
 
-  constructor(private readonly board: MovePreviewBoard) {
-    const material = arrowMaterial(ARROW_COLOR, ARROW_OPACITY);
+  constructor(
+    readonly style: ArrowStyle,
+    color: number,
+    order: number,
+  ) {
+    const material = arrowMaterial(color, 1);
     this.segments = new THREE.InstancedMesh(segmentGeometry(), material, MAX_SEGMENTS);
     this.segments.frustumCulled = false;
     this.segments.count = 0;
-    this.head = new THREE.Mesh(arrowHeadGeometry(), material);
-    this.object.add(this.segments, this.head);
+    this.head = new THREE.Mesh(arrowHeadGeometry(style), material);
+    this.segments.renderOrder = order;
+    this.head.renderOrder = order;
+  }
+
+  draw(path: readonly Pos[] | null, groundOf: (pos: Pos) => THREE.Vector3): void {
+    const isShown = !!path && path.length > 1;
+    this.segments.visible = isShown;
+    this.head.visible = isShown;
+    if (!path || !isShown) return;
+    const points = arrowPoints(path, groundOf, this.style);
+    const steps = segmentsOf(points).slice(0, MAX_SEGMENTS);
+    steps.forEach(([from, to], index) => this.segments.setMatrixAt(index, segmentMatrix(from, to, this.style)));
+    this.segments.count = steps.length;
+    this.segments.instanceMatrix.needsUpdate = true;
+    headMatrix(points).decompose(this.head.position, this.head.quaternion, this.head.scale);
+  }
+}
+
+export class MovePreviewView implements MovePreview {
+  readonly object = new THREE.Group();
+  private readonly layers = [new ArrowLayer(BLOCK_ARROW_INK, INK_COLOR, 30), new ArrowLayer(BLOCK_ARROW, ARROW_COLOR, 31)];
+  private readonly arc = new AimArc();
+  private ghost: { uid: number; object: THREE.Object3D } | null = null;
+
+  constructor(private readonly board: MovePreviewBoard) {
+    for (const layer of this.layers) this.object.add(layer.segments, layer.head);
+    this.object.add(this.arc.object);
     this.show(null);
   }
 
   show(look: MoveLook | null): void {
-    const hasPath = !!look && look.path.length > 1;
-    this.segments.visible = hasPath;
-    this.head.visible = hasPath;
-    if (!look || !hasPath) return this.hideGhost();
-    const points = arrowPoints(look.path, (pos) => this.board.groundOf(pos));
-    this.drawSegments(points);
-    this.drawHead(points);
+    const groundOf = (pos: Pos) => this.board.groundOf(pos);
+    for (const layer of this.layers) layer.draw(look?.path ?? null, groundOf);
+    if (!look || look.path.length < 2) return this.hideGhost();
     this.placeGhost(look);
   }
 
-  private drawSegments(points: readonly THREE.Vector3[]): void {
-    const steps = segmentsOf(points).slice(0, MAX_SEGMENTS);
-    steps.forEach(([from, to], index) => this.segments.setMatrixAt(index, segmentMatrix(from, to)));
-    this.segments.count = steps.length;
-    this.segments.instanceMatrix.needsUpdate = true;
+  aim(shot: ShotLook | null): void {
+    const muzzleOf = (pos: Pos) => this.board.groundOf(pos).add(new THREE.Vector3(0, MUZZLE_HEIGHT, 0));
+    this.arc.show(shot ? muzzleOf(shot.from) : null, shot ? muzzleOf(shot.to) : null);
   }
 
-  /** La punta, en la casilla de llegada, hacia donde se llega. */
-  private drawHead(points: readonly THREE.Vector3[]): void {
-    headMatrix(points).decompose(this.head.position, this.head.quaternion, this.head.scale);
+  /** Un fotograma: el brillo del visor avanza. */
+  update(seconds: number, camera: THREE.PerspectiveCamera, viewportHeight: number): void {
+    this.arc.update(seconds, camera, viewportHeight);
   }
 
   private placeGhost(look: MoveLook): void {
