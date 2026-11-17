@@ -171,12 +171,9 @@ export class BoardPieceStage implements PieceStage, PieceLookup {
   async hop(uid: number): Promise<void> {
     const piece = this.host.board.pieceOf(uid);
     if (!piece) return;
-    const rest = piece.body.position.y;
-    await this.host.animate(
-      HOP_SECONDS,
-      (progress) => (piece.body.position.y = rest + Math.abs(Math.sin(progress * Math.PI * HOPS)) * HOP),
-    );
-    piece.body.position.y = rest;
+    const { body, bodyRestY } = piece;
+    await this.host.animate(HOP_SECONDS, (progress) => (body.position.y = bodyRestY + Math.abs(Math.sin(progress * Math.PI * HOPS)) * HOP));
+    body.position.y = bodyRestY;
   }
 
   /** Se hincha un instante y revienta (la explosion la tapa); un vehiculo o avion deja sus restos. */

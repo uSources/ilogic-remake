@@ -26,6 +26,8 @@ export interface UnitPiece {
   readonly object: THREE.Group;
   /** El cuerpo (a su altura de vuelo): lo que se sacude y se inclina en las animaciones. */
   readonly body: THREE.Object3D;
+  /** La altura del cuerpo en reposo: los saltos vuelven a ella aunque se pisen unos a otros. */
+  readonly bodyRestY: number;
   /** Lo que gira aparte (la torreta), si el modelo lo tiene. */
   readonly turret: THREE.Object3D | null;
   readonly rotor: THREE.Object3D | null;
@@ -81,6 +83,7 @@ export function newUnitPiece(look: UnitLook, glbModels: GlbLibrary): UnitPiece {
     uid: look.uid,
     object,
     body,
+    bodyRestY: body.position.y,
     turret: object.getObjectByName('turret') ?? null,
     rotor: object.getObjectByName('rotor') ?? null,
     lifeBadge,
