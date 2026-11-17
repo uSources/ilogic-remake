@@ -15,6 +15,8 @@ export interface SpotBoard {
   groundOf(pos: Pos): THREE.Vector3;
   /** Enseña la vida `life` (puede ser una fraccion, a mitad de una animacion; null: entera, sin chapa) con la chapa a `pulse` de su tamaño. */
   showLifeNow(uid: number, life: number | null, pulse: number): void;
+  /** La vida que acaba de perder: le queda `left` y lo perdido hasta `shown` brilla en blanco. */
+  showLifeDrop(uid: number, shown: number, left: number, pulse: number): void;
 }
 
 export const muzzleOf = (piece: UnitPiece): THREE.Vector3 =>
