@@ -67,83 +67,137 @@
   }
 }
 
-/* La compra (game/BuyGrid.tsx): rejilla de retratos con su precio. */
-.pop.buy-grid {
-  padding: 12px;
-  gap: 10px;
-  width: min(372px, calc(100vw - 32px));
-  max-width: none;
+/* La compra (game/BuyFan.tsx): retratos en abanico alrededor de la fabrica, y en el centro la chapa
+   de la señalada. Cada ficha mide lo que dice SLOT en BuyFan.tsx. */
+.buy-fan {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
 }
-.buy-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  font-family: var(--display);
-  font-weight: 600;
+.fan-place {
+  position: absolute;
+  left: -38px;
+  top: -46px;
+  animation: radial-in 0.16s ease-out;
 }
-.buy-title {
-  font-size: 18px;
-}
-.buy-funds {
-  font-size: 15px;
-  color: var(--muted);
-}
-.buy-tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-  gap: 8px;
-  max-height: calc(100vh - 260px);
-  overflow-y: auto;
-  padding: 2px 2px 6px;
-}
-.buy-tile {
+.fan-slot {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 6px 4px 4px;
+  justify-content: center;
+  gap: 1px;
+  width: 76px;
+  height: 92px;
+  padding: 4px 3px;
   border: var(--outline) solid var(--ink);
   border-radius: var(--radius-sm);
-  background: var(--slot);
-  box-shadow: 0 3px 0 var(--ink);
+  background: var(--panel);
+  box-shadow: 0 4px 0 var(--ink);
   color: var(--text);
   cursor: pointer;
   pointer-events: auto;
   transition: transform 0.06s ease-out;
 }
-.buy-tile:hover:not(.off),
-.buy-tile.sel:not(.off) {
+.fan-slot:hover:not(.off),
+.fan-slot.sel:not(.off) {
   background: var(--sel);
 }
-.buy-tile.sel {
+.fan-slot.sel {
   outline: 3px solid #ffd23f;
   outline-offset: 1px;
 }
-.buy-tile:active:not(.off) {
-  transform: translateY(2px);
+.fan-slot:active:not(.off) {
+  transform: translateY(3px);
   box-shadow: 0 1px 0 var(--ink);
 }
-.buy-tile.off {
-  opacity: 0.5;
+.fan-slot.off {
+  background: var(--slot);
   cursor: default;
 }
-.buy-portrait {
-  width: 48px;
-  height: 48px;
+.fan-slot.off .fan-portrait {
+  opacity: 0.55;
 }
-.buy-price {
+.fan-portrait {
+  width: 44px;
+  height: 44px;
+}
+.fan-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fan-price {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+}
+.fan-price.short {
+  color: var(--red-btn);
+}
+/* La chapa de la señalada, centrada sobre la fabrica. */
+.fan-facts {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 10px;
+  border: var(--outline) solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  box-shadow: 0 3px 0 var(--ink);
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.fan-facts-name {
+  font-family: var(--display);
+  font-size: 14px;
+  font-weight: 600;
+}
+.fan-facts-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
 }
-.buy-detail {
-  font-size: 13px;
-  line-height: 1.35;
-  color: var(--muted);
+.fan-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
-.buy-detail b {
-  color: var(--text);
-  font-family: var(--display);
-  font-weight: 600;
+.fan-stat-icon {
+  width: 18px;
+  height: 18px;
+}
+.fan-strong {
+  gap: 3px;
+}
+.fan-strong-mark {
+  color: var(--muted);
+  font-size: 13px;
+}
+.fan-strong-icon {
+  width: 24px;
+  height: 24px;
+}
+.fan-why {
+  max-width: 180px;
+  color: var(--red-btn);
+  font-size: 12px;
+  white-space: normal;
+  text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fan-place {
+    animation: none;
+  }
 }
 
 /* La ficha de la casilla señalada (game/TileTip.tsx): lo justo; con Alt, la tarjeta entera. */

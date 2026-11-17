@@ -141,7 +141,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
 - No se intenta adivinar qué hará la IA. Ilogic tiene azar y su IA no es determinista, así que lo
   que se enseña es lo que **podría** pasar, nunca lo que pasará.
 
-### Fase 5. Comprar en abanico
+### Fase 5. Comprar en abanico (hecha)
 - Al tocar una fábrica propia, sus retratos salen **en abanico alrededor de ella**, anclados como la
   rueda (`RadialMenu.tsx`). Cada ficha lleva el retrato, el nombre corto y el precio.
 - Lo que no se puede pagar sale apagado y dice cuánto falta («−2000»). El motivo ya lo da

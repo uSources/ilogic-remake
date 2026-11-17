@@ -235,6 +235,9 @@ y estado: `docs/PLAN-INTERFAZ.md`.
     vóxel, con borde de tinta, en fila al borde de la casilla y botando en ola. La ficha de la casilla
     ya no las repite.
   - La previsión de combate, **chapas de plástico** (`Badge`) encima de la barra de vida.
+  - La compra, **fichas en abanico** alrededor de la fábrica (retrato, nombre y precio; lo que no se
+    puede pagar, apagado y con lo que falta en rojo) y en el centro la chapa de la señalada: mover,
+    alcance y visión con sus iconos y los retratos de contra qué es buena.
 - Todo sale de las variables de `src/hud/styles/base/base.css` y de las piezas de
   `src/hud/common/toy.tsx` (`Pill`, `Chip`, `Badge`): un color o una forma nuevos se añaden ahí, no sueltos en
   un componente.

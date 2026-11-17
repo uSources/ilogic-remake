@@ -1,4 +1,4 @@
-import type { Anchor } from './common';
+import type { Anchor, StatChipVM } from './common';
 
 /** Menus: emergente de la partida (unidad, compra, carga, pausa) y pantallas del menu principal. */
 
@@ -15,6 +15,20 @@ export interface MenuItemVM {
   danger?: boolean;
   /** Linea de detalle que se muestra al pie cuando esta seleccionado. */
   detail?: string;
+  /** En la compra: lo esencial de la unidad, en iconos (la chapa de la ficha señalada). */
+  buy?: BuyFactsVM;
+}
+
+/** Lo esencial de una unidad que se compra, en iconos, y cuanto dinero falta si no llega. */
+export interface BuyFactsVM {
+  /** Mover, alcance y vision (`unitStatChips`). */
+  stats: StatChipVM[];
+  /** Los retratos de las unidades contra las que es mejor (las que mas acierta). */
+  strongAgainst: string[];
+  /** Lo que falta para pagarla («−2000»), si es el dinero lo que no llega; null si llega. */
+  missing: number | null;
+  /** Por que no se puede si no es por el dinero (sin sitio en el ejercito); null si no es eso. */
+  why: string | null;
 }
 
 export interface MenuVM {

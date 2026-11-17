@@ -565,9 +565,10 @@ export class TurnControls {
   }
 
   private buyMenu(building: Building, options: readonly BuyOption[], selected: number): MenuView {
-    const items = options.map((option) => buyItem(this.s, option));
+    const { funds } = teamState(this.s, this.host.viewer);
+    const items = options.map((option) => buyItem(this.s, option, funds));
     const title = nameOf(buildingTypeOf(this.s, building));
-    const subtitle = `${t('funds')}: ${fmtNum(teamState(this.s, this.host.viewer).funds)}`;
+    const subtitle = `${t('funds')}: ${fmtNum(funds)}`;
     return { kind: 'buy', title, subtitle, items, selected, at: building };
   }
 

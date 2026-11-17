@@ -4,7 +4,7 @@ import { t } from '../../settings';
 import type { UIState } from '../state';
 import type { MenuVM, NetVM } from '../vm/menus';
 import { ActionChips } from './ActionChips';
-import { BuyGrid } from './BuyGrid';
+import { BuyFan } from './BuyFan';
 import { CombatPanel } from './Combat';
 import { Forecast } from './Forecast';
 import { EnemyGeneral, GeneralPanel } from './GeneralPanel';
@@ -77,7 +77,7 @@ function MatchMenu({ menu }: { menu: MenuVM }) {
   if (menu.kind === 'game') return <Pause menu={menu} />;
   if (menu.kind === 'chips') return <ActionChips menu={menu} />;
   if (menu.kind === 'radial') return <RadialMenu menu={menu} />;
-  if (menu.kind === 'buy') return <BuyGrid menu={menu} />;
+  if (menu.kind === 'buy') return <BuyFan menu={menu} />;
   return <PopMenu menu={menu} />;
 }
 
