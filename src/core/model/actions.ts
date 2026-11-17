@@ -25,8 +25,6 @@ export type GameAction =
   | { kind: 'deleteUnit'; uid: number }
   /** Fabricar una unidad de ese tipo (id de units.json) en el edificio de `at`. */
   | { kind: 'buy'; at: Pos; unitType: string }
-  /** Un poder del general del equipo; `target`, la casilla de los de area. */
-  | { kind: 'usePower'; power: string; target: Pos | null }
   /**
    * El paso de este turno de la orden de ir alli ('goto') de la unidad: hacia su destino lo que pueda;
    * si ya llega este turno, la orden acaba sin moverla (el ultimo trozo lo hace quien juega).
@@ -110,12 +108,6 @@ export type ActionRejection =
   | 'funds'
   | 'units'
   | 'command'
-  /** Poderes del general (ver PowerBlock en generals.ts). */
-  | 'noGeneral'
-  | 'unknownPower'
-  | 'powerUsed'
-  | 'charge'
-  | 'needsTarget'
   /** Ordenes permanentes (ver standingOrderBlock): capturar donde no hay nada, o sin nadie que capture. */
   | 'noBuilding'
   | 'noCapturer'

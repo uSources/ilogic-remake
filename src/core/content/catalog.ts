@@ -1,5 +1,5 @@
 /**
- * Catalogo de tipos de contenido (unidades, edificios, terrenos, climas, temas, generales): la lista
+ * Catalogo de tipos de contenido (unidades, edificios, terrenos, climas, temas): la lista
  * en el orden del fichero y el acceso por id. Cada tipo ya viene resuelto al cargar (campos con
  * nombre, referencias comprobadas), asi que las reglas preguntan `unitType.cost`, no columnas por
  * numero de tipo.

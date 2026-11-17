@@ -52,7 +52,7 @@ export type StatCounter<K extends GameEventKind> = (s: GameState, counts: TeamSt
 
 /**
  * Los sucesos que cuentan para las estadisticas, por su tipo; los demas no (mover, unir, subir,
- * esperar, ordenes, escuadras, poderes). Un suceso nuevo que cuente es una entrada aqui; lo que cuenta
+ * esperar, ordenes, escuadras). Un suceso nuevo que cuente es una entrada aqui; lo que cuenta
  * un modulo de reglas (de sus sucesos o de los de siempre), un `statCounters` suyo.
  */
 export const STAT_COUNTERS: { readonly [K in GameEventKind]?: StatCounter<K> } = {

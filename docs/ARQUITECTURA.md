@@ -82,11 +82,11 @@ los pasos con los que se cambia la partida (`advanceCapture`, `mergeInto`, `earn
 `giveStandingOrder`, `formSquad`...): solo los llaman el `apply` de las acciones, los pasos de ronda
 y de turno, las `INVARIANTS` y lo que prepara una partida. La IA, autopilot/, la sesion, los
 controladores, la vista y lo que apunta la vista (`targeting.ts`, `trail.ts`) no los importan
-(`APPLY_STEPS`, eslint.config.js; tambien los del clima, los generales y las estadisticas:
-`advanceWeather`, `appointGeneral`, `applyPower`, `recordEvents`...), y las fachadas no los dan
+(`APPLY_STEPS`, eslint.config.js; tambien los del clima y las estadisticas:
+`advanceWeather`, `recordEvents`...), y las fachadas no los dan
 (tests/lintImports.test.ts, que ademas busca con los tipos de TypeScript toda funcion del nucleo que
 escribe en la partida, `tests/stateWriters.ts`, y falla si no esta en la lista de su modulo). Los de
-la raiz del nucleo (clima, generales, estadisticas, `changeSettings`), que no tienen fachada que los
+la raiz del nucleo (clima, estadisticas, `changeSettings`), que no tienen fachada que los
 esconda, tampoco se pueden importar desde src/ ni tools/ (`ROOT_STEPS`): las
 herramientas y los tests que preparan una partida a mano ponen sus unidades con `newUnit` de
 `core/measure.ts`.
@@ -119,7 +119,7 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   `dispatch` tampoco: lee lo que dice la entrada del registro.
 - `ACTIONS` (`actions/registry.ts`) tiene una entrada por accion (el tipo obliga), cada una en el
   modulo de su tema (`movement`, `combat`, `capture`, `transport`, `units`, `economy`,
-  `standingOrders`, `squads`; la de los poderes, `POWER_ACTIONS`, vive con ellos en `generalPowers.ts`). `validate(s, team, action)` lo calcula todo desde la partida (alcance,
+  `standingOrders`, `squads`). `validate(s, team, action)` lo calcula todo desde la partida (alcance,
   vision, dinero, de quien es cada unidad): no se fia de nada que traiga la accion. `apply` usa las
   piezas de `rules/` y `squads/` y devuelve los sucesos.
 - `actionProblem`/`isValidAction` preguntan lo mismo sin cambiar nada. El menu de una unidad sale de
@@ -181,7 +181,7 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
   (`canBeLost`: el laboratorio no; el nucleo tampoco lo deja, 'cannotLose'), y guardar, si su modo se
   guarda (`saves`; `gameMenuOf`).
 - Lo que cambia la partida y no es de quien juega se queda fuera de `dispatch`: preparar una partida
-  (`buildMatch`, `newGameState`, `newUnit`, `appointGeneral`).
+  (`buildMatch`, `newGameState`, `newUnit`).
 - **Una accion nueva**: su forma en `GameAction` (`model/actions.ts`) y la de cada campo en
   `ACTION_SHAPES` (`actions/shape.ts`; el tipo la pide), su suceso en `GameEvent`
   (`model/events.ts`) y su entrada en el modulo de `actions/` que toque (con `keepsUndo` si no
@@ -197,12 +197,11 @@ if (result.ok) await play(result.events); // si no, result.reason dice por que (
 Cada accion y el fin de ronda devuelven sus sucesos (`GameEvent`, `model/events.ts`), completos para
 contar lo que ha pasado sin mirar la partida: quien lo hizo (`actor`: el equipo que mando la accion,
 o null en los del fin de ronda), a quien (uids), tipos y casillas. El ataque nombra a su objetivo
-por uid (`target`) y su casilla (`at`) y lleva como estaban las dos (`combat`), el botin y la carga
-que gana cada general (`charge`); la compra, el tipo y el equipo; la captura, siempre los puntos que
+por uid (`target`) y su casilla (`at`) y lleva como estaban las dos (`combat`), el botin; la compra, el tipo y el equipo; la captura, siempre los puntos que
 quedan. Lo que dejan en orden las `INVARIANTS` tambien se cuenta, detras de los de la accion y sin
 actor: `cargoLost` (los pasajeros de un transporte que cae; tambien al retirarlo), `captureDropped`
 (una captura a medias cuya unidad se ha ido), la escuadra que se queda vacia y `fundsCapped` (el
-dinero que pasaba del maximo; botin, poderes e ingresos se cuentan enteros y lo perdido va aqui,
+dinero que pasaba del maximo; botin e ingresos se cuentan enteros y lo perdido va aqui,
 porque el tope se aplica al acabar la accion o la ronda, no al cobrar). Cada escuadra que desaparece
 tiene un solo suceso `squad` (`SquadChange`): `change: 'disbanded'` si su equipo la deshace, o
 `change: 'removed'` si se queda vacia; si la vacia una accion (salir, formar otra con sus unidades),
@@ -237,7 +236,6 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 | `matchSettings.ts` | `settingsWith(contenido, cambios)`: los ajustes por defecto con cambios (`MatchSettings`, `s.settings`) |
 | `ruleModules/` | los modulos de reglas (`RULE_MODULES`) y lo que aporta cada uno a las listas de las reglas (`RuleHooks`); ver "Modulos de reglas" |
 | `abilities.ts` | lo que hace cada clase de habilidad de las unidades (`ABILITY_EFFECTS`; lo enchufa el modulo `abilities`) |
-| `generals.ts`, `generalPowers.ts` | el general de cada equipo (ventaja fija, carga, ronda, reconocimiento) y sus poderes (`POWER_EFFECTS`: casilla, area, efecto y valor para la IA; `powerBlock`, `applyPower`) |
 | `weather.ts` | el clima de la partida: cual hay, el pronostico y como cambia (lo enchufa el modulo `weather`) |
 | `damage.ts` | como sale el daño (`DamageModel`: la tirada y su reparto); cada modelo por su nombre en `DAMAGE_MODELS` (el ajuste `damageModel`: `shotByShot`, `spread`), construido una vez por partida (`damageModelOf`); solo usa `model/` |
 | `teams.ts` | los equipos de la partida: alianzas, enemigos, quien los juega (ver "Equipos") |
@@ -254,7 +252,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   `StandingOrder`, `Squad`, `UndoableMove`, `MatchResult`, `GameModeId`, `MatchSettings`, `Rng`,
   `Dice`... No importa nada ni exporta constantes o funciones.
 - `content/`: los JSON validados se resuelven al cargar en tipos con campos con nombre (`UnitType`,
-  `BuildingType`, `TerrainType`, `WeatherType`, `Theme`, generales y sus poderes), cada uno en un
+  `BuildingType`, `TerrainType`, `WeatherType`, `Theme`), cada uno en un
   catalogo por id (`Catalog`: `list` en el orden del fichero y `byId`; `findEntry`/`entryOf`).
   `loadContent(ficheros)` da un `GameContent` congelado; `content/default.ts`, el del juego
   (`defaultContent()`, perezoso).
@@ -292,7 +290,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
 - `match.ts`: `MatchConfig` son datos (`SkirmishConfig`, `MissionConfig`, `SandboxConfig`);
   `MATCH_SETUPS`, como se prepara cada modo; `buildMatch(config, { content, mapRng? })`, con su
   clima y la muestra del ejercito del primer dia. Todo lo de la partida va en la configuracion, nada
-  se cambia despues: los generales en `MatchTeam.general`, y empezar cada equipo en el sitio del que
+  se cambia despues; empezar cada equipo en el sitio del que
   va k puestos detras en `rotateStarts: k`, con cualquier numero de equipos (la herramienta de
   equilibrio; con dos y 1, se cambian). `skirmishConfig` pone lo de
   siempre en lo que no se elige (mapa de `DEFAULT_MAP_SIZE`, tema al azar, reglas por defecto);
@@ -469,7 +467,7 @@ partida, `autopilotProfileOf`, en defaultProfile.ts), `context` (el `PlayCtx` de
 comunes), `engagement` (como pelea una unidad: `EngagementPolicy`), `scoring` (cuanto vale cada
 ataque), `tactics` (retirarse, atacar, capturar lo de debajo), `formation` (escuadras que avanzan
 juntas) `standingOrders` (cumplir las ordenes, `StandingOrder`) y `preview` (lo que haran, para las flechas de intencion: `previewStandingOrders`).
-`src/core/ai/` los reutiliza: `profile` (`AiProfile`, `defaultAiProfile`), `general` (que poder usa su general: `choosePower`), `tactics` (ir a capturar,
+`src/core/ai/` los reutiliza: `profile` (`AiProfile`, `defaultAiProfile`), `tactics` (ir a capturar,
 avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades de cada unidad) y
 `production` (que fabrica). `turn` tiene `aiTurn`, que los junta (es el `turn` del perfil del juego, `defaultProfile`); `ai.ts` es la fachada.
 
@@ -488,7 +486,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
 - **Lo que sabe su equipo**: decide con la `PlayerView` que le da la sesion (`playerView.ts`): la
   partida sin lo que su equipo no sabe (`FOG`: los enemigos que no ve; de los que ve, sus ordenes,
   su escuadra y a quien llevan dentro; las escuadras enemigas; quien captura un edificio que no ve;
-  las cuentas de los enemigos: estadisticas, dinero y carga de su general; lo que pueden deshacer los
+  las cuentas de los enemigos: estadisticas y dinero; lo que pueden deshacer los
   demas equipos; y las semillas: dados, decisiones y la del mapa, `setup`). De su azar solo sabe el de sus
   decisiones de este turno (`PlayerView.turnSeed`, que usa su controlador). Las semillas son de 32
   bits y la pantalla enseña a la persona el codigo del mapa (de el salen las de una escaramuza): una
@@ -518,7 +516,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
 - **Sin estado global**: el equipo que juega, su perfil, como mide los caminos (`paths`: 'alone',
   cada unidad sola, o 'army', el ejercito a la vez: atraviesa a los aliados si las reglas lo
   dejan) y el fuego concentrado del turno (`focusFire`) van en un `PlayCtx` que no cambia; la IA
-  crea uno para el general y la compra y otro para mover el ejercito. Dos turnos, o una prevision en
+  crea uno para la compra y otro para mover el ejercito. Dos turnos, o una prevision en
   medio de uno, no se mezclan.
 - **Pregunta a las reglas**: lo que necesita saber de la partida es una consulta de las reglas
   (`projectedIncome`, `canRepair`, `isEnemyHq`, `hasFullArmy`, `killReward`; el daño de rematar
@@ -539,7 +537,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   - algo que pasa en cada ataque es un `combatSteps` de su modulo, en su momento (`CombatStage`);
     lo de cualquier ataque esta en `COMBAT_RESOLUTION` (`actions/combat.ts`); lo que apunta en el
     ataque (y lleva su suceso) es su campo en `AttackRecordParts` (`model/combat.ts`, con `declare
-    module`, como el botin y la carga; no puede llamarse como un campo de `AttackEventBase`:
+    module`, como el botin; no puede llamarse como un campo de `AttackEventBase`:
     `AttackPartsFitEvent` no compila); quien contraataca, un `counterRules`;
   - un suceso propio de un modulo (el mantenimiento, los puntos de control, el clima) es su tipo en
     `ModuleEvents` (`model/events.ts`, con `declare module` desde el modulo). `GameEvent` es lo de
@@ -562,11 +560,6 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
     en `ABILITY_SHAPES` (`content/abilities.ts`), lo que aporta a las listas en `ABILITY_HOOKS`
     y su sitio en `ABILITY_ORDER` (`abilities.ts`; el compilador exige las dos, y de ahi sale
     `ABILITY_EFFECTS`, en ese orden); el modulo de las habilidades lo enchufa todo;
-  - una clase de efecto de un poder del general es su forma en `GeneralEffect`, su validacion en
-    `EFFECT_SHAPES` (`content/generals.ts`) y su entrada en `POWER_EFFECTS` (`generalPowers.ts`: si
-    necesita casilla, su area, como se aplica, lo que apunta en el suceso del poder —su campo en
-    `PowerEventParts`, con `declare module`, como el dinero o las curas— y lo que le vale a la IA,
-    `aiValue`);
   - un comportamiento de IA nuevo (un papel de unidad) es una entrada `{ id, when, run }` en
     `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`, los del perfil por defecto), en su sitio de la lista; `run`
     es un plan que devuelve si ha usado la unidad y suele llamar a un paso de `ai/tactics.ts`. Para
@@ -610,7 +603,6 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `abilities` | `abilities` | lo de cada clase de habilidad (`ABILITY_EFFECTS`): escudo y aura al acierto, perforar, zona de control, ver en el bosque, capturar rapido |
 | `veterancy` | `veterancy` | el rango al acierto (`rank`, `RANK_KILLS`; las bajas se cuentan siempre) |
 | `flank` | `flankBonus` > 0 | rematar a quien ya ha recibido un ataque hoy (`flankBonusFor`, `wasHitToday`) |
-| `generals` | siempre | su ventaja fija al acierto, su carga en combate, su ronda (volver a usar un poder) y su reconocimiento |
 | `weather` | `weather` | acierto, lo que se puede gastar al moverse, el radio de vision, el cambio de clima con el dia y el clima del primer dia (`matchSetup`) |
 | `controlPoints` | `controlPoints` > 0 | lo que pagan al acabar la ronda |
 | `upkeep` | `upkeep` > 0 | pagar el mantenimiento al acabar la ronda |
@@ -633,17 +625,16 @@ Las listas (`RuleHooks`, en `ruleModules/hooks.ts`, solo tipos): `hitModifiers`,
 (el fin de ronda, el ataque) se ordenan por momento y, en cada uno, primero las de siempre y luego
 las de los modulos (`roundPhasesOf`, `combatResolutionOf`); en el acierto, el orden de los modulos
 importa (coma flotante). La direccion es una: el registro (`ruleModules/registry.ts`) importa los
-modulos, los modulos importan lo que enchufan (generales, clima, habilidades...) y las reglas solo
+modulos, los modulos importan lo que enchufan (clima, habilidades...) y las reglas solo
 importan `ruleModules/ruleset.ts` (`hooksOf`, `isRuleOn`) y los tipos de `ruleModules/hooks.ts`:
-ni el registro, ni un modulo concreto, ni generales, clima o habilidades (L7). Lo comprueba ESLint
+ni el registro, ni un modulo concreto, ni clima o habilidades (L7). Lo comprueba ESLint
 (`no-restricted-imports` en `src/core/rules/**` y `src/core/actions/**`, con la ruta que sea:
-relativa o por `@core/`; solo la lista de acciones, `actions/registry.ts`, junta la de los poderes
-de `generalPowers.ts`). `ruleModules/ruleset.ts` y `ruleModules/hooks.ts` no importan rules/: lo
+relativa o por `@core/`). `ruleModules/ruleset.ts` y `ruleModules/hooks.ts` no importan rules/: lo
 que comparten con las reglas son tipos de `model/` (`Engagement`, `AttackRecord` y sus
 `AttackRecordParts`, `DamageModel`, `RoundReport` y sus `RoundReportParts`, `model/combat.ts` y
 `model/roundReport.ts`) y los modelos de daño (`damage.ts`, que solo usa `model/`). Asi la direccion
 es rules → ruleModules/ruleset → model, sin vuelta. Los tipos del registro de acciones tambien
-estan en `model/actionRegistry.ts`, para que una pieza que trae su accion (los poderes) no importe
+estan en `model/actionRegistry.ts`, para que una pieza que trae su accion no importe
 actions/. Lo que solo usa el arma de cada tipo esta en `rules/weapons.ts` para que las reglas de
 los modulos no tengan que importar el combate.
 
@@ -658,8 +649,8 @@ modulo y solo ese).
 ### Equipos
 
 Una partida tiene dos o mas equipos (`GameState.teams`, `TeamState`; una guardada, hasta 16): cada uno con su numero (`id`, su
-puesto en la lista), su `alliance`, quien lo juega (`controller`: `'human'` o `'ai'`), su dinero, su
-general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 0 es el jugador".
+puesto en la lista), su `alliance`, quien lo juega (`controller`: `'human'` o `'ai'`), su dinero y sus
+estadisticas. **Ningun numero de equipo es especial**: no hay "el 0 es el jugador".
 
 - Enemigos son los de otra alianza (`isHostile`, `enemiesOf`); los de la misma comparten la vision,
   no se atacan ni se capturan lo suyo, y un punto de control solo lo disputan enemigos.
@@ -925,7 +916,7 @@ esta en la tabla no sale):
 
 | Se ve... | Sucesos |
 |---|---|
-| siempre (la partida lo anuncia a todos) | `turnStart`, `turnEnd`, `newDay`, `weather`, `surrender`, `teamDefeated`; `controlPoint` (de quien es cada punto esta en el estado; que lo disputa alguien, solo si ve a quien lo disputa); `power` (que un general usa su poder es publico: su `used` esta en el estado de cada equipo), recortado a las unidades que conoce y a la casilla si la ve |
+| siempre (la partida lo anuncia a todos) | `turnStart`, `turnEnd`, `newDay`, `weather`, `surrender`, `teamDefeated`; `controlPoint` (de quien es cada punto esta en el estado; que lo disputa alguien, solo si ve a quien lo disputa) |
 | si conoce a la unidad (antes o despues) | `capture`, `spawn`, `wait`, `remove`, `heal`, `captureDropped`; `supply` (sus reparaciones, solo las de unidades que conoce); `undoMove` (y ve adonde vuelve) |
 | si conoce a las dos | `merge`, `load`, `unload` |
 | si conoce a la unidad; del camino, solo las casillas que ve | `move` (y el corte, si ve donde esta lo que corto); una unidad que cruza la vision sin pararse en ella no esta en ninguna vista: no se cuenta |
@@ -936,11 +927,11 @@ esta en la tabla no sale):
 Lo que hace la propia alianza se sabe entero (el camino de una unidad propia pasa por donde no ve).
 Sin niebla todo lo del mapa pasa tal cual; lo privado de cada alianza, no. Y lo que la vista no
 cuenta de los enemigos tampoco lo cuenta un cambio de la vista: de los demas equipos no se ve el
-dinero ni la carga de su general (`FOG`, 'foreignBooks': dirian lo que compran y lo que pelean donde
+dinero (`FOG`, 'foreignBooks': dirian lo que compran donde
 no se ve), un edificio sin captura a la vista va siempre sin el campo `capture` (si apareciera,
 delataria la captura escondida) y la lista de movimientos que se pueden deshacer solo esta si hay
 alguno propio. Lo prueba `tests/eventFog.test.ts` en partidas enteras de 2 a 4 equipos (con alianzas,
-generales, clima, puntos de control, emboscadas y bosques): cada uid y cada casilla que nombra un
+clima, puntos de control, emboscadas y bosques): cada uid y cada casilla que nombra un
 suceso recortado se conocen antes o despues del paso (`tests/sim/eventReferences.ts` dice lo que
 nombra cada tipo), y `tests/room.test.ts` prueba por mensajes que ningun cliente recibe una unidad
 escondida y que, para cada tipo de accion, una unidad o escuadra escondida se rechaza igual que una
@@ -951,8 +942,8 @@ apuntadas, nunca se deducen de lo que se ve) y `cloneState`, `serialize` y la pa
 cualquier partida. Un `events` no trae la accion (el suceso de rendirse ya lo cuenta), trae un lote
 (varios pasos y la vista del final: una unidad que se metio en la niebla por el camino se anima
 contra la vista de antes, no contra la del final), el `attacker` de un ataque puede ser null (la
-vista ya dibuja un combate sin atacante a la vista), y el dinero y la carga del general de los
-demas equipos llegan a 0 (la barra del general enemigo enseña «?»).
+vista ya dibuja un combate sin atacante a la vista), y el dinero de los
+demas equipos llega a 0.
 
 ESLint pone la red encima de todo (`NO_NET`, eslint.config.js): ni la IA, ni las ordenes, ni la
 sesion, ni las reglas, ni la vista la importan (una partida se juega igual con red que sin ella), y la
@@ -1016,7 +1007,7 @@ decisiones:
   que la comprueba con lo que el equipo sabe, igual que la sala antes de preguntar a la partida de
   verdad) y, si vale, se manda a la sala. Si la sala la rechaza (algo escondido lo impedia), se avisa
   y se pide la vista (`resync`), que vuelve a ser la partida. Lo que se anima (atacar, capturar,
-  comprar, unirse, subir, poderes) lo decide el servidor —los dados y lo escondido estan alli—: se
+  comprar, unirse, subir) lo decide el servidor —los dados y lo escondido estan alli—: se
   espera su `result` y su eco (la vista al dia), la vista pasa a ser la partida (`adoptView`: sesion
   espejo nueva) y sus sucesos, tal como los ve el equipo, se animan como siempre.
 - **Los demas llegan por lotes** y cada lote se anima por turnos contra `animationView(antes,
@@ -1033,9 +1024,8 @@ decisiones:
   ninguna, el juego no ofrece «Jugar en línea».
 - **Lo que no vale por la red**: guardar y repetir el turno enemigo no estan en el menu de pausa
   (`gameMenuOf(s, isOnline)`; la partida sigue desde el servidor: «Mis partidas en línea» o el
-  enlace), el final solo ofrece volver al menu (la revancha seria otra sala), la barra del general
-  enemigo enseña «?» (su carga no llega: `GeneralVM.chargeKnown`) y no hay autoguardado.
-- **Limites de hoy**: el general de cada asiento lo elige quien crea la sala; los enemigos que se
+  enlace), el final solo ofrece volver al menu (la revancha seria otra sala) y no hay autoguardado.
+- **Limites de hoy**: los enemigos que se
   rinden en el turno propio no se anuncian hasta que llega su lote; el reloj por turno corre en el
   servidor sin cuenta atras en la pantalla.
 
@@ -1118,8 +1108,7 @@ src/view3d/
 - **Depuracion**: en la consola, `window.ilogic3d` (`session`, `board`, `controls`, `camera`, `world`,
   `weather`, `stages`, `wrecks`...). Playground de modelos y animaciones: `units3d.html`
   (`src/view3d/playground/`, `window.ilogicPlayground`).
-- **Aun no en 3D** (estaban en el 2D): escuadras, ordenes permanentes, grupos y recuadro, poderes de
-  los generales, minimapa dibujado, varias personas en la misma pantalla, repetir el turno enemigo,
+- **Aun no en 3D** (estaban en el 2D): escuadras, ordenes permanentes, grupos y recuadro, minimapa dibujado, varias personas en la misma pantalla, repetir el turno enemigo,
   guardado automatico, tutorial, laboratorio de animaciones y campaña online. Cada uno entra con esta
   forma: su sistema en `systems/`, su dibujo en `engine/` y su puerto en `ports/`.
 - Colores de los lienzos de la interfaz: `PAL_CSS` en `ui/palette.ts` (los mismos que `hud.css`).

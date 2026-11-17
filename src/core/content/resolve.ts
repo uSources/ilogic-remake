@@ -1,6 +1,6 @@
 /**
  * Lo que hay en los ficheros de contenido (`Content`) y los tipos resueltos que salen de ellos
- * (`ResolvedContent`): cada unidad, edificio, terreno, clima, tema, general y mision como un objeto con sus
+ * (`ResolvedContent`): cada unidad, edificio, terreno, clima, tema y mision como un objeto con sus
  * campos con nombre, en un catalogo por id. Lo usa index.ts (cargar el contenido); aparte para que
  * los modulos de cada parte no dependan de el.
  */
@@ -9,7 +9,6 @@ import type { DeepReadonly } from '../util/freeze';
 import { buildAiWeights, type AiWeights } from './ai';
 import { buildBuildingTypes, type BuildingType } from './buildings';
 import { catalogOf, type Catalog } from './catalog';
-import type { GeneralDef } from './generals';
 import type { MapgenDef, MapgenSettings } from './mapgen';
 import type { MissionDef } from './missions';
 import { buildMovementTypes, type MovementDef, type MovementType } from './movements';
@@ -30,7 +29,6 @@ export interface Content {
   settings: SettingsFile;
   ai: Record<string, unknown>;
   weather: WeatherDef[];
-  generals: GeneralDef[];
   missions: MissionDef[];
   movements: MovementDef[];
 }
@@ -49,7 +47,6 @@ export interface ResolvedContent {
   weather: Catalog<WeatherType>;
   /** El clima neutro (el de "clear": true en weather.json): con el empiezan las partidas. */
   clearWeather: WeatherType;
-  generals: Catalog<DeepReadonly<GeneralDef>>;
   /** Los tipos de movimiento (movements.json), en su orden. */
   movements: Catalog<MovementType>;
   /** Las misiones de la campaña, en su orden (missions.json). */
@@ -77,7 +74,6 @@ export function resolveContent(files: Content): ResolvedContent {
     mapgen: files.mapgen,
     weather,
     clearWeather: weather.list.find((type) => type.isClear)!,
-    generals: catalogOf(files.generals),
     missions: catalogOf(files.missions),
     movements: catalogOf(buildMovementTypes(files.movements)),
     defaultSettings: { ...files.settings.defaults },

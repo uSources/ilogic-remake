@@ -23,7 +23,6 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
     las pantallas de salas, `src/menu/online/`) ya están, pero el cliente iba enganchado a la
     escena 2D, que se quitó. Falta que la partida 3D juegue con la conexión (`OnlineMatch`) y dar al
     menú 3D su `openOnline`; hasta entonces la tarjeta «Jugar en línea» no sale.
-18. **Poderes de los generales:** elegirlos y animarlos.
 19. **Minimapa dibujado** (el panel del HUD y la tecla M están, pero la vista 3D no lo rellena),
     tutorial y paneles de misión.
 20. **Varias personas en la misma pantalla** (el aviso de cambio de jugador), repetir el turno
@@ -46,27 +45,16 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
    ejércitos más pequeños (2) y un asalto escoltado a la Base.
 2. **Ejércitos más pequeños.** Bajar los puntos de mando de 30 a ~20 para que cada unidad pese más y
    haya menos que mover. Medir antes con `npm run balance`.
-3. **Dificultad en «Nueva partida».** Fácil: la IA empieza con menos dinero, sin general y sin
+3. **Dificultad en «Nueva partida».** Fácil: la IA empieza con menos dinero y sin
    curarse. Normal: como ahora.
 4. **Modo Escaramuza.** Mapa pequeño (12×12), menos dinero, partidas de ~10 días.
-5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar estrellas al
-   general o visión. Ver cómo se juegan primero (PR #47).
+5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar visión. Ver cómo se juegan primero (PR #47).
 
 ## Equilibrio
 
-9. **Generales.** Con las reglas de ataque de la 0.7.0, Brisa pasó del 60 % al 71 % de victorias
-   contra la IA sin general y Ámbar bajó del 60 % al 50 % (margen ±10). Retocar sus números con
-   `npm run generals`.
 10. **Unidades.** `npm run balance` dice que el Soldado (1,6×) y el Caza ligero (2×) rinden demasiado
     para lo que cuestan, y el Jeep (0,4×) y el Motorizado (0,3×) muy poco. Propuestas de la
     herramienta: Soldado 1500 → 2000, Jeep 5000 → 4000, Caza ligero 12000 → 15000.
-
-## Generales con unidades propias
-
-13. **Unidades comunes y exclusivas por general.** Cada general cambia 2-3 unidades del catálogo común
-    por variantes suyas, con otro estilo y no más fuertes. Ejemplos: Brisa, un caza explorador (ve
-    más, pega menos); Ámbar, un camión de
-    campaña (repara más y lleva infantería). Medir con `npm run generals` que ninguno se aleje del 50 %.
 
 ## PvP (más adelante: primero un núcleo PvE bueno)
 
@@ -76,7 +64,7 @@ jugador es una acción (datos) que pasa por `dispatch`, con sucesos completos: l
 recibiría un cliente. Por fases, para no apostarlo todo de golpe:
 
 14. **Dos jugadores en el mismo dispositivo** (pasarse el móvil): casi gratis de hacer, y sirve para
-    probar el equilibrio de los generales entre personas.
+    probar el equilibrio entre personas.
 15. **Partidas con amigos por enlace o código**, asíncronas, con aviso cuando te toca. **En marcha**,
     en tres PR: (1) el núcleo habla por la red, sin servidor (hecho: `src/core/net`, ver
     `docs/ARQUITECTURA.md`, "Red": el protocolo como datos, la sala `Room` sobre una `GameSession`,
@@ -84,26 +72,24 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     Durable Object por sala, que guarda la sala (`snapshot`/`restore`), lleva los tiempos y manda a
     cada uno solo lo que ve (hecho: `server/`); (3) la pantalla: crear una sala, el enlace de
     invitación y jugar desde la vista y los sucesos que llegan (hecho: `src/net`, «Jugar en línea»;
-    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"). Queda: que cada uno elija su general al entrar,
-    la cuenta atrás del reloj por turno en la pantalla y avisos fuera de la pestaña (notificaciones
+    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"). Queda: la cuenta atrás del reloj por turno en la pantalla y avisos fuera de la pestaña (notificaciones
     del navegador). Decidido: el servidor manda (las acciones pasan por la sesión
     como las de cualquiera, la IA rival y los dados juegan allí) y un cliente nunca recibe más que la
     vista de su equipo (si no, se puede mirar a través de la niebla). Las clasificatorias, después.
 16. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
 
-Para competir hará falta: equilibrio estricto de generales, mapas simétricos o probados (los de azar
+Para competir hará falta: equilibrio estricto, mapas simétricos o probados (los de azar
 dan algo de ventaja a una salida) y quizá una opción "sin azar" en el daño. El PvE se queda: enseña a
 jugar y es lo que hay cuando no hay rival.
 
 ## Monetización (si llega)
 
 Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende suelto.
-- **Lo más limpio:** web gratis como demo (parte de la campaña, escaramuza y 3 generales) y pago
+- **Lo más limpio:** web gratis como demo (parte de la campaña y escaramuza) y pago
   único por la versión completa en itch.io, Steam (aplicación de escritorio) o Google Play (la app
   instalable envuelta). En la web es casi imposible cobrar: el juego es un fichero que se copia.
-- **Después:** expansiones de campaña que traen un general nuevo, y cosméticos (aspectos de unidades y
-  generales, colores, temas de mapa, el estilo 2013 como pack). Si el juego fuera gratis con PvP, los
-  generales se consiguen jugando.
+- **Después:** expansiones de campaña (misiones nuevas), y cosméticos (aspectos de unidades, colores,
+  temas de mapa, el estilo 2013 como pack).
 - **Nunca:** cajas de botín o gacha, monedas premium, energía, anuncios que cortan la partida.
 - Antes de cobrar: derechos del Ilogic original, facturación e IVA.
 
@@ -132,6 +118,9 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   mete una pieza más que sube y baja. Se eligió la «mesa de juego» (`docs/PLAN-INTERFAZ-2.md`).
 - **Interfaz «Cuartel del general»** (dirección C, al estilo Advance Wars y Fire Emblem): vuelve a
   poner información fija en pantalla, justo lo que se quitó en la 0.12.0.
+- **Generales** (un general por equipo, con una ventaja fija, una barra que se cargaba con el combate y
+  poderes como el ataque aéreo o el reconocimiento): casi no se usaban y la IA apenas los aprovechaba.
+  Se quitaron del juego; siguen en el historial de git si algún día vuelven.
 - **Barra de vida en las unidades:** con las cifras nuevas de la letra del juego se lee bien; no hace
   falta.
 - **Edificio semitransparente con una unidad encima:** se probó y quedaba un borrón; en su lugar,

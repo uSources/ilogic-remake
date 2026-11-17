@@ -53,7 +53,7 @@ describe('modificadores del acierto (HIT_MODIFIERS y los de los modulos)', () =>
     const fight = engagement(attacker, defender);
     const ids = hitModifiersOf(s).map((modifier) => modifier.id);
     expect(ids.slice(0, HIT_MODIFIERS.length)).toEqual(['power', 'cover']);
-    expect(ids).toEqual(['power', 'cover', 'guard', 'aura', 'veterancy', 'flank', 'generals', 'weather']);
+    expect(ids).toEqual(['power', 'cover', 'guard', 'aura', 'veterancy', 'flank', 'weather']);
     let chance = power(fighterType, defenderType) * tileProtection(s, defender);
     for (const modifier of hooksOf(s, 'hitModifiers')) chance *= modifier.factor(s, fight);
     expect(hitChance(s, fight)).toBe(chance);
@@ -64,7 +64,7 @@ describe('modificadores del acierto (HIT_MODIFIERS y los de los modulos)', () =>
     const fighterType = fighter();
     const attacker = newUnit(s, fighterType, 0, { x: 2, y: 2 });
     const defender = newUnit(s, fighterType, 1, { x: 3, y: 2 });
-    expect(hitModifiersOf(s).map((modifier) => modifier.id)).toEqual(['power', 'cover', 'generals']);
+    expect(hitModifiersOf(s).map((modifier) => modifier.id)).toEqual(['power', 'cover']);
     expect(hitChance(s, engagement(attacker, defender))).toBe(power(fighterType, fighterType) * tileProtection(s, defender));
   });
 });
@@ -73,12 +73,12 @@ describe('pasos del fin de ronda (ROUND_PHASES y los de los modulos)', () => {
   it('tienen nombres distintos y van por momentos: el dia cambia antes que el clima', () => {
     const ids = roundPhasesOf(blankState(TEST_SETTINGS)).map((roundPhase) => roundPhase.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(['refresh', 'generals', 'buildings', 'control', 'upkeep', 'day', 'weather', 'army']);
+    expect(ids).toEqual(['refresh', 'buildings', 'control', 'upkeep', 'day', 'weather', 'army']);
   });
 
   it('sin los modulos solo quedan los de siempre', () => {
     const s = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0 }));
-    expect(roundPhasesOf(s).map((roundPhase) => roundPhase.id)).toEqual(['refresh', 'generals', 'buildings', 'day', 'army']);
+    expect(roundPhasesOf(s).map((roundPhase) => roundPhase.id)).toEqual(['refresh', 'buildings', 'day', 'army']);
     expect(ROUND_PHASES.map((roundPhase) => roundPhase.stage)).toEqual(['start', 'income', 'newDay', 'record']);
   });
 
@@ -145,17 +145,11 @@ describe('modelos de daño (DamageModel)', () => {
 });
 
 describe('lo que pasa en un ataque (COMBAT_RESOLUTION y los pasos de los modulos)', () => {
-  it('por momentos: golpe, contraataque, lo de herir (generales) y lo de caer (bajas, botin)', () => {
-    expect(combatResolutionOf(blankState(TEST_SETTINGS)).map((step) => step.id)).toEqual([
-      'strike',
-      'counter',
-      'charge',
-      'kills',
-      'bounty',
-    ]);
+  it('por momentos: golpe, contraataque y lo de caer (bajas, botin)', () => {
+    expect(combatResolutionOf(blankState(TEST_SETTINGS)).map((step) => step.id)).toEqual(['strike', 'counter', 'kills', 'bounty']);
     expect(COMBAT_RESOLUTION.map((step) => step.stage)).toEqual(['strike', 'counter', 'kill']);
     const noBounty = blankState(settingsWith(defaultContent(), { fog: false, bounty: 0 }));
-    expect(combatResolutionOf(noBounty).map((step) => step.id)).toEqual(['strike', 'counter', 'charge', 'kills']);
+    expect(combatResolutionOf(noBounty).map((step) => step.id)).toEqual(['strike', 'counter', 'kills']);
   });
 
   it('el contraataque lo deciden las reglas de los modulos: sin el modulo nadie responde', () => {

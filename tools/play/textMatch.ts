@@ -12,7 +12,6 @@ import { createMatch, loadGame } from '@core/defaultGames';
 import { skirmishConfig, type MatchConfig } from '@core/match';
 import { posKey } from '@core/geom';
 import { mapGrid } from '@core/mapGrid';
-import { generalOf } from '@core/generals';
 import { missionById } from '@core/missions';
 import {
   attackTargets,
@@ -48,9 +47,6 @@ export interface TextMatchOptions {
   mission?: string;
   /** Partida guardada (JSON) en vez de una nueva. */
   state?: string;
-  /** General del jugador y de la IA (id de generals.json). */
-  general?: string;
-  enemyGeneral?: string;
 }
 
 export class TextMatch {
@@ -122,11 +118,6 @@ export class TextMatch {
       },
     },
     { names: ['buy', 'comprar'], plays: true, run: (match, words) => match.buy(words.posAt(0), words.list[2] ?? '') },
-    {
-      names: ['power', 'poder'],
-      plays: true,
-      run: (match, words) => match.power(words.list[0] ?? '', words.list[1] === undefined ? null : words.posAt(1)),
-    },
     { names: ['end', 'fin'], plays: true, run: (match) => match.endTurn(false) },
     { names: ['ai', 'ia'], plays: true, run: (match) => match.endTurn(true) },
     { names: ['surrender', 'rendirse'], plays: true, run: (match) => match.surrender() },
@@ -276,17 +267,6 @@ export class TextMatch {
     return `comprada ${uid} ${unitType.id} en (${posKey(at)}); quedan ${teamState(this.s, this.me).funds}`;
   }
 
-  /** Usar un poder del general (sin id: lista de poderes y carga). */
-  private power(id: string, target: { x: number; y: number } | null): string {
-    const general = generalOf(this.s, this.me);
-    if (!general) throw new UsageError('no tienes general (--general Brisa)');
-    const list = general.definition.powers.map((power) => `${power.id} (${power.cost})`).join(', ');
-    if (!id)
-      return `${general.definition.id}: carga ${general.state.charge.toFixed(1)}/${general.definition.charge.max}${general.state.used ? ', ya usado este turno' : ''}. Poderes: ${list}`;
-    const events = this.perform({ kind: 'usePower', power: id, target }, `no se puede usar ${id} (poderes: ${list})`);
-    return describeAll(this.s, events, '').join('\n');
-  }
-
   /**
    * Fin del turno propio (o la IA juega por ti con `ai`): lo que pasa solo al acabarlo (las ordenes
    * permanentes, las capturas que siguen), los turnos de los demas equipos por su orden (los
@@ -341,10 +321,8 @@ export class TextMatch {
     const own = (team: TeamId) => buildingsOf(s, team).length;
     const unitsOf = (team: TeamId) => teamUnits(s, team).length;
     const others = (count: (team: TeamId) => number) => this.others.map(count).join('/');
-    const general = teamState(s, me).general;
     return [
       `dia ${s.day} · dinero ${teamState(s, me).funds} (otros ${others((team) => teamState(s, team).funds)}) · edificios ${own(me)} contra ${others(own)}`,
-      ...(general ? [`general ${general.id}: carga ${general.charge.toFixed(1)}`] : []),
       `unidades ${unitsOf(me)} contra ${others(unitsOf)} · resultado: ${this.result()}`,
       `sin usar: ${
         teamUnits(s, me)
@@ -392,14 +370,6 @@ function loadedGame(json: string): GameState {
   return s;
 }
 
-/** Un general que no existe para aqui; ninguno (undefined), sin general. */
-function checkedGeneral(id: string | undefined): string | null {
-  if (!id) return null;
-  const known = defaultContent().generals.list.map((general) => general.id);
-  if (!known.includes(id)) throw new Error(`No existe el general "${id}" (${known.join(', ')})`);
-  return id;
-}
-
 /**
  * La partida que se pide: la mision, o una escaramuza con lo mismo que el juego en lo que no se
  * dice (skirmishConfig: mapa, reglas). Asi la misma semilla da la misma partida aqui y en la pantalla (K4).
@@ -414,10 +384,7 @@ function matchConfigOf(options: TextMatchOptions, seed: number): MatchConfig {
     size: options.size,
     theme: options.theme,
     settingChanges: options.fog === undefined ? {} : { fog: options.fog },
-    teams: [
-      { controller: 'human', general: checkedGeneral(options.general) },
-      { controller: 'ai', general: checkedGeneral(options.enemyGeneral) },
-    ],
+    teams: [{ controller: 'human' }, { controller: 'ai' }],
   });
 }
 
@@ -465,11 +432,6 @@ const EVENT_TEXT: { readonly [Kind in GameEvent['kind']]?: (s: GameState, event:
   load: (s, event) => `${unitName(s, event.uid)} sube a ${unitName(s, event.into)}`,
   unload: (s, event) => `${unitName(s, event.uid)} baja a ${unitName(s, event.passenger)} en ${at(event.to)}`,
   supply: (s, event) => `${unitName(s, event.uid)} repara a ${event.repairs.length}`,
-  power: (s, event) => {
-    const target = event.target ? ` en ${at(event.target)}` : '';
-    const hits = event.hits.length ? `: ${event.hits.map((hit) => `${unitName(s, hit.uid)} -${hit.damage}`).join(', ')}` : '';
-    return `general ${event.general} usa ${event.power}${target}${hits}`;
-  },
   surrender: (_s, event) => `el equipo ${shownTeamNumber(event.actor)} se rinde`,
   teamDefeated: (_s, event) => `el equipo ${shownTeamNumber(event.team)} queda fuera (${DEFEAT_TEXT[event.reason]})`,
 };
@@ -500,7 +462,6 @@ const HELP = `Ordenes (coordenadas x y desde 0, arriba a la izquierda):
   capture <id>             capturar el edificio de debajo
   wait <id>                terminar con la unidad
   buy <x> <y> <Tipo>       comprar en un edificio tuyo (Soldier, Tank...; sin tipo, lista)
-  power [id] [x y]         poder del general (con --general; sin id, carga y lista)
   end                      fin de turno: juega la IA enemiga y empieza el dia siguiente
   ai                       la IA juega tu turno y el enemigo el suyo
   surrender                rendirse (y siguen los demas, si queda alguna persona)

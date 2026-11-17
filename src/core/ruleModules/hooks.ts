@@ -24,7 +24,7 @@ import type {
 
 /**
  * Algo que cambia la probabilidad de acierto (el poder del atacante, la proteccion, habilidades,
- * veterania, generales, clima...). Devuelve un multiplicador: 1 = nada.
+ * veterania, clima...). Devuelve un multiplicador: 1 = nada.
  */
 export interface HitModifier {
   /** Nombre corto (para depurar o enseñar el desglose). */
@@ -46,7 +46,7 @@ export interface CounterRule {
 
 /**
  * Momentos de un ataque, en orden (COMBAT_STAGES, actions/combat.ts): el golpe, el contraataque, lo
- * que pasa por herir (la carga de los generales) y lo que pasa si una cae (bajas, botin).
+ * que pasa por herir y lo que pasa si una cae (bajas, botin).
  */
 export type CombatStage = 'strike' | 'counter' | 'wound' | 'kill';
 
@@ -58,8 +58,8 @@ export interface CombatStep {
 }
 
 /**
- * Momentos del fin de ronda, en orden (ROUND_STAGES, rules/round.ts): empezar (las unidades y los
- * generales vuelven a poder actuar), cobrar, pagar, el dia nuevo y apuntar como acaba.
+ * Momentos del fin de ronda, en orden (ROUND_STAGES, rules/round.ts): empezar (las unidades vuelven a
+ * poder actuar), cobrar, pagar, el dia nuevo y apuntar como acaba.
  */
 export type RoundStage = 'start' | 'income' | 'costs' | 'newDay' | 'record';
 
@@ -97,7 +97,7 @@ export interface VisionRadiusRule {
   radius(s: GameState, unit: Unit, radius: number): number;
 }
 
-/** Algo por lo que un equipo ve todo el mapa (sin niebla, el reconocimiento de un general). */
+/** Algo por lo que un equipo ve todo el mapa (sin niebla, un reconocimiento). */
 export interface RevealRule {
   readonly id: string;
   revealsAll(s: GameState, team: TeamId): boolean;
@@ -239,7 +239,6 @@ export interface RuleModuleIds {
   abilities: true;
   veterancy: true;
   flank: true;
-  generals: true;
   weather: true;
   controlPoints: true;
   upkeep: true;

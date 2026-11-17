@@ -67,12 +67,6 @@ export interface UIActions {
   /** Centrar la camara en un punto del mapa, en casillas (con decimales: donde se pulso dentro de la casilla). */
   minimapJump(at: Pos): void;
 
-  // --- General ---
-  /** Usar un poder del general (los de area pasan a elegir casilla). */
-  usePower(id: string): void;
-  /** Dejar de apuntar un poder. */
-  cancelPower(): void;
-
   // --- Final de la partida y ayuda ---
   endContinue(): void;
   endHover(index: number): void;

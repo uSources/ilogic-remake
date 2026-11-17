@@ -54,5 +54,4 @@ export const online = {
   onlineRejected: 'El servidor no ha aceptado la jugada: se pone la partida al día',
   onlineResynced: 'Partida puesta al día con el servidor',
   onlineNoSave: 'Las partidas en línea no se guardan aquí: se siguen desde el servidor',
-  onlineGeneralsNote: 'Quien crea la sala elige el general de cada asiento.',
 };

@@ -126,10 +126,7 @@ function SeatRow({ seat, focus }: { seat: OnlineSeatVM; focus: string }) {
   const presence = seat.kind === 'ai' ? '' : seat.joined ? t('onlineIn') : t('onlineOut');
   return (
     <div class={`on-lobby-seat ${seat.joined || seat.kind === 'ai' ? 'in' : 'out'}`}>
-      <span class="on-seat-name">
-        {seat.label}
-        {seat.general && <span class="muted small"> · {seat.general}</span>}
-      </span>
+      <span class="on-seat-name">{seat.label}</span>
       <span class="muted small">
         {who}
         {presence && ` · ${presence}`}

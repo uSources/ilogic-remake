@@ -1,6 +1,6 @@
 /**
  * La accion de atacar y lo que pasa en un ataque (COMBAT_RESOLUTION): el golpe, el contraataque y lo
- * que aportan los modulos de reglas (la carga de los generales, el botin).
+ * que aportan los modulos de reglas (el botin).
  */
 import { posOf } from '../geom';
 import { attackProblem, canCounter, combatInfoBefore, strike } from '../rules/combat';
@@ -44,7 +44,7 @@ function countKill(_s: GameState, attack: AttackRecord): void {
 
 /**
  * Lo que pasa en cualquier ataque, cada paso en su momento. Lo que depende de la partida lo ponen sus
- * modulos de reglas (`combatSteps`): la carga de los generales al herir, el botin si una cae. Un
+ * modulos de reglas (`combatSteps`): el botin si una cae. Un
  * efecto nuevo de los combates (moral, experiencia por daño...) es un paso de su modulo.
  */
 export const COMBAT_RESOLUTION: readonly CombatStep[] = [

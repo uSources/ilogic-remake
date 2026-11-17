@@ -32,7 +32,8 @@
     "check:server": "npm run check -w server",
     "shots": "node tests/visual/shots.mjs",
     "shots:update": "node tests/visual/shots.mjs --update",
-    "perf": "node tools/perf/measure.mjs"
+    "perf": "node tools/perf/measure.mjs",
+    "retratos": "node tools/art/retratos3d.mjs"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",

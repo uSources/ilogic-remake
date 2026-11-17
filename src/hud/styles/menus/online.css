@@ -89,11 +89,3 @@
 .netline.offline i {
   background: var(--red-soft);
 }
-
-/* Por la red no se sabe la carga del general enemigo */
-.gp-charge.unknown .gp-unknown {
-  font-family: var(--display);
-  color: var(--gold);
-  font-size: 16px;
-  line-height: 1;
-}

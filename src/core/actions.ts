@@ -16,7 +16,6 @@
  * | `transport` | unirse, subir y bajar de un transporte |
  * | `units` | esperar, reparar, retirar una unidad |
  * | `economy` | comprar |
- * | `powers` | poderes del general |
  * | `standingOrders` | dar, quitar y cumplir ordenes permanentes |
  * | `squads` | escuadras y grupos por tecla |
  * | `match` | lo de la partida entera: rendirse |

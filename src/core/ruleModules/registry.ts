@@ -14,7 +14,6 @@ import { ELEVATION } from './elevation';
 import { COUNTERATTACK } from './counterattack';
 import { FLANK } from './flank';
 import { FOREST_HIDES } from './forestHides';
-import { GENERALS } from './generals';
 import type { RuleModule, RuleModuleId } from './hooks';
 import { resolveRuleset, type Ruleset } from './ruleset';
 import { NO_FOG } from './noFog';
@@ -34,7 +33,6 @@ export const RULE_MODULES: readonly RuleModule[] = [
   ABILITIES,
   VETERANCY,
   FLANK,
-  GENERALS,
   WEATHER,
   CONTROL_POINTS,
   UPKEEP,

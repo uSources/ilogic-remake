@@ -13,7 +13,7 @@ import { isStandingOrderKind, isTurnEndOrderKind } from './squads/standingOrderT
 import { sanitizeTeamStats } from './stats';
 import { allianceCount, isControllerKind } from './teams';
 import { isDefeatReason } from './rules/falls';
-import type { GeneralState, SavedGameState } from './model';
+import type { SavedGameState } from './model';
 import { Grid, type GridBounds } from './util/grid';
 import { isElevationGrid } from './elevation';
 import { isInt, isPosOn, isObject, isUid } from './util/validation';
@@ -76,15 +76,6 @@ export function boardOf(map: readonly (readonly string[])[]): GridBounds {
   return { ...size, contains: (pos) => Grid.fits(size, pos) };
 }
 
-/** Un general que no existe (o con datos rotos) se quita: el equipo sigue sin el. */
-function cleanGeneral(content: GameContent, saved: unknown): GeneralState | null {
-  const definition = isObject(saved) && typeof saved.id === 'string' ? findEntry(content.generals, saved.id) : undefined;
-  if (!isObject(saved) || !definition) return null;
-  const hasCharge = typeof saved.charge === 'number' && Number.isFinite(saved.charge);
-  const charge = hasCharge ? Math.max(0, Math.min(saved.charge as number, definition.charge.max)) : 0;
-  return { id: definition.id, charge, used: !!saved.used, reveal: !!saved.reveal };
-}
-
 /** Cuando y por que cayo un equipo (o null, si sigue en pie). Que cuadre con la partida lo mira readSave (fallsMatch). */
 const isTeamFall = (fell: unknown): boolean =>
   fell === null || (isObject(fell) && isInt(fell.order, 1, MAX_COUNT) && isDefeatReason(fell.reason));
@@ -102,10 +93,9 @@ export function hasValidTeams(teams: readonly unknown[]): boolean {
   return checked.length === teams.length && allianceCount(checked) >= 2;
 }
 
-/** El general y las estadisticas de cada equipo, si estan rotos, se arreglan (despues de hasValidTeams). */
-export function cleanTeams(content: GameContent, teams: readonly unknown[]): void {
+/** Las estadisticas de cada equipo, si estan rotas, se arreglan (despues de hasValidTeams). */
+export function cleanTeams(teams: readonly unknown[]): void {
   for (const team of objectsIn(teams)) {
-    team.general = cleanGeneral(content, team.general);
     team.stats = sanitizeTeamStats(team.stats);
   }
 }

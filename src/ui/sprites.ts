@@ -49,14 +49,14 @@ export function unitKey(textures: GameImages, s: GameState, unit: Unit, viewer: 
   const unitType = unitTypeOf(s, unit);
   const terrain = unitType.classicSprite[terrainAt(s, drawnAt).id] ?? '';
   const name = unitType.art;
-  // Dibujo nuevo (carpeta u/), si esta elegido y existe.
-  if (settings.terrainArt === 'new' && hasImage(textures, `u/${side}${name}`)) return `u/${side}${name}`;
+  // Retrato nuevo (carpeta retrato/, de los modelos 3D), si esta elegido y existe.
+  if (settings.terrainArt === 'new' && hasImage(textures, `retrato/${side}${name}`)) return `retrato/${side}${name}`;
   return firstExisting(textures, [side + terrain + name, side + name, `${unitSideLetter(unitSide, true)}_${name}`]);
 }
 
 export function unitIconKey(unitType: UnitType, available: boolean): string {
   const key = (available ? 'b_' : 'i_') + unitType.art;
-  return settings.terrainArt === 'new' ? `u/${key}` : key;
+  return settings.terrainArt === 'new' ? `retrato/${key}` : key;
 }
 
 export function buildingKey(textures: GameImages, s: GameState, building: Building, visible: boolean, viewer: TeamId): string | null {

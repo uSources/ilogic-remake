@@ -3,7 +3,7 @@
  * y con las piezas puras de ui/hudModels.ts (economyVM, dayInfoVM, weatherVM, tileVM, forecastVM,
  * los menus de la unidad y de compra...), asi la barra de arriba, las fichas, la prevision de combate
  * y los menus son los del juego: tambien las escuadras de la bandeja y el panel de lo elegido. Lo que
- * la partida 3D aun no hace (generales) sigue con sus valores de partida.
+ * la partida 3D aun no hace sigue con sus valores de partida.
  */
 import { visibility, buildingsOf, canActNow, commandUsed } from '../../../core/rules';
 import type { GameState, Pos, TeamId, Unit } from '../../../core/model';

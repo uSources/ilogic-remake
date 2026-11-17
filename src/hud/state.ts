@@ -4,7 +4,6 @@ import type { EndOutcome, EndStatsVM } from './vm/end';
 import type { Anchor, BySide, Side } from './vm/common';
 import type { CombatVM, ForecastVM } from './vm/combat';
 import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
-import type { GeneralVM } from './vm/general';
 import type { LabVM } from './vm/lab';
 import type {
   CampaignItemVM,
@@ -63,10 +62,6 @@ export interface UIState {
   dayInfo: DayInfoVM | null;
   /** Laboratorio de animaciones (null en una partida normal). */
   lab: LabVM | null;
-  /** General del equipo que mira. */
-  general: GeneralVM | null;
-  /** General del primer enemigo que tenga uno (solo para verlo). */
-  enemyGeneral: GeneralVM | null;
   buildings: number;
   day: number;
   /** De quien es el turno, visto por quien mira: suyo, de un aliado o de un enemigo. */
@@ -162,9 +157,6 @@ export const initialState: UIState = {
     presets: [],
     groups: [],
     rival: { id: 'opt-rival', group: '', label: '', choices: [], index: 0 },
-    general: null,
-    enemyGeneral: null,
-    generalNote: '',
     code: '',
     codeError: false,
     mapCode: '',
@@ -189,8 +181,6 @@ export const initialState: UIState = {
   funds: 0,
   economy: null,
   lab: null,
-  general: null,
-  enemyGeneral: null,
   dayInfo: null,
   income: 0,
   commandPoints: null,

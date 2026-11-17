@@ -3,7 +3,7 @@
  * `SkirmishChoices`) y, si quiere, un reloj por turno y cuanto esperar a los que faltan antes de
  * darles a la IA. Llega como JSON de fuera, asi que se comprueba campo a campo, como el protocolo
  * comprueba cada mensaje (`CLIENT_MESSAGE_SHAPES`): una tabla con una comprobacion por campo, que
- * el tipo exige completa. Los temas y los generales tienen que existir en el contenido; las reglas,
+ * el tipo exige completa. Los temas tienen que existir en el contenido; las reglas,
  * valer segun `SETTINGS_SCHEMA`.
  */
 import { isEntryId, type GameContent } from '@core/content';
@@ -38,13 +38,11 @@ const MAX_ALLIANCE = MAX_ROOM_TEAMS;
 const MAX_FUNDS = SETTINGS_SCHEMA.initialFunds.kind === 'number' ? SETTINGS_SCHEMA.initialFunds.max : 0;
 
 const isController: FieldCheck = (value) => value === 'human' || value === 'ai';
-const isGeneral: FieldCheck = (value, content) => value === null || isEntryId(content.generals, value);
 
 const TEAM_SHAPE: ShapeOf<MatchTeam> = {
   controller: isController,
   alliance: optional((value) => isInt(value, 0, MAX_ALLIANCE)),
   funds: optional((value) => isInt(value, 0, MAX_FUNDS)),
-  general: optional(isGeneral),
 };
 
 const hasShape =

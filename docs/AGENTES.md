@@ -102,7 +102,7 @@ La primera vez: `npx playwright install chromium`.
   dinero en Retro Diffusion sin permiso**).
 - **Reglas o IA**: `tests/aiGolden.test.ts` falla si cambia como se juega. Bien si era a proposito.
 - **Refactor (reescribir sin cambiar nada)**: `npm run huella` antes y despues; la huella total tiene que
-  ser la misma. Juega 24 partidas IA contra IA (4 juegos de reglas, mapas de 16 a 32, generales y una
-  escuadra del jugador con orden) y resume cada suceso y el estado tras cada ronda.
+  ser la misma. Juega 24 partidas IA contra IA (4 juegos de reglas, mapas de 16 a 32 y una escuadra del
+  jugador con orden) y resume cada suceso y el estado tras cada ronda.
 - **Una version**: skill `sacar-version`.
 - **GitHub**: la web se publica con cada push a `main` si pasa `npm run check`.

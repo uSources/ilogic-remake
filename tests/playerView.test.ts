@@ -161,7 +161,7 @@ describe('PlayerView: lo que sabe un equipo', () => {
     const view = playerView(s, 0).state;
     expect(view.teams[1]!.stats).toEqual({ built: 0, spent: 0, lost: 0, captured: 0, army: [] });
     expect(view.teams[0]!.stats).toEqual(s.teams[0]!.stats);
-    // Su dinero y la carga de su general tampoco (dirian lo que compra y lo que pelea sin verlo).
+    // Su dinero tampoco (diria lo que compra o cobra sin verlo).
     expect(view.teams[1]!.funds).toBe(0);
     expect(s.teams[1]!.funds).toBe(5000);
     // El escondido tiene el uid mas alto: la vista da el siguiente a los que conoce, no el de verdad.

@@ -10,15 +10,9 @@ import type { TeamId } from './team';
  */
 export type EventActor = GameEvent['actor'];
 
-/** Lo que ha curado algo a una unidad (abastecer, un poder del general, un edificio al acabar la ronda). */
+/** Lo que ha curado algo a una unidad (abastecer, un edificio al acabar la ronda). */
 export interface Healing {
   uid: number;
-  amount: number;
-}
-
-/** La carga que ha ganado el general de un equipo (en estrellas, con decimales). */
-export interface GeneralCharge {
-  team: TeamId;
   amount: number;
 }
 
@@ -73,7 +67,7 @@ export type GameEvent = CoreGameEvent | ModuleEvent;
 
 /**
  * Lo de cualquier ataque en su suceso. El suceso lleva ademas lo que han apuntado los modulos
- * (AttackRecordParts: botin, carga...), que no puede llamarse como nada de aqui (AttackPartsFitEvent).
+ * (AttackRecordParts: botin...), que no puede llamarse como nada de aqui (AttackPartsFitEvent).
  */
 export interface AttackEventBase {
   kind: 'attack';
@@ -114,29 +108,6 @@ export interface IncomeSources {
 }
 export type IncomeSource = keyof IncomeSources;
 
-/**
- * Lo que apunta en el suceso de un poder cada clase de efecto, ademas de las unidades tocadas (las
- * curas, el dinero): esta vacia aqui y cada efecto anade lo suyo ampliandola (`declare module`, en
- * generalPowers.ts). No puede llamarse como un campo de `PowerEventBase` (PowerPartsFitEvent).
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- se amplia con declare module
-export interface PowerEventParts {}
-
-/** Lo de cualquier poder en su suceso. */
-export interface PowerEventBase {
-  kind: 'power';
-  actor: TeamId;
-  general: string;
-  power: string;
-  /** Casilla elegida (poderes de area). */
-  target?: Pos;
-  /** Unidades tocadas y vida que han perdido (vacio si el efecto no toca a nadie). */
-  hits: { uid: number; damage: number }[];
-}
-
-/** true si ninguna parte de los efectos se llama como un campo del suceso del poder (si no, never). */
-export type PowerPartsFitEvent = [keyof PowerEventParts & keyof PowerEventBase] extends [never] ? true : never;
-
 /** Un suceso de un modulo (ver ModuleEvents). */
 export type ModuleEvent = { [K in keyof ModuleEvents]: { kind: K } & ModuleEvents[K] }[keyof ModuleEvents];
 
@@ -164,7 +135,6 @@ export type CoreGameEvent =
   | { kind: 'standingOrderDone'; actor: TeamId; uid: number; end: StandingOrderEnd }
   /** Una escuadra formada, cambiada o deshecha: como queda (`uids`, las suyas ahora; vacio si ya no existe). */
   | { kind: 'squad'; actor: TeamId | null; squad: number; change: SquadChange; uids: number[]; name: string; key?: number }
-  | (PowerEventBase & Partial<PowerEventParts>)
   /**
    * Los pasajeros de un transporte que ha caido o se ha retirado, que se van con el (sus uids;
    * `transport` ya no existe). Un solo suceso para los dos casos.

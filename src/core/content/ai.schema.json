@@ -17,8 +17,6 @@
     "enemyHqPreference",
     "ownedBuildingPreference",
     "minCapturers",
-    "minPowerValue",
-    "revealValue",
     "controlPointHeadStart",
     "guardRadius",
     "focusFireBonus",
@@ -90,16 +88,6 @@
       "type": "number",
       "minimum": 0,
       "description": "Unidades que capturan que intenta tener siempre."
-    },
-    "minPowerValue": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Valor (precio × vida que quita / 100) que tiene que valer una habilidad del general para usarla. Con la barra llena basta con que valga algo."
-    },
-    "revealValue": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Lo que vale ver todo el mapa una ronda (habilidad reveal), solo con niebla. Bajo: se usa cuando la barra esta llena y no hay nada mejor."
     },
     "controlPointHeadStart": {
       "type": "number",

@@ -1,5 +1,5 @@
 /**
- * El contenido de cada partida (unidades, edificios, terreno, clima, generales, pesos de la IA). Es un
+ * El contenido de cada partida (unidades, edificios, terreno, clima, pesos de la IA). Es un
  * campo de la partida (`GameState.content`), no un modulo: dos partidas con contenidos distintos (el
  * del juego y el de una variante de equilibrio) se juegan a la vez en el mismo proceso.
  *

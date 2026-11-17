@@ -21,7 +21,6 @@ const optional =
   (check: FieldCheck): FieldCheck =>
   (value) =>
     value === undefined || check(value);
-const isPosOrNull: FieldCheck = (value) => value === null || isPos(value);
 const isPath: FieldCheck = (value) => Array.isArray(value) && value.every(isPos);
 const isStandingOrder: FieldCheck = (value) => isObject(value) && isStandingOrderKind(value.kind) && isPos(value.at);
 /** Teclas de grupo: un entero (cuales valen, de 1 a SQUAD_KEYS, lo dice la accion, con 'badKey'). */
@@ -45,7 +44,6 @@ export const ACTION_SHAPES: { readonly [K in GameActionKind]: ShapeOf<K> } = {
   wait: unitOnly,
   deleteUnit: unitOnly,
   buy: { at: isPos, unitType: isText },
-  usePower: { power: isText, target: isPosOrNull },
   gotoStep: unitOnly,
   giveStandingOrder: { uids: isUidList, order: isStandingOrder },
   cancelStandingOrder: unitList,

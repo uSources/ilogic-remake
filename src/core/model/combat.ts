@@ -24,7 +24,7 @@ export interface Engagement {
 }
 
 /**
- * Lo que apunta cada modulo en un ataque, por su nombre (el botin, la carga de los generales). Esta
+ * Lo que apunta cada modulo en un ataque, por su nombre (el botin). Esta
  * vacia aqui: cada modulo que apunta algo la amplia (`declare module '../model/combat' { interface
  * AttackRecordParts { bounty: number } }`). El suceso del ataque lleva las que se han apuntado.
  */

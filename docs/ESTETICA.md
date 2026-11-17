@@ -248,6 +248,9 @@ y estado: `docs/PLAN-INTERFAZ.md`.
 - **Letras**: Fredoka (redonda, para títulos, botones y cifras) y Nunito (texto). La letra píxel de
   2013 queda para el logo.
 - **Iconos**: los de píxel que ya hay, nítidos (`image-rendering: pixelated`), dentro de las fichas.
+- **Retratos de unidades**: no son dibujos, son el propio modelo 3D renderizado en tres cuartos y pasado a
+  pixel art de 64x64 (`npm run retratos` y `tools/art/retratos_pixel.py`). Así la ficha y el tablero
+  muestran lo mismo; si cambia un modelo, hay que volver a renderizarlo.
 - **Poca cosa en pantalla**: solo cuatro piezas fijas, el dinero (su desglose al pasar el ratón), el
   día con su clima, el menú y «Fin del turno» con su número de unidades sin mover (que lleva a la
   siguiente). Nada de bandejas ni líneas de ayuda: lo demás sale junto a lo que se toca y cuando hace
