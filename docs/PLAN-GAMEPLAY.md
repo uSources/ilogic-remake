@@ -41,7 +41,7 @@ Lo que más pesa en la estrategia:
 
 - Fase 0: hecha (herramienta en `balance/`).
 - Fase 1: hecha.
-- Fase 2: hecha (los precios propuestos quedan pendientes de decisión, ver `docs/BALANCE.md`).
+- Fase 2: hecha (los precios propuestos quedan pendientes de decisión).
 - Fase 3: hecha (IA adaptada a las reglas nuevas).
 - Fase 5: veteranía y campaña con tutorial hechas; el editor de mapas queda pendiente.
 - Fase 4: hecha (pantalla de nueva partida con códigos de mapa, límite de días con victoria por puntos, rendirse, repetir el turno enemigo).
@@ -55,7 +55,7 @@ Primero hay que saber cómo se juega hoy en números. Si no, cada cambio se deci
   - qué unidades se compran y cuánto daño hace cada una por cada 1000 de coste;
   - cuántas partidas se deciden por la Base y cuántas por quedarse sin nada;
   - el efecto bola de nieve: quién va ganando en el día 5 y quién gana al final.
-- **Informe** en `docs/BALANCE.md`, para comparar antes y después de cada fase.
+- **Informe** en `balance/reports/`, para comparar antes y después de cada fase.
 
 **Hecho cuando:** tengamos la línea base y cada fase siguiente compare contra ella.
 
@@ -133,7 +133,7 @@ Fase 0 → 1 → 2 → 3 van seguidas: cada una cambia los números de la siguie
 Cada fase:
 - deja tests de las reglas nuevas;
 - vuelve a pasar el simulador;
-- actualiza `docs/BALANCE.md`;
+- guarda el informe en `balance/reports/`;
 - marca los cambios respecto al original con `[CAMBIO]`, como hasta ahora.
 
 Las reglas nuevas que cambien el juego original (contraataque, captura por puntos) irán con una opción **"Reglas clásicas de 2013"** en la pantalla de nueva partida, para poder seguir jugando como entonces.

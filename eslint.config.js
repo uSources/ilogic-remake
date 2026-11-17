@@ -251,16 +251,7 @@ const NET_FILES = ['src/core/net/**/*.ts', 'src/core/net.ts'];
 
 export default tseslint.config(
   {
-    ignores: [
-      'dist/',
-      'dist-single/',
-      'node_modules/',
-      'improve/',
-      'src/assetList.ts',
-      'src/atlasPages.ts',
-      'src/ui/*Sets.ts',
-      'src/ui/sheets.ts',
-    ],
+    ignores: ['dist/', 'dist-single/', 'node_modules/', 'src/assetList.ts', 'src/atlasPages.ts', 'src/ui/*Sets.ts', 'src/ui/sheets.ts'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

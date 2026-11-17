@@ -1,5 +1,5 @@
 /**
- * Juega variantes en hilos (lo usan npm run balance y npm run metrics). Cada hilo recibe los ficheros
+ * Juega variantes en hilos (lo usa npm run balance). Cada hilo recibe los ficheros
  * de contenido de la variante, los carga (loadContent: valida y congela) y juega con ese contenido y
  * sus reglas (worker.ts).
  */

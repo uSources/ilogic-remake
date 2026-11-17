@@ -11,7 +11,5 @@ src/atlasPages.ts
 src/ui/blobSets.ts
 src/ui/wangSets.ts
 src/ui/sheets.ts
-improve/metrics
-improve/baseline.json
 # Partidas guardadas tal cual las escribio el juego (no se formatean)
 tests/fixtures/saves

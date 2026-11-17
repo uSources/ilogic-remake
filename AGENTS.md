@@ -21,8 +21,6 @@ npm run dev                 # el juego en http://localhost:5173 (/?seed=2013: pa
 npm run build:single        # juego en dist-single/ilogic.html (un solo fichero)
 npm run assets              # recompilar graficos
 npm run balance -- run ...  # equilibrio (IA contra IA)
-npm run metrics             # nota del juego 0-100 (compara con improve/baseline.json)
-npm run arena               # IA actual contra la guardada
 npm run fuzz                # cazador de fallos (invariantes con jugadas al azar)
 npm run huella              # huella del comportamiento: igual antes y despues de un refactor
 ```
@@ -57,8 +55,6 @@ npm run huella              # huella del comportamiento: igual antes y despues d
 - `docs/ESTETICA.md`: la estetica del juego (como se ven los modelos 3D, decidida con el usuario):
   obligatoria al hacer o revisar un modelo; lo nuevo que se decida se apunta ahi.
 - `docs/AGENTES.md`: como comprobar el trabajo (partida por texto, `window.ilogic3d`, playground de modelos).
-- `improve/DIARIO.md`: experimentos de mejora (leer antes de proponer cambios de equilibrio o IA).
-- `.claude/agents/*.md`: subagentes (equilibrador, entrenador-ia, cazador-fallos, revisor).
 - `.claude/skills/*/SKILL.md`: guias por tarea (codigo, estetica, graficos con Retro Diffusion,
   modelos 3D con Ashfox, nueva unidad, nueva mision, sacar version, equilibrar). Sirven para
   cualquier agente, no solo Claude.

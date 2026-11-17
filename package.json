@@ -21,8 +21,6 @@
     "check": "tsc --noEmit && eslint . && prettier --check . && vitest run && npm run check:server",
     "play": "tsx tools/play/cli.ts",
     "fuzz": "tsx tools/improve/fuzz.ts",
-    "metrics": "tsx tools/improve/metrics.ts",
-    "arena": "tsx tools/improve/arena.ts",
     "huella": "tsx tools/huella.ts",
     "unit": "tsx tools/content/cli.ts",
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
