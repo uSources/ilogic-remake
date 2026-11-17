@@ -130,7 +130,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
   lo que se quede.
 - **Captura**: en un edificio que se está capturando, una chapa con lo que le falta.
 
-### Fase 4. Quién te puede atacar
+### Fase 4. Quién te puede atacar (hecha)
 - Al señalar o elegir una unidad propia, salen **líneas rojas** desde cada enemigo visible que
   podría atacarla en su turno, como en Fire Emblem Engage.
   - Lo calcula `systems/threat/threatZone.ts`, que ya sabe qué alcanza cada enemigo.

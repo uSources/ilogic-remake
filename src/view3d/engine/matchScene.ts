@@ -21,6 +21,7 @@ import { ScreenBoxView } from './core/screenBox';
 import { FxEffectStage } from './fx/effectStage';
 import { DefenseStars } from './fx/defenseStars';
 import { Highlights } from './fx/highlights';
+import { ThreatLinesView } from './fx/threatLines';
 import { MovePreviewView } from './fx/movePreview';
 import { IntentArrowsView } from './fx/intentArrows';
 import { ParticleSystem } from './fx/particles';
@@ -67,6 +68,7 @@ export class MatchScene implements ScreenView {
   private readonly particles = new ParticleSystem();
   private readonly marks = new GroundMarks();
   private readonly stars = new DefenseStars();
+  private readonly threatLines: ThreatLinesView;
   private readonly cameraView: ThreeCameraView;
   private readonly selectionBox: ScreenBoxView;
 
@@ -80,6 +82,7 @@ export class MatchScene implements ScreenView {
     this.terrain = buildTerrain(state, glbModels);
     this.board = new BoardView(state, viewer, this.terrain, glbModels);
     this.highlights = new Highlights((pos) => this.board.groundOf(pos));
+    this.threatLines = new ThreatLinesView((pos) => this.board.groundOf(pos));
     this.preview = new MovePreviewView(this.board);
     this.intents = new IntentArrowsView((pos) => this.board.groundOf(pos));
     this.weather = new WeatherView(container);
@@ -91,6 +94,7 @@ export class MatchScene implements ScreenView {
       this.board.object,
       this.highlights.object,
       this.stars.object,
+      this.threatLines.object,
       this.preview.object,
       this.intents.object,
       this.effects,
@@ -128,9 +132,12 @@ export class MatchScene implements ScreenView {
     return this.highlights;
   }
 
-  /** A donde llegan los enemigos («Ver amenaza»). */
+  /** A donde llegan los enemigos («Ver amenaza») y quien podria atacar a la unidad que se mira. */
   get threatMarks(): ThreatMarks {
-    return this.highlights;
+    return {
+      showThreat: (tiles) => this.highlights.showThreat(tiles),
+      showThreatLines: (lines) => this.threatLines.show(lines),
+    };
   }
 
   /** La flecha del camino y el fantasma de la unidad que se va a mover. */
@@ -189,6 +196,7 @@ export class MatchScene implements ScreenView {
     this.cameraView.place(pose);
     this.highlights.update(seconds);
     this.stars.update(seconds);
+    this.threatLines.update(seconds);
     this.preview.update(seconds, this.world.camera, this.canvas.clientHeight);
     this.board.update(seconds);
     this.terrain.update(seconds);

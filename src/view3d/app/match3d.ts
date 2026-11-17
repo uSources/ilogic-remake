@@ -5,8 +5,8 @@
  * ni se decide: solo se conecta. La pausa y el final, en systems/hud/matchMenus.ts.
  */
 import { mapGrid } from '../../core/mapGrid';
-import type { Pos } from '../../core/model';
-import { defenseStars, isOnMap } from '../../core/rules';
+import type { Pos, Unit } from '../../core/model';
+import { defenseStars, isOnMap, unitAt } from '../../core/rules';
 import { screenEnd } from '../../core/session';
 import { ui } from '../../hud/store';
 import type { GameImages } from '../../atlas';
@@ -56,6 +56,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   function publish(): void {
     const forecast = cursor ? controls.forecastAt(cursor) : null;
     board.previewHit(hitLookOf(state, forecast));
+    threat.focus(controls.busy ? null : threatFocus());
     const menu = pause.view(cursor ?? PAUSE_ANCHOR) ?? controls.menu();
     publishHud(images, state, viewer, {
       cursor,
@@ -69,6 +70,13 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
       anchorOf,
       overheadOf: (pos) => scene.overheadOf(pos),
     });
+  }
+  /** De quien se enseña quien podria atacarle: la unidad propia señalada o, si no, la elegida (sola). */
+  function threatFocus(): Unit | null {
+    const pointed = cursor ? unitAt(state, cursor) : undefined;
+    if (pointed?.team === viewer) return pointed;
+    const selected = controls.selectedUnits();
+    return selected.length === 1 ? selected[0]! : null;
   }
   function refresh(): void {
     scene.sync(state.weather?.kind ?? null);
