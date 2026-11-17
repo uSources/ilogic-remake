@@ -47,6 +47,8 @@ function frameUnit(id, side) {
   world.renderer.setClearColor(0xff00ff, 1);
   for (const child of world.scene.children) if (child !== stage.object && !child.isLight) child.visible = false;
   stage.object.children[0].visible = false;
+  // Las baldosas (planos bajo cada modelo) son hijas de los modelos y no salen en el retrato.
+  for (const child of stage.object.children[1].children) if (child.isMesh) child.visible = false;
   const { center, radius } = stage.bounds();
   const dir = { x: 0.6, y: 0.25, z: 0.9 };
   const length = Math.hypot(dir.x, dir.y, dir.z);

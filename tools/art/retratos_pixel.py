@@ -16,7 +16,7 @@ import glob
 import os
 
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "retratos", "3d")
@@ -24,6 +24,7 @@ OUT = os.path.normpath(os.path.join(ROOT, "..", "..", "public", "assets", "img",
 SIZE = 64  # lado del retrato final, en pixeles
 COLORS = 40  # colores de la paleta de cada retrato
 MAGENTA = np.array([255, 0, 255])
+OUTLINE = (20, 16, 28, 255)  # contorno: casi negro, con un tinte morado (como los sprites de antes)
 KEY_TOLERANCE = 90  # distancia (suma de canales) para considerar el fondo magenta
 
 
@@ -32,7 +33,7 @@ def cut_out(render: Image.Image) -> Image.Image:
     rgb = np.array(render.convert("RGB")).astype(int)
     background = np.abs(rgb - MAGENTA).sum(-1) < KEY_TOLERANCE
     rgba = np.dstack([rgb.astype(np.uint8), np.where(background, 0, 255).astype(np.uint8)])
-    return Image.fromarray(rgba, "RGBA")
+    return Image.fromarray(rgba)
 
 
 def fit(unit: Image.Image) -> Image.Image:
@@ -49,11 +50,21 @@ def fit(unit: Image.Image) -> Image.Image:
 
 
 def pixelate(art: Image.Image) -> Image.Image:
-    """Paleta pequena sin difuminar y borde duro."""
+    """Paleta pequena sin difuminar y borde duro, con un contorno de un pixel."""
     alpha = art.getchannel("A").point(lambda value: 255 if value >= 128 else 0)
     quantized = art.convert("RGB").quantize(colors=COLORS, dither=Image.Dither.NONE).convert("RGBA")
     quantized.putalpha(alpha)
-    return quantized
+    return outline(quantized)
+
+
+def outline(art: Image.Image) -> Image.Image:
+    """Pone un pixel del color del contorno alrededor de la silueta (fuera de ella, nunca encima)."""
+    inside = np.array(art.getchannel("A")) > 0
+    grown = Image.fromarray((inside * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(3))
+    ring = (np.array(grown) > 0) & ~inside
+    pixels = np.array(art)
+    pixels[ring] = OUTLINE
+    return Image.fromarray(pixels)
 
 
 def grey(art: Image.Image) -> Image.Image:
