@@ -7,6 +7,54 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.13.0] - 2026-11-17 — El tablero se lee
+
+### Novedades
+- **El tablero cuenta lo que pasa**: al elegir una unidad, losas azules hasta donde llega y un marco rojo en cada casilla a la que podría disparar. Bajo cada enemigo al que puede atacar sale una diana, y la casilla señalada lleva un cursor de cuatro esquinas. El camino es una flecha de bloques y la artillería enseña un arco de puntos hasta su blanco.
+- **Quién te puede atacar**: al señalar una unidad tuya sale una flecha roja desde cada enemigo visible que podría alcanzarla en su turno. «Ver amenaza» es ahora un velo rojo con borde, que ya no se confunde con el mover.
+- **Previsión en chapas**: al apuntar, el daño esperado sale encima del enemigo (dorado si lo más probable es destruirlo) y el contraataque encima de tu unidad. Con Alt sigue la tarjeta con todo el detalle.
+- **La vida en tramos**: una unidad herida lleva su porcentaje y diez tramos debajo. Al apuntar, los tramos enseñan a rayas lo que perdería. Al recibir un golpe, lo perdido brilla en blanco y se encoge mientras el porcentaje baja.
+- **Defensa y capturas a la vista**: la casilla señalada enseña sus estrellas de defensa como bloquecitos amarillos, y una captura a medias lleva los puntos que le faltan.
+- **Comprar en abanico**: los retratos salen alrededor de la fábrica con su nombre y su precio. Lo que no puedes pagar sale apagado con lo que falta en rojo, y en el centro, los datos de la unidad señalada.
+- **Retratos nuevos**: las unidades de la interfaz se dibujan desde sus modelos 3D, así que son las mismas que ves en el tablero.
+- **Fin del turno avisa**: si quedan unidades sin mover, la primera pulsación las hace saltar y el botón pasa a «¿Terminar?»; la segunda termina.
+- **La banderola del día**: cae una banderola del color del bando con el día y el clima si ha cambiado, y sobre cada edificio que cobra sale lo que da.
+- **Explosiones**: las unidades destruidas estallan en una explosión de bloques con destello, fuego y cascotes, y los vehículos y aviones dejan sus restos quemados.
+- **Unidades a escala**: un soldado ya no mide lo mismo que un tanque, y las unidades quedan por debajo de los edificios. Si comparten casilla, cada uno va a una esquina y se ven los dos.
+- **Montañas en cordilleras**: el mapa levanta sierras en vez de acantilados sueltos, con un paso por lo más bajo si parten la tierra en dos. Se ven como macizos, con hierba, roca y nieve según la altura.
+- **El mundo alrededor**: los islotes son pequeñas sierras con el mismo relieve que las montañas, y las nubes son bolas de bloques blancas y redondeadas.
+
+### Cambios de juego
+- **Sin generales**: casi no se usaban, así que se quitan con sus poderes y su barra de estrellas, también en la partida en línea.
+- Las partidas guardadas de versiones anteriores no se pueden seguir.
+
+### Rendimiento
+- El tablero se dibuja con muchas menos llamadas, y los islotes con la mitad de triángulos: la partida va más suelta.
+
+<!-- en -->
+
+### New
+- **The board tells you what's going on**: when you pick a unit, blue tiles show where it can go and a red frame marks every tile it could shoot at. A target ring appears under each enemy it can attack, and the hovered tile gets a four-corner cursor. The path is a block arrow, and artillery shows a dotted arc to its target.
+- **Who can attack you**: hovering one of your units draws a red arrow from every visible enemy that could reach it on its turn. “Show threat” is now a red veil with an outline, no longer confused with movement.
+- **Forecast on chips**: when aiming, the expected damage shows above the enemy (gold if it will most likely be destroyed) and the counterattack above your unit. Hold Alt for the full card.
+- **Health in segments**: a damaged unit shows its percentage with ten segments below. When aiming, the segments it would lose are striped. When hit, the lost part flashes white and shrinks while the percentage counts down.
+- **Defense and captures at a glance**: the hovered tile shows its defense stars as little yellow blocks, and a half-done capture shows the points it still needs.
+- **Buying in a fan**: portraits spread around the factory with their name and price. What you can't afford is dimmed with the missing amount in red, and the hovered unit's stats sit in the middle.
+- **New portraits**: interface units are drawn from their 3D models, so they match what you see on the board.
+- **End turn warns you**: if units haven't moved, the first press makes them hop and the button turns into “End?”; the second ends the turn.
+- **Day banner**: a banner in the side's color drops with the day and the weather if it changed, and each building that pays shows how much.
+- **Explosions**: destroyed units burst in a blocky explosion with a flash, fire and debris, and vehicles and planes leave their burnt wrecks.
+- **Units to scale**: a soldier is no longer as tall as a tank, and units stay smaller than buildings. When they share a tile, each goes to a corner so both can be seen.
+- **Mountain ranges**: maps raise ranges instead of loose cliffs, with a pass at the lowest point if they would split the land. They look like massifs, with grass, rock and snow by height.
+- **The world around**: islets are small ranges with the same relief as the mountains, and clouds are round white balls of blocks.
+
+### Gameplay
+- **No more generals**: they were barely used, so they are gone along with their powers and star bar, online too.
+- Saved games from earlier versions can't be continued.
+
+### Performance
+- The board draws with far fewer calls, and the islets with half the triangles: matches run smoother.
+
 ## [0.12.0] - 2026-11-16 — Una interfaz de juguete y un mar alrededor
 
 ### Novedades
