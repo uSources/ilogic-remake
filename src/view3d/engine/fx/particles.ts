@@ -1,5 +1,5 @@
 /**
- * Particulas de un momento: humo, polvo y fuego, cuadradas como pixeles (PixelPoints), todas en una
+ * Particulas de un momento: humo y polvo, cuadradas como pixeles (PixelPoints), todas en una
  * sola llamada de dibujo. Cada clase de bocanada (PUFFS) dice sus colores, su tamaño, cuanto vive y
  * como se mueve; una nueva es una entrada mas. Quien las pide (`emit`) solo dice cual y donde; el
  * resto (moverlas, crecer, apagarse y reciclarlas) lo hace `update` en cada fotograma.
@@ -50,15 +50,6 @@ const PUFFS: Readonly<Record<PuffKind, PuffSpec>> = {
     spread: 0.35,
     drift: 0.1,
     opacity: 0.7,
-  },
-  blast: {
-    colors: [0xffd447, 0xff8a3d, 0xfff3a0, 0xe0502a],
-    size: [0.12, 0.04],
-    life: [0.3, 0.55],
-    rise: 0.8,
-    spread: 1.2,
-    drift: 0,
-    opacity: 1,
   },
   gunSmoke: { colors: [0xeef0f4, 0xd0d4dc], size: [0.05, 0.16], life: [0.4, 0.7], rise: 0.25, spread: 0.2, drift: 0.1, opacity: 0.7 },
 };
@@ -127,8 +118,6 @@ export class ParticleSystem {
     for (const particle of this.particles) {
       particle.age += seconds;
       particle.position.addScaledVector(particle.velocity, seconds);
-      // El fuego cae y frena; el humo y el polvo solo frenan.
-      if (particle.kind === 'blast') particle.velocity.y -= 2.5 * seconds;
       particle.velocity.multiplyScalar(1 - seconds * 1.5);
     }
     this.removeDead();

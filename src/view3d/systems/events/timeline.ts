@@ -30,6 +30,7 @@ const STEP_RUNNERS: StepRunners = {
   fall: (step, { pieces }) => pieces.fall(step.uid, step.leavesWreck),
   projectile: (step, { effects }) => effects.projectile(step.from, step.to, step.isArc),
   sparks: (step, { effects }) => effects.sparks(step.at, step.power),
+  explosion: (step, { effects }) => effects.explosion(step.at, step.ground, step.size),
   text: (step, { effects }) => effects.text(step.at, step.text, step.color),
   puff: (step, { effects }) => effects.puff(step.puff, step.at, step.count),
   scorch: (step, { effects }) => effects.scorch(step.at),

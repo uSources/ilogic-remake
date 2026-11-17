@@ -23,6 +23,7 @@ export type AnimationStep =
   | { kind: 'hop'; uid: number }
   | { kind: 'fall'; uid: number; leavesWreck: boolean }
   | { kind: 'sparks'; at: Spot; power: number }
+  | { kind: 'explosion'; at: Spot; ground: Spot; size: number }
   | { kind: 'text'; at: Spot; text: string; color: string }
   | { kind: 'puff'; puff: PuffKind; at: Spot; count: number }
   | { kind: 'scorch'; at: Spot }
