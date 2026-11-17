@@ -85,7 +85,7 @@ Lo que vale para todo muñeco; la referencia es el soldado.
 
 - **En guardia, con el arma en las dos manos.** Nunca el arma colgando de una mano a un lado ni
   flotando delante con los brazos rectos como palos (se probaron y se descartaron).
-- **Guardia alta** (aprobada para los retratos; es la pose de reposo del soldado, sin clip aparte): Piernas abiertas, una adelantada; el
+- **Propuesta actual (pendiente de visto bueno):** guardia alta. Piernas abiertas, una adelantada; el
   fusil cruzado delante del pecho, culata a la derecha y boca hacia delante, a la izquierda y algo
   alzada; la mano derecha en la empuñadura y la izquierda en el guardamanos. Cada antebrazo sale del
   codo y apunta en 3D a su mano en el arma (`grip`), así se recoloca solo si se mueve el arma.
