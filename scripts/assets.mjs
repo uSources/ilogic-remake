@@ -14,6 +14,7 @@ const py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'pyt
 const ART = [
   ['Edificios', py, ['tools/art/rd_buildings32.py']],
   ['Unidades y colores de bando', py, ['tools/art/rd_units32.py']],
+  ['Retratos de unidades (pixel art desde los modelos 3D)', py, ['tools/art/retratos_pixel.py']],
   ['Iconos de la interfaz', py, ['tools/art/build_icons.py']],
   ['Retratos, habilidades, clima y banderin (Retro Diffusion)', py, ['tools/art/rd_ui.py']],
   ['Iconos de la app (PWA)', py, ['tools/art/build_app_icons.py']],

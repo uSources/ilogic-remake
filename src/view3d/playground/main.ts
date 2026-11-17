@@ -155,4 +155,4 @@ show({});
 world.start();
 
 // Para mirar y probar desde la consola (y los agentes).
-(window as unknown as { ilogicPlayground: object }).ilogicPlayground = { world, stage, choice, time, reload };
+(window as unknown as { ilogicPlayground: object }).ilogicPlayground = { world, stage, choice, time, reload, catalog };

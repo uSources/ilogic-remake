@@ -28,7 +28,8 @@
     "notes": "tsx tools/notes/cli.ts",
     "server:dev": "npm run dev -w server",
     "server:test": "npm run test -w server",
-    "check:server": "npm run check -w server"
+    "check:server": "npm run check -w server",
+    "retratos": "node tools/art/retratos3d.mjs"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",

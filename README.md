@@ -212,7 +212,10 @@ Los graficos se compilan antes de jugar, no mientras se juega. Hay dos clases:
 - **Modelos 3D** (unidades, edificios, casillas y decorado del tablero): se hacen con Ashfox a partir
   de `tools/art/ashfox/` y se guardan ya exportados en `public/assets/models/` (`.glb`). Ver la skill
   `ashfox`. Un tipo sin GLB se ve con un modelo de bloques (`src/view3d/models/`).
-- **Imagenes de la interfaz** (retratos, iconos, fichas, miniaturas de mapa): `npm run assets`
+- **Retratos de unidades**: `npm run retratos` renderiza cada modelo 3D (en el playground, sobre magenta) a
+  `tools/art/retratos/3d/` (se guarda en el repo); `tools/art/retratos_pixel.py` lo pasa a pixel art de 64x64 en
+  `public/assets/img/retrato/` (`b_` azul, `r_` rojo, `i_` gris). Ese paso lo hace `npm run assets`.
+- **Imagenes de la interfaz** (iconos, fichas, miniaturas de mapa): `npm run assets`
   (necesita Python 3 con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/art/`:
 
 1. edificios y unidades con sus colores de bando
@@ -221,7 +224,7 @@ Los graficos se compilan antes de jugar, no mientras se juega. Hay dos clases:
    `ui/dinero`...) y la letra pixel del logo (`tools/art/font/ilogic.txt` → `src/hud/fonts/ilogic.woff2`; la de la interfaz,
    Fredoka y Nunito, ya viene hecha en `src/hud/fonts/`),
    las dos dibujadas como rejillas de pixeles en texto: se retocan editando el `.txt`;
-   retratos, habilidades, clima y banderin; los iconos de la app (pestaña, PWA y pantalla de inicio)
+   retratos, habilidades, clima y banderin (los retratos de unidades salen de sus modelos 3D: ver abajo); los iconos de la app (pestaña, PWA y pantalla de inicio)
    a partir del Soldado azul nuevo (`tools/art/build_app_icons.py` → `public/icons`);
 3. la lista de imagenes (`src/assetList.ts`) y el atlas (`public/assets/atlas`: 2 paginas colocadas con MaxRects y
    comprimidas sin perdida con oxipng);
