@@ -114,7 +114,7 @@ function forecastOf(textures: GameImages, s: GameState, viewer: TeamId, moment: 
   const plan = moment.forecast;
   if (!plan || moment.busy) return null;
   const { attacker, from, target } = plan;
-  return forecastVM(textures, s, viewer, attacker, from, target, moment.overheadOf(target), moment.overheadOf(from));
+  return forecastVM(textures, s, viewer, attacker, from, target, moment.overheadOf(target), moment.anchorOf(from));
 }
 
 const squadIsMine = (s: GameState, viewer: TeamId, id: number): boolean =>

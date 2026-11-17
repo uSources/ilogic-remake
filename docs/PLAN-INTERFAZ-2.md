@@ -167,8 +167,9 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
   - La lista de texto de hoy queda solo para el desglose del dinero.
 - **Turno enemigo**: la cámara sigue a la IA, como ahora, y las chapas de daño salen en cada golpe.
 
-### Fase 7. Escala y documentación
-- Chapas y abanico que no tapen la unidad. Comprobarlo con `settings.uiScale` a 0,75 y a 1,5.
+### Fase 7. Escala y documentación (hecha)
+- Chapas y abanico que no tapen la unidad. Comprobarlo con `settings.uiScale` a 0,75 y a 1,5 (las
+  escalas que da Opciones son 0,9, 1 y 1,25: se comprobó con esas).
 - Documentación:
   - `docs/ESTETICA.md` («Interfaz»): chapas, banderola, losas y bordes, y estrellas de bloque;
   - `docs/SPEC-INTERFAZ.md` y `src/i18n/*/help.ts`: lo nuevo;

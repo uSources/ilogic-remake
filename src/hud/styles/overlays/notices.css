@@ -30,7 +30,8 @@
 .banner {
   position: absolute;
   left: 50%;
-  top: 0;
+  /* Cuelga por debajo de la barra de arriba (el dia y el clima siguen a la vista). */
+  top: 76px;
   translate: -50% 0;
   display: flex;
   flex-direction: column;
@@ -62,7 +63,7 @@
   background: repeating-linear-gradient(90deg, transparent 0 22px, rgba(0, 0, 0, 0.07) 22px 24px), var(--cloth);
   color: #fff;
   /* Cola de golondrina: la tela acaba en dos puntas. */
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
   filter: drop-shadow(0 4px 0 var(--ink));
 }
 .banner.red .banner-cloth {
@@ -95,7 +96,7 @@
 }
 @keyframes banner {
   0% {
-    transform: translateY(-110%) rotate(0deg);
+    transform: translateY(-160%) rotate(0deg);
   }
   16% {
     transform: translateY(0) rotate(4deg);
@@ -111,7 +112,7 @@
     transform: none;
   }
   100% {
-    transform: translateY(-110%);
+    transform: translateY(-160%);
     visibility: hidden;
   }
 }

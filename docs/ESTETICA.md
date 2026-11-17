@@ -225,6 +225,10 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   amenaza, ver órdenes) o en la rueda (escuadras).
 - **Sobre el tablero, chapas y bloques** (`docs/PLAN-INTERFAZ-2.md`, fases 2 y 3; probado en el
   navegador el 17-11-2026):
+  - Mover y atacar, **losas y bordes**: a donde puede ir, losas azules translúcidas con borde claro
+    alrededor del área; hasta donde ataca, marcos rojos casilla a casilla con un velo muy suave y una
+    diana que gira en cada enemigo a tiro; el cursor, cuatro esquinas que laten. Con «Ver amenaza»,
+    un velo rojo con borde por fuera del área.
   - La vida de una unidad herida es **un número en una chapa** (verde, amarilla o roja según lo que le
     queda; número blanco con tinta), como en Wargroove. Se probó frente a la barra de antes: el número
     se lee de lejos y sin contar píxeles, y la barra se confundía con la de la captura. Entera, nada.
@@ -234,7 +238,9 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   - La defensa de la casilla señalada, **estrellas de bloque**: cubitos amarillos sombreados como un
     vóxel, con borde de tinta, en fila al borde de la casilla y botando en ola. La ficha de la casilla
     ya no las repite.
-  - La previsión de combate, **chapas de plástico** (`Badge`) encima de la barra de vida.
+  - La previsión de combate, **chapas de plástico** (`Badge`): la del daño encima de la barra de vida
+    del enemigo y la del contraataque a los pies de tu unidad (encima, junto al enemigo de al lado,
+    chocaban). Comprobadas con la interfaz a 0,9 y a 1,25 (las escalas de Opciones).
   - El cartel del día, una **banderola de tela** en el color del bando colgada de una barra de
     madera, con cola de golondrina: cae, se balancea y vuelve a subir. Dice «Día 4» en grande, «Tu
     turno» debajo y, si el clima cambia, su icono grande en una ficha.

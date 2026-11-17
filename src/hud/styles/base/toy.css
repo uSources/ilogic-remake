@@ -123,6 +123,9 @@
   white-space: nowrap;
   pointer-events: none;
 }
+.toy-badge.below {
+  transform: translate(-50%, 4px);
+}
 .toy-badge.gold {
   background: #ffd23f;
 }

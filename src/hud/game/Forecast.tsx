@@ -88,9 +88,10 @@ function ForecastDetails({ forecast }: { forecast: ForecastVM }) {
 }
 
 /** Una chapa de la prevision: el numero y, si puede caer, la calavera con su %. */
-function ForecastBadge({ look, anchor, label, cls }: { look: BadgeLook; anchor: Anchor; label: string; cls?: string }) {
+function ForecastBadge(props: { look: BadgeLook; anchor: Anchor; label: string; cls?: string; below?: boolean }) {
+  const { look, anchor, label, cls, below } = props;
   return (
-    <Badge anchor={anchor} tone={look.tone} label={label} cls={cls}>
+    <Badge anchor={anchor} tone={look.tone} label={label} cls={cls} below={below}>
       <span class="num">{look.text}</span>
       {look.death !== null && (
         <span class="badge-death">
@@ -133,7 +134,7 @@ export function Forecast({ forecast }: { forecast: ForecastVM }) {
   return (
     <>
       <ForecastBadge look={damageBadge(forecast)} anchor={forecast.anchor} label={t('forecast')} cls="damage" />
-      {counter && <ForecastBadge look={counter} anchor={forecast.attackerAnchor} label={t('counter')} cls="small counter" />}
+      {counter && <ForecastBadge look={counter} anchor={forecast.attackerAnchor} label={t('counter')} cls="small counter" below />}
     </>
   );
 }

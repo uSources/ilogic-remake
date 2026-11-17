@@ -56,14 +56,28 @@ export function Chip(props: {
 export type BadgeTone = 'plain' | 'gold' | 'danger';
 
 /**
- * Chapa que flota encima de una casilla (centrada, sin tapar la casilla): un numero que se lee de un
- * vistazo, como el daño de un ataque. No se pulsa: el raton pasa a traves.
+ * Chapa que flota encima de una casilla (o a sus pies, con `below`), centrada: un numero que se lee de
+ * un vistazo, como el daño de un ataque. No se pulsa: el raton pasa a traves.
  */
-export function Badge(props: { anchor: Anchor; tone?: BadgeTone; label: string; cls?: string; children: ComponentChildren }) {
-  const { anchor, tone = 'plain', label, cls = '', children } = props;
+export function Badge(props: {
+  anchor: Anchor;
+  tone?: BadgeTone;
+  label: string;
+  cls?: string;
+  below?: boolean;
+  children: ComponentChildren;
+}) {
+  const { anchor, tone = 'plain', label, cls = '', below = false, children } = props;
   const tile = scaled(anchor);
+  // Encima de la casilla o, con `below`, a sus pies (sin tapar lo que hay en ella).
+  const top = below ? tile.y + tile.h : tile.y;
   return (
-    <div class={`toy-badge ${tone} ${cls}`} role="status" aria-label={label} style={{ left: tile.x + tile.w / 2, top: tile.y }}>
+    <div
+      class={`toy-badge ${tone} ${cls} ${below ? 'below' : ''}`}
+      role="status"
+      aria-label={label}
+      style={{ left: tile.x + tile.w / 2, top }}
+    >
       {children}
     </div>
   );

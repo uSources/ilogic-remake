@@ -79,9 +79,13 @@ export const help: HelpTexts = {
   colorsTitle: 'Map colours',
   // The 3D view's colors and controls: only what it does today (what the 2D had and is still missing, in docs/IDEAS.md).
   colors: (_keys: KeyLabels) => [
-    ['#4fc3ff', 'Where the selected unit can move'],
-    ['#ff4d45', 'Attack targets'],
-    ['#ffd447', 'The pointed tile'],
+    ['#2e7dff', 'Where the selected unit can move (blue slabs with a light edge)'],
+    ['#ff4d45', 'How far it attacks (red frames; a bullseye on enemies in range)'],
+    [
+      '#d8262a',
+      'Enemy threat: where enemies can reach (red veil with an edge); pointing at one of your units, a red arrow from each enemy that could attack it',
+    ],
+    ['#ffd447', 'The pointed tile and its defense stars (yellow blocks)'],
   ],
   controlsTitle: 'Controls',
   head: ['Action', 'Keyboard', 'Mouse / touch'],
@@ -97,6 +101,16 @@ export const help: HelpTexts = {
       'Attack, capture, join, board',
       '—',
       'With the unit selected, click the target: a red enemy, a building (goes and captures), a transport (boards) or a matching unit (joins)',
+    ],
+    [
+      'Attack forecast',
+      'Alt: the full card',
+      'Hover the enemy: a chip with the damage above it (gold if it will most likely be destroyed, with a skull and % if it can fall) and one with the counterattack at your unit’s feet; its life bar shows in stripes what it would lose',
+    ],
+    [
+      'Buy',
+      '—',
+      'Click a free factory, city or airport of yours: portraits fan out around it and a click buys. What you cannot afford is greyed out with what is missing; the chip in the middle shows how it moves, its range and what it is good against',
     ],
     [
       'Capture when already on it, repair, unload',
@@ -122,7 +136,11 @@ export const help: HelpTexts = {
     ['Move the camera', 'Arrows / WASD', 'Drag with the middle button, mouse at the edge or drag with a finger'],
     ['Turn the camera', '—', 'Drag with the right button'],
     ['Zoom', `${keys.zoomIn} / ${keys.zoomOut}`, 'Wheel'],
-    ['End turn', keys.endTurn, 'Top button'],
+    [
+      'End turn',
+      keys.endTurn,
+      'Bottom-right button. With units that have not moved, the first press makes them hop so you see them and asks again (“End anyway?”)',
+    ],
   ],
 
   close: 'Close',

@@ -13,7 +13,10 @@ export interface ForecastVM {
   killChance: number;
   /** La casilla del objetivo (su chapa de daño va encima). */
   anchor: Anchor;
-  /** La casilla desde donde dispara tu unidad (su chapa del contraataque va encima). */
+  /**
+   * La casilla desde donde dispara tu unidad: su chapa del contraataque va a sus pies (si fuera encima,
+   * junto al enemigo de al lado, chocaria con la del daño).
+   */
   attackerAnchor: Anchor;
   /** [CAMBIO] Acierto extra por flanqueo, en tanto por uno (0 si no hay). */
   flank: number;
