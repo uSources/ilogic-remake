@@ -7,8 +7,8 @@
 import type { MovementMotion } from '../../core/content';
 import type { Pos } from '../../core/model';
 
-/** Las clases de bocanada (humo, polvo, fuego): el motor dice como se ve cada una (particles.ts, PUFFS). */
-export type PuffKind = 'smoke' | 'darkSmoke' | 'dust' | 'blast' | 'gunSmoke';
+/** Las clases de bocanada (humo y polvo): el motor dice como se ve cada una (particles.ts, PUFFS). */
+export type PuffKind = 'smoke' | 'darkSmoke' | 'dust' | 'gunSmoke';
 
 /** Un sitio del tablero donde sale un efecto. */
 export type Spot =
@@ -48,9 +48,13 @@ export interface PieceStage {
   recoil(uid: number): Promise<void>;
   /** La sacudida al recibir un golpe. */
   shake(uid: number): Promise<void>;
+  /** Enseña esa vida en la chapa de la unidad, sin animar. */
+  showLife(uid: number, life: number): void;
+  /** La vida de la unidad baja de `from` a `to`: su porcentaje cuenta hacia abajo y sus tramos se vacian. */
+  drainLife(uid: number, from: number, to: number): Promise<void>;
   /** Dos saltitos en su sitio. */
   hop(uid: number): Promise<void>;
-  /** Cae y se esconde: se ladea y quema hasta el suelo (y deja sus restos) o vuelca y desaparece. */
+  /** Desaparece de golpe (dentro de su explosion): un vehiculo o avion deja sus restos quemados en el suelo. */
   fall(uid: number, leavesWreck: boolean): Promise<void>;
 }
 
@@ -62,6 +66,8 @@ export interface EffectStage {
   /** Un texto que sube y se desvanece. */
   text(at: Spot, text: string, color: string): Promise<void>;
   puff(kind: PuffKind, at: Spot, count: number): void;
+  /** Una explosion en `at` cuyos cascotes caen hasta `ground`; `size` 1 es la de un vehiculo. */
+  explosion(at: Spot, ground: Spot, size: number): Promise<void>;
   /** Una mancha quemada en el suelo. */
   scorch(at: Spot): void;
 }

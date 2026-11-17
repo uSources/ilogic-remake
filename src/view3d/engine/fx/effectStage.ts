@@ -1,10 +1,11 @@
 /**
  * El motor de los efectos de un momento (ports/stage.ts, `EffectStage`): proyectiles, chispas, textos
- * que suben (fx.ts), bocanadas (particles.ts) y manchas en el suelo (groundMarks.ts), en el punto del
+ * que suben (fx.ts), explosiones (explosion.ts), bocanadas (particles.ts) y manchas en el suelo (groundMarks.ts), en el punto del
  * mundo de cada sitio (spots.ts). Un sitio de una pieza que ya no esta no pone nada.
  */
 import type * as THREE from 'three';
 import type { EffectStage, PuffKind, Spot } from '../../ports/stage';
+import { explosion } from './explosion';
 import { floatingText, projectile, sparks, type FxHost } from './fx';
 import { worldOf, type SpotBoard } from './spots';
 
@@ -26,6 +27,12 @@ export class FxEffectStage implements EffectStage {
   async sparks(at: Spot, power: number): Promise<void> {
     const point = this.at(at);
     if (point) await sparks(this.host, point, power);
+  }
+
+  async explosion(at: Spot, ground: Spot, size: number): Promise<void> {
+    const center = this.at(at);
+    const floor = this.at(ground);
+    if (center && floor) await explosion(this.host, center, floor, size);
   }
 
   async text(at: Spot, text: string, color: string): Promise<void> {

@@ -61,6 +61,8 @@ export interface UnitDef {
   heals?: Record<string, number>;
   /** Mientras no tenga dibujo propio, se pinta con el de esta unidad. */
   art?: string;
+  /** Tamaño de su modelo 3D en el tablero, por uno (1 = el modelo tal cual). Si no esta, 1. */
+  modelSize?: number;
   /** Graficos de 2013: prefijo de la imagen segun el terreno ("1_" en agua, "2_" en nieve). */
   classicSprite?: Record<string, string>;
   /** Habilidades pasivas (regla abilities): ver AbilityDef y docs/CONTENIDO.md. */

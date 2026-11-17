@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import type { MovementMotion } from '../../../core/content';
+import { MAX_LIFE } from '../../../core/data';
 import type { Pos } from '../../../core/model';
 import type { PieceClip, PieceLookup, PieceStage, PuffKind, ShownPiece } from '../../ports/stage';
 import { tint } from '../pieces/tint';
@@ -30,16 +31,26 @@ const RECOIL = 0.12;
 const SHAKE_SECONDS = 0.25;
 const SHAKE_WIDTH = 0.05;
 const SHAKE_SWINGS = 3;
-const FALL_SECONDS = 0.5;
-/** Lo que vuelca (radianes) y lo que encoge una pieza que desaparece. */
-const VANISH_TILT = 1.4;
-const VANISH_SHRINK = 0.9;
+/** Lo que tarda en hincharse antes de reventar (lo justo para que se vea dentro del destello) y cuanto. */
+const BURST_SECONDS = 0.08;
+const BURST_SWELL = 0.18;
 /** Lo que se ladean y lo oscuros que quedan los restos (tanto por uno de su color). */
 const WRECK_TILT = 0.3;
 const CHARRED = 0.22;
 const HOP_SECONDS = 0.4;
 const HOP = 0.12;
 const HOPS = 2;
+/** La vida que baja al recibir un golpe, y cuanto se hincha la chapa al empezar (1 = normal). */
+const LIFE_DRAIN_SECONDS = 0.9;
+const LIFE_PULSE = 0.35;
+/** La parte de la animacion en la que lo perdido brilla quieto antes de encogerse. */
+const LIFE_FLASH_HOLD = 0.3;
+
+/** Quieto mientras brilla y despues frena al llegar (de 0 a 1). */
+function drainEase(progress: number): number {
+  const shrinking = Math.max(0, (progress - LIFE_FLASH_HOLD) / (1 - LIFE_FLASH_HOLD));
+  return 1 - (1 - shrinking) ** 3;
+}
 
 /** Lo que necesita: las piezas, el reloj del mundo y donde quedan huellas, polvo y restos. */
 export interface PieceStageHost {
@@ -145,6 +156,18 @@ export class BoardPieceStage implements PieceStage, PieceLookup {
     });
   }
 
+  showLife(uid: number, life: number): void {
+    this.host.board.showLifeNow(uid, life >= MAX_LIFE ? null : life, 1);
+  }
+
+  async drainLife(uid: number, from: number, to: number): Promise<void> {
+    await this.host.animate(LIFE_DRAIN_SECONDS, (progress) => {
+      const shown = from + (to - from) * drainEase(progress);
+      this.host.board.showLifeDrop(uid, shown, to, 1 + LIFE_PULSE * (1 - progress));
+    });
+    this.host.board.showLifeNow(uid, to, 1);
+  }
+
   async hop(uid: number): Promise<void> {
     const piece = this.host.board.pieceOf(uid);
     if (!piece) return;
@@ -156,30 +179,26 @@ export class BoardPieceStage implements PieceStage, PieceLookup {
     piece.body.position.y = rest;
   }
 
+  /** Se hincha un instante y revienta (la explosion la tapa); un vehiculo o avion deja sus restos. */
   async fall(uid: number, leavesWreck: boolean): Promise<void> {
     const piece = this.host.board.pieceOf(uid);
     if (!piece) return;
-    await (leavesWreck ? this.burnDown(piece) : this.vanish(piece));
+    const scale = piece.object.scale.x;
+    await this.host.animate(BURST_SECONDS, (progress) => piece.object.scale.setScalar(scale * (1 + progress * BURST_SWELL)));
+    piece.object.scale.setScalar(scale);
+    if (leavesWreck) this.leaveWreck(piece);
     piece.object.visible = false;
   }
 
-  /** Vuelca, se encoge y desaparece. */
-  private async vanish(piece: UnitPiece): Promise<void> {
-    await this.host.animate(FALL_SECONDS, (progress) => {
-      piece.body.rotation.z = progress * VANISH_TILT;
-      piece.object.scale.setScalar(1 - progress * VANISH_SHRINK);
-    });
-  }
-
-  /** Se ladea, se quema y cae al suelo (un avion, desde su altura); ahi quedan sus restos. */
-  private async burnDown(piece: UnitPiece): Promise<void> {
-    const ground = piece.object.position.y;
-    const height = new THREE.Box3().setFromObject(piece.object).min.y - ground;
-    await this.host.animate(FALL_SECONDS, (progress) => {
-      piece.body.rotation.z = progress * WRECK_TILT;
-      piece.object.position.y = ground - height * progress * progress;
-      tint(piece.object, 1 - progress * (1 - CHARRED));
-    });
-    this.host.wreck(piece.object);
+  /** Sus restos, quemados y algo ladeados, en el suelo (un avion cae desde su altura). */
+  private leaveWreck(piece: UnitPiece): void {
+    const { object, body } = piece;
+    const rest = { y: object.position.y, tilt: body.rotation.z };
+    body.rotation.z = WRECK_TILT;
+    object.position.y -= new THREE.Box3().setFromObject(object).min.y - rest.y;
+    tint(object, CHARRED);
+    this.host.wreck(object);
+    object.position.y = rest.y;
+    body.rotation.z = rest.tilt;
   }
 }

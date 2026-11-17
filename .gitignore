@@ -7,3 +7,5 @@ tools/art/retrodiffusion/inbox/
 .wrangler/
 .env
 .env.*.local
+tests/visual/out/
+tools/perf/out/

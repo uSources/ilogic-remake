@@ -32,6 +32,10 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
     vivo del menú (se quitó también su opción).
 23. **Comprobar lo visual sin mirar:** ya no hay capturas comparadas (`npm run shots` se quitó con
     el 2D) ni API de depuración para agentes (solo `window.ilogic3d` en la consola).
+24. **Edificios con explanada delante** (como en Advance Wars): rehacer los seis en Ashfox ocupando
+    la mitad de atrás de la casilla, para que la unidad de encima quede delante sin tener que
+    encogerlos ni moverlos a una esquina (ahora lo hace `sharedTile.ts`). Para cuando se retoquen los
+    modelos; no corre prisa (`docs/ESTETICA.md`, «Tamaños en el tablero»).
 
 ## Jugabilidad
 
@@ -119,3 +123,9 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   Se quitaron del juego; siguen en el historial de git si algún día vuelven.
 - **Barra de vida en las unidades:** con las cifras nuevas de la letra del juego se lee bien; no hace
   falta.
+- **Edificio semitransparente con una unidad encima:** se probó y quedaba un borrón; en su lugar,
+  unidad y edificio a esquinas distintas de la casilla.
+- **Infantería en pelotón** (2 o 3 soldaditos, como en Wargroove): se perdería el soldado chibi con
+  detalle, que es el estilo del juego; con las unidades más pequeñas ya se lee bien.
+- **Peana del color del equipo bajo cada unidad** (como una figurita, para que no se confunda con lo
+  que tiene detrás de su color): se probó y no gustó.

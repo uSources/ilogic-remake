@@ -35,6 +35,13 @@ export function toonMaterial(color: THREE.ColorRepresentation): THREE.MeshToonMa
   return material;
 }
 
+/** El material cartoon que toma el color de cada vertice (una malla juntada de muchas piezas). */
+let vertexColored: THREE.MeshToonMaterial | undefined;
+export function toonVertexColored(): THREE.MeshToonMaterial {
+  vertexColored ??= new THREE.MeshToonMaterial({ vertexColors: true, gradientMap: ramp });
+  return vertexColored;
+}
+
 /** Un bloque cartoon que da y recibe sombra. */
 export function toonBox(size: THREE.Vector3Tuple, color: THREE.ColorRepresentation): THREE.Mesh {
   const block = new THREE.Mesh(new THREE.BoxGeometry(...size), toonMaterial(color));

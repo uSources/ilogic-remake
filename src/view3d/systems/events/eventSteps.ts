@@ -19,8 +19,9 @@ const DAMAGE_COLOR = '#ff7a73';
 /** Lo que deja cada forma de moverse al caer: la infanteria se va (queda la mancha); vehiculos y aviones, sus restos. */
 const LEAVES_WRECK: Readonly<Record<MovementMotion, boolean>> = { march: false, drive: true, fly: true };
 const GUN_SMOKE_PUFFS = 4;
-const BLAST_PUFFS = 14;
-const FALL_SMOKE_PUFFS = 8;
+/** Lo grande que es la explosion de cada forma de moverse (1, la de un vehiculo). */
+const EXPLOSION_SIZE: Readonly<Record<MovementMotion, number>> = { march: 0.65, drive: 1, fly: 1 };
+const FALL_SMOKE_PUFFS = 10;
 const HIT_SPARKS = 1;
 const FALL_SPARKS = 1.6;
 const CAPTURE_PARTIAL = { color: '#fff1a8', sparks: 0.7 } as const;
@@ -86,25 +87,34 @@ function shotSteps(shooter: number, motion: MovementMotion, target: number, piec
 }
 
 /** Lo que pasa al que recibe: chispas, una sacudida y el daño que sube. */
-const hitSteps = (uid: number, damage: number): AnimationStep[] => [
+const hitSteps = (uid: number, hit: Hit): AnimationStep[] => [
   sound('hit'),
   together(
     { kind: 'sparks', at: muzzle(uid), power: HIT_SPARKS },
     { kind: 'shake', uid },
-    { kind: 'text', at: muzzle(uid), text: `−${damage}`, color: DAMAGE_COLOR },
+    { kind: 'lifeLoss', uid, from: hit.lifeBefore, to: Math.max(0, hit.lifeBefore - hit.damage) },
+    { kind: 'text', at: muzzle(uid), text: `−${hit.damage}`, color: DAMAGE_COLOR },
   ),
 ];
 
-/** Una unidad destruida estalla y deja una mancha quemada; despues, sus restos o nada (`sync` quita su pieza). */
+/**
+ * Una unidad destruida estalla: deja una mancha quemada, desaparece dentro de la explosion (con sus
+ * restos o sin nada; `sync` quita su pieza) y queda una columna de humo negro.
+ */
 const fallSteps = (uid: number, motion: MovementMotion): AnimationStep[] => [
   sound('explosion'),
-  { kind: 'puff', puff: 'blast', at: muzzle(uid), count: BLAST_PUFFS },
-  { kind: 'puff', puff: 'darkSmoke', at: muzzle(uid), count: FALL_SMOKE_PUFFS },
   { kind: 'scorch', at: feet(uid) },
-  together({ kind: 'sparks', at: muzzle(uid), power: FALL_SPARKS }, { kind: 'fall', uid, leavesWreck: LEAVES_WRECK[motion] }),
+  together(
+    { kind: 'explosion', at: muzzle(uid), ground: feet(uid), size: EXPLOSION_SIZE[motion] },
+    { kind: 'sparks', at: muzzle(uid), power: FALL_SPARKS },
+    { kind: 'fall', uid, leavesWreck: LEAVES_WRECK[motion] },
+  ),
+  { kind: 'puff', puff: 'darkSmoke', at: muzzle(uid), count: FALL_SMOKE_PUFFS },
 ];
 
 interface Hit {
+  /** La vida del que recibe antes del golpe. */
+  lifeBefore: number;
   damage: number;
   killed: boolean;
 }
@@ -117,15 +127,26 @@ function exchangeSteps(shooter: number | null, target: number | null, hit: Hit, 
   const shot = shooter !== null && shooterPiece?.isVisible ? shotSteps(shooter, shooterPiece.motion, target, pieces) : [];
   if (!targetPiece.isVisible) return shot;
   const fall = hit.killed ? fallSteps(target, targetPiece.motion) : [];
-  return [...shot, ...hitSteps(target, hit.damage), ...fall];
+  return [...shot, ...hitSteps(target, hit), ...fall];
 }
 
 /** Atacar: el golpe y, si el blanco sigue en pie y responde, el contraataque. */
 function attackSteps(event: EventOf<'attack'>, pieces: PieceLookup): AnimationStep[] {
-  const attack = exchangeSteps(event.attacker, event.target, { damage: event.damage, killed: event.killed }, pieces);
+  const { attackerLife, defenderLife } = event.combat;
+  const hit = { lifeBefore: defenderLife, damage: event.damage, killed: event.killed };
+  const attack = [...lifeBeforeSteps(event, pieces), ...exchangeSteps(event.attacker, event.target, hit, pieces)];
   if (event.counter <= 0 || event.killed) return attack;
-  const counter = exchangeSteps(event.target, event.attacker, { damage: event.counter, killed: event.attackerKilled }, pieces);
-  return [...attack, ...counter];
+  const counterHit = { lifeBefore: attackerLife, damage: event.counter, killed: event.attackerKilled };
+  return [...attack, ...exchangeSteps(event.target, event.attacker, counterHit, pieces)];
+}
+
+/** Las dos chapas vuelven a la vida de antes del combate, para que cada una baje cuando le llega su golpe. */
+function lifeBeforeSteps(event: EventOf<'attack'>, pieces: PieceLookup): AnimationStep[] {
+  const lives = [
+    { uid: event.target, life: event.combat.defenderLife },
+    { uid: event.attacker, life: event.combat.attackerLife },
+  ];
+  return lives.flatMap(({ uid, life }) => (uid !== null && pieces.pieceOf(uid) ? [{ kind: 'lifeShown' as const, uid, life }] : []));
 }
 
 /**

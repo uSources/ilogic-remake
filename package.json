@@ -26,9 +26,13 @@
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
     "commitlint": "commitlint",
     "notes": "tsx tools/notes/cli.ts",
+    "generals": "tsx tools/balance/generals.ts",
     "server:dev": "npm run dev -w server",
     "server:test": "npm run test -w server",
     "check:server": "npm run check -w server",
+    "shots": "node tests/visual/shots.mjs",
+    "shots:update": "node tests/visual/shots.mjs --update",
+    "perf": "node tools/perf/measure.mjs",
     "retratos": "node tools/art/retratos3d.mjs"
   },
   "dependencies": {
@@ -45,6 +49,9 @@
     "@types/three": "^0.181.0",
     "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",
+    "pixelmatch": "^7.1.0",
+    "playwright": "^1.63.0",
+    "pngjs": "^7.0.0",
     "prettier": "3.9.10",
     "tsx": "^4.23.15",
     "typescript": "5.9",

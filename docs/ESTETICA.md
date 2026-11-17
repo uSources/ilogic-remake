@@ -28,7 +28,8 @@ equipo, que se lean bien desde arriba, con la cámara del juego.
      cristales que asoman), la hebilla, las cartucheras, la solapa de la mochila, la cantimplora, la
      manta enrollada, la mira y el cargador del arma.
 5. **Proporciones chibi.** Cabeza y casco grandes (casi la mitad de la altura), cuerpo corto, piernas
-   cortas. La figura llena la casilla de alto (unas 31 de 32 unidades).
+   cortas. La figura llena la casilla de alto (unas 31 de 32 unidades) en Ashfox: el detalle se
+   modela a tamaño completo y el juego la encoge con su tamaño (ver «Tamaños en el tablero»).
 6. **Que se lea desde arriba.** La cámara del juego mira desde arriba en diagonal: el casco, el arma y
    la mochila son lo que más se ve. Las armas, gruesas y algo exageradas (si no, desaparecen); el
    casco, con sus gafas bien visibles.
@@ -148,6 +149,35 @@ casilla, el color del equipo en la carrocería y el detalle dibujado.
 - **El transporte** (`transport`): camión con la cabina del equipo delante (parabrisas en 3D con su
   barra, ventanillas, rejilla, faros, retrovisores) y la caja con la lona (costillas, la abertura
   oscura de detrás con la lona enrollada) y pilotos rojos.
+
+## Tamaños en el tablero
+
+Con todo llenando la casilla, un soldado medía lo mismo que un tanque (0,97 y 0,94 casillas de alto)
+y no se distinguía de un vistazo qué era cada cosa (noviembre de 2026). Los modelos se siguen
+haciendo a tamaño completo, que es donde cabe el detalle, y el juego los escala con el tamaño de
+cada unidad (`modelSize` en `units.json`, por uno):
+
+| Clase | Tamaño | Unidades |
+|---|---|---|
+| Infantería | 0,42 (moto 0,45) | soldado, bazuca, mortero, antidisturbios, moto |
+| Vehículos ligeros | 0,5–0,55 | jeep, transporte, suministros, lanzamisiles, tanque ligero, anfibio |
+| Tanques | 0,62 | tanque, antiaéreo |
+| Pesados | 0,65 | artillería, bloqueador |
+| Aviones | 0,6–0,72 | caza ligero, caza, helicóptero; el bombardero, el más grande |
+
+Una unidad nueva entra en la clase que le toca. La regla de fondo: que el tamaño diga lo que pesa la
+unidad, con la infantería claramente la más pequeña, y que **todas queden más bajas que los
+edificios** (como en Advance Wars): así, con una unidad encima, el edificio asoma por detrás.
+Se probó antes con la infantería a 0,6 y los tanques a 0,9 (un tanque tapaba la fábrica de debajo)
+y luego a 0,5 y 0,75 (aún descompensadas al lado de los edificios). Referencia: en Advance Wars
+(también en Re-Boot Camp) y Wargroove las unidades quedan claramente por debajo de los edificios.
+
+**Una unidad encima de un edificio**: cada uno se va a una esquina de la casilla, la unidad a la de
+delante (la más cerca de la cámara) y el edificio, encogido a 0,8, a la de atrás
+(`src/view3d/engine/pieces/sharedTile.ts`). Así no se atraviesan y se ven los dos. Va por esquinas y
+no siguiendo a la cámara para que no se muevan al desplazarla; solo cambian de esquina al girarla.
+Si la unidad está en la niebla, el edificio no se mueve (no la delata). Se probó y no gustó: solo
+encoger el edificio (la unidad lo tapaba) y hacerlo semitransparente (un borrón).
 
 ## Edificios
 
@@ -280,8 +310,11 @@ tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
 
 - **Cielo en bandas**: una cúpula con seis bandas secas del horizonte (claro) al cenit (azul), sin
   degradado suave, como la sombra de dos tonos de las piezas. Sol **cuadrado** de píxel con un halo.
-- **Nubes de bloques**: losas blancas con bultos encima, con el material cartoon, bajas y lejos del
-  mapa para que se vean por encima del mar al inclinar la cámara; pasan despacio con el viento.
+- **Nubes de voxels**: cada nube es la suma de unas cuantas esferas de voxels (1,6 casillas), así el
+  borde sale escalonado como el pixel art y no como una losa. Blancas por arriba y azul gris por el
+  fondo (el suelo de la nube es plano), con el material cartoon; bajas y lejos del mapa para que se
+  vean por encima del mar al inclinar la cámara; pasan despacio con el viento (solo cambia la posición
+  de cada voxel). Código: `engine/core/sky.ts`.
 - **Mar**: un plano por debajo del agua del tablero (se ve el borde de tierra, como un acantilado)
   que recibe la sombra del mapa. Para que el tablero se asiente en él y no parezca puesto encima
   (primera versión, plana y de un solo azul: «no queda integrado»), el agua va en escalones de
@@ -289,8 +322,10 @@ tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
   del agua del tablero. Al pie de la tierra late una franja de **espuma** de píxel, y los brillos
   son rayitas de tres píxeles que titilan (no líneas largas), solo cerca de la tierra. Los tonos van
   por tema: templado, turquesa en el desierto, verdoso en el pantano y frío con nieve.
-- **Islotes de bloques** alrededor (14, siempre los mismos): playa baja y un cerro escalonado de la
-  tierra del tema, con su propio bajío y espuma. Dicen que el mapa es un trozo de un mundo.
+- **Islotes** alrededor (14, siempre los mismos): cada uno es una sierra pequeña con el relieve de
+  las montañas del tablero (`massif.ts`, `reliefColors.ts`): playa baja, tierra del tema, roca pelada
+  en las laderas empinadas y manchas de color, con su propio bajío y espuma. Dicen que el mapa es un
+  trozo de un mundo. Código: `engine/terrain/islets.ts`.
 - **Niebla del horizonte**: del color de abajo del cielo, empieza pasado el mapa (nunca lo tapa) y
   funde el mar con el cielo.
 - **Con el clima**: cielo, nubes y niebla cambian a la vez que la luz: gris y sin sol con lluvia,
