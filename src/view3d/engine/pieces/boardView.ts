@@ -66,16 +66,11 @@ export class BoardView {
     return ground.add(EMPTY_OVERHEAD);
   }
 
-  /** La vida que tiene ahora la unidad en pantalla: la de su ultima vista (antes del golpe que se anima). */
-  lifeOf(uid: number): number {
-    return (this.unitLooks.get(uid)?.lifeLeft ?? 1) * MAX_LIFE;
-  }
-
-  /** Enseña la vida `life` en la chapa de la unidad, a `pulse` de su tamaño (durante una animacion, con decimales). */
-  showLifeNow(uid: number, life: number, pulse: number): void {
+  /** Enseña la vida `life` en la chapa de la unidad (null: entera, sin chapa), a `pulse` de su tamaño. */
+  showLifeNow(uid: number, life: number | null, pulse: number): void {
     const piece = this.units.get(uid);
     if (!piece) return;
-    showLife(piece.lifeBadge, Math.ceil(life), life / MAX_LIFE);
+    showLife(piece.lifeBadge, life === null ? null : Math.ceil(life), (life ?? MAX_LIFE) / MAX_LIFE);
     piece.lifeBadge.scale.multiplyScalar(pulse);
   }
 

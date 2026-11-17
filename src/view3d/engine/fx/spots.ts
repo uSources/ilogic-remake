@@ -13,10 +13,8 @@ const MUZZLE_HEIGHT = 0.3;
 export interface SpotBoard {
   pieceOf(uid: number): UnitPiece | undefined;
   groundOf(pos: Pos): THREE.Vector3;
-  /** La vida que tiene ahora la unidad en pantalla (de 0 a MAX_LIFE). */
-  lifeOf(uid: number): number;
-  /** Enseña la vida `life` (puede ser una fraccion, a mitad de una animacion) con la chapa a `pulse` de su tamaño. */
-  showLifeNow(uid: number, life: number, pulse: number): void;
+  /** Enseña la vida `life` (puede ser una fraccion, a mitad de una animacion; null: entera, sin chapa) con la chapa a `pulse` de su tamaño. */
+  showLifeNow(uid: number, life: number | null, pulse: number): void;
 }
 
 export const muzzleOf = (piece: UnitPiece): THREE.Vector3 =>

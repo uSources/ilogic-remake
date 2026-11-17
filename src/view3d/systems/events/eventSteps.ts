@@ -86,13 +86,13 @@ function shotSteps(shooter: number, motion: MovementMotion, target: number, piec
 }
 
 /** Lo que pasa al que recibe: chispas, una sacudida y el daño que sube. */
-const hitSteps = (uid: number, damage: number): AnimationStep[] => [
+const hitSteps = (uid: number, hit: Hit): AnimationStep[] => [
   sound('hit'),
   together(
     { kind: 'sparks', at: muzzle(uid), power: HIT_SPARKS },
     { kind: 'shake', uid },
-    { kind: 'lifeLoss', uid, damage },
-    { kind: 'text', at: muzzle(uid), text: `−${damage}`, color: DAMAGE_COLOR },
+    { kind: 'lifeLoss', uid, from: hit.lifeBefore, to: Math.max(0, hit.lifeBefore - hit.damage) },
+    { kind: 'text', at: muzzle(uid), text: `−${hit.damage}`, color: DAMAGE_COLOR },
   ),
 ];
 
@@ -106,6 +106,8 @@ const fallSteps = (uid: number, motion: MovementMotion): AnimationStep[] => [
 ];
 
 interface Hit {
+  /** La vida del que recibe antes del golpe. */
+  lifeBefore: number;
   damage: number;
   killed: boolean;
 }
@@ -118,15 +120,26 @@ function exchangeSteps(shooter: number | null, target: number | null, hit: Hit, 
   const shot = shooter !== null && shooterPiece?.isVisible ? shotSteps(shooter, shooterPiece.motion, target, pieces) : [];
   if (!targetPiece.isVisible) return shot;
   const fall = hit.killed ? fallSteps(target, targetPiece.motion) : [];
-  return [...shot, ...hitSteps(target, hit.damage), ...fall];
+  return [...shot, ...hitSteps(target, hit), ...fall];
 }
 
 /** Atacar: el golpe y, si el blanco sigue en pie y responde, el contraataque. */
 function attackSteps(event: EventOf<'attack'>, pieces: PieceLookup): AnimationStep[] {
-  const attack = exchangeSteps(event.attacker, event.target, { damage: event.damage, killed: event.killed }, pieces);
+  const { attackerLife, defenderLife } = event.combat;
+  const hit = { lifeBefore: defenderLife, damage: event.damage, killed: event.killed };
+  const attack = [...lifeBeforeSteps(event, pieces), ...exchangeSteps(event.attacker, event.target, hit, pieces)];
   if (event.counter <= 0 || event.killed) return attack;
-  const counter = exchangeSteps(event.target, event.attacker, { damage: event.counter, killed: event.attackerKilled }, pieces);
-  return [...attack, ...counter];
+  const counterHit = { lifeBefore: attackerLife, damage: event.counter, killed: event.attackerKilled };
+  return [...attack, ...exchangeSteps(event.target, event.attacker, counterHit, pieces)];
+}
+
+/** Las dos chapas vuelven a la vida de antes del combate, para que cada una baje cuando le llega su golpe. */
+function lifeBeforeSteps(event: EventOf<'attack'>, pieces: PieceLookup): AnimationStep[] {
+  const lives = [
+    { uid: event.target, life: event.combat.defenderLife },
+    { uid: event.attacker, life: event.combat.attackerLife },
+  ];
+  return lives.flatMap(({ uid, life }) => (uid !== null && pieces.pieceOf(uid) ? [{ kind: 'lifeShown' as const, uid, life }] : []));
 }
 
 /**

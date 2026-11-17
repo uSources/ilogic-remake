@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import type { MovementMotion } from '../../../core/content';
+import { MAX_LIFE } from '../../../core/data';
 import type { Pos } from '../../../core/model';
 import type { PieceClip, PieceLookup, PieceStage, PuffKind, ShownPiece } from '../../ports/stage';
 import { tint } from '../pieces/tint';
@@ -148,9 +149,11 @@ export class BoardPieceStage implements PieceStage, PieceLookup {
     });
   }
 
-  async drainLife(uid: number, damage: number): Promise<void> {
-    const from = this.host.board.lifeOf(uid);
-    const to = Math.max(0, from - damage);
+  showLife(uid: number, life: number): void {
+    this.host.board.showLifeNow(uid, life >= MAX_LIFE ? null : life, 1);
+  }
+
+  async drainLife(uid: number, from: number, to: number): Promise<void> {
     await this.host.animate(LIFE_DRAIN_SECONDS, (progress) => {
       const eased = 1 - (1 - progress) ** 3;
       this.host.board.showLifeNow(uid, from + (to - from) * eased, 1 + LIFE_PULSE * (1 - progress));
