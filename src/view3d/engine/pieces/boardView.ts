@@ -12,11 +12,11 @@ import type { PuffSource } from '../fx/particles';
 import { tileToWorld } from '../core/space';
 import type { TerrainView } from '../terrain/terrain';
 import { boardScene, woundedUnits, type BuildingLook, type HitLook, type UnitLook } from '../../systems/board/boardScene';
-import { chimneyOf, newBuildingPiece, type BuildingPiece } from './buildingPiece';
+import { chimneyOf, makeRoom, newBuildingPiece, type BuildingPiece } from './buildingPiece';
 import { growIn, startPopping } from './growIn';
 import { CAPTURE_COLOR } from './sidePaint';
 import { tint } from './tint';
-import { newUnitPiece, ROTOR_SPEED, type UnitPiece } from './unitPiece';
+import { newUnitPiece, ROTOR_SPEED, stepAside, type UnitPiece } from './unitPiece';
 
 /** Lo que se oscurece una unidad propia que ya ha hecho todo (tanto por uno de su color). */
 const SPENT_TINT = 0.5;
@@ -118,15 +118,20 @@ export class BoardView {
     showLife(piece.lifeBadge, look.lifeShown, look.lifeLeft ?? 1);
   }
 
-  /** Lo que se anima solo, sin sucesos: los rotores y las piezas que aparecen. */
-  update(seconds: number): void {
+  /**
+   * Lo que se anima solo, sin sucesos: los rotores, las piezas que aparecen y las unidades y edificios
+   * que comparten casilla, cada uno a su esquina segun hacia donde mira la camara (`cameraForward`).
+   */
+  update(seconds: number, cameraForward: THREE.Vector3): void {
     for (const piece of this.units.values()) {
       if (piece.rotor) piece.rotor.rotation.y += ROTOR_SPEED * seconds;
       piece.glb?.update(seconds);
+      stepAside(piece, cameraForward, seconds);
       if (piece.popping !== null) growIn(piece, seconds);
     }
     for (const piece of this.buildings.values()) {
       piece.glb?.update(seconds);
+      makeRoom(piece, cameraForward, seconds);
       if (piece.popping !== null) growIn(piece, seconds);
     }
   }
@@ -146,6 +151,7 @@ export class BoardView {
       // Al cambiar de dueño (una captura) el edificio vuelve a crecer con sus colores nuevos.
       if (wasThere) startPopping(piece);
     }
+    piece.isOccupied = look.isOccupied;
     showNumber(piece.captureBadge, look.capture?.points ?? null, look.capture ? CAPTURE_COLOR[look.capture.side] : '');
   }
 
@@ -171,6 +177,7 @@ export class BoardView {
     const piece = this.units.get(look.uid) ?? this.addUnit(look);
     piece.object.position.copy(this.groundOf(look.pos));
     piece.object.visible = look.isVisible;
+    piece.standsOnBuilding = look.standsOnBuilding;
     tint(piece.object, look.isSpent ? SPENT_TINT : 1);
     this.unitLooks.set(look.uid, look);
     this.showLife(look.uid);

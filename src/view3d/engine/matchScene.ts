@@ -56,6 +56,8 @@ export class MatchScene implements ScreenView {
   readonly weather: WeatherView;
   readonly sandDust: SandDust;
   readonly wrecks = new Wrecks();
+  /** Hacia donde mira la camara en este fotograma (se reutiliza). */
+  private readonly cameraForward = new THREE.Vector3();
   readonly stages: SceneStages;
   /** El centro del mapa, en el suelo. */
   readonly center: Point3;
@@ -198,7 +200,7 @@ export class MatchScene implements ScreenView {
     this.stars.update(seconds);
     this.threatLines.update(seconds);
     this.preview.update(seconds, this.world.camera, this.canvas.clientHeight);
-    this.board.update(seconds);
+    this.board.update(seconds, this.world.camera.getWorldDirection(this.cameraForward));
     this.terrain.update(seconds);
     this.sea.update(seconds);
     const { target } = this.cameraView;

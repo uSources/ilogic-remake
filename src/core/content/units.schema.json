@@ -293,6 +293,12 @@
               ]
             }
           },
+          "modelSize": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 2,
+            "description": "Tamaño de su modelo 3D en el tablero, por uno (1 = el modelo tal cual, que llena la casilla). Marca la escala entre unidades (infanteria pequeña, tanques grandes), siempre mas bajas que los edificios (docs/ESTETICA.md, \"Tamaños\"). Si no esta, 1."
+          },
           "art": {
             "type": "string",
             "description": "Mientras no tenga dibujo propio, se pinta con el de esta unidad (id). Quitarlo al añadir sus imagenes."

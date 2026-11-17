@@ -1,6 +1,8 @@
 /**
  * Que hay sobre el tablero y como se ve para quien mira (`viewer`): que unidades se ven (niebla), de
- * que lado es cada pieza, cuales ya han jugado, su vida y como va cada captura (sus chapas). Solo decide (puro, sin
+ * que lado es cada pieza, cuales ya han jugado, su vida, como va cada captura (sus chapas) y que
+ * unidades y edificios comparten casilla (cada uno se aparta a una esquina para que no se atraviesen).
+ * Solo decide (puro, sin
  * three.js); el motor (engine/pieces/boardView.ts) pone, mueve y quita los objetos para que se vea asi.
  */
 import type { MovementMotion } from '../../../core/content';
@@ -9,7 +11,16 @@ import { unitTypeOf } from '../../../core/gameContent';
 import { posKey } from '../../../core/geom';
 import type { Building, GameState, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
 import { gotoDestination, turnEndOrderOf } from '../../../core/squads';
-import { capturePointsOf, captureProgress, combatForecast, engagement, isOnMap, isShownTo, visibility } from '../../../core/rules';
+import {
+  buildingAt,
+  capturePointsOf,
+  captureProgress,
+  combatForecast,
+  engagement,
+  isOnMap,
+  isShownTo,
+  visibility,
+} from '../../../core/rules';
 import type { Grid } from '../../../core/util/grid';
 import { isFriendly, ownerSideOf, sideOf, type OwnerSide } from '../../../ui/sides';
 import type { PuffKind } from '../../ports/stage';
@@ -29,6 +40,10 @@ export interface UnitLook {
   readonly side: OwnerSide;
   /** Como se mueve (movements.json, "motion"): su paso, su huella y si deja restos. */
   readonly motion: MovementMotion;
+  /** Tamaño de su modelo en el tablero, por uno (units.json, "modelSize"). */
+  readonly modelSize: number;
+  /** Esta encima de un edificio: se pone delante y el edificio detras, para que se vean los dos. */
+  readonly standsOnBuilding: boolean;
   readonly pos: Pos;
   /** La niebla no la tapa. */
   readonly isVisible: boolean;
@@ -58,6 +73,8 @@ export interface BuildingLook {
   /** De quien se ve que es: si cambia (una captura), se vuelve a pintar. */
   readonly side: OwnerSide;
   readonly capture: CaptureLook | null;
+  /** Hay una unidad encima que se ve: el edificio le deja sitio (si no, se atravesarian). */
+  readonly isOccupied: boolean;
 }
 
 /** El tablero tal como lo ve `viewer`. */
@@ -72,10 +89,12 @@ export const buildingKey = (building: Pos): string => posKey(building);
 
 export function boardScene(s: GameState, viewer: TeamId): BoardScene {
   const seen = visibility(s, viewer);
+  const units = s.units.filter(isOnMap).map((unit) => unitLook(s, viewer, seen, unit));
+  const shownUnitTiles = new Set(units.filter((look) => look.isVisible).map((look) => posKey(look.pos)));
   return {
     seen,
-    units: s.units.filter(isOnMap).map((unit) => unitLook(s, viewer, seen, unit)),
-    buildings: s.buildings.map((building) => buildingLook(s, viewer, seen, building)),
+    units,
+    buildings: s.buildings.map((building) => buildingLook(s, viewer, seen, building, shownUnitTiles)),
   };
 }
 
@@ -85,6 +104,8 @@ function unitLook(s: GameState, viewer: TeamId, seen: Grid<boolean>, unit: Unit)
     type: unit.type,
     side: sideOf(s, viewer, unit.team),
     motion: unitTypeOf(s, unit).motion,
+    modelSize: unitTypeOf(s, unit).modelSize,
+    standsOnBuilding: buildingAt(s, unit) !== undefined,
     pos: { x: unit.x, y: unit.y },
     isVisible: isShownTo(viewer, unit, (pos) => seen.at(pos)),
     isSpent: unit.team === viewer && unit.turnState === 'done',
@@ -101,13 +122,21 @@ function orderLetterOf(s: GameState, unit: Unit): string | null {
   return gotoDestination(unit) ? GOTO_LETTER : null;
 }
 
-function buildingLook(s: GameState, viewer: TeamId, seen: Grid<boolean>, building: Building): BuildingLook {
+/** Como se ve un edificio; `shownUnitTiles`: las casillas (`posKey`) con una unidad que se ve. */
+function buildingLook(
+  s: GameState,
+  viewer: TeamId,
+  seen: Grid<boolean>,
+  building: Building,
+  shownUnitTiles: ReadonlySet<string>,
+): BuildingLook {
   return {
     key: buildingKey(building),
     type: building.type,
     pos: { x: building.x, y: building.y },
     side: shownOwner(s, viewer, seen, building),
     capture: seen.at(building) ? captureLook(s, viewer, building) : null,
+    isOccupied: shownUnitTiles.has(posKey(building)),
   };
 }
 
