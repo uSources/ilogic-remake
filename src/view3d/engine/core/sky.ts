@@ -1,7 +1,7 @@
 /**
  * El cielo de juguete: una cupula con un degradado en bandas secas (del horizonte claro al cenit mas
  * azul; sin degradado suave, como la rampa de dos tonos de las piezas), un sol cuadrado de pixel y
- * nubes de bloques que pasan despacio con el viento. La cupula va con la camara (nunca se llega a
+ * nubes de voxels redondeadas (blancas arriba, con el fondo azul gris) que pasan despacio con el viento. La cupula va con la camara (nunca se llega a
  * ella). Sus colores van de un clima a otro poco a poco (`blendTo`); los de cada clima los da el mundo.
  */
 import * as THREE from 'three';
@@ -70,10 +70,26 @@ const CLOUD_SPEED = 0.8;
 /** Hasta donde se alejan del sitio de partida antes de volver por el otro lado (casillas a cada lado). */
 const CLOUD_WRAP = 200;
 
-/** Un bloque de una nube: su sitio (desde el centro de la nube) y su tamaño. */
-interface CloudBlock {
+/** Lado de un voxel de nube (casillas): los bultos se ven como bloques de juguete, no como losas. */
+const CLOUD_VOXEL = 1.6;
+/** Blanco por arriba; el fondo de la nube, de un azul gris que lo asienta en el cielo. */
+const CLOUD_BELLY = new THREE.Color(0xdbe6f6);
+const CLOUD_WHITE = new THREE.Color(0xffffff);
+/** Cuanta luz propia tienen las nubes (0 a 1): sin ella, el lado de sombra se ve gris de piedra. */
+const CLOUD_GLOW = 0.5;
+
+/** Una esfera de la nube, en voxels: su centro (y apoyado sobre el suelo de la nube) y su radio. */
+interface Puff {
+  x: number;
+  y: number;
+  z: number;
+  radius: number;
+}
+
+/** Un voxel de una nube: su sitio (desde el centro de la nube, en casillas) y si es del fondo. */
+interface CloudVoxel {
   at: THREE.Vector3;
-  size: THREE.Vector3;
+  belly: boolean;
 }
 
 /** Numeros al azar siempre iguales: el cielo es el mismo en cada partida. */
@@ -85,17 +101,43 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-/** Una nube de bloques: una losa ancha y unos bultos encima. */
-function cloudBlocks(random: () => number): CloudBlock[] {
-  const length = 10 + random() * 14;
-  const depth = 5 + random() * 6;
-  const slab = { at: new THREE.Vector3(), size: new THREE.Vector3(length, 2.5, depth) };
-  const bumps = Array.from({ length: 2 + Math.floor(random() * 3) }, () => {
-    const width = 4 + random() * 6;
-    const at = new THREE.Vector3((random() - 0.5) * (length - width), 2 + random() * 1.5, (random() - 0.5) * (depth - 3));
-    return { at, size: new THREE.Vector3(width, 2 + random() * 2.5, Math.min(depth - 1, 3 + random() * 4)) };
+/** Los bultos de una nube: unas cuantas esferas alineadas, de tamaños distintos y apoyadas en el suelo. */
+function cloudPuffs(random: () => number): Puff[] {
+  const count = 3 + Math.floor(random() * 3);
+  const spread = 4 + random() * 4;
+  return Array.from({ length: count }, (_, index) => {
+    const along = count === 1 ? 0 : index / (count - 1) - 0.5;
+    return {
+      x: along * spread,
+      y: 2 + random() * 1.5,
+      z: (random() - 0.5) * 2.5,
+      radius: 2.2 + random() * 1.8 - Math.abs(along),
+    };
   });
-  return [slab, ...bumps];
+}
+
+function insideAnyPuff(point: THREE.Vector3, puffs: readonly Puff[]): boolean {
+  return puffs.some((puff) => point.distanceToSquared(new THREE.Vector3(puff.x, puff.y, puff.z)) <= puff.radius ** 2);
+}
+
+/**
+ * Una nube: los voxels de la suma de sus esferas, con el suelo plano (el fondo, en otro tono). Los
+ * voxels caen en una rejilla, asi que el borde sale escalonado como el pixel art.
+ */
+function cloudVoxels(random: () => number): CloudVoxel[] {
+  const puffs = cloudPuffs(random);
+  const voxels: CloudVoxel[] = [];
+  for (let x = -12; x < 12; x++) {
+    for (let y = 0; y < 9; y++) {
+      for (let z = -6; z < 6; z++) {
+        const center = new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5);
+        if (insideAnyPuff(center, puffs)) {
+          voxels.push({ at: center.multiplyScalar(CLOUD_VOXEL), belly: y === 0 });
+        }
+      }
+    }
+  }
+  return voxels;
 }
 
 /** Un sitio de partida para una nube: repartidas en un anillo alrededor del mapa. */
@@ -112,24 +154,34 @@ function windShift(drift: number): number {
   return wrapped - CLOUD_WRAP;
 }
 
-/** Las nubes, todas en una malla instanciada: cada bloque es una copia de un cubo con el material cartoon. */
-class BlockClouds {
+/**
+ * Las nubes, todas en una malla instanciada: cada voxel es una copia de un cubo con el material
+ * cartoon (blanco arriba y azul gris por el fondo). El viento solo mueve la posicion de cada copia.
+ */
+class VoxelClouds {
   readonly mesh: THREE.InstancedMesh;
   readonly material = toonMaterial(0xffffff).clone();
-  private readonly blocks: { cloud: number; block: CloudBlock }[];
+  private readonly voxels: { cloud: number; voxel: CloudVoxel }[];
   private readonly starts: THREE.Vector3[];
   private drift = 0;
 
   constructor(center: THREE.Vector3) {
     const random = seededRandom(2013);
-    const clouds = Array.from({ length: CLOUD_COUNT }, () => cloudBlocks(random));
-    this.blocks = clouds.flatMap((blocks, cloud) => blocks.map((block) => ({ cloud, block })));
+    const clouds = Array.from({ length: CLOUD_COUNT }, () => cloudVoxels(random));
+    this.voxels = clouds.flatMap((voxels, cloud) => voxels.map((voxel) => ({ cloud, voxel })));
     this.starts = clouds.map((_, index) => cloudStart(center, index, random));
     // Estan mas alla de la niebla del fondo: con ella no se verian.
     this.material.fog = false;
-    this.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), this.material, this.blocks.length);
+    this.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(CLOUD_VOXEL, CLOUD_VOXEL, CLOUD_VOXEL), this.material, this.voxels.length);
     this.mesh.frustumCulled = false;
+    this.voxels.forEach(({ voxel }, index) => this.mesh.setColorAt(index, voxel.belly ? CLOUD_BELLY : CLOUD_WHITE));
     this.place();
+  }
+
+  /** Acerca el color de las nubes a `color`: la luz propia (emisiva) sigue al color para que la sombra no se ensucie. */
+  lerpTone(color: THREE.ColorRepresentation, blend: number): void {
+    this.material.color.lerp(new THREE.Color(color), blend);
+    this.material.emissive.copy(this.material.color).multiplyScalar(CLOUD_GLOW);
   }
 
   update(seconds: number): void {
@@ -137,13 +189,16 @@ class BlockClouds {
     this.place();
   }
 
+  /** Solo la posicion (columna 4 de cada matriz): la escala y el giro no cambian. */
   private place(): void {
     const shift = WIND_DIRECTION.clone().multiplyScalar(windShift(this.drift));
-    const matrix = new THREE.Matrix4();
-    const noTurn = new THREE.Quaternion();
-    this.blocks.forEach(({ cloud, block }, index) => {
-      const at = this.starts[cloud]!.clone().add(shift).add(block.at);
-      this.mesh.setMatrixAt(index, matrix.compose(at, noTurn, block.size));
+    const elements = this.mesh.instanceMatrix.array;
+    this.voxels.forEach(({ cloud, voxel }, index) => {
+      const start = this.starts[cloud]!;
+      const offset = index * 16;
+      elements[offset + 12] = start.x + shift.x + voxel.at.x;
+      elements[offset + 13] = start.y + voxel.at.y;
+      elements[offset + 14] = start.z + shift.z + voxel.at.z;
     });
     this.mesh.instanceMatrix.needsUpdate = true;
   }
@@ -161,7 +216,7 @@ export class Sky {
     uSunShow: { value: 1 },
   };
   private readonly dome: THREE.Mesh;
-  private readonly clouds: BlockClouds;
+  private readonly clouds: VoxelClouds;
 
   constructor(center: THREE.Vector3, sunDirection: THREE.Vector3, look: SkyLook) {
     this.uniforms.uSunDirection.value.copy(sunDirection).normalize();
@@ -176,7 +231,7 @@ export class Sky {
     this.dome = new THREE.Mesh(new THREE.SphereGeometry(DOME_RADIUS, 32, 16), material);
     this.dome.renderOrder = -1;
     this.dome.frustumCulled = false;
-    this.clouds = new BlockClouds(center);
+    this.clouds = new VoxelClouds(center);
     this.object.add(this.dome, this.clouds.mesh);
     this.blendTo(look, 1);
   }
@@ -185,7 +240,7 @@ export class Sky {
   blendTo(look: SkyLook, blend: number): void {
     this.horizon.lerp(new THREE.Color(look.horizon), blend);
     this.uniforms.uZenith.value.lerp(new THREE.Color(look.zenith), blend);
-    this.clouds.material.color.lerp(new THREE.Color(look.cloud), blend);
+    this.clouds.lerpTone(look.cloud, blend);
     this.uniforms.uSunShow.value += (look.sun - this.uniforms.uSunShow.value) * blend;
   }
 
