@@ -91,6 +91,7 @@ const hitSteps = (uid: number, damage: number): AnimationStep[] => [
   together(
     { kind: 'sparks', at: muzzle(uid), power: HIT_SPARKS },
     { kind: 'shake', uid },
+    { kind: 'lifeLoss', uid, damage },
     { kind: 'text', at: muzzle(uid), text: `−${damage}`, color: DAMAGE_COLOR },
   ),
 ];

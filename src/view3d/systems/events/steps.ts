@@ -16,6 +16,8 @@ export type AnimationStep =
   | { kind: 'recoil'; uid: number }
   | { kind: 'projectile'; from: Spot; to: Spot; isArc: boolean }
   | { kind: 'shake'; uid: number }
+  /** La vida baja `damage` puntos: el porcentaje cuenta hacia abajo y los tramos se vacian. */
+  | { kind: 'lifeLoss'; uid: number; damage: number }
   | { kind: 'hop'; uid: number }
   | { kind: 'fall'; uid: number; leavesWreck: boolean }
   | { kind: 'sparks'; at: Spot; power: number }

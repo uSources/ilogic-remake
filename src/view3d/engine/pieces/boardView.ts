@@ -5,6 +5,7 @@
  * animaciones mueven las piezas y despues `sync` las deja donde dice la partida).
  */
 import * as THREE from 'three';
+import { MAX_LIFE } from '../../../core/data';
 import type { GameState, Pos, TeamId } from '../../../core/model';
 import { showLetter, showLife, showLoss, showNumber } from './badges';
 import type { GlbLibrary } from './glbModels';
@@ -63,6 +64,19 @@ export class BoardView {
         return piece.lifeBadge.getWorldPosition(new THREE.Vector3()).add(OVERHEAD_GAP);
     }
     return ground.add(EMPTY_OVERHEAD);
+  }
+
+  /** La vida que tiene ahora la unidad en pantalla: la de su ultima vista (antes del golpe que se anima). */
+  lifeOf(uid: number): number {
+    return (this.unitLooks.get(uid)?.lifeLeft ?? 1) * MAX_LIFE;
+  }
+
+  /** Enseña la vida `life` en la chapa de la unidad, a `pulse` de su tamaño (durante una animacion, con decimales). */
+  showLifeNow(uid: number, life: number, pulse: number): void {
+    const piece = this.units.get(uid);
+    if (!piece) return;
+    showLife(piece.lifeBadge, Math.ceil(life), life / MAX_LIFE);
+    piece.lifeBadge.scale.multiplyScalar(pulse);
   }
 
   /** La unidad se ve ahora (la niebla no la tapa). */

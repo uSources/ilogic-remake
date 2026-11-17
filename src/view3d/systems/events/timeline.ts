@@ -24,6 +24,7 @@ const STEP_RUNNERS: StepRunners = {
   aim: (step, { pieces }) => pieces.aim(step.uid, step.target),
   recoil: (step, { pieces }) => pieces.recoil(step.uid),
   shake: (step, { pieces }) => pieces.shake(step.uid),
+  lifeLoss: (step, { pieces }) => pieces.drainLife(step.uid, step.damage),
   hop: (step, { pieces }) => pieces.hop(step.uid),
   fall: (step, { pieces }) => pieces.fall(step.uid, step.leavesWreck),
   projectile: (step, { effects }) => effects.projectile(step.from, step.to, step.isArc),

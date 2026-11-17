@@ -48,6 +48,8 @@ export interface PieceStage {
   recoil(uid: number): Promise<void>;
   /** La sacudida al recibir un golpe. */
   shake(uid: number): Promise<void>;
+  /** La vida de la unidad baja `damage` puntos: su porcentaje cuenta hacia abajo y sus tramos se vacian. */
+  drainLife(uid: number, damage: number): Promise<void>;
   /** Dos saltitos en su sitio. */
   hop(uid: number): Promise<void>;
   /** Cae y se esconde: se ladea y quema hasta el suelo (y deja sus restos) o vuelca y desaparece. */
