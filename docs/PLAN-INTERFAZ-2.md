@@ -93,7 +93,7 @@ Boceto (escritorio):
 El móvil se deja de momento (decidido con el usuario): las fases se piensan para ratón y teclado, sin
 romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo será otro plan.
 
-### Fase 1. El tablero se lee: mover, atacar y camino
+### Fase 1. El tablero se lee: mover, atacar y camino (hecha)
 - **Alcance de mover**: losas azules con borde claro en el contorno del área, no un tinte. Se tienen
   que distinguir sobre hierba, nieve, arena y agua. Va en `engine/fx/highlights.ts`.
 - **Alcance de ataque**: un borde rojo en las casillas a las que podría disparar desde cualquier

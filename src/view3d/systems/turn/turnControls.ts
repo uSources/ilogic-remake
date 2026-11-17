@@ -45,7 +45,8 @@ import { teamState } from '../../../core/teams';
 import { endSound } from '../sound/soundCues';
 import { attackPlan, type AttackPlan } from './attackPlan';
 import type { EventPlayer, MovePreview, ScreenView, TileMarks } from '../../ports/turn';
-import { pathFor, previewAt } from './movePreview';
+import { arcShotOf, pathFor, previewAt } from './movePreview';
+import { attackReachTiles } from './attackReach';
 import { clickIntent, type ClickIntent } from './clickIntent';
 import { chipOptions, groupRadialOptions, optionAction, orderForTile, ORDER_KINDS, radialOptions, type UnitOption } from './unitOptions';
 import { isSelectable, pickedFrom } from './selection';
@@ -709,11 +710,19 @@ export class TurnControls {
   /** La casilla señalada (raton encima): con una unidad elegida que aun se mueve, por donde iria y a donde llegaria. */
   hover(pos: Pos | null): void {
     const mode = this.mode;
-    if (mode.kind !== 'unit' || !mode.range || !pos || this.isBusy) return this.host.preview.show(null);
-    const attackFrom = this.planAt(mode.unit, mode.range, pos)?.from ?? null;
-    const { trail, look } = previewAt(mode.unit.uid, mode.range, mode.trail, pos, attackFrom);
+    if (mode.kind !== 'unit' || !pos || this.isBusy) return this.clearPreview();
+    const plan = this.planAt(mode.unit, mode.range, pos);
+    this.host.preview.aim(arcShotOf(plan));
+    if (!mode.range) return this.host.preview.show(null);
+    const { trail, look } = previewAt(mode.unit.uid, mode.range, mode.trail, pos, plan?.from ?? null);
     this.mode = { ...mode, trail };
     this.host.preview.show(look);
+  }
+
+  /** Sin camino, fantasma ni visor. */
+  private clearPreview(): void {
+    this.host.preview.show(null);
+    this.host.preview.aim(null);
   }
 
   // ---- Marcas ----
@@ -728,8 +737,9 @@ export class TurnControls {
   private showMarks(): void {
     const mode = this.mode;
     const { marks } = this.host;
-    this.host.preview.show(null);
+    this.clearPreview();
     marks.showReach(this.reachTiles());
+    marks.showAttackReach(mode.kind === 'unit' ? attackReachTiles(this.s, mode.unit, mode.range) : []);
     marks.showTargets(this.targetTiles());
     marks.select('unit' in mode ? mode.unit : 'building' in mode ? mode.building : null);
     marks.showGroup(mode.kind === 'group' || mode.kind === 'order' ? mode.units : []);

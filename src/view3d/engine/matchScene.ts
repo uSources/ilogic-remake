@@ -189,6 +189,7 @@ export class MatchScene implements ScreenView {
     this.cameraView.place(pose);
     this.highlights.update(seconds);
     this.stars.update(seconds);
+    this.preview.update(seconds, this.world.camera, this.canvas.clientHeight);
     this.board.update(seconds);
     this.terrain.update(seconds);
     this.sea.update(seconds);
