@@ -11,7 +11,10 @@ export interface ForecastVM {
   lifeBefore: number;
   lifeAfter: number;
   killChance: number;
+  /** La casilla del objetivo (su chapa de daño va encima). */
   anchor: Anchor;
+  /** La casilla desde donde dispara tu unidad (su chapa del contraataque va encima). */
+  attackerAnchor: Anchor;
   /** [CAMBIO] Acierto extra por flanqueo, en tanto por uno (0 si no hay). */
   flank: number;
   /** [CAMBIO] Dinero que se cobraria al destruirla (0 sin botin). */

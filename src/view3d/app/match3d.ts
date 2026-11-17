@@ -15,6 +15,7 @@ import type { SoundPort } from '../../audio/sounds';
 import { OptionsPanel } from '../../menu/optionsPanel';
 import { MatchScene } from '../engine/matchScene';
 import type { GlbLibrary } from '../engine/pieces/glbModels';
+import { hitLookOf } from '../systems/board/boardScene';
 import { StrategyCamera } from '../systems/camera/strategyCamera';
 import { playEvents } from '../systems/events/timeline';
 import { installHudActions, publishHud } from '../systems/hud/hudBridge';
@@ -51,9 +52,10 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const anchorOf = (pos: Pos) => scene.anchorOf(pos);
 
   let cursor: Pos | null = null;
-  /** Publica la interfaz (sin tocar las piezas). */
+  /** Publica la interfaz (de las piezas, solo la barra de vida del enemigo al que se apunta). */
   function publish(): void {
     const forecast = cursor ? controls.forecastAt(cursor) : null;
+    board.previewHit(hitLookOf(state, forecast));
     const menu = pause.view(cursor ?? PAUSE_ANCHOR) ?? controls.menu();
     publishHud(images, state, viewer, {
       cursor,
@@ -65,6 +67,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
       intents: intents.isShowingAll,
       threat: threat.isShowing,
       anchorOf,
+      overheadOf: (pos) => scene.overheadOf(pos),
     });
   }
   function refresh(): void {

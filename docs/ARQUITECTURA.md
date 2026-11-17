@@ -743,7 +743,7 @@ pone la vista. Cada pieza en su sitio:
 | Paneles de la partida y donde va cada uno | `game/*.tsx`, colocados en `game/GameHud.tsx` (lista `GAME_PANELS`) |
 | Pantallas del menu, pausa y final | `menus/*.tsx` |
 | Dialogos (ayuda, novedades, nombre de escuadra) y avisos (carga, aviso, resumen, cartel) | `overlays/*.tsx` |
-| Piezas compartidas | `common/`: `Pill` y `Chip` (`toy.tsx`, las piezas "caja de juguete": pastillas de esquina y fichas que se pulsan), `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useFold`/`FoldMark`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
+| Piezas compartidas | `common/`: `Pill`, `Chip` y `Badge` (`toy.tsx`, las piezas "caja de juguete": pastillas de esquina, fichas que se pulsan y chapas sobre una casilla, como las de la prevision: numero y color en `ui/models/forecastBadges.ts`), `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useFold`/`FoldMark`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
 | Estilos | `styles/<grupo>/<panel>.css`, juntados en orden por `hud.css` |
 
 - **Un panel nuevo**: su tipo en `vm/`, su campo en `UIState` (null = no se ve) y en `initialState`,
@@ -1094,7 +1094,7 @@ src/view3d/
 | `systems/orders/` | lo que haran las ordenes al terminar el turno: cuales enseñar (`orderIntents.ts`, con `previewStandingOrders` del nucleo) |
 | `systems/threat/` | «Ver amenaza» (T o el menú de la partida): las casillas a las que puede disparar algun enemigo que se ve (`threatZone.ts`, con `threatMap` del nucleo, que no delata a los de la niebla); las pinta el motor por `ThreatMarks` (`ports/threat.ts`, en `engine/fx/highlights.ts`) |
 | `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
-| `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas |
+| `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas; lo que perderia el enemigo al que se apunta (`hitLookOf`) |
 | `systems/camera/` | la camara de estrategia como logica (`StrategyCamera`): desplazar, acercar, girar, limites y suavizado; da su pose como datos |
 | `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`: grupos con numero, ordenes, «Ver órdenes») y raton o dedo sobre el mundo (`pointerInput.ts`: tocar, recuadro, doble clic, borde), a ordenes de la camara y del turno |
 | `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien el numero de «Fin del turno» y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`) |
@@ -1102,7 +1102,7 @@ src/view3d/
 | `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
 | `engine/core/` | lienzo, escena, luz cartoon (y por clima), cielo de bandas con nubes de bloques y niebla del horizonte (`sky.ts`) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`) |
 | `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas, agua, polvo de la arena, el mar alrededor del mapa con sus bajíos (`sea.ts`) y los islotes de bloques (`islets.ts`) |
-| `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, barras, restos y rodadas |
+| `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`, y `previewHit` para la barra a rayas de lo que perderia; `overheadOf`, encima de la barra, para las chapas), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, barras, restos y rodadas |
 | `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`), la flecha y el fantasma al mover (`movePreview.ts`) y las flechas de las ordenes (`intentArrows.ts`; piezas comunes en `arrowParts.ts`), lluvia y nieve (`weather3d.ts`) |
 | `engine/camera/` | situa la camara de three.js en la pose que da `systems/camera` |
 

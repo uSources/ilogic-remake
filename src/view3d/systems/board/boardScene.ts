@@ -9,7 +9,7 @@ import { unitTypeOf } from '../../../core/gameContent';
 import { posKey } from '../../../core/geom';
 import type { Building, GameState, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
 import { gotoDestination, turnEndOrderOf } from '../../../core/squads';
-import { capturePointsOf, captureProgress, isOnMap, isShownTo, visibility } from '../../../core/rules';
+import { capturePointsOf, captureProgress, combatForecast, engagement, isOnMap, isShownTo, visibility } from '../../../core/rules';
 import type { Grid } from '../../../core/util/grid';
 import { isFriendly, ownerSideOf, sideOf, type OwnerSide } from '../../../ui/sides';
 import type { PuffKind } from '../../ports/stage';
@@ -130,4 +130,28 @@ export function woundedUnits(s: GameState): { uid: number; smoke: PuffKind }[] {
     const smoke = woundSmokeOf(unit.life);
     return smoke ? [{ uid: unit.uid, smoke }] : [];
   });
+}
+
+/** Un ataque que se esta apuntando: quien, desde donde y a quien. */
+export interface PlannedHit {
+  readonly attacker: Unit;
+  readonly from: Pos;
+  readonly target: Unit;
+}
+
+/** Lo que perderia el blanco: su vida ahora y la que le quedaria (lo esperado), de 0 a 1. */
+export interface HitLook {
+  readonly uid: number;
+  readonly lifeLeft: number;
+  readonly lifeAfter: number;
+}
+
+/**
+ * Mientras se apunta a un enemigo (su chapa de daño a la vista), su barra de vida enseña lo que
+ * perderia: la misma prevision que la chapa (combatForecast). Null si no se apunta a nadie.
+ */
+export function hitLookOf(s: GameState, hit: PlannedHit | null): HitLook | null {
+  if (!hit) return null;
+  const forecast = combatForecast(s, engagement(hit.attacker, hit.target, { from: hit.from }));
+  return { uid: hit.target.uid, lifeLeft: hit.target.life / MAX_LIFE, lifeAfter: Math.max(0, forecast.lifeAfter) / MAX_LIFE };
 }

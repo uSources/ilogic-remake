@@ -108,7 +108,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
 - Tests: `tests/turnControls.test.ts` y uno nuevo para las casillas de ataque, con puertos falsos que
   apuntan lo que se pide.
 
-### Fase 2. Chapas de combate (la previsión)
+### Fase 2. Chapas de combate (la previsión) (hecha)
 - `game/Forecast.tsx` pasa a ser **dos chapas**:
   - sobre el enemigo, el daño esperado en grande («−45»), con una calavera y el % si puede morir, en
     dorado si es probable (`LIKELY_KILL`);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { newUnit } from '@core/measure';
 import type { GameState } from '@core/model';
-import { boardScene, woundedUnits, woundSmokeOf, type UnitLook } from '../src/view3d/systems/board/boardScene';
+import { boardScene, hitLookOf, woundedUnits, woundSmokeOf, type UnitLook } from '../src/view3d/systems/board/boardScene';
 import { act, blankState, ENEMY, PLAYER, unitTypeNamed } from './helpers';
 
 /** El tablero tal como lo ve quien mira, sin navegador: niebla, lados, vida, quien ya jugo y capturas. */
@@ -95,5 +95,21 @@ describe('la letra de la orden', () => {
     expect(lookOf(s, soldier.uid)?.orderLetter).toBeNull();
     act(s, PLAYER, { kind: 'giveStandingOrder', uids: [soldier.uid], order: { kind: 'attack', at: { x: 9, y: 9 } } });
     expect(lookOf(s, soldier.uid)?.orderLetter).toBe('A');
+  });
+});
+
+describe('la barra del enemigo al que se apunta', () => {
+  it('sin apuntar, nada', () => {
+    expect(hitLookOf(blankState({ fog: false }), null)).toBeNull();
+  });
+
+  it('enseña su vida y la que le quedaria (de 0 a 1), aunque este entero', () => {
+    const s = blankState({ fog: false });
+    const attacker = newUnit(s, unitTypeNamed('Tank'), PLAYER, { x: 2, y: 2 });
+    const target = newUnit(s, SOLDIER, ENEMY, { x: 3, y: 2 });
+    const look = hitLookOf(s, { attacker, from: { x: 2, y: 2 }, target });
+    expect(look).toMatchObject({ uid: target.uid, lifeLeft: 1 });
+    expect(look!.lifeAfter).toBeGreaterThanOrEqual(0);
+    expect(look!.lifeAfter).toBeLessThan(1);
   });
 });

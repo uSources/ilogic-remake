@@ -1,6 +1,7 @@
 /**
  * Las marcas que flotan sobre las piezas y miran siempre a la camara: la vida de una unidad herida,
- * lo que le queda a un edificio que se esta capturando y la letra de la orden de una unidad. Son dibujos planos (como en 2D), para que se
+ * lo que perderia una unidad a la que se apunta, lo que le queda a un edificio que se esta capturando
+ * y la letra de la orden de una unidad. Son dibujos planos (como en 2D), para que se
  * lean igual desde cualquier angulo. Las texturas se guardan por valor: hay pocas distintas.
  */
 import * as THREE from 'three';
@@ -17,7 +18,23 @@ function lifeColor(share: number): string {
   return share > 0.3 ? '#ffd447' : '#ff4d45';
 }
 
-function barTexture(share: number, color: string): THREE.CanvasTexture {
+/** Lo que perderia en un ataque: rayas de rojo claro y oscuro, como en la tarjeta de la prevision. */
+const LOSS_LIGHT = '#ff8a82';
+const LOSS_DARK = '#6b1f1c';
+const LOSS_STRIPE = 4;
+
+/** De `after` a `share` (de 0 a 1 de la barra), las rayas de lo que perderia. */
+function drawLoss(draw: CanvasRenderingContext2D, after: number, share: number): void {
+  const inner = BAR_WIDTH - BORDER * 2;
+  const start = BORDER + Math.round(inner * after);
+  const end = BORDER + Math.round(inner * share);
+  for (let x = start; x < end; x++) {
+    draw.fillStyle = Math.floor((x - start) / LOSS_STRIPE) % 2 === 0 ? LOSS_LIGHT : LOSS_DARK;
+    draw.fillRect(x, BORDER, 1, BAR_HEIGHT - BORDER * 2);
+  }
+}
+
+function barTexture(share: number, color: string, after: number | null): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   canvas.width = BAR_WIDTH;
   canvas.height = BAR_HEIGHT;
@@ -25,7 +42,8 @@ function barTexture(share: number, color: string): THREE.CanvasTexture {
   draw.fillStyle = '#0b1220';
   draw.fillRect(0, 0, BAR_WIDTH, BAR_HEIGHT);
   draw.fillStyle = color;
-  draw.fillRect(BORDER, BORDER, Math.round((BAR_WIDTH - BORDER * 2) * share), BAR_HEIGHT - BORDER * 2);
+  draw.fillRect(BORDER, BORDER, Math.round((BAR_WIDTH - BORDER * 2) * (after ?? share)), BAR_HEIGHT - BORDER * 2);
+  if (after !== null) drawLoss(draw, after, share);
   const texture = new THREE.CanvasTexture(canvas);
   texture.magFilter = THREE.NearestFilter;
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -34,14 +52,24 @@ function barTexture(share: number, color: string): THREE.CanvasTexture {
 
 const textures = new Map<string, THREE.CanvasTexture>();
 
-function cachedBar(share: number, color: string): THREE.CanvasTexture {
-  const key = `${Math.round(share * 100)}${color}`;
+function cachedBar(share: number, color: string, after: number | null = null): THREE.CanvasTexture {
+  const key = `${Math.round(share * 100)}${color}${after === null ? '' : `-${Math.round(after * 100)}`}`;
   let texture = textures.get(key);
   if (!texture) {
-    texture = barTexture(share, color);
+    texture = barTexture(share, color, after);
     textures.set(key, texture);
   }
   return texture;
+}
+
+/** La barra de vida con lo que perderia en un ataque: lo que le quedaria en su color y lo demas, a rayas. */
+export function showLoss(badge: THREE.Sprite, share: number, after: number): void {
+  badge.visible = true;
+  const texture = cachedBar(share, lifeColor(after), Math.min(after, share));
+  if (badge.material.map !== texture) {
+    badge.material.map = texture;
+    badge.material.needsUpdate = true;
+  }
 }
 
 /** Una marca vacia (sin dibujo hasta que se le pone uno con `showBar`). */

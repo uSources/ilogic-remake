@@ -1,17 +1,14 @@
 import { fmtNum, t } from '../../settings';
+import { counterBadge, damageBadge, LIKELY_KILL, MENTION_DEATH, RISKY_COUNTER, type BadgeLook } from '../../ui/models/forecastBadges';
 import { pct, range } from '../common/format';
 import { Icon } from '../common/Icon';
 import { useAltHeld } from '../common/useAltHeld';
 import { Popover } from '../common/Popover';
+import { Badge, PixelSkull } from '../common/toy';
+import type { Anchor } from '../vm/common';
 import type { ForecastVM } from '../vm/combat';
 
 const FULL_LIFE = 100;
-/** Desde esta probabilidad de destruirlo, se resalta en dorado. */
-const LIKELY_KILL = 0.5;
-/** Desde esta probabilidad de que caiga tu unidad en el contraataque, tu vida sale en rojo. */
-const RISKY_COUNTER = 0.2;
-/** Por debajo de esta probabilidad no se dice "(cae x%)". */
-const MENTION_DEATH = 0.01;
 const LOST_LIFE_COLOR = '#6b1f1c';
 
 /**
@@ -73,20 +70,6 @@ function GoldRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** El contraataque en una linea: cuanto te devuelve, o que no hay. */
-function CounterLine({ counter }: { counter: ForecastVM['counter'] }) {
-  return (
-    <div class="row">
-      <span>{t('counter')}</span>
-      {counter ? (
-        <span style={{ color: 'var(--red-soft)' }}>{range(counter.low, counter.high)}</span>
-      ) : (
-        <span class="muted">{t('none')}</span>
-      )}
-    </div>
-  );
-}
-
 /** Lo que sale ademas con Alt: la vida que le queda, flanqueo, botin y como queda tu unidad. */
 function ForecastDetails({ forecast }: { forecast: ForecastVM }) {
   return (
@@ -104,12 +87,23 @@ function ForecastDetails({ forecast }: { forecast: ForecastVM }) {
   );
 }
 
-/**
- * Prevision de combate junto al objetivo, en lo justo: daño, vida que le queda, cuanto puede
- * destruirlo y el contraataque. Con Alt, todo (docs/PLAN-INTERFAZ.md, fase 5).
- */
-export function Forecast({ forecast }: { forecast: ForecastVM }) {
-  const isDetailed = useAltHeld();
+/** Una chapa de la prevision: el numero y, si puede caer, la calavera con su %. */
+function ForecastBadge({ look, anchor, label, cls }: { look: BadgeLook; anchor: Anchor; label: string; cls?: string }) {
+  return (
+    <Badge anchor={anchor} tone={look.tone} label={label} cls={cls}>
+      <span class="num">{look.text}</span>
+      {look.death !== null && (
+        <span class="badge-death">
+          <PixelSkull />
+          {pct(look.death)}
+        </span>
+      )}
+    </Badge>
+  );
+}
+
+/** La tarjeta con todo (con Alt): rango, vida antes y despues, cuanto puede destruirlo, flanqueo, botin y contraataque. */
+function ForecastCard({ forecast }: { forecast: ForecastVM }) {
   return (
     <Popover anchor={forecast.anchor} prefer="left" class="forecast" label={t('forecast')}>
       <div class="vs">
@@ -122,8 +116,24 @@ export function Forecast({ forecast }: { forecast: ForecastVM }) {
         <span>{t('destroyIt')}</span>
         <span style={{ color: forecast.killChance >= LIKELY_KILL ? 'var(--gold)' : undefined }}>{pct(forecast.killChance)}</span>
       </div>
-      {isDetailed ? <ForecastDetails forecast={forecast} /> : <CounterLine counter={forecast.counter} />}
-      {!isDetailed && <div class="tt-more">{t('tipMore')}</div>}
+      <ForecastDetails forecast={forecast} />
     </Popover>
+  );
+}
+
+/**
+ * Prevision de combate en chapas (docs/PLAN-INTERFAZ-2.md, fase 2): sobre el enemigo, el daño
+ * esperado, con la calavera y el % si puede caer (en dorado si es lo probable); sobre tu unidad, lo
+ * que te devuelve, en rojo si puede caer (si no contraataca, no sale). Con Alt, la tarjeta con todo.
+ */
+export function Forecast({ forecast }: { forecast: ForecastVM }) {
+  const isDetailed = useAltHeld();
+  if (isDetailed) return <ForecastCard forecast={forecast} />;
+  const counter = counterBadge(forecast);
+  return (
+    <>
+      <ForecastBadge look={damageBadge(forecast)} anchor={forecast.anchor} label={t('forecast')} cls="damage" />
+      {counter && <ForecastBadge look={counter} anchor={forecast.attackerAnchor} label={t('counter')} cls="small counter" />}
+    </>
   );
 }

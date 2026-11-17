@@ -5,7 +5,7 @@
  * pasos de los sucesos, la pose de la camara) y app/match3d.ts los junta.
  */
 import * as THREE from 'three';
-import { mapGrid } from '../../core/mapGrid';
+import { isOnBoard, mapGrid } from '../../core/mapGrid';
 import type { GameState, Pos, TeamId } from '../../core/model';
 import type { Anchor } from '../../hud/store';
 import type { CameraPose, Point3 } from '../ports/camera';
@@ -214,6 +214,17 @@ export class MatchScene implements ScreenView {
     return { x: left, y: top, w: Math.max(...xs) - left, h: Math.max(...ys) - top };
   }
 
+  /**
+   * Encima de lo que hay en esa casilla (la barra de vida de su unidad), para las chapas: la casilla
+   * en la pantalla, con su borde de arriba a esa altura.
+   */
+  overheadOf(pos: Pos): Anchor {
+    const tile = this.anchorOf(pos);
+    const canvas = this.canvas.getBoundingClientRect();
+    const top = canvas.top + ((1 - this.board.overheadOf(pos).project(this.world.camera).y) / 2) * canvas.height;
+    return { ...tile, y: Math.min(tile.y, top) };
+  }
+
   /** El punto de la pantalla (pixeles CSS de la ventana) del suelo de esa casilla; null si queda detras de la camara. */
   screenOf(pos: Pos): { x: number; y: number } | null {
     const point = this.board.groundOf(pos).project(this.world.camera);
@@ -248,6 +259,8 @@ export class MatchScene implements ScreenView {
     if (!hit) return null;
     const uid = this.board.unitHit(hit.object);
     if (uid !== null) return this.state.units.find((unit) => unit.uid === uid) ?? null;
-    return this.terrain.tileOfHit(hit) ?? { x: Math.round(hit.point.x), y: Math.round(hit.point.z) };
+    const pos = this.terrain.tileOfHit(hit) ?? { x: Math.round(hit.point.x), y: Math.round(hit.point.z) };
+    // Una pieza que asoma por el borde del mapa (un edificio alto) no da una casilla de fuera.
+    return isOnBoard(this.state, pos) ? pos : null;
   }
 }
