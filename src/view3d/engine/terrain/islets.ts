@@ -1,22 +1,25 @@
 /**
- * Islotes de bloques en el mar, cerca del tablero: que el mapa parezca un trozo de un mundo de
- * juguete y no lo unico que hay. Cada islote es un monton de columnas de una casilla (una playa
- * baja y, en medio, un cerro de la tierra del tema), siempre los mismos en cada partida. Todos van en
- * una malla instanciada con el material cartoon; no se tocan (no son del mapa).
+ * Islotes en el mar, cerca del tablero: que el mapa parezca un trozo de un mundo de juguete y no lo
+ * unico que hay. Cada islote es una sierra pequeña de la tierra del tema: se calcula con el mismo
+ * relieve que las montañas del tablero (relief.ts, massif.ts), con su color por alturas, roca en las
+ * laderas empinadas y manchas (reliefColors.ts). Siempre los mismos en cada partida. No son del mapa.
  */
 import * as THREE from 'three';
-import { toonMaterial } from '../core/toon';
+import type { Pos } from '../../../core/model';
+import { toonVertexColored } from '../core/toon';
+import { columnsOf, visibleFacesGeometry } from './columnFaces';
+import { buildRelief } from './relief';
+import type { ReliefMap, ReliefStyle } from './reliefGrid';
 
 const ISLET_COUNT = 14;
 /** A cuantas casillas del borde del tablero pueden estar (ni pegados ni perdidos en la niebla). */
 const ISLET_DISTANCE = { near: 6, far: 34 } as const;
 /** Radio de un islote (casillas). */
 const ISLET_RADIUS = { small: 2, large: 4.5 } as const;
-/** Altura de la cara de arriba de la playa y de cada escalon del cerro (casillas). */
+/** Altura de la playa (casillas): la base del islote, justo sobre el mar. */
 const BEACH_TOP = 0.02;
-const STEP_HEIGHT = 0.5;
-/** La base de los bloques, bajo el agua. */
-const ISLET_BOTTOM = -0.6;
+/** Casillas de margen alrededor del islote, para que sus faldas caigan al mar sin salirse del mapa. */
+const ISLET_MARGIN = 2;
 
 /** Arena de la playa, tierra de encima y roca del pico, por tema (id de themes.json). */
 interface IsletColors {
@@ -40,13 +43,6 @@ function seededRandom(seed: number): () => number {
     value = (value * 16807) % 2147483647;
     return value / 2147483647;
   };
-}
-
-interface Column {
-  x: number;
-  z: number;
-  top: number;
-  color: number;
 }
 
 /** Un sitio en el mar alrededor del tablero, a esa distancia de su borde. */
@@ -74,36 +70,65 @@ export function planIslets(center: THREE.Vector3, half: THREE.Vector2): Islet[] 
   });
 }
 
-/** Las columnas de un islote: cuanto mas cerca del medio, mas alto; el borde, playa. */
-function isletColumns({ at, radius }: Islet, colors: IsletColors, random: () => number): Column[] {
+/** Las casillas de un islote, con sus coordenadas desde su centro (un poco irregular, no un circulo). */
+function isletFootprint({ radius }: Islet, random: () => number): Pos[] {
   const reach = Math.ceil(radius);
-  const columns: Column[] = [];
+  const footprint: Pos[] = [];
   for (let dx = -reach; dx <= reach; dx++)
-    for (let dz = -reach; dz <= reach; dz++) {
-      const inside = 1 - Math.hypot(dx, dz) / radius + (random() - 0.5) * 0.3;
-      if (inside <= 0) continue;
-      const steps = Math.floor(inside * radius * 0.9);
-      const color = steps === 0 ? colors.beach : steps >= 3 ? colors.peak : colors.land;
-      columns.push({ x: at.x + dx, z: at.y + dz, top: BEACH_TOP + steps * STEP_HEIGHT, color });
+    for (let dy = -reach; dy <= reach; dy++) {
+      const inside = 1 - Math.hypot(dx, dy) / radius + (random() - 0.5) * 0.3;
+      if (inside > 0) footprint.push({ x: dx, y: dy });
     }
-  return columns;
+  return footprint;
 }
 
-/** Los bloques de los islotes, con la tierra del tema (id de themes.json). */
-export function buildIslets(islets: readonly Islet[], theme: string): THREE.InstancedMesh {
-  const colors = ISLET_BY_THEME[theme] ?? GREEN_ISLET;
+/** El estilo de relieve de un islote: playa, tierra y roca como una montaña del tema. */
+function isletStyle(colors: IsletColors): ReliefStyle {
+  return {
+    shape: 'peak',
+    bands: [
+      { from: 0, color: colors.beach },
+      { from: 0.3, color: colors.land },
+      { from: 1.3, color: colors.peak },
+    ],
+    cliff: colors.peak,
+  };
+}
+
+/** El relieve de un islote, en su propia rejilla y movido a su sitio en el mar. */
+function isletMesh(islet: Islet, style: ReliefStyle, random: () => number): THREE.InstancedMesh {
+  const footprint = isletFootprint(islet, random);
+  const reach = Math.ceil(islet.radius);
+  const offset = reach + ISLET_MARGIN;
+  const size = 2 * offset + 1;
+  const map: ReliefMap = {
+    width: size,
+    height: size,
+    tiles: footprint.map((pos) => ({ pos: { x: pos.x + offset, y: pos.y + offset }, style })),
+    groundAt: () => BEACH_TOP,
+    canSpill: () => true,
+  };
+  const view = buildRelief(map);
+  view.mesh.position.set(islet.at.x - offset, 0, islet.at.y - offset);
+  return view.mesh;
+}
+
+/** Un islote con solo las caras que se ven de sus columnas (y su color por vertice). */
+function visibleIsletMesh(mesh: THREE.InstancedMesh): THREE.Mesh {
+  const geometry = visibleFacesGeometry(columnsOf(mesh));
+  // Solo su geometria: el material es el cartoon blanco que comparte con el relieve del tablero.
+  mesh.geometry.dispose();
+  const visible = new THREE.Mesh(geometry, toonVertexColored());
+  visible.castShadow = true;
+  visible.receiveShadow = true;
+  return visible;
+}
+
+/** Los islotes, con la tierra del tema (id de themes.json): cada uno con solo sus caras visibles, para que la camara deje fuera los que no se ven. */
+export function buildIslets(islets: readonly Islet[], theme: string): THREE.Group {
+  const style = isletStyle(ISLET_BY_THEME[theme] ?? GREEN_ISLET);
   const random = seededRandom(13);
-  const columns = islets.flatMap((islet) => isletColumns(islet, colors, random));
-  const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), toonMaterial(0xffffff), columns.length);
-  const matrix = new THREE.Matrix4();
-  const noTurn = new THREE.Quaternion();
-  columns.forEach((column, index) => {
-    const height = column.top - ISLET_BOTTOM;
-    const at = new THREE.Vector3(column.x, ISLET_BOTTOM + height / 2, column.z);
-    mesh.setMatrixAt(index, matrix.compose(at, noTurn, new THREE.Vector3(1, height, 1)));
-    mesh.setColorAt(index, new THREE.Color(column.color));
-  });
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  return mesh;
+  const group = new THREE.Group();
+  for (const islet of islets) group.add(visibleIsletMesh(isletMesh(islet, style, random)));
+  return group;
 }

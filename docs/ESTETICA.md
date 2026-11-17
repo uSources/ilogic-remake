@@ -316,8 +316,10 @@ tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
   del agua del tablero. Al pie de la tierra late una franja de **espuma** de píxel, y los brillos
   son rayitas de tres píxeles que titilan (no líneas largas), solo cerca de la tierra. Los tonos van
   por tema: templado, turquesa en el desierto, verdoso en el pantano y frío con nieve.
-- **Islotes de bloques** alrededor (14, siempre los mismos): playa baja y un cerro escalonado de la
-  tierra del tema, con su propio bajío y espuma. Dicen que el mapa es un trozo de un mundo.
+- **Islotes** alrededor (14, siempre los mismos): cada uno es una sierra pequeña con el relieve de
+  las montañas del tablero (`massif.ts`, `reliefColors.ts`): playa baja, tierra del tema, roca pelada
+  en las laderas empinadas y manchas de color, con su propio bajío y espuma. Dicen que el mapa es un
+  trozo de un mundo. Código: `engine/terrain/islets.ts`.
 - **Niebla del horizonte**: del color de abajo del cielo, empieza pasado el mapa (nunca lo tapa) y
   funde el mar con el cielo.
 - **Con el clima**: cielo, nubes y niebla cambian a la vez que la luz: gris y sin sol con lluvia,
