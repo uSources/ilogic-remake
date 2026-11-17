@@ -12,7 +12,7 @@ import type { PuffSource } from '../fx/particles';
 import { tileToWorld } from '../core/space';
 import type { TerrainView } from '../terrain/terrain';
 import { boardScene, woundedUnits, type BuildingLook, type UnitLook } from '../../systems/board/boardScene';
-import { chimneyOf, newBuildingPiece, type BuildingPiece } from './buildingPiece';
+import { chimneyOf, makeRoom, newBuildingPiece, type BuildingPiece } from './buildingPiece';
 import { growIn, startPopping } from './growIn';
 import { CAPTURE_COLOR } from './sidePaint';
 import { tint } from './tint';
@@ -79,8 +79,11 @@ export class BoardView {
     this.syncUnits(scene.units);
   }
 
-  /** Lo que se anima solo, sin sucesos: los rotores y las piezas que aparecen. */
-  update(seconds: number): void {
+  /**
+   * Lo que se anima solo, sin sucesos: los rotores, las piezas que aparecen y los edificios que dejan
+   * sitio a la unidad de encima (hacia el fondo de lo que mira la camara: `cameraForward`).
+   */
+  update(seconds: number, cameraForward: THREE.Vector3): void {
     for (const piece of this.units.values()) {
       if (piece.rotor) piece.rotor.rotation.y += ROTOR_SPEED * seconds;
       piece.glb?.update(seconds);
@@ -88,6 +91,7 @@ export class BoardView {
     }
     for (const piece of this.buildings.values()) {
       piece.glb?.update(seconds);
+      makeRoom(piece, cameraForward, seconds);
       if (piece.popping !== null) growIn(piece, seconds);
     }
   }
@@ -107,6 +111,7 @@ export class BoardView {
       // Al cambiar de dueño (una captura) el edificio vuelve a crecer con sus colores nuevos.
       if (wasThere) startPopping(piece);
     }
+    piece.isOccupied = look.isOccupied;
     showBar(piece.captureBar, look.capture?.left ?? null, look.capture ? CAPTURE_COLOR[look.capture.side] : undefined);
   }
 

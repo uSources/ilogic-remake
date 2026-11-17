@@ -28,7 +28,8 @@ equipo, que se lean bien desde arriba, con la cámara del juego.
      cristales que asoman), la hebilla, las cartucheras, la solapa de la mochila, la cantimplora, la
      manta enrollada, la mira y el cargador del arma.
 5. **Proporciones chibi.** Cabeza y casco grandes (casi la mitad de la altura), cuerpo corto, piernas
-   cortas. La figura llena la casilla de alto (unas 31 de 32 unidades).
+   cortas. La figura llena la casilla de alto (unas 31 de 32 unidades) en Ashfox: el detalle se
+   modela a tamaño completo y el juego la encoge con su tamaño (ver «Tamaños en el tablero»).
 6. **Que se lea desde arriba.** La cámara del juego mira desde arriba en diagonal: el casco, el arma y
    la mochila son lo que más se ve. Las armas, gruesas y algo exageradas (si no, desaparecen); el
    casco, con sus gafas bien visibles.
@@ -148,6 +149,30 @@ casilla, el color del equipo en la carrocería y el detalle dibujado.
 - **El transporte** (`transport`): camión con la cabina del equipo delante (parabrisas en 3D con su
   barra, ventanillas, rejilla, faros, retrovisores) y la caja con la lona (costillas, la abertura
   oscura de detrás con la lona enrollada) y pilotos rojos.
+
+## Tamaños en el tablero
+
+Con todo llenando la casilla, un soldado medía lo mismo que un tanque (0,97 y 0,94 casillas de alto)
+y no se distinguía de un vistazo qué era cada cosa (noviembre de 2026). Los modelos se siguen
+haciendo a tamaño completo, que es donde cabe el detalle, y el juego los escala con el tamaño de
+cada unidad (`modelSize` en `units.json`, por uno):
+
+| Clase | Tamaño | Unidades |
+|---|---|---|
+| Infantería | 0,6 | soldado, bazuca, mortero, antidisturbios, moto |
+| Vehículos ligeros | 0,75–0,8 | jeep, transporte, suministros, lanzamisiles, tanque ligero, anfibio |
+| Tanques | 0,9 | tanque, antiaéreo |
+| Pesados | 0,95–1 | artillería, bloqueador |
+| Aviones | 0,85–1 | caza ligero, caza, helicóptero; el bombardero, el más grande |
+
+Una unidad nueva entra en la clase que le toca. La regla de fondo: que el tamaño diga lo que pesa la
+unidad, con la infantería claramente la más pequeña.
+
+**Una unidad encima de un edificio** no lo atraviesa: el edificio encoge (0,7) y se aparta a la
+esquina de atrás de la casilla, la más lejos de la cámara, y la unidad queda delante
+(`makeRoom` en `src/view3d/engine/pieces/buildingPiece.ts`). Va por esquinas y no siguiendo a la
+cámara para que no se muevan al desplazarla; solo cambian de esquina al girarla. Si la unidad está
+en la niebla, el edificio no se mueve (no la delata).
 
 ## Edificios
 

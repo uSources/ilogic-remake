@@ -19,6 +19,13 @@ describe('las unidades del tablero', () => {
     expect(lookOf(s, foe.uid)).toMatchObject({ side: 'enemy', motion: 'drive', type: 'Tank' });
   });
 
+  it('con el tamaño de su modelo: la infanteria, mas pequeña que un tanque', () => {
+    const s = blankState({ fog: false });
+    const soldier = newUnit(s, SOLDIER, PLAYER, { x: 2, y: 2 });
+    const tank = newUnit(s, unitTypeNamed('Tank'), PLAYER, { x: 3, y: 2 });
+    expect(lookOf(s, soldier.uid)?.modelSize).toBeLessThan(lookOf(s, tank.uid)?.modelSize ?? 0);
+  });
+
   it('con niebla, el enemigo lejos no se ve; el propio si', () => {
     const s = blankState({ fog: true, weather: false });
     const mine = newUnit(s, SOLDIER, PLAYER, { x: 2, y: 2 });
@@ -72,6 +79,16 @@ describe('los edificios del tablero', () => {
     expect(city?.side).toBe('neutral');
     s.buildings.push({ type: 'City', owner: PLAYER, x: 21, y: 5, capture: null });
     expect(boardScene(s, PLAYER).buildings.find((look) => look.pos.x === 21)?.side).toBe('own');
+  });
+
+  it('con una unidad encima deja sitio; con una escondida en la niebla, no (no la delata)', () => {
+    const s = blankState({ fog: true, weather: false });
+    s.buildings.push({ type: 'City', owner: null, x: 2, y: 2, capture: null }, { type: 'City', owner: null, x: 25, y: 25, capture: null });
+    newUnit(s, SOLDIER, PLAYER, { x: 2, y: 2 });
+    newUnit(s, SOLDIER, ENEMY, { x: 25, y: 25 });
+    const cityAt = (x: number) => boardScene(s, PLAYER).buildings.find((look) => look.pos.x === x);
+    expect(cityAt(2)?.isOccupied).toBe(true);
+    expect(cityAt(25)?.isOccupied).toBe(false);
   });
 
   it('una captura a medias: lo que le queda, del lado de quien captura', () => {

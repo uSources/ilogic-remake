@@ -1,6 +1,7 @@
 /**
- * La pieza 3D de una unidad: su modelo GLB (Ashfox) si su tipo lo tiene, si no el de bloques, con su
- * barra de vida encima y lo que se anima aparte (torreta, rotor).
+ * La pieza 3D de una unidad: su modelo GLB (Ashfox) si su tipo lo tiene, si no el de bloques, a su
+ * tamaño (units.json, "modelSize": la infanteria, mas pequeña que un tanque), con su barra de vida
+ * encima y lo que se anima aparte (torreta, rotor).
  */
 import * as THREE from 'three';
 import type { MovementMotion } from '../../../core/content';
@@ -48,12 +49,16 @@ interface UnitModel {
 function unitModel(look: UnitLook, glbModels: GlbLibrary): UnitModel {
   const glb = glbModels.unit(look.type, look.side);
   if (glb) {
+    const body = glb.object.children[0]!;
+    body.scale.setScalar(look.modelSize);
     const top = new THREE.Box3().setFromObject(glb.object).max.y;
-    return { object: glb.object, body: glb.object.children[0]!, badgeHeight: top + BADGE_GAP, glb };
+    return { object: glb.object, body, badgeHeight: top + BADGE_GAP, glb };
   }
   const model = unitModelOf(look.type);
   const object = buildModel(model, SIDE_PAINT[look.side]);
-  return { object, body: object.getObjectByName('body')!, badgeHeight: BADGE_HEIGHT + (model.hover ?? 0), glb: null };
+  const body = object.getObjectByName('body')!;
+  body.scale.setScalar(look.modelSize);
+  return { object, body, badgeHeight: BADGE_HEIGHT * look.modelSize + (model.hover ?? 0), glb: null };
 }
 
 /** Una pieza nueva para esa unidad, empezando a aparecer. */

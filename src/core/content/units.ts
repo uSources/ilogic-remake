@@ -7,6 +7,8 @@ import type { MovementDef, MovementMotion } from './movements';
 import type { AbilityDef, ContentContext, MoveType, Texts, UnitDef } from './types';
 
 const LINKS_TO_BUILDINGS = ['builtAt', 'repairedAt'] as const;
+/** Lo que puede crecer o encoger un modelo en el tablero: nunca nada, como mucho el doble. */
+const MODEL_SIZE_LIMITS = { min: 0.1, max: 2 };
 
 export function validateUnits(units: readonly UnitDef[], context: ContentContext, check: Checker): void {
   for (const unit of units) {
@@ -28,6 +30,7 @@ function validateNumbers(scope: Scope, unit: UnitDef, context: ContentContext): 
   scope.num('vision', unit?.vision, { min: 0, max: 30, int: true });
   scope.known('movement', unit?.movement, context.movementIds, 'el movimiento ');
   scope.bool('captures', unit?.captures);
+  if (unit?.modelSize !== undefined) scope.num('modelSize', unit.modelSize, MODEL_SIZE_LIMITS);
 }
 
 /** Alcance y acierto contra cada unidad. */
@@ -120,6 +123,8 @@ export interface UnitType {
   readonly art: string;
   /** Graficos de 2013: prefijo de la imagen segun el terreno, por id de terreno (si no esta, ''). */
   readonly classicSprite: Readonly<Record<string, string>>;
+  /** Tamaño de su modelo 3D en el tablero, por uno: la escala entre unidades (docs/ESTETICA.md, "Tamaños"). */
+  readonly modelSize: number;
 }
 
 function attackOf(definition: UnitDef): UnitAttack | null {
@@ -151,5 +156,6 @@ export function buildUnitTypes(units: readonly UnitDef[], movements: readonly Mo
     isSupport: !!definition.ai?.support,
     art: definition.art ?? definition.id,
     classicSprite: { ...definition.classicSprite },
+    modelSize: definition.modelSize ?? 1,
   }));
 }
