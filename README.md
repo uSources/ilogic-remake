@@ -122,7 +122,7 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
   ciudades, aguantar unos días, escoltar un convoy, destruir a todo el enemigo, asalto final).
   Las misiones están en `src/core/content/missions.json` y es fácil añadir más (skill `nueva-mision`).
 - **Reglas nuevas de movimiento:** el terreno cuesta (bosque, arena y nieve frenan a los vehículos;
-  acantilados y agua poco profunda, a la infantería), se atraviesan las unidades propias y, con
+  montañas y agua poco profunda, a la infantería), se atraviesan las unidades propias y, con
   niebla, el bosque esconde: si tu camino choca con un enemigo escondido, emboscada. Los edificios
   propios vigilan a su alrededor (la Base y la fortaleza 3 casillas, fábricas y aeropuertos 2, ciudades y pozos 1).
 - Opciones dentro de la partida (menú > Opciones): esperar sola al soltar, saltar a la siguiente
@@ -203,7 +203,7 @@ src/
                (un componente por fichero), common/ (piezas compartidas), store.ts (estado que publica
                la vista; tipos en state.ts, actions.ts y vm/) y hud.css (estilo "retro pixel", por partes en styles/)
 public/assets/ img/ (cada imagen suelta, material de partida), atlas/ (lo que carga la interfaz), models/ (GLB) y musica
-tools/art/     Scripts que compilan las imagenes a partir de los dibujos guardados (PixelLab, Retro Diffusion)
+tools/art/     Scripts que compilan las imagenes a partir de los dibujos guardados (Retro Diffusion)
                y ashfox/ (fuentes de los modelos 3D)
 docs/          Especificacion del juego original sacada del codigo Java
 tests/         Tests (vitest)
@@ -221,7 +221,7 @@ Los graficos se compilan antes de jugar, no mientras se juega. Hay dos clases:
 - **Imagenes de la interfaz** (retratos, iconos, fichas, miniaturas de mapa): `npm run assets`
   (necesita Python 3 con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/art/`:
 
-1. montañas y bosques, edificios, unidades con sus colores de bando, flores, cactus y muñecos de nieve
+1. edificios y unidades con sus colores de bando
    (desde los dibujos ya guardados en `tools/art/`: no llama a ningun servicio de pago);
 2. los iconos de la interfaz (`tools/art/icons/iconos.txt` → `public/assets/img/ui`, claves `ui/vida`,
    `ui/dinero`...) y la letra pixel del logo (`tools/art/font/ilogic.txt` → `src/hud/fonts/ilogic.woff2`; la de la interfaz,
@@ -239,7 +239,6 @@ GitHub publica la web, las previews y las Releases con esos graficos (`npm run b
 `npm run assets`), asi que tras retocar un dibujo hay que ejecutar `npm run assets` y subir lo que cambie. `npm run assets:pack` rehace
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
 En `dist` van el atlas, los modelos GLB, los punteros del raton (`raton*.png`) y los iconos de `public/icons`; en la version de un fichero (que incrusta tambien los `.glb`) la musica va solo en mp3.
-Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
 
 ## Calidad del codigo
 
@@ -260,20 +259,6 @@ Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` 
   `nueva-unidad`, `nueva-mision`, `sacar-version` y `equilibrar`.
 - `.claude/settings.json`: formato y lint automaticos al editar y proteccion de ficheros generados.
 - GitHub: `@claude` en issues y PRs y revision automatica de PRs (ver "Claude en GitHub").
-
-## Automejora
-
-El juego se puede mejorar solo, con pruebas, cuando se pide ("lanza un ciclo de automejora"): la skill
-`automejora` coordina subagentes (`.claude/agents/`) que proponen **un solo PR** para aprobar.
-
-- **Equilibrador**: un cambio de numeros que suba la nota del juego.
-- **Entrenador de la IA**: una mejora de la IA que gane a la anterior en la arena.
-- **Cazador de fallos**: busca partidas que rompan las reglas, añade el test y lo arregla.
-- **Revisor**: revisa cada propuesta y repite las medidas antes de que llegue al PR.
-
-Medidas: `npm run metrics` (nota 0-100 por partes, linea base en `improve/baseline.json`),
-`npm run arena` (IA actual contra la guardada) y `npm run fuzz` (invariantes). Todo lo probado,
-aceptado o no, queda en `improve/DIARIO.md`. Nada se fusiona sin aprobarlo.
 
 ## Claude en GitHub
 

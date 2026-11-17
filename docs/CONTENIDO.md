@@ -189,13 +189,14 @@ movimiento de una unidad), `canMoveOn(unitType.movement, terrainAt(s, pos))`,
 | `mapLetters` | Que terreno es cada letra que depende del tema en los mapas en texto: `.` suelo, `T` bosque, `M` monte, `*` adorno |
 | `generator.terrainChance` | Mapas al azar: para cada terreno que sale en el tema, la probabilidad de partida (`base`) y lo que suma cada vecino igual (`perNeighbour`) |
 | `generator.openWater`, `narrowWater`, `shoreWater`, `deepWater` | Que terreno es el agua abierta, los pasos estrechos, la orilla y el agua profunda (null si el tema no la tiene) |
+| `generator.mountains` | Mapas al azar: las cordilleras. `terrain` (la montaña del tema), `share` (la parte de la tierra que es montaña) y `spacing` (cada cuantas casillas cambia el ruido: lo largas que son las sierras). Se levantan donde un ruido de crestas es mas alto, no casilla a casilla; sin el, el tema no tiene montañas |
 
 `mapgen.json` es lo que el generador pone en cada mapa: `startingUnits` y `startingBuildings` de cada
 salida, `neutralBuildings` (cuantos de cada tipo, `[minimo, maximo]`) y `neutralTotal`, y lo que tiene
 que tener una salida para valer (`spawnRadius`, `minSpawnWalkable`, `minSpawnBuildable`, y lo lejos
 que estan dos, `minSpawnDistance`) y un mapa (`minLandTiles`, medido con el movimiento de
-`landMovement`), y donde van los puntos de control (`controlPoints`: cuanta tierra tiene su zona,
-lo lejos que estan de las salidas y entre ellos, y el azar de su puntuacion). Reglas en `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios, puntos de control; los pasos en orden, `steps.ts`); un mapa sale siempre igual con la misma semilla (el
+`landMovement`), el movimiento que tiene que poder cruzar entre sierras (`passMovement`: donde una cordillera corta su camino se abre un paso por lo mas bajo de la cresta), y donde van los puntos de control (`controlPoints`: cuanta tierra tiene su zona,
+lo lejos que estan de las salidas y entre ellos, y el azar de su puntuacion). Reglas en `src/core/mapgen/` (un modulo por paso: terreno, montañas, salidas, edificios, puntos de control; los pasos en orden, `steps.ts`); un mapa sale siempre igual con la misma semilla (el
 codigo de mapa) y el mismo contenido.
 
 ## Clima
@@ -255,8 +256,7 @@ Para medir un general: `npm run generals -- --a Roca` (la IA con Roca contra la 
 partidas en 40 mapas con los equipos cambiados; al dia 60 gana quien tenga mas puntos). `--b Brisa`
 los enfrenta (`--json` y `--from` distintos para sumar tandas en paralelo). Con 80 partidas el margen
 es de ±11: para comparar generales hacen falta 200-400. Ahora (01-11-2026, 400 partidas) los tres
-ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % (ver
-`docs/BALANCE.md`, "Generales (01-11-2026)").
+ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 %.
 
 ## Reglas e IA
 
@@ -270,15 +270,14 @@ ganan el 61-64 % contra la IA sin general y entre ellos se quedan en el 46-52 % 
   modulo de reglas (`core/ruleModules/`, `docs/ARQUITECTURA.md`, "Modulos de reglas") cuyo `isOn`
   mira el ajuste: las reglas no lo preguntan. Las que premian atacar: `bounty` (botin al
   destruir), `flankBonus` (acierto extra contra quien ya recibio un ataque ese dia), `noHealUnderFire`
-  (quien recibe un ataque no se cura esa noche) y `vetBonus` (acierto por rango de veterania); ver
-  `docs/BALANCE.md`.
+  (quien recibe un ataque no se cura esa noche) y `vetBonus` (acierto por rango de veterania).
   `damageModel` elige como sale el daño por su nombre (`spread`: el esperado +- `damageSpread`;
   `shotByShot`: la tirada de 2013, un disparo por punto de vida): un ajuste de una lista (`choice` en
   `SETTINGS_SCHEMA`), y cada nombre es una entrada de `DAMAGE_MODELS` (`src/core/damage.ts`).
-- `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run arena` y
-  `npm run balance` (skill `equilibrar`). Los lee quien juega por su perfil (`AiProfile.weights`; las
-  ordenes de la partida, `autopilotProfileOf(contenido)`), nunca de un sitio comun: la arena juega
-  con otros sin tocar el fichero. Ningun numero de la IA va suelto en el codigo: `hqCaptureHeadStart` (la
+- `ai.json`: pesos de la IA. Cambiarlos cambia como juega: medir con `npm run balance`
+  (skill `equilibrar`). Los lee quien juega por su perfil (`AiProfile.weights`; las
+  ordenes de la partida, `autopilotProfileOf(contenido)`), nunca de un sitio comun: otros perfiles juegan
+  sin tocar el fichero. Ningun numero de la IA va suelto en el codigo: `hqCaptureHeadStart` (la
   Base enemiga, al elegir que capturar), `bigUnitCost` (desde que precio un edificio fabrica lo
   grande) y `minEvictionWeight` (lo minimo que pesa echar a quien defiende o captura) tambien son pesos.
   `guardRadius` es de las ordenes con destino del jugador: a que distancia de su destino ataca una

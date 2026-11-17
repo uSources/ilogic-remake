@@ -575,3 +575,20 @@ Marcados [F] los que conviene **conservar** por fidelidad y [C] los que se recom
 - `Imagenes/`: `logoFP`, `menubackground`, `logoilogic`, `mouse`, `fondoacciones`, `Botonunit`, `l_Botonunit`, `cursor`, `seltile`, `atktile`, `mergetile`, `entertile`, `fogtile`, `currency`, `health`, `fuel`, `ammo`, `minus`, `n_0`..`n_9`, `cl_0`..`cl_4`, `es_victmsg`, `en_victmsg`, `es_deftmsg`, `en_deftmsg`, los terrenos (15), `c_<t>_<1..19>`, los edificios (`[b_|r_][2_]<Tipo>`) y las unidades (`<b_|i_|r_>[1_|2_]<Nombre>`).
 - `Imagenes/Botones/`: `<es_|en_>[l_|i_][d_]Boton<jugar|cargar|pw|asave|music|lang|atras|guardar|finturno|atacar|capturar|descarga|supply|esperar|borrar>`.
 - `music/`: `menu.wav`, `game.wav`.
+
+## 12. En el remake 3D: la «mesa de juego»
+
+Esta especificación describe el juego de 2013. La partida del remake, en 3D, cuenta lo mismo sobre
+el propio tablero (`docs/PLAN-INTERFAZ-2.md`; cómo se ve, `docs/ESTETICA.md`, «Interfaz»):
+
+| 2013 (§5.7, §5.10, §8) | Remake |
+| --- | --- |
+| Casillas resaltadas `seltile` / `atktile` | Losas azules con borde a donde puede ir; marcos rojos hasta donde ataca y una diana en cada enemigo a tiro |
+| Daño y vida en el panel lateral | Chapas sobre el tablero: el daño encima del enemigo, el contraataque a los pies de tu unidad; la vida de una unidad herida, una chapa con su número |
+| Defensa del terreno en el panel | Estrellas de bloque sobre la casilla señalada |
+| — | Al señalar una unidad tuya, una flecha roja desde cada enemigo que podría atacarla |
+| Panel de compra | Retratos en abanico alrededor del edificio, con lo que falta si no llega el dinero |
+| Botón «Fin del turno» | Abajo a la derecha; con unidades sin mover, estas saltan y pide otra pulsación |
+| Cambio de día instantáneo | Una banderola cae con el día y el clima; «+1000» sobre cada edificio que cobra |
+
+El detalle (la tarjeta de la casilla o de la previsión) sigue con Alt o con una pulsación larga.

@@ -1,6 +1,6 @@
 /**
  * [CAMBIO] Elevacion (ajuste `elevation`; el original era plano): cada casilla tiene una altura
- * (core/elevation.ts, la prepara este modulo al empezar la partida) y la altura cuenta:
+ * (core/elevation.ts, la prepara el modulo del relieve al empezar la partida) y con este ajuste cuenta:
  * - desde arriba se acierta mas y desde abajo menos (`elevationHit` por nivel de diferencia; tambien
  *   al contraatacar, que es el mismo combate al reves);
  * - desde arriba se ve mas (`elevationVision` casillas por nivel);
@@ -10,7 +10,7 @@
  * el alcance y la IA lo tienen en cuenta solos.
  */
 import { entryOf, type MoveType } from '../content';
-import { elevationAt, elevationFor, heightDifference, MAX_ELEVATION } from '../elevation';
+import { elevationAt, heightDifference, MAX_ELEVATION } from '../elevation';
 import { unitTypeOf } from '../gameContent';
 import type { Engagement, GameState, Pos, Unit } from '../model';
 import type { RuleModule } from './hooks';
@@ -42,14 +42,6 @@ export const ELEVATION: RuleModule = {
   id: 'elevation',
   isOn: (settings) => settings.elevation,
   hooks: {
-    matchSetup: [
-      {
-        id: 'elevation',
-        run: (s) => {
-          s.elevation = elevationFor(s);
-        },
-      },
-    ],
     hitModifiers: [{ id: 'highGround', factor: highGround }],
     visionRadius: [{ id: 'elevation', radius: lookout }],
     enterCosts: [{ id: 'climb', cost: climb }],

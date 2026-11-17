@@ -16,20 +16,10 @@ codigo estan en la skill `ilogic-code`; la arquitectura en `docs/ARQUITECTURA.md
 No hay capturas de referencia: lo que cambia a la vista se comprueba mirandolo (captura del
 navegador) y se dice en el commit.
 
-## Automejora
+## Cazador de fallos (`npm run fuzz`)
 
-Solo cuando el usuario lo pide (skill `automejora`). Medidas:
-
-- `npm run metrics`: nota del juego 0-100 por partes con 120 partidas IA contra IA; se compara con
-  `improve/baseline.json`. `--save-baseline` al aceptar un cambio.
-- `npm run arena -- --games 200`: la IA del juego contra la de referencia (la misma con los pesos guardados en
-  `improve/ai-baseline.json`); `--candidate fichero.ts` prueba otro perfil (`AiProfile`: comportamientos,
-  razones de ataque, pesos o su turno entero: asi se mide un cambio de codigo de la IA antes de ponerlo en
-  `src/core`; ejemplo en `tools/improve/candidates/example.ts`) contra la del juego, y `--rival` cambia el rival. Un cambio de IA solo vale si el intervalo del 95 % queda
-  por encima del 50 %. `--snapshot` guarda los pesos de ahora al aceptarlo.
-- `npm run fuzz`: invariantes (`tools/improve/invariants.ts`) en partidas con jugadas al azar e IA;
-  `--repro N` para ver una partida entera.
-- `improve/DIARIO.md`: todo lo probado. Leerlo antes de proponer; apuntar tambien lo descartado.
+Juega partidas con jugadas al azar e IA y comprueba los invariantes (`tools/improve/invariants.ts`)
+despues de cada accion; `--repro N` muestra una partida entera.
 
 ## Partida por texto (`npm run play`)
 
@@ -54,7 +44,7 @@ linea empieza por `error:` y el programa sale con 1.
 - `/`: el menu principal (Inicio, Nueva partida, Campaña, Opciones). Cada partida va en su propia carga
   de la pagina: al empezar una se recarga, y salir al menu tambien (`src/view3d/app/gameStart.ts`).
 - `/?seed=2013`: una escaramuza directa (la persona contra la IA) con ese mapa; `&elevation=0`, sin la
-  regla de altura. Siempre el mismo mapa: sirve para comparar antes y despues.
+  regla de altura (el relieve se ve igual). Siempre el mismo mapa: sirve para comparar antes y despues.
 - `/units3d.html`: el playground de modelos (todas las unidades y edificios, sus animaciones, luz por
   clima; `?model=Tank&side=enemy`). Desde la consola, `window.ilogicPlayground`.
 

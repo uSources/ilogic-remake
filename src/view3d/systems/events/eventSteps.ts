@@ -5,7 +5,9 @@
  * Solo decide (datos, sin three.js); lo cumple timeline.ts.
  */
 import type { MovementMotion } from '../../../core/content';
-import type { GameEvent, Pos } from '../../../core/model';
+import { buildingTypeOf } from '../../../core/gameContent';
+import type { GameEvent, GameState, Pos, TeamId } from '../../../core/model';
+import { buildingIncome } from '../../../core/rules';
 import { t } from '../../../settings';
 import type { PieceLookup } from '../../ports/stage';
 import { captureSound, shotSound, STEP_SOUNDS } from '../sound/soundCues';
@@ -26,8 +28,37 @@ const CAPTURE_DONE = { color: '#ffd447', sparks: 1.3 } as const;
 /** Por encima del suelo del edificio (casillas) salen las chispas y el texto de la captura. */
 const CAPTURE_LIFT = 0.5;
 
+const INCOME_COLOR = '#ffd447';
+/** Por encima del suelo del edificio sale lo que cobra. */
+const INCOME_LIFT = 0.7;
+
+/**
+ * Lo que hace falta saber de la partida para los sucesos del dia: quien mira (lo que cobra, solo lo
+ * suyo) y lo que paga cada edificio de un equipo.
+ */
+export interface DayLookup {
+  readonly viewer: TeamId;
+  incomeSpots(team: TeamId): IncomeSpot[];
+}
+
+/** Un edificio que cobra al empezar el dia: donde esta y cuanto. */
+export interface IncomeSpot {
+  readonly pos: Pos;
+  readonly amount: number;
+}
+
+/** Los edificios de un equipo que cobran, con lo que paga cada uno. */
+export function incomeSpotsOf(s: GameState, team: TeamId): IncomeSpot[] {
+  return s.buildings
+    .filter((building) => building.owner === team)
+    .map((building) => ({ pos: { x: building.x, y: building.y }, amount: buildingIncome(s, buildingTypeOf(s, building)) }))
+    .filter((spot) => spot.amount > 0);
+}
+
 type EventOf<K extends GameEvent['kind']> = Extract<GameEvent, { kind: K }>;
-type EventStepBuilders = { readonly [K in GameEvent['kind']]?: (event: EventOf<K>, pieces: PieceLookup) => AnimationStep[] };
+type EventStepBuilders = {
+  readonly [K in GameEvent['kind']]?: (event: EventOf<K>, pieces: PieceLookup, day: DayLookup | null) => AnimationStep[];
+};
 
 /** Cada casilla del camino con la siguiente. */
 const stepsAlong = (path: readonly Pos[]): [Pos, Pos][] => path.slice(1).map((to, index) => [path[index]!, to]);
@@ -60,7 +91,7 @@ const hitSteps = (uid: number, damage: number): AnimationStep[] => [
   together(
     { kind: 'sparks', at: muzzle(uid), power: HIT_SPARKS },
     { kind: 'shake', uid },
-    { kind: 'text', at: muzzle(uid), text: `-${damage}`, color: DAMAGE_COLOR },
+    { kind: 'text', at: muzzle(uid), text: `−${damage}`, color: DAMAGE_COLOR },
   ),
 ];
 
@@ -117,13 +148,25 @@ function captureSteps(event: EventOf<'capture'>, pieces: PieceLookup): Animation
   ];
 }
 
-const EVENT_STEPS: EventStepBuilders = { move: moveSteps, attack: attackSteps, capture: captureSteps };
+/** Al empezar el dia, lo tuyo: sobre cada edificio que cobra, a la vez, una chapa dorada con lo que paga («+1000»). */
+function incomeSteps(event: EventOf<'income'>, _pieces: PieceLookup, day: DayLookup | null): AnimationStep[] {
+  if (!day || event.team !== day.viewer || event.source !== 'buildings') return [];
+  const chips = day.incomeSpots(event.team).map(({ pos, amount }): AnimationStep => ({
+    kind: 'text',
+    at: { kind: 'tile', pos, lift: INCOME_LIFT },
+    text: `+${amount}`,
+    color: INCOME_COLOR,
+  }));
+  return chips.length ? [sound('capture'), together(...chips)] : [];
+}
 
-type AnyEventSteps = (event: GameEvent, pieces: PieceLookup) => AnimationStep[];
+const EVENT_STEPS: EventStepBuilders = { move: moveSteps, attack: attackSteps, capture: captureSteps, income: incomeSteps };
 
-/** Los pasos de ese suceso, con las piezas como estan ahora (vacio si no se anima). */
-export function stepsOf(event: GameEvent, pieces: PieceLookup): AnimationStep[] {
+type AnyEventSteps = (event: GameEvent, pieces: PieceLookup, day: DayLookup | null) => AnimationStep[];
+
+/** Los pasos de ese suceso, con las piezas como estan ahora (vacio si no se anima); `day`, para los del dia. */
+export function stepsOf(event: GameEvent, pieces: PieceLookup, day: DayLookup | null = null): AnimationStep[] {
   // TypeScript no sabe que la entrada de cada clase recibe un suceso de esa misma clase.
   const build = EVENT_STEPS[event.kind] as AnyEventSteps | undefined;
-  return build?.(event, pieces) ?? [];
+  return build?.(event, pieces, day) ?? [];
 }

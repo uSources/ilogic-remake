@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Pesos de la IA de Ilogic",
-  "description": "Cambiarlos cambia como juega la IA: medir con npm run balance / npm run arena y actualizar tests/aiGolden.test.ts.",
+  "description": "Cambiarlos cambia como juega la IA: medir con npm run balance y actualizar tests/aiGolden.test.ts.",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -1,17 +1,17 @@
 /**
  * Las piezas 3D del tablero (unidades y edificios), tal como dice systems/board/boardScene.ts que se
  * ven: `sync` pone las que faltan, quita las que ya no estan, deja cada una en su casilla y pone sus
- * marcas (vida, captura). Aqui no se decide nada de la partida: solo se crean y se mueven objetos (las
+ * marcas (las chapas de vida y de captura; y lo que perderia el enemigo al que se apunta, `previewHit`). Aqui no se decide nada de la partida: solo se crean y se mueven objetos (las
  * animaciones mueven las piezas y despues `sync` las deja donde dice la partida).
  */
 import * as THREE from 'three';
 import type { GameState, Pos, TeamId } from '../../../core/model';
-import { showBar, showLetter } from './badges';
+import { showLetter, showLife, showLoss, showNumber } from './badges';
 import type { GlbLibrary } from './glbModels';
 import type { PuffSource } from '../fx/particles';
 import { tileToWorld } from '../core/space';
 import type { TerrainView } from '../terrain/terrain';
-import { boardScene, woundedUnits, type BuildingLook, type UnitLook } from '../../systems/board/boardScene';
+import { boardScene, woundedUnits, type BuildingLook, type HitLook, type UnitLook } from '../../systems/board/boardScene';
 import { chimneyOf, makeRoom, newBuildingPiece, type BuildingPiece } from './buildingPiece';
 import { growIn, startPopping } from './growIn';
 import { CAPTURE_COLOR } from './sidePaint';
@@ -23,10 +23,21 @@ const SPENT_TINT = 0.5;
 /** Por encima de la unidad sale el humo de sus heridas. */
 const WOUND_SMOKE_LIFT = new THREE.Vector3(0, 0.45, 0);
 
+/** Lo que sobra por encima de la barra de vida para las chapas (que no la tapen). */
+const OVERHEAD_GAP = new THREE.Vector3(0, 0.08, 0);
+/** Sin unidad en la casilla (a donde se movera la tuya para disparar), las chapas, a esta altura. */
+const EMPTY_OVERHEAD = new THREE.Vector3(0, 0.95, 0);
+/** Una pieza esta en la casilla si su punto de apoyo esta tan cerca de su suelo. */
+const SAME_SPOT = 0.05;
+
 export class BoardView {
   readonly object = new THREE.Group();
   private readonly units = new Map<number, UnitPiece>();
   private readonly buildings = new Map<string, BuildingPiece>();
+  /** El enemigo al que se apunta ahora: su barra enseña lo que perderia (hasta que se deja de apuntar). */
+  private hit: HitLook | null = null;
+  /** La chapa de vida de cada unidad (la del ultimo `sync`), para volver a ella al dejar de apuntar. */
+  private readonly unitLooks = new Map<number, UnitLook>();
 
   constructor(
     private readonly s: GameState,
@@ -42,6 +53,16 @@ export class BoardView {
 
   pieceOf(uid: number): UnitPiece | undefined {
     return this.units.get(uid);
+  }
+
+  /** Encima de la barra de vida de la unidad que se ve en esa casilla (o a esa altura si no hay ninguna). */
+  overheadOf(pos: Pos): THREE.Vector3 {
+    const ground = this.groundOf(pos);
+    for (const piece of this.units.values()) {
+      if (piece.object.visible && piece.object.position.distanceTo(ground) < SAME_SPOT)
+        return piece.lifeBadge.getWorldPosition(new THREE.Vector3()).add(OVERHEAD_GAP);
+    }
+    return ground.add(EMPTY_OVERHEAD);
   }
 
   /** La unidad se ve ahora (la niebla no la tapa). */
@@ -79,6 +100,24 @@ export class BoardView {
     this.syncUnits(scene.units);
   }
 
+  /** La barra del enemigo al que se apunta enseña lo que perderia; con null, todas vuelven a la suya. */
+  previewHit(look: HitLook | null): void {
+    const before = this.hit;
+    if (before?.uid === look?.uid && before?.lifeAfter === look?.lifeAfter && before?.lifeLeft === look?.lifeLeft) return;
+    this.hit = look;
+    if (before) this.showLife(before.uid);
+    if (look) this.showLife(look.uid);
+  }
+
+  /** Su chapa de vida o, si es a quien se apunta, la barra a rayas de lo que perderia. */
+  private showLife(uid: number): void {
+    const piece = this.units.get(uid);
+    const look = this.unitLooks.get(uid);
+    if (!piece || !look) return;
+    if (this.hit?.uid === uid) return showLoss(piece.lifeBadge, this.hit.lifeLeft, this.hit.lifeAfter);
+    showLife(piece.lifeBadge, look.lifeShown, look.lifeLeft ?? 1);
+  }
+
   /**
    * Lo que se anima solo, sin sucesos: los rotores, las piezas que aparecen y las unidades y edificios
    * que comparten casilla, cada uno a su esquina segun hacia donde mira la camara (`cameraForward`).
@@ -113,7 +152,7 @@ export class BoardView {
       if (wasThere) startPopping(piece);
     }
     piece.isOccupied = look.isOccupied;
-    showBar(piece.captureBar, look.capture?.left ?? null, look.capture ? CAPTURE_COLOR[look.capture.side] : undefined);
+    showNumber(piece.captureBadge, look.capture?.points ?? null, look.capture ? CAPTURE_COLOR[look.capture.side] : '');
   }
 
   private addBuilding(look: BuildingLook): BuildingPiece {
@@ -140,7 +179,8 @@ export class BoardView {
     piece.object.visible = look.isVisible;
     piece.standsOnBuilding = look.standsOnBuilding;
     tint(piece.object, look.isSpent ? SPENT_TINT : 1);
-    showBar(piece.lifeBar, look.lifeLeft);
+    this.unitLooks.set(look.uid, look);
+    this.showLife(look.uid);
     showLetter(piece.orderBadge, look.orderLetter);
   }
 
@@ -154,6 +194,7 @@ export class BoardView {
   private removeUnit(uid: number, piece: UnitPiece): void {
     this.object.remove(piece.object);
     this.units.delete(uid);
+    this.unitLooks.delete(uid);
   }
 }
 

@@ -102,3 +102,44 @@
     transition: none;
   }
 }
+
+/* Chapa que flota encima de una casilla (Badge): el daño de un ataque, el contraataque. */
+.toy-badge {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 6px));
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--panel);
+  color: var(--ink);
+  border: var(--outline) solid var(--ink);
+  border-radius: 999px;
+  box-shadow: var(--lift);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.toy-badge.below {
+  transform: translate(-50%, 4px);
+}
+.toy-badge.gold {
+  background: #ffd23f;
+}
+.toy-badge.danger {
+  background: var(--red-btn);
+  color: #fff;
+}
+.toy-badge .badge-death {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 16px;
+}
+.toy-badge.small {
+  font-size: 19px;
+  padding: 3px 10px;
+}

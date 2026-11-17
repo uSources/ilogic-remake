@@ -1,135 +1,170 @@
 /**
- * Las marcas sobre el tablero: a donde puede ir la unidad elegida (azul), a quien puede atacar (rojo),
- * a donde llegan los enemigos (naranja, con «Ver amenaza»),
- * la casilla bajo el puntero, el anillo de la unidad elegida y los aros de un grupo elegido. Solo dibujan lo que se les dice (no
- * saben de reglas).
+ * Las marcas sobre el tablero, como piezas de juguete que se apoyan en las casillas: a donde puede ir
+ * la unidad elegida (losas azules con un borde claro por fuera), hasta donde ataca (un marco rojo en
+ * cada casilla), a quien puede atacar (una diana de pixel bajo el enemigo), a donde llegan los
+ * enemigos (con «Ver amenaza»: un velo rojo con un borde rojo por fuera del area), la casilla señalada (cuatro esquinas que no dejan dudas), el
+ * anillo de la unidad elegida y los aros de un grupo. Solo dibujan lo que se les dice (no saben de
+ * reglas). Las piezas, en markParts.ts; el contorno, en tileOutline.ts.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
-import type { ThreatMarks } from '../../ports/threat';
+import type { TileMarks } from '../../ports/turn';
+import { bullseyeMesh, cornerCursor, flatMaterial, frameSides, instanced, slabMatrix, stripMatrix, unitBox } from './markParts';
+import { outlineSides } from './tileOutline';
 
 /** Lo justo por encima del suelo para no parpadear con el (z-fighting). */
 const LIFT = 0.012;
-const REACH_COLOR = 0x4fc3ff;
+/** Azul de juguete: mas saturado que el agua del tablero, para que se distinga tambien sobre ella. */
+const REACH_COLOR = 0x2e7dff;
+const REACH_OPACITY = 0.55;
+/** El borde de fuera del alcance: casi blanco, se lee sobre la hierba, la arena y el agua. */
+const REACH_EDGE_COLOR = 0xeaf6ff;
 const ATTACK_COLOR = 0xff4d45;
-const THREAT_COLOR = 0xff8a1f;
-/** La amenaza va debajo de las demas y mas suave: es un fondo, no una eleccion. */
-const THREAT_OPACITY = 0.4;
-const MARK_OPACITY = 0.6;
+/** El relleno de las casillas a tiro: un velo, lo que manda es el marco. */
+const ATTACK_FILL_OPACITY = 0.16;
+/** La amenaza: un rojo mas oscuro que el de atacar; va debajo de las demas y suave (es un fondo, no una eleccion). */
+const THREAT_COLOR = 0xd8262a;
+const THREAT_OPACITY = 0.22;
 const CURSOR_COLOR = 0xffd447;
-/** Las marcas de alcance son algo menores que la casilla: se ve la cuadricula entre ellas. */
-const REACH_INSET = 0.86;
+/** Las losas son algo menores que la casilla: se ve la cuadricula entre ellas. */
+const SLAB_INSET = 0.92;
+/** El marco rojo, un poco hacia dentro del borde de la casilla. */
+const FRAME_INSET = 0.44;
+const FRAME_LENGTH = 0.88;
 /** Un mapa no tiene mas casillas que esto a la vez en el alcance (40 x 40). */
-const MAX_REACH_TILES = 1600;
+const MAX_TILES = 1600;
+/** Un grupo elegido, o los enemigos a tiro, no son mas que esto. */
+const MAX_RINGS = 64;
 const RING_PULSE_SPEED = 4;
-/** Un grupo elegido no tiene mas unidades que esto con aro. */
-const MAX_GROUP_RINGS = 64;
+const CURSOR_PULSE_SPEED = 5;
+const CURSOR_PULSE = 0.05;
+/** Lo que gira la diana (vueltas por segundo), para que se vea viva. */
+const BULLSEYE_TURNS = 0.15;
+const BULLSEYE_SIZE = 1.02;
 
-export class Highlights implements ThreatMarks {
+const UP = new THREE.Vector3(0, 1, 0);
+const FLAT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
+
+export class Highlights implements TileMarks {
   readonly object = new THREE.Group();
-  private readonly reach: THREE.InstancedMesh;
-  private readonly attack: THREE.InstancedMesh;
-  private readonly threat: THREE.InstancedMesh;
-  private readonly cursor: THREE.LineSegments;
+  private readonly reach = instanced(unitBox(), flatMaterial(REACH_COLOR, REACH_OPACITY), MAX_TILES);
+  private readonly reachEdges = instanced(unitBox(), flatMaterial(REACH_EDGE_COLOR, 1), MAX_TILES);
+  private readonly attackFill = instanced(unitBox(), flatMaterial(ATTACK_COLOR, ATTACK_FILL_OPACITY), MAX_TILES);
+  private readonly attackFrames = instanced(unitBox(), flatMaterial(ATTACK_COLOR, 1), MAX_TILES * frameSides.length);
+  private readonly threat = instanced(unitBox(), flatMaterial(THREAT_COLOR, THREAT_OPACITY), MAX_TILES);
+  private readonly threatEdges = instanced(unitBox(), flatMaterial(THREAT_COLOR, 1), MAX_TILES);
+  private readonly targets = bullseyeMesh(MAX_RINGS);
+  private readonly cursor = cornerCursor(CURSOR_COLOR);
   private readonly ring: THREE.Mesh;
   private readonly groupRings: THREE.InstancedMesh;
+  private targetTiles: readonly Pos[] = [];
   private time = 0;
 
   constructor(private readonly groundOf: (pos: Pos) => THREE.Vector3) {
-    this.reach = marksMesh(REACH_COLOR);
-    this.attack = marksMesh(ATTACK_COLOR);
-    this.threat = marksMesh(THREAT_COLOR, THREAT_OPACITY);
-    this.cursor = cursorMesh();
     this.ring = ringMesh();
-    this.groupRings = groupRingsMesh();
-    this.object.add(this.threat, this.reach, this.attack, this.cursor, this.ring, this.groupRings);
+    this.groupRings = instanced(ringGeometry(), ringMaterial(), MAX_RINGS);
+    this.object.add(this.threat, this.threatEdges, this.reach, this.reachEdges, this.attackFill, this.attackFrames, this.targets);
+    this.object.add(this.cursor, this.ring, this.groupRings);
   }
 
+  private lifted(pos: Pos, lift = LIFT): THREE.Vector3 {
+    return this.groundOf(pos).add(new THREE.Vector3(0, lift, 0));
+  }
+
+  /** Losas azules en cada casilla y, solo por fuera del area, un borde claro. */
   showReach(tiles: readonly Pos[]): void {
-    this.mark(this.reach, tiles);
+    const shown = tiles.slice(0, MAX_TILES);
+    place(
+      this.reach,
+      shown.map((pos) => slabMatrix(this.lifted(pos), SLAB_INSET)),
+    );
+    const edges = outlineSides(shown).map(({ pos, side }) => stripMatrix(this.lifted(pos, LIFT * 2), side, 0.5, 1));
+    place(this.reachEdges, edges.slice(0, MAX_TILES));
   }
 
+  /** Un marco rojo (con un velo rojo debajo) en cada casilla a la que podria disparar. */
+  showAttackReach(tiles: readonly Pos[]): void {
+    const shown = tiles.slice(0, MAX_TILES);
+    place(
+      this.attackFill,
+      shown.map((pos) => slabMatrix(this.lifted(pos), SLAB_INSET, LIFT)),
+    );
+    const frames = shown.flatMap((pos) =>
+      frameSides.map((side) => stripMatrix(this.lifted(pos, LIFT * 2), side, FRAME_INSET, FRAME_LENGTH)),
+    );
+    place(this.attackFrames, frames);
+  }
+
+  /** Una diana bajo cada enemigo al que puede atacar (gira despacio: `update`). */
   showTargets(tiles: readonly Pos[]): void {
-    this.mark(this.attack, tiles);
+    this.targetTiles = tiles.slice(0, MAX_RINGS);
+    this.placeTargets();
   }
 
+  private placeTargets(): void {
+    const turn = new THREE.Quaternion().setFromAxisAngle(UP, this.time * BULLSEYE_TURNS * Math.PI * 2);
+    const size = new THREE.Vector3(BULLSEYE_SIZE, 1, BULLSEYE_SIZE);
+    place(
+      this.targets,
+      this.targetTiles.map((pos) => new THREE.Matrix4().compose(this.lifted(pos, LIFT * 4), turn, size)),
+    );
+  }
+
+  /** Un velo rojo en cada casilla amenazada (seguido, sin cuadricula) y un borde rojo por fuera del area. */
   showThreat(tiles: readonly Pos[]): void {
-    this.mark(this.threat, tiles);
-  }
-
-  private mark(marks: THREE.InstancedMesh, tiles: readonly Pos[]): void {
-    const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-    const size = new THREE.Vector3(REACH_INSET, REACH_INSET, 1);
-    tiles.slice(0, MAX_REACH_TILES).forEach((pos, index) => {
-      const at = this.groundOf(pos).add(new THREE.Vector3(0, LIFT, 0));
-      marks.setMatrixAt(index, new THREE.Matrix4().compose(at, flat, size));
-    });
-    marks.count = Math.min(tiles.length, MAX_REACH_TILES);
-    marks.instanceMatrix.needsUpdate = true;
+    const shown = tiles.slice(0, MAX_TILES);
+    place(
+      this.threat,
+      shown.map((pos) => slabMatrix(this.lifted(pos), 1, LIFT)),
+    );
+    const edges = outlineSides(shown).map(({ pos, side }) => stripMatrix(this.lifted(pos, LIFT * 1.5), side, 0.5, 1));
+    place(this.threatEdges, edges.slice(0, MAX_TILES));
   }
 
   hover(pos: Pos | null): void {
     this.cursor.visible = pos !== null;
-    if (pos) this.cursor.position.copy(this.groundOf(pos)).add(new THREE.Vector3(0, LIFT * 2, 0));
+    if (pos) this.cursor.position.copy(this.lifted(pos, LIFT * 3));
   }
 
   select(pos: Pos | null): void {
     this.ring.visible = pos !== null;
-    if (pos) this.ring.position.copy(this.groundOf(pos)).add(new THREE.Vector3(0, LIFT * 3, 0));
+    if (pos) this.ring.position.copy(this.lifted(pos, LIFT * 3));
   }
 
   /** Un aro a los pies de cada unidad del grupo elegido. */
   showGroup(tiles: readonly Pos[]): void {
-    const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
-    const shown = tiles.slice(0, MAX_GROUP_RINGS);
-    shown.forEach((pos, index) => {
-      const at = this.groundOf(pos).add(new THREE.Vector3(0, LIFT * 3, 0));
-      this.groupRings.setMatrixAt(index, new THREE.Matrix4().compose(at, flat, new THREE.Vector3(1, 1, 1)));
-    });
-    this.groupRings.count = shown.length;
-    this.groupRings.instanceMatrix.needsUpdate = true;
+    const one = new THREE.Vector3(1, 1, 1);
+    place(
+      this.groupRings,
+      tiles.slice(0, MAX_RINGS).map((pos) => new THREE.Matrix4().compose(this.lifted(pos, LIFT * 3), FLAT, one)),
+    );
   }
 
-  /** El anillo de la unidad elegida late (para encontrarla al girar la camara). */
+  /** Lo que late: el anillo de la elegida (para encontrarla al girar la camara), el cursor y las dianas. */
   update(seconds: number): void {
     this.time += seconds;
     const pulse = 1 + Math.sin(this.time * RING_PULSE_SPEED) * 0.06;
     this.ring.scale.set(pulse, pulse, 1);
+    this.cursor.scale.setScalar(1 + Math.sin(this.time * CURSOR_PULSE_SPEED) * CURSOR_PULSE);
+    if (this.targetTiles.length) this.placeTargets();
   }
 }
 
-function marksMesh(color: number, opacity = MARK_OPACITY): THREE.InstancedMesh {
-  const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
-  const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), material, MAX_REACH_TILES);
-  mesh.count = 0;
-  // Su esfera de recorte se calcula una vez, con el alcance vacio: sin esto no se veria nunca.
-  mesh.frustumCulled = false;
-  return mesh;
+/** Pone una pieza por matriz y esconde las demas. */
+function place(mesh: THREE.InstancedMesh, matrices: readonly THREE.Matrix4[]): void {
+  const shown = matrices.slice(0, mesh.instanceMatrix.count);
+  shown.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
+  mesh.count = shown.length;
+  mesh.instanceMatrix.needsUpdate = true;
 }
 
-/** El borde de la casilla bajo el puntero (un cuadrado de lineas). */
-function cursorMesh(): THREE.LineSegments {
-  const square = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 0.001, 1));
-  const cursor = new THREE.LineSegments(square, new THREE.LineBasicMaterial({ color: CURSOR_COLOR }));
-  cursor.visible = false;
-  return cursor;
-}
+const ringGeometry = (): THREE.BufferGeometry => new THREE.RingGeometry(0.4, 0.48, 32);
+const ringMaterial = (): THREE.MeshBasicMaterial =>
+  new THREE.MeshBasicMaterial({ color: CURSOR_COLOR, transparent: true, opacity: 0.9, depthWrite: false });
 
 function ringMesh(): THREE.Mesh {
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(0.4, 0.48, 32),
-    new THREE.MeshBasicMaterial({ color: CURSOR_COLOR, transparent: true, opacity: 0.9, depthWrite: false }),
-  );
+  const ring = new THREE.Mesh(ringGeometry(), ringMaterial());
   ring.rotation.x = -Math.PI / 2;
   ring.visible = false;
   return ring;
-}
-
-/** Los aros de un grupo: como el de la unidad elegida, quietos (son muchos y no hace falta buscarlos). */
-function groupRingsMesh(): THREE.InstancedMesh {
-  const material = new THREE.MeshBasicMaterial({ color: CURSOR_COLOR, transparent: true, opacity: 0.9, depthWrite: false });
-  const rings = new THREE.InstancedMesh(new THREE.RingGeometry(0.4, 0.48, 32), material, MAX_GROUP_RINGS);
-  rings.count = 0;
-  rings.frustumCulled = false;
-  return rings;
 }

@@ -1,7 +1,8 @@
 /**
  * Que hay sobre el tablero y como se ve para quien mira (`viewer`): que unidades se ven (niebla), de
- * que lado es cada pieza, cuales ya han jugado, su vida, como va cada captura y que unidades y edificios
- * comparten casilla (cada uno se aparta a una esquina para que no se atraviesen). Solo decide (puro, sin
+ * que lado es cada pieza, cuales ya han jugado, su vida, como va cada captura (sus chapas) y que
+ * unidades y edificios comparten casilla (cada uno se aparta a una esquina para que no se atraviesen).
+ * Solo decide (puro, sin
  * three.js); el motor (engine/pieces/boardView.ts) pone, mueve y quita los objetos para que se vea asi.
  */
 import type { MovementMotion } from '../../../core/content';
@@ -10,7 +11,16 @@ import { unitTypeOf } from '../../../core/gameContent';
 import { posKey } from '../../../core/geom';
 import type { Building, GameState, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
 import { gotoDestination, turnEndOrderOf } from '../../../core/squads';
-import { buildingAt, capturePointsOf, captureProgress, isOnMap, isShownTo, visibility } from '../../../core/rules';
+import {
+  buildingAt,
+  capturePointsOf,
+  captureProgress,
+  combatForecast,
+  engagement,
+  isOnMap,
+  isShownTo,
+  visibility,
+} from '../../../core/rules';
 import type { Grid } from '../../../core/util/grid';
 import { isFriendly, ownerSideOf, sideOf, type OwnerSide } from '../../../ui/sides';
 import type { PuffKind } from '../../ports/stage';
@@ -39,15 +49,19 @@ export interface UnitLook {
   readonly isVisible: boolean;
   /** Es de quien mira y ya ha hecho todo este turno: se ve oscurecida, se lee de un vistazo cual queda. */
   readonly isSpent: boolean;
-  /** Lo que le queda de vida (de 0 a 1) si esta herida; null si esta entera (sin barra). */
+  /** Lo que le queda de vida (de 0 a 1) si esta herida (el color de su chapa); null si esta entera. */
   readonly lifeLeft: number | null;
+  /** El numero de su chapa de vida (redondeado hacia arriba: viva, nunca 0) si esta herida; null si esta entera. */
+  readonly lifeShown: number | null;
   /** La letra de su orden permanente (solo las de quien mira; null sin orden). */
   readonly orderLetter: string | null;
 }
 
-/** Una captura a medias que se ve: lo que le queda (de 0 a 1) y de que lado es quien captura. */
+/** Una captura a medias que se ve: lo que le queda (de 0 a 1 y en puntos) y de que lado es quien captura. */
 export interface CaptureLook {
   readonly left: number;
+  /** Los puntos que le faltan (la chapa del edificio). */
+  readonly points: number;
   readonly side: OwnerSide;
 }
 
@@ -96,6 +110,7 @@ function unitLook(s: GameState, viewer: TeamId, seen: Grid<boolean>, unit: Unit)
     isVisible: isShownTo(viewer, unit, (pos) => seen.at(pos)),
     isSpent: unit.team === viewer && unit.turnState === 'done',
     lifeLeft: unit.life < MAX_LIFE ? unit.life / MAX_LIFE : null,
+    lifeShown: unit.life < MAX_LIFE ? Math.ceil(unit.life) : null,
     orderLetter: unit.team === viewer ? orderLetterOf(s, unit) : null,
   };
 }
@@ -134,7 +149,8 @@ function shownOwner(s: GameState, viewer: TeamId, seen: Grid<boolean>, building:
 function captureLook(s: GameState, viewer: TeamId, building: Building): CaptureLook | null {
   const capture = captureProgress(s, building);
   if (!capture) return null;
-  return { left: capture.left / capturePointsOf(s, building), side: sideOf(s, viewer, capture.team) };
+  const side = sideOf(s, viewer, capture.team);
+  return { left: capture.left / capturePointsOf(s, building), points: Math.ceil(capture.left), side };
 }
 
 /** El humo de las heridas de una unidad: gris de la mitad para abajo, negro de un cuarto para abajo. */
@@ -149,4 +165,28 @@ export function woundedUnits(s: GameState): { uid: number; smoke: PuffKind }[] {
     const smoke = woundSmokeOf(unit.life);
     return smoke ? [{ uid: unit.uid, smoke }] : [];
   });
+}
+
+/** Un ataque que se esta apuntando: quien, desde donde y a quien. */
+export interface PlannedHit {
+  readonly attacker: Unit;
+  readonly from: Pos;
+  readonly target: Unit;
+}
+
+/** Lo que perderia el blanco: su vida ahora y la que le quedaria (lo esperado), de 0 a 1. */
+export interface HitLook {
+  readonly uid: number;
+  readonly lifeLeft: number;
+  readonly lifeAfter: number;
+}
+
+/**
+ * Mientras se apunta a un enemigo (su chapa de daño a la vista), su barra de vida enseña lo que
+ * perderia: la misma prevision que la chapa (combatForecast). Null si no se apunta a nadie.
+ */
+export function hitLookOf(s: GameState, hit: PlannedHit | null): HitLook | null {
+  if (!hit) return null;
+  const forecast = combatForecast(s, engagement(hit.attacker, hit.target, { from: hit.from }));
+  return { uid: hit.target.uid, lifeLeft: hit.target.life / MAX_LIFE, lifeAfter: Math.max(0, forecast.lifeAfter) / MAX_LIFE };
 }

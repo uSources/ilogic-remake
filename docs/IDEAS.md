@@ -128,6 +128,10 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   fuego» (quien recibe un ataque no se cura esa noche).
 - **Rediseño del móvil V1-V5:** en un móvil real se veía peor que antes (márgenes negros, textos
   montados). Solo se quedaron dos arreglos (letra 5/8 y la ayuda cortada).
+- **Interfaz «Bandeja de juguetes»** (dirección B del plan de la interfaz 2, al estilo Polytopia):
+  mete una pieza más que sube y baja. Se eligió la «mesa de juego» (`docs/PLAN-INTERFAZ-2.md`).
+- **Interfaz «Cuartel del general»** (dirección C, al estilo Advance Wars y Fire Emblem): vuelve a
+  poner información fija en pantalla, justo lo que se quitó en la 0.12.0.
 - **Barra de vida en las unidades:** con las cifras nuevas de la letra del juego se lee bien; no hace
   falta.
 - **Edificio semitransparente con una unidad encima:** se probó y quedaba un borrón; en su lugar,

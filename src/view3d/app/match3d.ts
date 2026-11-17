@@ -5,8 +5,8 @@
  * ni se decide: solo se conecta. La pausa y el final, en systems/hud/matchMenus.ts.
  */
 import { mapGrid } from '../../core/mapGrid';
-import type { Pos } from '../../core/model';
-import { isOnMap } from '../../core/rules';
+import type { Pos, TeamId, Unit } from '../../core/model';
+import { defenseStars, isOnMap, unitAt } from '../../core/rules';
 import { screenEnd } from '../../core/session';
 import { ui } from '../../hud/store';
 import type { GameImages } from '../../atlas';
@@ -15,7 +15,10 @@ import type { SoundPort } from '../../audio/sounds';
 import { OptionsPanel } from '../../menu/optionsPanel';
 import { MatchScene } from '../engine/matchScene';
 import type { GlbLibrary } from '../engine/pieces/glbModels';
+import { hitLookOf } from '../systems/board/boardScene';
+import { EndTurnGuard } from '../systems/turn/endTurnGuard';
 import { StrategyCamera } from '../systems/camera/strategyCamera';
+import { incomeSpotsOf } from '../systems/events/eventSteps';
 import { playEvents } from '../systems/events/timeline';
 import { installHudActions, publishHud } from '../systems/hud/hudBridge';
 import { PauseMenu, saveGame, showEndIfOver } from '../systems/hud/matchMenus';
@@ -51,9 +54,11 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const anchorOf = (pos: Pos) => scene.anchorOf(pos);
 
   let cursor: Pos | null = null;
-  /** Publica la interfaz (sin tocar las piezas). */
+  /** Publica la interfaz (de las piezas, solo la barra de vida del enemigo al que se apunta). */
   function publish(): void {
     const forecast = cursor ? controls.forecastAt(cursor) : null;
+    board.previewHit(hitLookOf(state, forecast));
+    threat.focus(controls.busy ? null : threatFocus());
     const menu = pause.view(cursor ?? PAUSE_ANCHOR) ?? controls.menu();
     publishHud(images, state, viewer, {
       cursor,
@@ -64,9 +69,28 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
       adding: controls.adding,
       intents: intents.isShowingAll,
       threat: threat.isShowing,
+      endArmed: endGuard.isArmed,
       anchorOf,
+      overheadOf: (pos) => scene.overheadOf(pos),
     });
   }
+  /** De quien se enseña quien podria atacarle: la unidad propia señalada o, si no, la elegida (sola). */
+  function threatFocus(): Unit | null {
+    const pointed = cursor ? unitAt(state, cursor) : undefined;
+    if (pointed?.team === viewer) return pointed;
+    const selected = controls.selectedUnits();
+    return selected.length === 1 ? selected[0]! : null;
+  }
+  /** «Fin del turno»: con unidades sin mover, la primera pulsacion las hace saltar y pide otra. */
+  const endGuard = new EndTurnGuard({
+    s: state,
+    viewer,
+    pieces: scene.stages.pieces,
+    endTurn: () => controls.endTurn(),
+    changed: () => publish(),
+    now: () => performance.now(),
+    later: (ms, run) => void setTimeout(run, ms),
+  });
   function refresh(): void {
     scene.sync(state.weather?.kind ?? null);
     intents.update();
@@ -75,7 +99,8 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   }
 
   /** Los sucesos se ven con las piezas y los efectos del motor (systems/events dice que pasos lleva cada uno). */
-  const stages = { ...scene.stages, sounds };
+  const day = { viewer, incomeSpots: (team: TeamId) => incomeSpotsOf(state, team) };
+  const stages = { ...scene.stages, sounds, day };
   /** Lo que haran las ordenes al terminar el turno (al señalar una unidad con orden, o todas con «Ver órdenes»). */
   const intents = new OrderIntents({ session, viewer, marks: scene.intentMarks });
   function toggleIntents(): void {
@@ -113,7 +138,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const pause = new PauseMenu({
     session,
     viewer,
-    endTurn: () => controls.endTurn(),
+    endTurn: () => endGuard.press(),
     openOptions: () => options.open(),
     toggleThreat,
     toggleIntents,
@@ -150,7 +175,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   }
 
   installHudActions({
-    endTurn: () => controls.endTurn(),
+    endTurn: () => endGuard.press(),
     focusUnit,
     menuPick: (index) => (pause.isOpen ? pickPause(index) : controls.pickMenu(index)),
     menuHover: (index) => (pause.isOpen ? pause.hover(index) : controls.hoverMenu(index)),
@@ -183,7 +208,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     const isSame = pos && cursor ? pos.x === cursor.x && pos.y === cursor.y : pos === cursor;
     if (isSame) return;
     cursor = pos;
-    scene.hover(pos);
+    scene.hover(pos, pos ? defenseStars(state, pos) : 0);
     controls.hover(pos);
     intents.hover(pos);
     publish();
@@ -202,7 +227,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   installKeys({
     camera,
     onFrame: (listener) => scene.onFrame(listener),
-    endTurn: () => controls.endTurn(),
+    endTurn: () => endGuard.press(),
     nextUnit: nextIdle,
     cancel: escape,
     accept: () => (pause.isOpen ? pickPause() : controls.acceptMenu()),

@@ -41,7 +41,6 @@ export const turn = {
   intentsOn: 'Ocultar órdenes',
   intentsOff: 'Ver órdenes',
   /** La ficha de la casilla: con Alt, la tarjeta entera. */
-  tipMore: 'Alt: más datos',
   undone: 'Movimiento deshecho',
   nothingToUndo: 'No hay nada que deshacer',
   undoRevealed: 'Ha descubierto enemigos: ya no puede volver',

@@ -43,26 +43,33 @@ interface TerrainPiece {
   relief?: ReliefStyle;
 }
 
-/** Los relieves, con sus colores por alturas (a semejanza de las montañas del 2D: flat/mount_*). */
+/**
+ * Los relieves, con sus colores por alturas y la roca
+ * de sus laderas empinadas: hierba en las faldas, monte bajo, roca y nieve en las cimas mas altas.
+ */
 const GREEN_MOUNTAIN: ReliefStyle = {
   shape: 'peak',
   bands: [
     { from: 0, color: 0x6fae3c },
-    { from: 0.18, color: 0x4f8f34 },
-    { from: 0.32, color: 0x8c8676 },
-    { from: 0.62, color: 0xa8a290 },
-    { from: 0.95, color: 0xf2f6ff },
+    { from: 0.3, color: 0x5c9c38 },
+    { from: 0.55, color: 0x4a8532 },
+    { from: 0.85, color: 0x8c8676 },
+    { from: 1.2, color: 0xa8a290 },
+    { from: 1.5, color: 0xf2f6ff },
   ],
+  cliff: 0x77715f,
 };
 const SNOW_MOUNTAIN: ReliefStyle = {
   shape: 'peak',
   bands: [
     { from: 0, color: 0xdce8f4 },
-    { from: 0.2, color: 0x7f8ea6 },
-    { from: 0.55, color: 0x9eacc2 },
-    { from: 0.8, color: 0xf4f8ff },
+    { from: 0.3, color: 0x7f8ea6 },
+    { from: 0.75, color: 0x9eacc2 },
+    { from: 1.15, color: 0xf4f8ff },
   ],
+  cliff: 0x667590,
 };
+/** La meseta, a capas de roca de colores (como los estratos de un cañon). */
 const MESA: ReliefStyle = {
   shape: 'mesa',
   bands: [
@@ -70,6 +77,8 @@ const MESA: ReliefStyle = {
     { from: 0.12, color: 0xd0712c },
     { from: 0.37, color: 0xee9a48 },
     { from: 0.62, color: 0xc0602a },
+    { from: 0.87, color: 0xf0b060 },
+    { from: 1.12, color: 0xb4542a },
   ],
 };
 const DUNES: ReliefStyle = {
@@ -89,23 +98,23 @@ const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
   Grass: GRASS,
   Flowers: { tile: 'tile_grass', decor: ['flowers_red', 'flowers_yellow', 'flowers_purple', 'flowers_mixed'] },
   Woods: WOODS,
-  GrassCliff: { tile: 'tile_grass', relief: GREEN_MOUNTAIN },
+  GrassMountain: { tile: 'tile_grass', relief: GREEN_MOUNTAIN },
   Water: WATER,
   SWater: { tile: 'tile_shallow' },
   DWater: { tile: 'tile_deep' },
   Sand: { tile: 'tile_sand', relief: DUNES },
   Cactus: { tile: 'tile_sand', relief: DUNES, decor: ['cactus'] },
-  SandCliff: { tile: 'tile_sand', relief: MESA },
+  SandMountain: { tile: 'tile_sand', relief: MESA },
   Snow: { tile: 'tile_snow' },
   Frosty: { tile: 'tile_snow', decor: ['snowman'] },
-  SnowCliff: { tile: 'tile_snow', relief: SNOW_MOUNTAIN },
+  SnowMountain: { tile: 'tile_snow', relief: SNOW_MOUNTAIN },
   SnowWood: { tile: 'tile_snow', decor: ['pines'] },
   Ice: { tile: 'tile_ice' },
 };
 
 /** Lo que cambia un tema (id de themes.json): en el nevado, las montañas de hierba son nevadas (como en 2D). */
 const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece>>>> = {
-  Snowy: { GrassCliff: { tile: 'tile_snow', relief: SNOW_MOUNTAIN } },
+  Snowy: { GrassMountain: { tile: 'tile_snow', relief: SNOW_MOUNTAIN } },
 };
 
 /**

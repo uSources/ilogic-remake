@@ -5,7 +5,7 @@
  * pasos de los sucesos, la pose de la camara) y app/match3d.ts los junta.
  */
 import * as THREE from 'three';
-import { mapGrid } from '../../core/mapGrid';
+import { isOnBoard, mapGrid } from '../../core/mapGrid';
 import type { GameState, Pos, TeamId } from '../../core/model';
 import type { Anchor } from '../../hud/store';
 import type { CameraPose, Point3 } from '../ports/camera';
@@ -19,7 +19,9 @@ import { ThreeCameraView } from './camera/cameraView';
 import { World } from './core/world';
 import { ScreenBoxView } from './core/screenBox';
 import { FxEffectStage } from './fx/effectStage';
+import { DefenseStars } from './fx/defenseStars';
 import { Highlights } from './fx/highlights';
+import { ThreatLinesView } from './fx/threatLines';
 import { MovePreviewView } from './fx/movePreview';
 import { IntentArrowsView } from './fx/intentArrows';
 import { ParticleSystem } from './fx/particles';
@@ -67,6 +69,8 @@ export class MatchScene implements ScreenView {
   private readonly effects = new THREE.Group();
   private readonly particles = new ParticleSystem();
   private readonly marks = new GroundMarks();
+  private readonly stars = new DefenseStars();
+  private readonly threatLines: ThreatLinesView;
   private readonly cameraView: ThreeCameraView;
   private readonly selectionBox: ScreenBoxView;
 
@@ -80,6 +84,7 @@ export class MatchScene implements ScreenView {
     this.terrain = buildTerrain(state, glbModels);
     this.board = new BoardView(state, viewer, this.terrain, glbModels);
     this.highlights = new Highlights((pos) => this.board.groundOf(pos));
+    this.threatLines = new ThreatLinesView((pos) => this.board.groundOf(pos));
     this.preview = new MovePreviewView(this.board);
     this.intents = new IntentArrowsView((pos) => this.board.groundOf(pos));
     this.weather = new WeatherView(container);
@@ -90,6 +95,8 @@ export class MatchScene implements ScreenView {
       this.terrain.object,
       this.board.object,
       this.highlights.object,
+      this.stars.object,
+      this.threatLines.object,
       this.preview.object,
       this.intents.object,
       this.effects,
@@ -127,9 +134,12 @@ export class MatchScene implements ScreenView {
     return this.highlights;
   }
 
-  /** A donde llegan los enemigos («Ver amenaza»). */
+  /** A donde llegan los enemigos («Ver amenaza») y quien podria atacar a la unidad que se mira. */
   get threatMarks(): ThreatMarks {
-    return this.highlights;
+    return {
+      showThreat: (tiles) => this.highlights.showThreat(tiles),
+      showThreatLines: (lines) => this.threatLines.show(lines),
+    };
   }
 
   /** La flecha del camino y el fantasma de la unidad que se va a mover. */
@@ -162,9 +172,10 @@ export class MatchScene implements ScreenView {
     return this.board.groundOf(pos);
   }
 
-  /** La casilla señalada (el cuadro amarillo). */
-  hover(pos: Pos | null): void {
+  /** La casilla señalada: el cuadro amarillo y sus estrellas de defensa (cuantas, lo dice la partida). */
+  hover(pos: Pos | null, stars = 0): void {
     this.highlights.hover(pos);
+    this.stars.show(pos ? this.board.groundOf(pos) : null, stars);
   }
 
   /** Deja las piezas y el clima (su id, null si no hay) como estan en la partida. */
@@ -186,6 +197,9 @@ export class MatchScene implements ScreenView {
   render(seconds: number, pose: CameraPose): void {
     this.cameraView.place(pose);
     this.highlights.update(seconds);
+    this.stars.update(seconds);
+    this.threatLines.update(seconds);
+    this.preview.update(seconds, this.world.camera, this.canvas.clientHeight);
     this.board.update(seconds, this.world.camera.getWorldDirection(this.cameraForward));
     this.terrain.update(seconds);
     this.sea.update(seconds);
@@ -214,6 +228,17 @@ export class MatchScene implements ScreenView {
     const ys = corners.map((corner) => canvas.top + ((1 - corner.y) / 2) * canvas.height);
     const [left, top] = [Math.min(...xs), Math.min(...ys)];
     return { x: left, y: top, w: Math.max(...xs) - left, h: Math.max(...ys) - top };
+  }
+
+  /**
+   * Encima de lo que hay en esa casilla (la barra de vida de su unidad), para las chapas: la casilla
+   * en la pantalla, con su borde de arriba a esa altura.
+   */
+  overheadOf(pos: Pos): Anchor {
+    const tile = this.anchorOf(pos);
+    const canvas = this.canvas.getBoundingClientRect();
+    const top = canvas.top + ((1 - this.board.overheadOf(pos).project(this.world.camera).y) / 2) * canvas.height;
+    return { ...tile, y: Math.min(tile.y, top) };
   }
 
   /** El punto de la pantalla (pixeles CSS de la ventana) del suelo de esa casilla; null si queda detras de la camara. */
@@ -250,6 +275,8 @@ export class MatchScene implements ScreenView {
     if (!hit) return null;
     const uid = this.board.unitHit(hit.object);
     if (uid !== null) return this.state.units.find((unit) => unit.uid === uid) ?? null;
-    return this.terrain.tileOfHit(hit) ?? { x: Math.round(hit.point.x), y: Math.round(hit.point.z) };
+    const pos = this.terrain.tileOfHit(hit) ?? { x: Math.round(hit.point.x), y: Math.round(hit.point.z) };
+    // Una pieza que asoma por el borde del mapa (un edificio alto) no da una casilla de fuera.
+    return isOnBoard(this.state, pos) ? pos : null;
   }
 }

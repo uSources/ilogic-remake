@@ -45,7 +45,8 @@ import { teamState } from '../../../core/teams';
 import { endSound } from '../sound/soundCues';
 import { attackPlan, type AttackPlan } from './attackPlan';
 import type { EventPlayer, MovePreview, ScreenView, TileMarks } from '../../ports/turn';
-import { pathFor, previewAt } from './movePreview';
+import { arcShotOf, pathFor, previewAt } from './movePreview';
+import { attackReachTiles } from './attackReach';
 import { clickIntent, type ClickIntent } from './clickIntent';
 import { chipOptions, groupRadialOptions, optionAction, orderForTile, ORDER_KINDS, radialOptions, type UnitOption } from './unitOptions';
 import { isSelectable, pickedFrom } from './selection';
@@ -115,6 +116,8 @@ export class TurnControls {
   private mode: Mode = { kind: 'idle' };
   /** Mientras se anima algo (o juega otro) no se atiende la entrada. */
   private isBusy = false;
+  /** El clima del ultimo cartel del dia (undefined: aun ninguno). */
+  private bannerWeather: string | null | undefined = undefined;
   /** «Elegir varias» (para el dedo): cada toque en una unidad la suma o la quita, como con Mayusculas. */
   private isAdding = false;
   /** La ultima tecla de grupo que eligio uno, y cuando: dos seguidas llevan la camara. */
@@ -148,7 +151,7 @@ export class TurnControls {
       this.host.refresh();
     }
     this.isBusy = false;
-    showBanner(`${t('day')} ${this.s.day}`, t('yourTurn'), 'blue');
+    showBanner(t('yourTurn'), `${t('day')} ${this.s.day}`, 'blue', this.weatherIfChanged());
     this.host.sounds.play('turn_start');
     this.host.refresh();
   }
@@ -158,6 +161,14 @@ export class TurnControls {
     this.setMode({ kind: 'idle' });
     this.host.session.finishInput(this.host.viewer);
     void this.runUntilInput();
+  }
+
+  /** El clima de hoy si no es el del ultimo cartel (el primero, siempre): va grande en la banderola. */
+  private weatherIfChanged(): string | null {
+    const weather = this.s.weather?.kind ?? null;
+    const isNew = weather !== this.bannerWeather;
+    this.bannerWeather = weather;
+    return isNew ? weather : null;
   }
 
   private finish(won: boolean): void {
@@ -564,9 +575,10 @@ export class TurnControls {
   }
 
   private buyMenu(building: Building, options: readonly BuyOption[], selected: number): MenuView {
-    const items = options.map((option) => buyItem(this.s, option));
+    const { funds } = teamState(this.s, this.host.viewer);
+    const items = options.map((option) => buyItem(this.s, option, funds));
     const title = nameOf(buildingTypeOf(this.s, building));
-    const subtitle = `${t('funds')}: ${fmtNum(teamState(this.s, this.host.viewer).funds)}`;
+    const subtitle = `${t('funds')}: ${fmtNum(funds)}`;
     return { kind: 'buy', title, subtitle, items, selected, at: building };
   }
 
@@ -709,11 +721,19 @@ export class TurnControls {
   /** La casilla señalada (raton encima): con una unidad elegida que aun se mueve, por donde iria y a donde llegaria. */
   hover(pos: Pos | null): void {
     const mode = this.mode;
-    if (mode.kind !== 'unit' || !mode.range || !pos || this.isBusy) return this.host.preview.show(null);
-    const attackFrom = this.planAt(mode.unit, mode.range, pos)?.from ?? null;
-    const { trail, look } = previewAt(mode.unit.uid, mode.range, mode.trail, pos, attackFrom);
+    if (mode.kind !== 'unit' || !pos || this.isBusy) return this.clearPreview();
+    const plan = this.planAt(mode.unit, mode.range, pos);
+    this.host.preview.aim(arcShotOf(plan));
+    if (!mode.range) return this.host.preview.show(null);
+    const { trail, look } = previewAt(mode.unit.uid, mode.range, mode.trail, pos, plan?.from ?? null);
     this.mode = { ...mode, trail };
     this.host.preview.show(look);
+  }
+
+  /** Sin camino, fantasma ni visor. */
+  private clearPreview(): void {
+    this.host.preview.show(null);
+    this.host.preview.aim(null);
   }
 
   // ---- Marcas ----
@@ -728,8 +748,9 @@ export class TurnControls {
   private showMarks(): void {
     const mode = this.mode;
     const { marks } = this.host;
-    this.host.preview.show(null);
+    this.clearPreview();
     marks.showReach(this.reachTiles());
+    marks.showAttackReach(mode.kind === 'unit' ? attackReachTiles(this.s, mode.unit, mode.range) : []);
     marks.showTargets(this.targetTiles());
     marks.select('unit' in mode ? mode.unit : 'building' in mode ? mode.building : null);
     marks.showGroup(mode.kind === 'group' || mode.kind === 'order' ? mode.units : []);

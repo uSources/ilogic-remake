@@ -1,11 +1,11 @@
 /**
  * La pieza 3D de un edificio: su modelo GLB (Ashfox) si lo tiene, si no el de bloques, pintado del lado
- * del que se ve, con la barra de captura encima. Con una unidad encima deja sitio: encoge y se va a la
+ * del que se ve, con la chapa de captura encima. Con una unidad encima deja sitio: encoge y se va a la
  * esquina de atras de su casilla (`sharedTile.ts`), para que la unidad, delante, no lo atraviese.
  */
 import * as THREE from 'three';
 import type { OwnerSide } from '../../../ui/sides';
-import { newBadge } from './badges';
+import { newCaptureBadge } from './badges';
 import { buildModel } from './blocks';
 import type { GlbLibrary, GlbUnit } from './glbModels';
 import { buildingModelOf } from './models';
@@ -27,7 +27,7 @@ export interface BuildingPiece {
   readonly object: THREE.Group;
   /** El modelo (dentro de `object`): lo que encoge y se aparta cuando hay una unidad encima. */
   readonly model: THREE.Object3D;
-  readonly captureBar: THREE.Sprite;
+  readonly captureBadge: THREE.Sprite;
   /** El lado con el que se pinto: si cambia, se vuelve a construir. */
   readonly side: OwnerSide;
   /** Su modelo de Ashfox (con lo que se mueve: radares, banderas, la bomba del pozo), si lo tiene. */
@@ -46,9 +46,9 @@ export function newBuildingPiece(look: BuildingLook, ground: THREE.Vector3, glbM
   const model = glb?.object ?? buildModel(buildingModelOf(look.type), SIDE_PAINT[look.side]);
   const object = new THREE.Group();
   object.position.copy(ground);
-  const captureBar = newBadge(BADGE_HEIGHT);
-  object.add(model, captureBar);
-  return { object, model, captureBar, side: look.side, glb, type: look.type, isOccupied: look.isOccupied, popping: null };
+  const captureBadge = newCaptureBadge(BADGE_HEIGHT);
+  object.add(model, captureBadge);
+  return { object, model, captureBadge, side: look.side, glb, type: look.type, isOccupied: look.isOccupied, popping: null };
 }
 
 /**

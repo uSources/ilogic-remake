@@ -253,9 +253,51 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   siguiente). Nada de bandejas ni líneas de ayuda: lo demás sale junto a lo que se toca y cuando hace
   falta (fichas, rueda, compra, ficha de la casilla), y lo de vez en cuando va en el menú (ver
   amenaza, ver órdenes) o en la rueda (escuadras).
+- **Sobre el tablero, chapas y bloques** (`docs/PLAN-INTERFAZ-2.md`, fases 2 y 3; probado en el
+  navegador el 17-11-2026):
+  - Mover y atacar, **losas y bordes**: a donde puede ir, losas azules translúcidas con borde claro
+    alrededor del área; hasta donde ataca, marcos rojos casilla a casilla con un velo muy suave y una
+    diana que gira en cada enemigo a tiro; el cursor, cuatro esquinas que laten. Con «Ver amenaza»,
+    un velo rojo con borde por fuera del área.
+  - La vida de una unidad herida es **un número en una chapa** (verde, amarilla o roja según lo que le
+    queda; número blanco con tinta), como en Wargroove. Se probó frente a la barra de antes: el número
+    se lee de lejos y sin contar píxeles, y la barra se confundía con la de la captura. Entera, nada.
+  - La barra queda solo para **lo que perdería** al apuntarle (a rayas), que es una proporción.
+  - La captura a medias, una chapa con **los puntos que le faltan**, del color de quien captura y a la
+    izquierda (encima está la unidad que captura, con su vida en el centro y su orden a la derecha).
+  - La defensa de la casilla señalada, **estrellas de bloque**: cubitos amarillos sombreados como un
+    vóxel, con borde de tinta, en fila al borde de la casilla y botando en ola. La ficha de la casilla
+    ya no las repite.
+  - La previsión de combate, **chapas de plástico** (`Badge`): la del daño encima de la barra de vida
+    del enemigo y la del contraataque a los pies de tu unidad (encima, junto al enemigo de al lado,
+    chocaban). Comprobadas con la interfaz a 0,9 y a 1,25 (las escalas de Opciones).
+  - El cartel del día, una **banderola de tela** en el color del bando colgada de una barra de
+    madera, con cola de golondrina: cae, se balancea y vuelve a subir. Dice «Día 4» en grande, «Tu
+    turno» debajo y, si el clima cambia, su icono grande en una ficha.
+  - Lo que sube del tablero (el daño, lo que cobra cada edificio, la captura), **chapas de crema** con
+    el número en su color y borde de tinta, como las del HUD.
+  - La compra, **fichas en abanico** alrededor de la fábrica (retrato, nombre y precio; lo que no se
+    puede pagar, apagado y con lo que falta en rojo) y en el centro la chapa de la señalada: mover,
+    alcance y visión con sus iconos y los retratos de contra qué es buena.
 - Todo sale de las variables de `src/hud/styles/base/base.css` y de las piezas de
-  `src/hud/common/toy.tsx` (`Pill`, `Chip`): un color o una forma nuevos se añaden ahí, no sueltos en
+  `src/hud/common/toy.tsx` (`Pill`, `Chip`, `Badge`): un color o una forma nuevos se añaden ahí, no sueltos en
   un componente.
+
+## Montañas
+
+Decidido con el usuario (16-11-2026): ya no hay acantilados sueltos, casilla a casilla. Las montañas
+son **sierras de verdad**, lo alto del mapa, y se ven como macizos que siguen la cordillera:
+
+- **Forma**: una montaña sola es un pico; una sierra larga, una cresta; una ancha, más alta por el
+  medio. Las faldas se salen un poco a las casillas de al lado y tapan el borde. Ruido encima: cimas
+  separadas a lo largo de la cresta y ladera rugosa (columnas de voxels de 2 píxeles de Ashfox).
+- **Color que varía**: por alturas (hierba en las faldas, monte bajo, roca, nieve en lo más alto),
+  con el borde entre bandas mellado, **roca pelada en las laderas empinadas** y manchas más claras y
+  más oscuras por el macizo. Nunca una montaña de un solo color.
+- **Por tema**: verdes con nieve arriba (llanura, bosque, pantano), gris azulado y nieve (nevado) y
+  **mesetas** en terrazas planas a capas de colores, como un cañón (desierto).
+- Datos de cada estilo en `TERRAIN_PIECES` (`terrain.ts`); forma en `massif.ts`; color en
+  `reliefColors.ts`.
 
 ## Cielo y fondo
 

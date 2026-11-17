@@ -511,7 +511,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
 - **Un perfil que se le da**: como juega una IA es su `AiProfile` (`weights` de ai.json,
   `scoreTerms`, `behaviours` y su turno entero, `turn`: el del juego, `aiTurn`), que recibe su controlador (`aiController(perfil?)`; sin el, el del
   contenido de la partida: `defaultAiProfile`). Nada de la IA lee pesos de un sitio comun: dos IAs
-  con otros perfiles juegan a la vez (la arena). Las ordenes de la partida usan
+  con otros perfiles juegan a la vez. Las ordenes de la partida usan
   `autopilotProfileOf(contenido)`.
 - **Su azar, de la partida**: `decisionRngOf(vista)` (ver "El azar"): el mismo turno decide igual
   al cargar, al repetir o por la red.
@@ -570,7 +570,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   - un comportamiento de IA nuevo (un papel de unidad) es una entrada `{ id, when, run }` en
     `UNIT_BEHAVIOURS` (`ai/unitTurn.ts`, los del perfil por defecto), en su sitio de la lista; `run`
     es un plan que devuelve si ha usado la unidad y suele llamar a un paso de `ai/tactics.ts`. Para
-    probarlo antes, un perfil con la lista nueva en la arena (`--candidate`);
+    probarlo antes, medirlo con `npm run balance`;
   - una razon nueva para preferir o evitar un ataque es un termino en `ATTACK_SCORE_TERMS`
     (`autopilot/scoring.ts`, los del perfil); una forma de pelear, un preset de `EngagementPolicy`
     (`autopilot/engagement.ts`); un tipo de orden permanente, su linea en `StandingOrderKinds`
@@ -586,14 +586,6 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
     (autopilot/, que usa las reglas) y cada capa tiene su entrada por tipo, sin ciclos; las une el
     compilador, no una lista que haya que acordarse de tocar;
   - algo mas que un equipo no sabe de la partida, una entrada en `FOG` (`playerView.ts`).
-- La arena (`npm run arena`) enfrenta dos perfiles de IA (`AiProfile`, ver "La IA"): cada uno se le da a
-  su controlador, asi que juegan a la vez sin copiar codigo ni cambiar nada global. La referencia es la
-  IA del juego con los pesos guardados en `improve/ai-baseline.json` (`--snapshot` guarda los de
-  ai.json). Un cambio de codigo de la IA (comportamientos, razones de ataque o el turno entero, el
-  `turn` del perfil) se prueba como perfil antes de ponerlo en src/core: un fichero de
-  `tools/improve/candidates/` (`--candidate`; `--rival` para enfrentarlo a otro).
-  `tests/arenaSnapshot.test.ts` comprueba que los pesos guardados son justo los que lee la IA y que
-  las dos juegan una partida corta.
 
 ### Modulos de reglas (`core/ruleModules/`)
 
@@ -630,7 +622,8 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `ambush` | `ambush` | los enemigos que no se ven no cuentan al planear; al chocar, emboscada |
 | `counterattack` | `counterattack` | `MELEE_COUNTER`: quien contraataca |
 | `bounty` | `bounty` > 0 | el botin al destruir (`killRewards`: lo que se cobra, `killReward` de rules/economy.ts, que preguntan el panel de combate y la IA) |
-| `elevation` | `elevation` (apagado por defecto) | la altura de cada casilla al empezar (`matchSetup`, `elevationFor` de core/elevation.ts, en `GameState.elevation`), el acierto desde arriba o desde abajo (`elevationHit`), la vision desde lo alto (`elevationVision`) y lo que cuesta subir (`elevationClimb`: `enterCosts` recibe tambien la casilla de la que se viene); los aviones no lo notan |
+| `relief` | siempre | la altura de cada casilla al empezar (`matchSetup`, `elevationFor` de core/elevation.ts, en `GameState.elevation`): las montañas son lo alto y se ven como tal, con o sin la regla de elevacion |
+| `elevation` | `elevation` (apagado por defecto) | lo que hace la altura (la prepara `relief`): el acierto desde arriba o desde abajo (`elevationHit`), la vision desde lo alto (`elevationVision`) y lo que cuesta subir (`elevationClimb`: `enterCosts` recibe tambien la casilla de la que se viene); los aviones no lo notan |
 
 Las listas (`RuleHooks`, en `ruleModules/hooks.ts`, solo tipos): `hitModifiers`, `coverPiercing`,
 `counterRules`, `combatSteps` (con su `CombatStage`), `roundPhases` (con su `RoundStage`),
@@ -710,7 +703,7 @@ general y sus estadisticas. **Ningun numero de equipo es especial**: no hay "el 
 
 ### Herramientas
 
-`tools/` (equilibrio, automejora, partida por texto, contenido) solo usa el nucleo, importado por su
+`tools/` (equilibrio, partida por texto, contenido) solo usa el nucleo, importado por su
 alias: `import { createMatch } from '@core/defaultGames'` (definido en `tsconfig.json` "paths" y en
 `vite.config.ts`; `tsx` lo entiende solo). ESLint prohibe que `tools/` importe nada mas de `src/`
 (vista 3D, interfaz, ajustes) o three.js/Preact, y que los tests importen el nucleo por ruta relativa.
@@ -743,7 +736,7 @@ pone la vista. Cada pieza en su sitio:
 | Paneles de la partida y donde va cada uno | `game/*.tsx`, colocados en `game/GameHud.tsx` (lista `GAME_PANELS`) |
 | Pantallas del menu, pausa y final | `menus/*.tsx` |
 | Dialogos (ayuda, novedades, nombre de escuadra) y avisos (carga, aviso, resumen, cartel) | `overlays/*.tsx` |
-| Piezas compartidas | `common/`: `Pill` y `Chip` (`toy.tsx`, las piezas "caja de juguete": pastillas de esquina y fichas que se pulsan), `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useFold`/`FoldMark`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
+| Piezas compartidas | `common/`: `Pill`, `Chip` y `Badge` (`toy.tsx`, las piezas "caja de juguete": pastillas de esquina, fichas que se pulsan y chapas sobre una casilla, como las de la prevision: numero y color en `ui/models/forecastBadges.ts`), `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useFold`/`FoldMark`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
 | Estilos | `styles/<grupo>/<panel>.css`, juntados en orden por `hud.css` |
 
 - **Un panel nuevo**: su tipo en `vm/`, su campo en `UIState` (null = no se ve) y en `initialState`,
@@ -1056,7 +1049,7 @@ enlace, y los dos ven lo mismo. Esta en el workflow de capturas (informativo).
 Dos clases de graficos:
 
 - **Imagenes de la interfaz** (iconos, retratos, terreno de las miniaturas): `tools/art/` (dibujos
-  guardados de PixelLab y Retro Diffusion) → `npm run assets` → `public/assets/img/` (cada imagen) →
+  guardados de Retro Diffusion) → `npm run assets` → `public/assets/img/` (cada imagen) →
   `public/assets/atlas/` (2 paginas). Las carga `src/atlas.ts` (`loadGameImages`, `GameImages`: `url`
   para un `<img>`, `draw` en un lienzo), sin motor de juego. Ver README, "Graficos".
 - **Modelos 3D** (unidades, edificios, casillas y decorado): fuentes en `tools/art/ashfox/` → `.glb`
@@ -1069,7 +1062,7 @@ Dos clases de graficos:
 menu (`app/menuFlow.ts`, con las pantallas de `src/menu/`) o la partida pendiente (`app/gameStart.ts`).
 Cada partida va en su propia carga de pagina: el menu apunta lo elegido y recarga, y salir al menu
 recarga sin nada (asi no hay que deshacer a mano la escena 3D). `?seed=N` empieza una escaramuza
-directa y `?elevation=0` quita el relieve.
+directa y `?elevation=0` quita lo que hace la altura en el juego (el relieve se ve igual).
 
 La vista esta en cuatro carpetas, y cada cosa tiene su sitio:
 
@@ -1086,24 +1079,25 @@ src/view3d/
 |---|---|
 | `app/main.ts`, `menuFlow.ts`, `gameStart.ts` | arranque, menu principal y empezar o cargar una partida |
 | `app/match3d.ts` | la partida: crea el motor (`MatchScene`) y los sistemas y los conecta; no dibuja ni decide |
-| `ports/turn.ts` | para el turno: `TileMarks` (alcance, objetivos, lo elegido y los aros de un grupo), `MovePreview` (flecha y fantasma), `EventPlayer` (enseñar sucesos) y `ScreenView` (si una casilla se ve) |
+| `ports/threat.ts` | para la amenaza: `ThreatMarks` (`showThreat`, las casillas; `showThreatLines`, una linea por cada enemigo que podria atacar a la unidad que se mira) |
+| `ports/turn.ts` | para el turno: `TileMarks` (alcance, hasta donde ataca con `showAttackReach`, objetivos, lo elegido y los aros de un grupo), `MovePreview` (flecha y fantasma; `aim`, el visor de un disparo en arco), `EventPlayer` (enseñar sucesos) y `ScreenView` (si una casilla se ve) |
 | `ports/orders.ts`, `ports/pointer.ts` | `IntentMarks` (lo que haran las ordenes); `SelectionBoxView` (el recuadro de seleccion) |
 | `ports/stage.ts` | `PieceStage`, `EffectStage`, `PieceLookup` y los sitios (`Spot`), para los sucesos animados |
 | `ports/camera.ts`, `ports/frame.ts` | `CameraView` (situar la camara), `CameraPose`, `Point3`; el reloj (`FrameListener`) |
-| `systems/turn/` | el turno de la persona y los de los demas paso a paso (`turnControls.ts`); que hace un clic con una unidad elegida (`clickIntent.ts`: ir, atacar, capturar al llegar, subir, unirse); que sale junto a lo elegido (`unitOptions.ts`: las fichas, solo lo que no es tocar el tablero; la rueda del clic derecho, lo poco frecuente; la orden que tiene sentido en una casilla, `orderForTile`); el camino trazado y el fantasma (`movePreview.ts`); que se puede elegir (`selection.ts`); desde donde atacaria (`attackPlan.ts`); textos e iconos de las fichas, la rueda y la compra (`menuItems.ts`; los pinta el HUD: `ActionChips.tsx`, `RadialMenu.tsx` y `BuyGrid.tsx`). Esperar es implicito: la que se mueve y ya no puede hacer nada espera sola, y dejar una que se movio tambien (`leavingMovedUnit`). `MenuView.kind`: `chips`, `radial`, `prompt` (elegir casilla), `buy` o `game` (pausa) |
+| `systems/turn/` | el turno de la persona y los de los demas paso a paso (`turnControls.ts`); «Fin del turno» con unidades sin mover, que las hace saltar y pide otra pulsacion (`endTurnGuard.ts`); que hace un clic con una unidad elegida (`clickIntent.ts`: ir, atacar, capturar al llegar, subir, unirse); que sale junto a lo elegido (`unitOptions.ts`: las fichas, solo lo que no es tocar el tablero; la rueda del clic derecho, lo poco frecuente; la orden que tiene sentido en una casilla, `orderForTile`); el camino trazado, el fantasma y si el disparo va en arco (`movePreview.ts`: `arcShotOf`); hasta donde ataca, el borde rojo (`attackReach.ts`, con `attackZone` del nucleo); que se puede elegir (`selection.ts`); desde donde atacaria (`attackPlan.ts`); textos e iconos de las fichas, la rueda y la compra (`menuItems.ts`; los pinta el HUD: `ActionChips.tsx`, `RadialMenu.tsx` y `BuyFan.tsx`, el abanico de la compra; donde va cada ficha, `fanAround` en `hud/common/placement.ts`). Esperar es implicito: la que se mueve y ya no puede hacer nada espera sola, y dejar una que se movio tambien (`leavingMovedUnit`). `MenuView.kind`: `chips`, `radial`, `prompt` (elegir casilla), `buy` o `game` (pausa) |
 | `systems/orders/` | lo que haran las ordenes al terminar el turno: cuales enseñar (`orderIntents.ts`, con `previewStandingOrders` del nucleo) |
-| `systems/threat/` | «Ver amenaza» (T o el menú de la partida): las casillas a las que puede disparar algun enemigo que se ve (`threatZone.ts`, con `threatMap` del nucleo, que no delata a los de la niebla); las pinta el motor por `ThreatMarks` (`ports/threat.ts`, en `engine/fx/highlights.ts`) |
-| `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
-| `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas |
+| `systems/threat/` | «Ver amenaza» (T o el menú de la partida): las casillas a las que puede disparar algun enemigo que se ve (`threatZone.ts`, con `threatMap` del nucleo, que no delata a los de la niebla; se ven con un velo y un borde rojos); y al señalar o elegir una unidad propia, quien podria atacarla en su turno (`threatLinesTo`: enemigos que se ven, que llegan y que le hacen daño; lo que podria pasar, no lo que hara la IA). Lo pinta el motor por `ThreatMarks` (`ports/threat.ts`: las casillas en `engine/fx/highlights.ts`, las lineas en arco en `engine/fx/threatLines.ts`) |
+| `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`; los del dia, como lo que cobra cada edificio propio, con `DayLookup`), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
+| `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas; lo que perderia el enemigo al que se apunta (`hitLookOf`) |
 | `systems/camera/` | la camara de estrategia como logica (`StrategyCamera`): desplazar, acercar, girar, limites y suavizado; da su pose como datos |
 | `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`: grupos con numero, ordenes, «Ver órdenes») y raton o dedo sobre el mundo (`pointerInput.ts`: tocar, recuadro, doble clic, borde), a ordenes de la camara y del turno |
 | `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien el numero de «Fin del turno» y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`) |
 | `systems/sound/`, `systems/weather/` | que suena con cada cosa (`soundCues.ts`); como se ve cada clima (datos: `weatherStyles.ts`) |
 | `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
 | `engine/core/` | lienzo, escena, luz cartoon (y por clima), cielo de bandas con nubes de bloques y niebla del horizonte (`sky.ts`) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`) |
-| `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas, agua, polvo de la arena, el mar alrededor del mapa con sus bajíos (`sea.ts`) y los islotes de bloques (`islets.ts`) |
-| `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, barras, restos y rodadas |
-| `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`), la flecha y el fantasma al mover (`movePreview.ts`) y las flechas de las ordenes (`intentArrows.ts`; piezas comunes en `arrowParts.ts`), lluvia y nieve (`weather3d.ts`) |
+| `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas (`relief.ts`; los macizos, `massif.ts`; sus colores, `reliefColors.ts`), agua, polvo de la arena, el mar alrededor del mapa con sus bajíos (`sea.ts`) y los islotes de bloques (`islets.ts`) |
+| `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`, y `previewHit` para la barra a rayas de lo que perderia; `overheadOf`, encima de la barra, para las chapas), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, chapas y barras (`badges.ts`: la vida y la captura en numero), restos y rodadas |
+| `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`: losas azules con su contorno, `tileOutline.ts`; marco rojo, diana y cursor de esquinas, piezas en `markParts.ts`), las estrellas de defensa de la casilla señalada (`defenseStars.ts`; cuantas, `defenseStars` del nucleo), las flechas rojas de quien podria atacar (`threatLines.ts`), la flecha de bloques y el fantasma al mover (`movePreview.ts`), el visor de puntitos de la artilleria (`aimArc.ts`) y las flechas de las ordenes (`intentArrows.ts`; piezas comunes en `arrowParts.ts`), lluvia y nieve (`weather3d.ts`) |
 | `engine/camera/` | situa la camara de three.js en la pose que da `systems/camera` |
 
 - **La partida cambia con acciones**: `TurnControls` manda por la sesion (`session.act`) y enseña los

@@ -93,7 +93,7 @@ Boceto (escritorio):
 El móvil se deja de momento (decidido con el usuario): las fases se piensan para ratón y teclado, sin
 romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo será otro plan.
 
-### Fase 1. El tablero se lee: mover, atacar y camino
+### Fase 1. El tablero se lee: mover, atacar y camino (hecha)
 - **Alcance de mover**: losas azules con borde claro en el contorno del área, no un tinte. Se tienen
   que distinguir sobre hierba, nieve, arena y agua. Va en `engine/fx/highlights.ts`.
 - **Alcance de ataque**: un borde rojo en las casillas a las que podría disparar desde cualquier
@@ -108,7 +108,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
 - Tests: `tests/turnControls.test.ts` y uno nuevo para las casillas de ataque, con puertos falsos que
   apuntan lo que se pide.
 
-### Fase 2. Chapas de combate (la previsión)
+### Fase 2. Chapas de combate (la previsión) (hecha)
 - `game/Forecast.tsx` pasa a ser **dos chapas**:
   - sobre el enemigo, el daño esperado en grande («−45»), con una calavera y el % si puede morir, en
     dorado si es probable (`LIKELY_KILL`);
@@ -120,7 +120,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
   - Esto lo decide `systems/board` (`UnitLook`) y lo dibuja `engine/pieces/badges.ts`.
 - Una pieza `Badge` en `src/hud/common/toy.tsx`, junto a `Pill` y `Chip`, sirve para todas las chapas.
 
-### Fase 3. Casilla y unidad sin tarjeta
+### Fase 3. Casilla y unidad sin tarjeta (hecha)
 - **Defensa**: al señalar una casilla, salen sobre ella sus estrellas como bloquecitos amarillos
   (pieza del motor, como la letra de la orden en `badges.ts`).
 - **Ficha de la casilla** (`TileTip.tsx`): se queda solo con el nombre y la vida de la unidad. La
@@ -130,7 +130,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
   lo que se quede.
 - **Captura**: en un edificio que se está capturando, una chapa con lo que le falta.
 
-### Fase 4. Quién te puede atacar
+### Fase 4. Quién te puede atacar (hecha)
 - Al señalar o elegir una unidad propia, salen **líneas rojas** desde cada enemigo visible que
   podría atacarla en su turno, como en Fire Emblem Engage.
   - Lo calcula `systems/threat/threatZone.ts`, que ya sabe qué alcanza cada enemigo.
@@ -141,7 +141,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
 - No se intenta adivinar qué hará la IA. Ilogic tiene azar y su IA no es determinista, así que lo
   que se enseña es lo que **podría** pasar, nunca lo que pasará.
 
-### Fase 5. Comprar en abanico
+### Fase 5. Comprar en abanico (hecha)
 - Al tocar una fábrica propia, sus retratos salen **en abanico alrededor de ella**, anclados como la
   rueda (`RadialMenu.tsx`). Cada ficha lleva el retrato, el nombre corto y el precio.
 - Lo que no se puede pagar sale apagado y dice cuánto falta («−2000»). El motivo ya lo da
@@ -153,7 +153,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
 - Sale `BuyGrid.tsx` y entra `BuyFan.tsx`. Sus posiciones las calcula una función pura en
   `src/hud/common/placement.ts`, que se prueba con tests.
 
-### Fase 6. Fin del turno, día y clima
+### Fase 6. Fin del turno, día y clima (hecha)
 - **«Fin del turno»** se queda donde está.
   - El primer toque, con unidades sin mover, hace **saltar a esas unidades** en el tablero y pone
     «¿Terminar?» (hoy solo cambia el texto).
@@ -167,8 +167,9 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
   - La lista de texto de hoy queda solo para el desglose del dinero.
 - **Turno enemigo**: la cámara sigue a la IA, como ahora, y las chapas de daño salen en cada golpe.
 
-### Fase 7. Escala y documentación
-- Chapas y abanico que no tapen la unidad. Comprobarlo con `settings.uiScale` a 0,75 y a 1,5.
+### Fase 7. Escala y documentación (hecha)
+- Chapas y abanico que no tapen la unidad. Comprobarlo con `settings.uiScale` a 0,75 y a 1,5 (las
+  escalas que da Opciones son 0,9, 1 y 1,25: se comprobó con esas).
 - Documentación:
   - `docs/ESTETICA.md` («Interfaz»): chapas, banderola, losas y bordes, y estrellas de bloque;
   - `docs/SPEC-INTERFAZ.md` y `src/i18n/*/help.ts`: lo nuevo;

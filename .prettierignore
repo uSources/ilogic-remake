@@ -2,16 +2,12 @@ dist
 dist-single
 node_modules
 public
-tools/art/pixellab
 tools/art/retrodiffusion
-tools/art/sin_usar_2013
 src/assetList.ts
 src/atlasPages.ts
 *.md
 src/ui/blobSets.ts
 src/ui/wangSets.ts
 src/ui/sheets.ts
-improve/metrics
-improve/baseline.json
 # Partidas guardadas tal cual las escribio el juego (no se formatean)
 tests/fixtures/saves

@@ -29,7 +29,7 @@ export interface UnitPiece {
   /** Lo que gira aparte (la torreta), si el modelo lo tiene. */
   readonly turret: THREE.Object3D | null;
   readonly rotor: THREE.Object3D | null;
-  readonly lifeBar: THREE.Sprite;
+  readonly lifeBadge: THREE.Sprite;
   /** La letra de su orden permanente. */
   readonly orderBadge: THREE.Sprite;
   /** El modelo GLB animado (Ashfox), si su tipo lo tiene; si no, es de bloques. */
@@ -74,16 +74,16 @@ function unitModel(look: UnitLook, glbModels: GlbLibrary): UnitModel {
 /** Una pieza nueva para esa unidad, empezando a aparecer. */
 export function newUnitPiece(look: UnitLook, glbModels: GlbLibrary): UnitPiece {
   const { object, body, badgeHeight, glb } = unitModel(look, glbModels);
-  const lifeBar = newBadge(badgeHeight);
+  const lifeBadge = newBadge(badgeHeight);
   const orderBadge = newLetterBadge(badgeHeight);
-  object.add(lifeBar, orderBadge);
+  object.add(lifeBadge, orderBadge);
   const piece: UnitPiece = {
     uid: look.uid,
     object,
     body,
     turret: object.getObjectByName('turret') ?? null,
     rotor: object.getObjectByName('rotor') ?? null,
-    lifeBar,
+    lifeBadge,
     orderBadge,
     glb,
     motion: look.motion,
@@ -105,7 +105,7 @@ export function stepAside(piece: UnitPiece, cameraForward: THREE.Vector3, second
   asideInPiece.copy(asideInWorld).applyAxisAngle(UP, -piece.object.rotation.y);
   const share = settlingShare(seconds);
   settleToward(piece.body, share);
-  settleToward(piece.lifeBar, share);
+  settleToward(piece.lifeBadge, share);
   settleToward(piece.orderBadge, share);
 }
 

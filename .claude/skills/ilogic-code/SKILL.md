@@ -20,7 +20,7 @@ Para los modelos 3D, ademas, la skill `ashfox`. Del juego 2D de antes solo queda
 | `src/menu/`, `src/patchNotes/` | Pantallas del menu (inicio, partida nueva, campaña, opciones), notas de parche | core, ui, hud |
 | `src/controls/` | Ordenes del jugador (`InputCommand` en el mapa, `MenuCommand` en los menus) y adaptadores de cada mando (teclado...): funciones puras | menu (teclas compartidas) |
 | `src/controls/pointer.ts` | Gestos de raton y dedos (`PointerGestures`): de eventos de bajo nivel a gestos (toque, arrastre, recuadro, pulsacion larga, pellizco, rueda). Puro; la vista 3D aun usa su propio `view3d/systems/input/pointerInput.ts` | quien implemente `PointerTarget` |
-| `tools/` | Equilibrio, automejora, partida por texto, contenido (Node) | solo core, como `'@core/...'` |
+| `tools/` | Equilibrio, partida por texto, contenido (Node) | solo core, como `'@core/...'` |
 | `tests/` | Vitest | todo; core como `'@core/...'` |
 
 - `src/core/rules.ts` y `src/core/ai.ts` son fachadas: el codigo esta en `src/core/rules/` y

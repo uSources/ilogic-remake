@@ -41,7 +41,7 @@
         "SWater": "1_",
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       }
@@ -85,7 +85,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       }
@@ -129,7 +129,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       }
@@ -173,7 +173,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       },
@@ -222,7 +222,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       }
@@ -252,7 +252,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       },
@@ -300,7 +300,7 @@
         "SWater": "1_",
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       }
@@ -328,7 +328,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       },
@@ -382,7 +382,7 @@
         "SWater": "1_",
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       }
@@ -426,7 +426,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       }
@@ -564,7 +564,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       },
@@ -618,7 +618,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       }
@@ -694,7 +694,7 @@
         "SWater": "1_",
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       }
@@ -738,7 +738,7 @@
       "classicSprite": {
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_",
         "Ice": "2_"
       },
@@ -791,7 +791,7 @@
         "DWater": "1_",
         "Snow": "2_",
         "Frosty": "2_",
-        "SnowCliff": "2_",
+        "SnowMountain": "2_",
         "SnowWood": "2_"
       }
     }

@@ -18,6 +18,7 @@ export function forecastVM(
   from: Pos,
   target: Unit,
   anchor: Anchor,
+  attackerAnchor: Anchor,
 ): ForecastVM {
   const forecast = combatForecast(s, engagement(attacker, target, { from }));
   return {
@@ -31,6 +32,7 @@ export function forecastVM(
     lifeAfter: forecast.lifeAfter,
     killChance: forecast.killChance,
     anchor,
+    attackerAnchor,
     flank: flankBonusFor(s, target),
     bounty: killReward(s, target),
     counter: forecast.counter

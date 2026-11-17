@@ -37,6 +37,10 @@ export interface HudMoment {
   threat: boolean;
   /** El rectangulo de una casilla en la pantalla (para colocar bocadillos junto a ella). */
   anchorOf(pos: Pos): Anchor;
+  /** Lo mismo, con su borde de arriba encima de la unidad de esa casilla (para las chapas, que no tapen su barra). */
+  overheadOf(pos: Pos): Anchor;
+  /** «Fin del turno» espera la segunda pulsacion (dice «¿Terminar?»). */
+  endArmed: boolean;
 }
 
 export interface HudActions {
@@ -109,7 +113,8 @@ function menuOf(moment: HudMoment): UIState['menu'] {
 function forecastOf(textures: GameImages, s: GameState, viewer: TeamId, moment: HudMoment): UIState['forecast'] {
   const plan = moment.forecast;
   if (!plan || moment.busy) return null;
-  return forecastVM(textures, s, viewer, plan.attacker, plan.from, plan.target, moment.anchorOf(plan.target));
+  const { attacker, from, target } = plan;
+  return forecastVM(textures, s, viewer, attacker, from, target, moment.overheadOf(target), moment.anchorOf(from));
 }
 
 const squadIsMine = (s: GameState, viewer: TeamId, id: number): boolean =>
@@ -143,7 +148,7 @@ export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, m
     threat: moment.threat,
     tileAt: moment.cursor && !moment.menu ? moment.anchorOf(moment.cursor) : null,
     anyStandingOrder: anyStandingOrder(s, viewer),
-    endTurn: { pending: idleUnits(s, viewer).length, armed: false },
+    endTurn: { pending: idleUnits(s, viewer).length, armed: moment.endArmed },
   });
 }
 
