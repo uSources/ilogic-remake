@@ -1,0 +1,17 @@
+{
+  "game": {
+    "loadMs": 1161,
+    "fps": 4,
+    "frameMs": 248.2,
+    "drawCalls": 50,
+    "triangles": 156964,
+    "geometries": 72,
+    "textures": 24
+  },
+  "assets": {
+    "models": 78,
+    "modelBytes": 12861072,
+    "biggestModelBytes": 378152
+  },
+  "measuredAt": "2026-11-17T18:07:34.571Z"
+}

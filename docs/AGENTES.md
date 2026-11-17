@@ -78,6 +78,17 @@ se comparan los datos que devuelve o se le dan puertos falsos (`ports/`) que apu
 
 Lo que se ve de verdad (modelos, luz, efectos) se sigue mirando en el navegador.
 
+## Capturas y rendimiento de la vista 3D
+
+- `npm run shots`: abre cinco escenas fijas (el menu, la partida de semilla 2013 con y sin elevacion, y
+  dos modelos del playground) con el reloj parado, las compara con `tests/visual/ref/` y deja el informe
+  en `tests/visual/out/index.html`. Avisa solo de cambios grandes (mas del 3 % de pixeles): lo pequeño,
+  como el borde de una unidad que se anima, se mira en el informe. Si el cambio es a proposito,
+  `npm run shots:update`. La primera vez: `npx playwright install chromium`.
+- `npm run perf`: tiempo de carga de la partida 2013, fotogramas por segundo, llamadas de dibujo,
+  triangulos y peso de los modelos, comparado con `tools/perf/baseline.json`. `--save` guarda una linea
+  base nueva. Son cifras de esta maquina y de su navegador: solo se comparan con la linea base de aqui.
+
 ## Antes de tocar...
 
 - **Graficos**: nunca a mano en `public/assets/atlas`; skill `arte-retro-diffusion` (y **no gastar
