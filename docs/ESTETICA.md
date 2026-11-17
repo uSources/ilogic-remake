@@ -307,8 +307,11 @@ tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
 
 - **Cielo en bandas**: una cúpula con seis bandas secas del horizonte (claro) al cenit (azul), sin
   degradado suave, como la sombra de dos tonos de las piezas. Sol **cuadrado** de píxel con un halo.
-- **Nubes de bloques**: losas blancas con bultos encima, con el material cartoon, bajas y lejos del
-  mapa para que se vean por encima del mar al inclinar la cámara; pasan despacio con el viento.
+- **Nubes de voxels**: cada nube es la suma de unas cuantas esferas de voxels (1,6 casillas), así el
+  borde sale escalonado como el pixel art y no como una losa. Blancas por arriba y azul gris por el
+  fondo (el suelo de la nube es plano), con el material cartoon; bajas y lejos del mapa para que se
+  vean por encima del mar al inclinar la cámara; pasan despacio con el viento (solo cambia la posición
+  de cada voxel). Código: `engine/core/sky.ts`.
 - **Mar**: un plano por debajo del agua del tablero (se ve el borde de tierra, como un acantilado)
   que recibe la sombra del mapa. Para que el tablero se asiente en él y no parezca puesto encima
   (primera versión, plana y de un solo azul: «no queda integrado»), el agua va en escalones de
