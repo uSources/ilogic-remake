@@ -12,12 +12,8 @@ const py = process.env.PYTHON ?? (process.platform === 'win32' ? 'python' : 'pyt
 
 /** [descripcion, programa, argumentos] */
 const ART = [
-  ['Montañas y bosques (Retro Diffusion)', py, ['tools/art/rd_terrain.py']],
-  ['Ajuste a la casilla', py, ['tools/art/fit_tile.py']],
   ['Edificios', py, ['tools/art/rd_buildings32.py']],
   ['Unidades y colores de bando', py, ['tools/art/rd_units32.py']],
-  ['Flores y cactus', py, ['tools/art/rd_decor.py']],
-  ['Muñecos de nieve', py, ['tools/art/rd_snowmen.py']],
   ['Iconos de la interfaz', py, ['tools/art/build_icons.py']],
   ['Retratos, habilidades, clima y banderin (Retro Diffusion)', py, ['tools/art/rd_ui.py']],
   ['Iconos de la app (PWA)', py, ['tools/art/build_app_icons.py']],

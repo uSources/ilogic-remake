@@ -203,7 +203,7 @@ src/
                (un componente por fichero), common/ (piezas compartidas), store.ts (estado que publica
                la vista; tipos en state.ts, actions.ts y vm/) y hud.css (estilo "retro pixel", por partes en styles/)
 public/assets/ img/ (cada imagen suelta, material de partida), atlas/ (lo que carga la interfaz), models/ (GLB) y musica
-tools/art/     Scripts que compilan las imagenes a partir de los dibujos guardados (PixelLab, Retro Diffusion)
+tools/art/     Scripts que compilan las imagenes a partir de los dibujos guardados (Retro Diffusion)
                y ashfox/ (fuentes de los modelos 3D)
 docs/          Especificacion del juego original sacada del codigo Java
 tests/         Tests (vitest)
@@ -221,7 +221,7 @@ Los graficos se compilan antes de jugar, no mientras se juega. Hay dos clases:
 - **Imagenes de la interfaz** (retratos, iconos, fichas, miniaturas de mapa): `npm run assets`
   (necesita Python 3 con lo de `tools/art/requirements.txt`) ejecuta en orden los scripts de `tools/art/`:
 
-1. montañas y bosques, edificios, unidades con sus colores de bando, flores, cactus y muñecos de nieve
+1. edificios y unidades con sus colores de bando
    (desde los dibujos ya guardados en `tools/art/`: no llama a ningun servicio de pago);
 2. los iconos de la interfaz (`tools/art/icons/iconos.txt` → `public/assets/img/ui`, claves `ui/vida`,
    `ui/dinero`...) y la letra pixel del logo (`tools/art/font/ilogic.txt` → `src/hud/fonts/ilogic.woff2`; la de la interfaz,
@@ -239,7 +239,6 @@ GitHub publica la web, las previews y las Releases con esos graficos (`npm run b
 `npm run assets`), asi que tras retocar un dibujo hay que ejecutar `npm run assets` y subir lo que cambie. `npm run assets:pack` rehace
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
 En `dist` van el atlas, los modelos GLB, los punteros del raton (`raton*.png`) y los iconos de `public/icons`; en la version de un fichero (que incrusta tambien los `.glb`) la musica va solo en mp3.
-Las imagenes de 2013 que el remake ya no usa estan en `tools/art/sin_usar_2013` (no se publican).
 
 ## Calidad del codigo
 

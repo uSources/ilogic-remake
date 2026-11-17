@@ -10,7 +10,13 @@ from scipy import ndimage
 D = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, D)
 from team_key import recolor  # noqa: E402
-from fit_tile import trim  # noqa: E402
+
+
+def trim(im):
+    """Recorta el dibujo al rectangulo de sus pixeles no transparentes."""
+    a = np.array(im)[..., 3] > 0
+    ys, xs = np.where(a)
+    return im.crop((xs.min(), ys.min(), xs.max() + 1, ys.max() + 1))
 
 SRC = D + '/retrodiffusion/buildings32/'
 OUT = D + '/../../public/assets/img/flat/'
