@@ -135,8 +135,8 @@ export function showReport(title: string, lines: ReportLineVM[]): void {
   ui.set({ report: { title, lines, id: nextNoticeId() } });
 }
 
-export function showBanner(small: string, big: string, tone: 'blue' | 'red'): void {
-  ui.set({ banner: { small, big, tone, id: nextNoticeId() } });
+export function showBanner(small: string, big: string, tone: 'blue' | 'red', weather: string | null = null): void {
+  ui.set({ banner: { small, big, tone, weather, id: nextNoticeId() } });
 }
 
 /** Quita las acciones registradas (nada de botones que actuen sobre una pantalla cerrada). */

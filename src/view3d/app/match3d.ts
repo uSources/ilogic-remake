@@ -5,7 +5,7 @@
  * ni se decide: solo se conecta. La pausa y el final, en systems/hud/matchMenus.ts.
  */
 import { mapGrid } from '../../core/mapGrid';
-import type { Pos, Unit } from '../../core/model';
+import type { Pos, TeamId, Unit } from '../../core/model';
 import { defenseStars, isOnMap, unitAt } from '../../core/rules';
 import { screenEnd } from '../../core/session';
 import { ui } from '../../hud/store';
@@ -16,7 +16,9 @@ import { OptionsPanel } from '../../menu/optionsPanel';
 import { MatchScene } from '../engine/matchScene';
 import type { GlbLibrary } from '../engine/pieces/glbModels';
 import { hitLookOf } from '../systems/board/boardScene';
+import { EndTurnGuard } from '../systems/turn/endTurnGuard';
 import { StrategyCamera } from '../systems/camera/strategyCamera';
+import { incomeSpotsOf } from '../systems/events/eventSteps';
 import { playEvents } from '../systems/events/timeline';
 import { installHudActions, publishHud } from '../systems/hud/hudBridge';
 import { PauseMenu, saveGame, showEndIfOver } from '../systems/hud/matchMenus';
@@ -67,6 +69,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
       adding: controls.adding,
       intents: intents.isShowingAll,
       threat: threat.isShowing,
+      endArmed: endGuard.isArmed,
       anchorOf,
       overheadOf: (pos) => scene.overheadOf(pos),
     });
@@ -78,6 +81,16 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     const selected = controls.selectedUnits();
     return selected.length === 1 ? selected[0]! : null;
   }
+  /** «Fin del turno»: con unidades sin mover, la primera pulsacion las hace saltar y pide otra. */
+  const endGuard = new EndTurnGuard({
+    s: state,
+    viewer,
+    pieces: scene.stages.pieces,
+    endTurn: () => controls.endTurn(),
+    changed: () => publish(),
+    now: () => performance.now(),
+    later: (ms, run) => void setTimeout(run, ms),
+  });
   function refresh(): void {
     scene.sync(state.weather?.kind ?? null);
     intents.update();
@@ -86,7 +99,8 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   }
 
   /** Los sucesos se ven con las piezas y los efectos del motor (systems/events dice que pasos lleva cada uno). */
-  const stages = { ...scene.stages, sounds };
+  const day = { viewer, incomeSpots: (team: TeamId) => incomeSpotsOf(state, team) };
+  const stages = { ...scene.stages, sounds, day };
   /** Lo que haran las ordenes al terminar el turno (al señalar una unidad con orden, o todas con «Ver órdenes»). */
   const intents = new OrderIntents({ session, viewer, marks: scene.intentMarks });
   function toggleIntents(): void {
@@ -124,7 +138,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const pause = new PauseMenu({
     session,
     viewer,
-    endTurn: () => controls.endTurn(),
+    endTurn: () => endGuard.press(),
     openOptions: () => options.open(),
     toggleThreat,
     toggleIntents,
@@ -161,7 +175,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   }
 
   installHudActions({
-    endTurn: () => controls.endTurn(),
+    endTurn: () => endGuard.press(),
     focusUnit,
     menuPick: (index) => (pause.isOpen ? pickPause(index) : controls.pickMenu(index)),
     menuHover: (index) => (pause.isOpen ? pause.hover(index) : controls.hoverMenu(index)),
@@ -213,7 +227,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   installKeys({
     camera,
     onFrame: (listener) => scene.onFrame(listener),
-    endTurn: () => controls.endTurn(),
+    endTurn: () => endGuard.press(),
     nextUnit: nextIdle,
     cancel: escape,
     accept: () => (pause.isOpen ? pickPause() : controls.acceptMenu()),

@@ -4,7 +4,7 @@ import type { GameEvent, GameEventOf, Pos } from '@core/model';
 import { seededRng } from '@core/util/random';
 import type { SoundId, SoundPort } from '../src/audio/sounds';
 import type { EffectStage, PieceClip, PieceLookup, PieceStage, PuffKind, ShownPiece, Spot } from '../src/view3d/ports/stage';
-import { stepsOf } from '../src/view3d/systems/events/eventSteps';
+import { incomeSpotsOf, stepsOf } from '../src/view3d/systems/events/eventSteps';
 import type { AnimationStep } from '../src/view3d/systems/events/steps';
 import { playEvents, runSteps } from '../src/view3d/systems/events/timeline';
 import { blankState, diceFrom, ENEMY, fight, PLAYER, unitTypeNamed } from './helpers';
@@ -84,7 +84,7 @@ describe('pasos de cada suceso', () => {
     const steps = stepsOf(attackEvent({}), new FakeLookup({ [SHOOTER]: shown('drive'), [TARGET]: shown('march') }));
     expect(kindsOf(steps)).toEqual(['aim', 'sound', 'puff', 'together(recoil,projectile)', 'sound', 'together(sparks,shake,text)']);
     expect(steps).toContainEqual({ kind: 'sound', sound: 'shot_cannon' });
-    expect(steps.at(-1)).toMatchObject({ steps: expect.arrayContaining([expect.objectContaining({ kind: 'text', text: '-30' })]) });
+    expect(steps.at(-1)).toMatchObject({ steps: expect.arrayContaining([expect.objectContaining({ kind: 'text', text: '−30' })]) });
   });
 
   it('de lejos el disparo va en arco (y suena a artilleria)', () => {
@@ -239,7 +239,37 @@ describe('la linea de tiempo', () => {
       'sound:hit',
       'sparks',
       `shake:${TARGET}`,
-      'text:-30',
+      'text:−30',
     ]);
+  });
+});
+
+describe('lo que se cobra al empezar el dia', () => {
+  const lookup = new FakeLookup({});
+  const spots = [
+    { pos: { x: 1, y: 1 }, amount: 1000 },
+    { pos: { x: 3, y: 2 }, amount: 500 },
+  ];
+  const day = { viewer: PLAYER, incomeSpots: () => spots };
+  const income = (team: number): GameEvent => ({ kind: 'income', actor: null, team, amount: 1500, source: 'buildings' });
+
+  it('lo tuyo: una chapa «+N» sobre cada edificio que cobra, todas a la vez', () => {
+    const steps = stepsOf(income(PLAYER), lookup, day);
+    expect(kindsOf(steps)).toEqual(['sound', 'together(text,text)']);
+    expect(steps.at(-1)).toMatchObject({ steps: [{ text: '+1000' }, { text: '+500', at: { kind: 'tile', pos: { x: 3, y: 2 } } }] });
+  });
+
+  it('lo de los demas no se enseña (ni sin saber quien mira)', () => {
+    expect(stepsOf(income(ENEMY), lookup, day)).toEqual([]);
+    expect(stepsOf(income(PLAYER), lookup)).toEqual([]);
+  });
+
+  it('cada edificio propio que paga, con lo suyo', () => {
+    const s = blankState({ fog: false });
+    s.buildings.push({ type: 'City', owner: PLAYER, x: 4, y: 4, capture: null }, { type: 'City', owner: ENEMY, x: 8, y: 8, capture: null });
+    const mine = incomeSpotsOf(s, PLAYER);
+    expect(mine).toContainEqual(expect.objectContaining({ pos: { x: 4, y: 4 } }));
+    expect(mine).not.toContainEqual(expect.objectContaining({ pos: { x: 8, y: 8 } }));
+    expect(mine.every((spot) => spot.amount > 0)).toBe(true);
   });
 });

@@ -235,6 +235,11 @@ y estado: `docs/PLAN-INTERFAZ.md`.
     vóxel, con borde de tinta, en fila al borde de la casilla y botando en ola. La ficha de la casilla
     ya no las repite.
   - La previsión de combate, **chapas de plástico** (`Badge`) encima de la barra de vida.
+  - El cartel del día, una **banderola de tela** en el color del bando colgada de una barra de
+    madera, con cola de golondrina: cae, se balancea y vuelve a subir. Dice «Día 4» en grande, «Tu
+    turno» debajo y, si el clima cambia, su icono grande en una ficha.
+  - Lo que sube del tablero (el daño, lo que cobra cada edificio, la captura), **chapas de crema** con
+    el número en su color y borde de tinta, como las del HUD.
   - La compra, **fichas en abanico** alrededor de la fábrica (retrato, nombre y precio; lo que no se
     puede pagar, apagado y con lo que falta en rojo) y en el centro la chapa de la señalada: mover,
     alcance y visión con sus iconos y los retratos de contra qué es buena.

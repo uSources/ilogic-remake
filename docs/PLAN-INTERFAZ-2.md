@@ -153,7 +153,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
 - Sale `BuyGrid.tsx` y entra `BuyFan.tsx`. Sus posiciones las calcula una función pura en
   `src/hud/common/placement.ts`, que se prueba con tests.
 
-### Fase 6. Fin del turno, día y clima
+### Fase 6. Fin del turno, día y clima (hecha)
 - **«Fin del turno»** se queda donde está.
   - El primer toque, con unidades sin mover, hace **saltar a esas unidades** en el tablero y pone
     «¿Terminar?» (hoy solo cambia el texto).

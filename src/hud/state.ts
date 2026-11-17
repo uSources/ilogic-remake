@@ -102,7 +102,8 @@ export interface UIState {
   intents: boolean;
   anyStandingOrder: boolean;
   toast: { text: string; id: number } | null;
-  banner: { small: string; big: string; tone: 'blue' | 'red'; id: number } | null;
+  /** El cartel que cae: lo grande («Día 4»), lo pequeño («Tu turno»), su color y el clima si ha cambiado (su id). */
+  banner: { small: string; big: string; tone: 'blue' | 'red'; weather: string | null; id: number } | null;
   end: {
     /** Como ha acabado para quien mira. */
     outcome: EndOutcome;
