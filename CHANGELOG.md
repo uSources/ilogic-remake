@@ -7,6 +7,16 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.13.1] - 2026-11-17 — Con los pies en el suelo
+
+### Arreglos
+- Las unidades ya no se quedan flotando al pulsar «Fin del turno» (E) varias veces seguidas.
+
+<!-- en -->
+
+### Fixes
+- Units no longer stay floating when pressing «End turn» (E) several times in a row.
+
 ## [0.13.0] - 2026-11-17 — El tablero se lee
 
 ### Novedades
