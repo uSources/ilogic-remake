@@ -7,7 +7,6 @@
 import type { GameState, TeamId } from '../../../core/model';
 import { visibility } from '../../../core/rules';
 import { ui, type UIState } from '../../../hud/store';
-import type { GameImages } from '../../../atlas';
 import { minimapVM } from '../../../ui/hudModels';
 import { terrainPalette } from '../../../ui/terrainColors';
 
@@ -23,15 +22,15 @@ export class MinimapBridge {
   private shownMap = '';
   private shownView = '';
 
-  constructor(
-    private readonly textures: GameImages,
-    private readonly viewer: TeamId,
-  ) {}
+  /** El color de cada terreno (terrain.json, "mapColor"). */
+  private readonly palette = terrainPalette();
+
+  constructor(private readonly viewer: TeamId) {}
 
   /** El minimapa de la partida tal como esta para quien mira (si ha cambiado algo). */
   publishMap(s: GameState): void {
     const view = { viewer: this.viewer, vis: visibility(s, this.viewer), hidden: NOTHING_HIDDEN };
-    const minimap = minimapVM(terrainPalette(this.textures), s, view);
+    const minimap = minimapVM(this.palette, s, view);
     const key = JSON.stringify([minimap.units, minimap.buildings, minimap.fog, minimap.points]);
     if (key === this.shownMap) return;
     this.shownMap = key;

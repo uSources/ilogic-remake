@@ -56,7 +56,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const camera = new StrategyCamera({ target: startTarget, distance: START_DISTANCE, yaw: START_YAW }, bounds, scene.verticalFov);
   scene.placeCamera(camera.pose);
   const anchorOf = (pos: Pos) => scene.anchorOf(pos);
-  const minimap = new MinimapBridge(images, viewer);
+  const minimap = new MinimapBridge(viewer);
 
   let cursor: Pos | null = null;
   /** Publica la interfaz (de las piezas, solo la barra de vida del enemigo al que se apunta). */
@@ -199,6 +199,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     renameClose: () => ui.set({ rename: null }),
     pickInSelection: (uid, shift, ctrl) => controls.pickInSelection(uid, shift, ctrl),
     // El minimapa cuenta la casilla x de x a x + 1; en el mundo, su centro esta en x.
+    toggleMinimap,
     minimapJump: (at) => camera.lookAt({ x: at.x - MINIMAP_TILE_HALF, y: camera.pose.target.y, z: at.y - MINIMAP_TILE_HALF }),
   });
 

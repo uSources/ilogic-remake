@@ -15,11 +15,43 @@
 }
 .mm-wrap {
   position: relative;
-  width: 192px;
-  height: 192px;
+  width: var(--minimap-size, 192px);
+  height: var(--minimap-size, 192px);
   overflow: hidden;
   cursor: crosshair;
   touch-action: none;
+  transition:
+    width 0.15s ease-out,
+    height 0.15s ease-out;
+}
+/* Con raton, al pasar por encima crece (hacia la izquierda y hacia arriba: va en la esquina) para verlo mejor. */
+@media (hover: hover) {
+  .minimap:hover .mm-wrap {
+    width: calc(var(--minimap-size, 192px) * 1.6);
+    height: calc(var(--minimap-size, 192px) * 1.6);
+  }
+}
+/* El boton que lo abre y lo cierra: cuatro casillas, encendido con el minimapa abierto. */
+.minimap-btn {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 9px);
+  gap: 3px;
+  place-content: center;
+  pointer-events: auto;
+}
+.minimap-btn i {
+  display: block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--text);
+  opacity: 0.45;
+}
+.minimap-btn.on i {
+  opacity: 1;
 }
 .mm-wrap canvas {
   display: block;
@@ -35,9 +67,8 @@
   pointer-events: none;
 }
 @media (max-height: 640px) {
-  .mm-wrap {
-    width: 128px;
-    height: 128px;
+  .side {
+    --minimap-size: 128px;
   }
 }
 @media (max-width: 720px) {
@@ -45,7 +76,7 @@
     right: 10px;
     bottom: 80px;
   }
-  .minimap {
-    display: none;
+  .side {
+    --minimap-size: 144px;
   }
 }

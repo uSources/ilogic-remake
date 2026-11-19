@@ -15,11 +15,16 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "protection", "hides", "buildable", "water", "movement", "textLetter"],
+        "required": ["id", "name", "protection", "hides", "buildable", "water", "movement", "textLetter", "mapColor"],
         "properties": {
           "id": {
             "type": "string",
             "description": "Nombre interno (fijo: lo guardan las partidas)."
+          },
+          "mapColor": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "description": "Su color en el minimapa y en las miniaturas de los mapas (#rrggbb): el que tiene en el tablero 3D, para que se reconozca."
           },
           "textLetter": {
             "type": "string",

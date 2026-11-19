@@ -55,6 +55,7 @@ export const turn: Translation<typeof es> = {
   touchHint:
     'Tap your unit, then where to go (or drag it). To attack, tap the enemy twice. Long-press to see a range (with a unit selected, to give it an order there); pinch to zoom.',
   minimap: 'Minimap (M) · click to jump',
+  minimapToggle: 'Open or close the minimap (M)',
   hintInspect: 'Range: orange = where it can go, red = what it can attack · Esc: close',
   loading: 'Loading',
   nextUnit: 'Tab: next unit',
