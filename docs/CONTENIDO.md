@@ -173,6 +173,7 @@ skill `ashfox`), su imagen en el atlas (de ella salen los colores de las miniatu
 | `movement` | Coste de entrar por tipo: `{ "foot": 1, "vehicle": 2, "air": 1, "amphibious": null }`; `null` = no se puede pasar |
 | `mapLetter` | Letra que lo nombra en los mapas en texto de las misiones en cualquier tema (agua `~`, carretera `=`...). Los que cambian con el tema (la hierba, el bosque) los da `themes.json` |
 | `textLetter` | Letra del terreno en el mapa de la partida por texto (`npm run play`), distinta en cada terreno (no depende del tema) y de la de cada edificio |
+| `mapColor` | Su color en el minimapa y en las miniaturas de los mapas (`#rrggbb`): el que tiene en el tablero 3D, para que se reconozca |
 
 En el codigo se consulta con el tipo resuelto y por la partida: `movementOf(s, unit)` (el
 movimiento de una unidad), `canMoveOn(unitType.movement, terrainAt(s, pos))`,

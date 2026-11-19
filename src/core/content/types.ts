@@ -105,6 +105,8 @@ export interface TerrainDef {
   mapLetter?: string;
   /** Letra en el mapa de la partida por texto (npm run play), una por terreno. */
   textLetter: string;
+  /** Su color en el minimapa y en las miniaturas (#rrggbb), el que tiene en el tablero 3D. */
+  mapColor: string;
   /** El suelo llano: el de los mapas vacios (laboratorio, duelos, pruebas). Exactamente uno. */
   plain?: boolean;
 }

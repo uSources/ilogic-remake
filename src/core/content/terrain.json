@@ -3,6 +3,7 @@
   "terrain": [
     {
       "id": "Grass",
+      "mapColor": "#6aa83a",
       "textLetter": ".",
       "plain": true,
       "name": {
@@ -22,6 +23,7 @@
     },
     {
       "id": "Water",
+      "mapColor": "#4f9be0",
       "textLetter": "~",
       "name": {
         "es": "Agua",
@@ -41,6 +43,7 @@
     },
     {
       "id": "Woods",
+      "mapColor": "#2f6b2a",
       "textLetter": "w",
       "name": {
         "es": "Bosque",
@@ -59,6 +62,7 @@
     },
     {
       "id": "Sand",
+      "mapColor": "#f2c66e",
       "textLetter": ":",
       "name": {
         "es": "Arena",
@@ -77,6 +81,7 @@
     },
     {
       "id": "Cactus",
+      "mapColor": "#d9ad5a",
       "textLetter": "k",
       "name": {
         "es": "Cactus",
@@ -95,6 +100,7 @@
     },
     {
       "id": "SandMountain",
+      "mapColor": "#c0602a",
       "textLetter": "M",
       "name": {
         "es": "Meseta",
@@ -113,6 +119,7 @@
     },
     {
       "id": "Flowers",
+      "mapColor": "#7ab446",
       "textLetter": ",",
       "name": {
         "es": "Flores",
@@ -131,6 +138,7 @@
     },
     {
       "id": "GrassMountain",
+      "mapColor": "#8c8676",
       "textLetter": "^",
       "name": {
         "es": "Montaña",
@@ -149,6 +157,7 @@
     },
     {
       "id": "SWater",
+      "mapColor": "#7fd0ec",
       "textLetter": "-",
       "name": {
         "es": "Agua poco profunda",
@@ -168,6 +177,7 @@
     },
     {
       "id": "DWater",
+      "mapColor": "#4678d4",
       "textLetter": "=",
       "name": {
         "es": "Agua profunda",
@@ -187,6 +197,7 @@
     },
     {
       "id": "Snow",
+      "mapColor": "#f4f8ff",
       "textLetter": "_",
       "name": {
         "es": "Nieve",
@@ -205,6 +216,7 @@
     },
     {
       "id": "Frosty",
+      "mapColor": "#dce8f4",
       "textLetter": "&",
       "name": {
         "es": "Escarcha",
@@ -223,6 +235,7 @@
     },
     {
       "id": "SnowMountain",
+      "mapColor": "#9eacc2",
       "textLetter": "%",
       "name": {
         "es": "Montaña nevada",
@@ -242,6 +255,7 @@
     },
     {
       "id": "SnowWood",
+      "mapColor": "#5d7f6a",
       "textLetter": "t",
       "name": {
         "es": "Bosque nevado",
@@ -261,6 +275,7 @@
     },
     {
       "id": "Ice",
+      "mapColor": "#bfe6f5",
       "textLetter": "i",
       "name": {
         "es": "Hielo",

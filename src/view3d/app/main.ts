@@ -41,7 +41,7 @@ const start = pendingStart();
 const started = start ? sessionFor(start) : null;
 const images = await loadGameImages(asset);
 if (started) playMatch(started, images, await GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES), webAudioSounds);
-else new MenuFlow(images, webAudioSounds).open();
+else new MenuFlow(webAudioSounds).open();
 
 // Instalar como app y jugar sin conexion (solo en la web publicada).
 registerServiceWorker();

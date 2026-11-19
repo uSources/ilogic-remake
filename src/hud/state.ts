@@ -219,5 +219,6 @@ export const initialState: UIState = {
   notes: null,
   newsBadge: false,
   updateAvailable: null,
-  minimapOn: typeof window !== 'undefined' ? window.innerWidth > 900 : true,
+  // Siempre abierto (tambien en el movil, mas pequeño); la M lo cierra.
+  minimapOn: true,
 };

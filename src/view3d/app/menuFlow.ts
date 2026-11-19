@@ -22,7 +22,6 @@ import { checkNotes, notesCommand, notesOpen } from '../../patchNotes';
 import { matchConfigFor, randomSeed } from '../../setup';
 import { readSave } from '../../storage';
 import { terrainPalette, type TerrainPalette } from '../../ui/terrainColors';
-import type { GameImages } from '../../atlas';
 import { startGame } from './gameStart';
 import { menuSound } from '../systems/sound/soundCues';
 
@@ -41,13 +40,10 @@ export class MenuFlow {
   private readonly setup: SetupScreen;
   private readonly campaign: CampaignScreen;
 
-  constructor(
-    images: GameImages,
-    private readonly sounds: SoundPort,
-  ) {
+  constructor(private readonly sounds: SoundPort) {
     const raw = readSave();
     this.save = raw ? loadGame(raw) : null;
-    this.palette = terrainPalette(images);
+    this.palette = terrainPalette();
     this.options = new OptionsPanel(
       'menu',
       (key) => key === 'lang' && this.publish(),

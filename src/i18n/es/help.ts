@@ -138,7 +138,11 @@ export const help: HelpTexts = {
     ['Mover la cámara', 'Flechas / WASD', 'Arrastrar con el botón central, el ratón en el borde o arrastrar con el dedo'],
     ['Girar la cámara', '—', 'Arrastrar con el botón derecho'],
     ['Zoom', `${keys.zoomIn} / ${keys.zoomOut}`, 'Rueda'],
-    ['Minimapa', `${keys.minimap} (abrir o cerrar)`, 'Clic o arrastrar en él: la cámara va allí. El recuadro blanco es lo que se ve'],
+    [
+      'Minimapa',
+      `${keys.minimap} (abrir o cerrar)`,
+      'Clic o arrastrar en él: la cámara va allí. El recuadro blanco es lo que se ve. Con el ratón encima crece; con el dedo, el primer toque lo agranda y el siguiente lleva la cámara',
+    ],
     [
       'Fin del turno',
       keys.endTurn,

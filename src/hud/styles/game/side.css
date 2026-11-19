@@ -15,11 +15,28 @@
 }
 .mm-wrap {
   position: relative;
-  width: 192px;
-  height: 192px;
+  width: var(--minimap-size, 192px);
+  height: var(--minimap-size, 192px);
   overflow: hidden;
   cursor: crosshair;
   touch-action: none;
+  transition:
+    width 0.15s ease-out,
+    height 0.15s ease-out;
+}
+/*
+ * Para verlo mejor crece (hacia la izquierda y hacia arriba: va en la esquina): con raton al pasar
+ * por encima; con el dedo, al tocarlo (Minimap.tsx), algo mas, sin pasar del ancho de la pantalla.
+ */
+@media (hover: hover) {
+  .minimap:hover .mm-wrap {
+    width: calc(var(--minimap-size, 192px) * 1.6);
+    height: calc(var(--minimap-size, 192px) * 1.6);
+  }
+}
+.minimap.enlarged .mm-wrap {
+  width: min(calc(var(--minimap-size, 192px) * 2), calc(100vw - 48px));
+  height: min(calc(var(--minimap-size, 192px) * 2), calc(100vw - 48px));
 }
 .mm-wrap canvas {
   display: block;
@@ -35,9 +52,8 @@
   pointer-events: none;
 }
 @media (max-height: 640px) {
-  .mm-wrap {
-    width: 128px;
-    height: 128px;
+  .side {
+    --minimap-size: 128px;
   }
 }
 @media (max-width: 720px) {
@@ -45,7 +61,7 @@
     right: 10px;
     bottom: 80px;
   }
-  .minimap {
-    display: none;
+  .side {
+    --minimap-size: 144px;
   }
 }
