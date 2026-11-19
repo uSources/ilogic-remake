@@ -21,6 +21,7 @@ import { ScreenBoxView } from './core/screenBox';
 import { FxEffectStage } from './fx/effectStage';
 import { DefenseStars } from './fx/defenseStars';
 import { Highlights } from './fx/highlights';
+import { UnitOutline, type OutlinedUnits } from './fx/unitOutline';
 import { ThreatLinesView } from './fx/threatLines';
 import { MovePreviewView } from './fx/movePreview';
 import { IntentArrowsView } from './fx/intentArrows';
@@ -64,6 +65,10 @@ export class MatchScene implements ScreenView {
   private readonly terrain: TerrainView;
   private readonly sea: Sea;
   private readonly highlights: Highlights;
+  /** El contorno de la unidad elegida y de la señalada (las casillas: la unidad se busca en cada fotograma). */
+  private readonly outline = new UnitOutline();
+  private selectedTile: Pos | null = null;
+  private hoveredTile: Pos | null = null;
   private readonly preview: MovePreviewView;
   private readonly intents: IntentArrowsView;
   private readonly effects = new THREE.Group();
@@ -104,6 +109,7 @@ export class MatchScene implements ScreenView {
       this.sandDust.object,
     );
     this.world.scene.add(this.particles.object, this.marks.mesh, this.wrecks.object);
+    this.world.addOverlay((renderer, scene, camera) => this.outline.draw(renderer, scene, camera, this.outlinedUnits()));
     const grid = mapGrid(state);
     const center = new THREE.Vector3((grid.width - 1) / 2, 0, (grid.height - 1) / 2);
     this.world.lightArea(center, Math.max(grid.width, grid.height) * LIGHT_REACH);
@@ -129,9 +135,27 @@ export class MatchScene implements ScreenView {
     return { lookup: pieceStage, pieces: pieceStage, effects: effectStage };
   }
 
-  /** Las marcas del tablero que pide el turno (alcance, objetivos, lo elegido). */
+  /** Las marcas del tablero que pide el turno (alcance, objetivos, lo elegido, con su contorno). */
   get tileMarks(): TileMarks {
-    return this.highlights;
+    const highlights = this.highlights;
+    return {
+      showReach: (tiles) => highlights.showReach(tiles),
+      showAttackReach: (tiles) => highlights.showAttackReach(tiles),
+      showTargets: (tiles) => highlights.showTargets(tiles),
+      showGroup: (tiles) => highlights.showGroup(tiles),
+      select: (pos) => {
+        highlights.select(pos);
+        this.selectedTile = pos;
+      },
+    };
+  }
+
+  /** Las unidades que llevan contorno ahora: las de la casilla elegida y la señalada. */
+  private outlinedUnits(): OutlinedUnits {
+    return {
+      selected: this.selectedTile ? this.board.unitObjectAt(this.selectedTile) : null,
+      hovered: this.hoveredTile ? this.board.unitObjectAt(this.hoveredTile) : null,
+    };
   }
 
   /** A donde llegan los enemigos («Ver amenaza») y quien podria atacar a la unidad que se mira. */
@@ -175,6 +199,7 @@ export class MatchScene implements ScreenView {
   /** La casilla señalada: el cuadro amarillo y sus estrellas de defensa (cuantas, lo dice la partida). */
   hover(pos: Pos | null, stars = 0): void {
     this.highlights.hover(pos);
+    this.hoveredTile = pos;
     this.stars.show(pos ? this.board.groundOf(pos) : null, stars);
   }
 

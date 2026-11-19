@@ -6,6 +6,7 @@
  */
 import * as THREE from 'three';
 import { MAX_LIFE } from '../../../core/data';
+import { samePos } from '../../../core/geom';
 import type { GameState, Pos, TeamId } from '../../../core/model';
 import { showLetter, showLife, showLifeDrop, showLoss, showNumber } from './badges';
 import type { GlbLibrary } from './glbModels';
@@ -46,6 +47,12 @@ export class BoardView {
     private readonly terrain: TerrainView,
     private readonly glbModels: GlbLibrary,
   ) {}
+
+  /** La unidad que se ve en esa casilla (su pieza entera), o null. */
+  unitObjectAt(pos: Pos): THREE.Object3D | null {
+    const look = [...this.unitLooks.values()].find((unit) => unit.isVisible && samePos(unit.pos, pos));
+    return look ? (this.units.get(look.uid)?.object ?? null) : null;
+  }
 
   /** El punto del suelo de esa casilla (encima de su terreno). */
   groundOf(pos: Pos): THREE.Vector3 {
