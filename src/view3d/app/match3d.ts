@@ -26,6 +26,7 @@ import { PauseMenu, saveGame, showEndIfOver } from '../systems/hud/matchMenus';
 import { installKeys } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
 import { TurnControls } from '../systems/turn/turnControls';
+import { showDestinations } from '../systems/orders/destinationFlags';
 import { anyStandingOrder, OrderIntents } from '../systems/orders/orderIntents';
 import { ThreatZone } from '../systems/threat/threatZone';
 import type { StartedGame } from './gameStart';
@@ -101,6 +102,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   function refresh(): void {
     scene.sync(state.weather?.kind ?? null);
     intents.update();
+    showDestinations(state, viewer, scene.destinationMarks);
     threat.update();
     publish();
   }
