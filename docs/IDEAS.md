@@ -30,11 +30,6 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 21. **El dedo:** pellizcar para acercar y girar con dos dedos (`docs/PLAN-MOVIL.md`).
 22. **Laboratorio de animaciones** (se quitó con el 2D; para los modelos está `units3d.html`) y fondo
     vivo del menú (se quitó también su opción).
-23. **Comprobar lo visual sin mirar:** ya no hay capturas comparadas (`npm run shots` se quitó con
-    el 2D) ni API de depuración para agentes (solo `window.ilogic3d` en la consola). Lo que se ha
-    usado para enseñar los cambios del tablero sirve de base: Playwright con el Chrome del sistema
-    (WebGL por SwiftShader) abre `/?seed=2013`, coloca unidades desde `window.ilogic3d`, mueve la
-    cámara y saca capturas de antes y después; faltaría dejarlo como `npm run shots` con escenas fijas.
 24. **Edificios con explanada delante** (como en Advance Wars): rehacer los seis en Ashfox ocupando
     la mitad de atrás de la casilla, para que la unidad de encima quede delante sin tener que
     encogerlos ni moverlos a una esquina (ahora lo hace `sharedTile.ts`). Para cuando se retoquen los
