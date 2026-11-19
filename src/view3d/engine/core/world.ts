@@ -78,6 +78,9 @@ const MOOD_SECONDS = 1.5;
 /** La niebla del fondo empieza pasado el mapa (nunca lo tapa) y a esta distancia mas ya es horizonte. */
 const FOG_DEPTH = 110;
 
+/** Una pasada que dibuja encima de la escena ya dibujada (sin borrar lo que hay). */
+export type Overlay = (renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) => void;
+
 export class World {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -95,9 +98,11 @@ export class World {
   private readonly clock = new THREE.Clock();
   /** Las siluetas de las unidades tapadas, encima de la escena (silhouettes.ts). */
   private readonly silhouettes = new Silhouettes();
+  /** Lo que se dibuja encima de la escena y de las siluetas, ya con su profundidad (contornos...). */
+  private readonly overlays = new Set<Overlay>();
 
   constructor(private readonly parent: HTMLElement) {
-    // Con stencil: lo usan las siluetas de las unidades tapadas (silhouettes.ts).
+    // Con stencil: lo usan las siluetas de las unidades tapadas (silhouettes.ts) y el contorno (unitOutline.ts).
     this.renderer = new THREE.WebGLRenderer({ antialias: true, stencil: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
@@ -191,6 +196,11 @@ export class World {
     });
   }
 
+  /** Dibuja algo mas en cada fotograma, encima de la escena (y de su profundidad y stencil). */
+  addOverlay(overlay: Overlay): void {
+    this.overlays.add(overlay);
+  }
+
   start(): void {
     this.renderer.setAnimationLoop(() => {
       const delta = Math.min(this.clock.getDelta(), 0.1);
@@ -200,6 +210,7 @@ export class World {
       for (const listener of this.listeners) listener(delta);
       this.renderer.render(this.scene, this.camera);
       this.silhouettes.draw(this.renderer, this.scene, this.camera);
+      for (const overlay of this.overlays) overlay(this.renderer, this.scene, this.camera);
     });
   }
 }
