@@ -179,6 +179,14 @@ no siguiendo a la cámara para que no se muevan al desplazarla; solo cambian de 
 Si la unidad está en la niebla, el edificio no se mueve (no la delata). Se probó y no gustó: solo
 encoger el edificio (la unidad lo tapaba) y hacerlo semitransparente (un borrón).
 
+## Siluetas de las unidades tapadas
+
+Donde una montaña, un edificio o un árbol tapa una unidad desde la cámara, se ve su silueta a través,
+del color de su lado (azul lo propio y aliado, rojo lo enemigo), con algo de transparencia para que
+no parezca que está delante (`src/view3d/engine/core/silhouettes.ts`). Solo donde la unidad está
+tapada: una unidad no se pinta encima de sí misma ni de otra que tiene delante. Las que están en la
+niebla no se dibujan, así que tampoco su silueta; los restos de una destruida no llevan.
+
 ## Edificios
 
 `tools/art/ashfox/models/buildings.mjs`, también a 32 por casilla. Del color de su dueño (turquesa,

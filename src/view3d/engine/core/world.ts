@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import type { FrameListener } from '../../ports/frame';
+import { Silhouettes } from './silhouettes';
 import { Sky, type SkyLook } from './sky';
 
 /**
@@ -92,9 +93,12 @@ export class World {
   private mood = CLEAR_MOOD;
   private readonly listeners = new Set<FrameListener>();
   private readonly clock = new THREE.Clock();
+  /** Las siluetas de las unidades tapadas, encima de la escena (silhouettes.ts). */
+  private readonly silhouettes = new Silhouettes();
 
   constructor(private readonly parent: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Con stencil: lo usan las siluetas de las unidades tapadas (silhouettes.ts).
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, stencil: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -195,6 +199,7 @@ export class World {
       this.dome?.update(delta, this.camera.position);
       for (const listener of this.listeners) listener(delta);
       this.renderer.render(this.scene, this.camera);
+      this.silhouettes.draw(this.renderer, this.scene, this.camera);
     });
   }
 }

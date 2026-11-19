@@ -13,6 +13,7 @@ import type { UnitLook } from '../../systems/board/boardScene';
 import { startPopping } from './growIn';
 import { backCornerOf, settlingShare } from './sharedTile';
 import { SIDE_PAINT } from './sidePaint';
+import { showThroughWalls } from '../core/silhouettes';
 
 /** Altura de la barra de vida sobre el suelo de un modelo de bloques (por encima de el y de su vuelo). */
 const BADGE_HEIGHT = 0.7;
@@ -79,6 +80,7 @@ export function newUnitPiece(look: UnitLook, glbModels: GlbLibrary): UnitPiece {
   const lifeBadge = newBadge(badgeHeight);
   const orderBadge = newLetterBadge(badgeHeight);
   object.add(lifeBadge, orderBadge);
+  showThroughWalls(object, look.side);
   const piece: UnitPiece = {
     uid: look.uid,
     object,
