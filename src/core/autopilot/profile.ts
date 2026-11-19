@@ -1,7 +1,7 @@
 /**
  * Como juega quien decide por un equipo con los pasos de autopilot/ (las ordenes permanentes y la
  * IA): con que pesos (ai.json) y por que razones prefiere un ataque a otro. Se le da a quien juega
- * (`PlayCtx.profile`), nunca se lee de un sitio comun: asi dos IAs con otros pesos (la arena) juegan
+ * (`PlayCtx.profile`), nunca se lee de un sitio comun: asi dos IAs con otros pesos (`balance --vs`) juegan
  * a la vez en el mismo proceso. Las ordenes de la partida usan el de su contenido
  * (`autopilotProfileOf`, defaultProfile.ts); la IA, el suyo (`AiProfile`, ai/profile.ts).
  */

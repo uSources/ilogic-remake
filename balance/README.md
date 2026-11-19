@@ -9,6 +9,7 @@ npm run balance -- run --set UNIT.cost.Tank=10000 --name tanque-10k   # cambio r
 npm run balance -- compare actual tanque-10k                      # antes / después
 npm run balance -- duel --terrain Woods                           # unidad contra unidad
 npm run balance -- tune --iterations 3                            # ajustar precios solo
+npm run balance -- run --vs candidata --name candidata            # un perfil de IA contra la del juego
 ```
 
 Los informes salen en `balance/reports/<nombre>.md`, para leer, y en `.json`, para comparar.
@@ -54,6 +55,21 @@ Una variante es un JSON en `balance/variants/` con los cambios que se quieren pr
 - **Bola de nieve:** si quien va por delante el día 5, el 10 o el 20 acaba ganando.
 - **Unidades:** compras, eficiencia (valor destruido por cada 1 gastado), supervivencia, bajas causadas y capturas.
 - **Duelos:** daño, contraataque, probabilidad de destruir, valor quitado por cada 1000 de coste y cuántas veces gana quien ataca primero en un duelo a muerte.
+- **IA** (`docs/PLAN-IA.md`): de cada perfil que juega, lo que la hace parecer humana o una máquina (`tools/balance/humanity.ts`):
+  - **regaladas:** unidades que caen en el turno del rival sin haber atacado, capturado o llegado en su último turno (se quedaron donde las mataron);
+  - **al aliado más cercano:** a cuántas casillas queda, de media, cada unidad del suyo más cercano al acabar su turno (menos, más en grupo);
+  - **vaivenes:** movimientos que van en contra del anterior de la misma unidad (cambiar de idea de un turno a otro);
+  - **tiempo por turno** de la IA (media y el 95 %, en esta máquina).
+
+  Con dos perfiles (`--vs`), también cuánto gana cada uno. `compare` compara estas medidas entre informes.
+
+## Una IA contra otra
+
+`--vs <perfil>` hace que el primer bando lo juegue ese perfil y el resto la IA del juego (`ai`). Los perfiles están en `tools/balance/profiles.ts`: uno nuevo es una entrada más, con el mismo contenido de la partida y otro `AiProfile` (otros pesos, comportamientos o turno). Así se prueba un cambio de la IA antes de que sea la del juego.
+
+- Con dos perfiles, **los lados se alternan**: en las partidas de semilla par cada uno juega del otro lado, para que no cuente quién empieza ni el mapa.
+- El informe dice cuánto gana cada perfil (de verdad o con ventaja clara al final).
+- Los avisos de lados y precios solo salen cuando todos los bandos los juega la misma IA: con dos perfiles distintos no dicen nada del juego.
 
 ## Avisos y propuestas
 
@@ -76,4 +92,5 @@ Si una unidad rinde demasiado o demasiado poco para lo que cuesta, propone un pr
 - La IA decide qué compra y cómo juega. Si una unidad "casi nadie la compra", puede ser culpa de la IA y no del precio. La eficiencia mide cómo la usa la IA, no cómo la usaría una persona.
 - La eficiencia favorece a las unidades baratas que se compran en masa. Es una pista para investigar, no una sentencia.
 - `--vs passive` enfrenta la IA a un bando que no hace nada. Sirve para comprobar que la IA sigue sabiendo ganar después de cambiar las reglas.
+- Lo que tarda cada turno depende de la máquina: para comparar, en la misma y con el mismo `--threads`.
 - Opciones: `--games`, `--days` (60 por defecto), `--seed`, `--threads`, `--terrain`, `--no-duel`, `--first 1` (que mueva primero el bando 1) y `--swap` (cambiar de lado los bandos en cada mapa): sirven para separar la ventaja del orden de juego de la del mapa.

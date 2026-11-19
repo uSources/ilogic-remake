@@ -1,7 +1,7 @@
 /**
  * El turno de la IA del juego (`aiTurn`): el plan de fuego, cada unidad con sus
  * comportamientos y la compra. Es el `turn` del perfil por defecto (`defaultAiProfile`); otro perfil
- * puede traer otro (la arena prueba asi un cambio de codigo de la IA: `--candidate`).
+ * puede traer otro (asi se prueba un cambio de codigo de la IA: `npm run balance -- run --vs <perfil>`).
  */
 import { teamUnits } from '../rules/queries';
 import type { ActionPlan, Rng } from '../model';

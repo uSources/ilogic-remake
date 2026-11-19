@@ -41,15 +41,26 @@ export interface GamesRun {
   rotateStarts?: number;
   /** Lado del mapa (si no, DEFAULT_MAP_SIZE). */
   size?: number;
+  /** Cambiar los lados en las partidas de semilla par (dos perfiles de IA distintos: PlayOptions.alternateSides). */
+  alternateSides?: boolean;
 }
 
 export async function runGames(setup: VariantSetup, run: GamesRun): Promise<GameRecord[]> {
-  const { seeds, maxDays, policies, threads, firstTeam = FIRST_TEAM, rotateStarts = 0, size = DEFAULT_MAP_SIZE } = run;
+  const {
+    seeds,
+    maxDays,
+    policies,
+    threads,
+    firstTeam = FIRST_TEAM,
+    rotateStarts = 0,
+    size = DEFAULT_MAP_SIZE,
+    alternateSides = false,
+  } = run;
   const chunks: number[][] = Array.from({ length: threads }, () => []);
   seeds.forEach((seed, index) => chunks[index % threads]!.push(seed));
   const records: GameRecord[] = [];
   const started = Date.now();
-  const game = { maxDays, policies, firstTeam, rotateStarts, size };
+  const game = { maxDays, policies, firstTeam, rotateStarts, size, alternateSides };
   const progress = () => {
     if (process.stderr.isTTY || records.length % 25 === 0 || records.length === seeds.length)
       process.stderr.write(`\r  ${records.length}/${seeds.length} partidas (${((Date.now() - started) / 1000).toFixed(0)} s)   `);
