@@ -66,6 +66,8 @@ export interface HudActions {
   toggleThreat: () => void;
   /** La siguiente unidad sin mover (el numero de «Fin del turno»). */
   nextIdle: () => void;
+  /** Un clic o arrastre en el minimapa: la camara va a ese punto (en casillas del minimapa). */
+  minimapJump: (at: Pos) => void;
 }
 
 const NOTHING_HIDDEN: ReadonlySet<number> = new Set();

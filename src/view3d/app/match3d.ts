@@ -21,6 +21,7 @@ import { StrategyCamera } from '../systems/camera/strategyCamera';
 import { incomeSpotsOf } from '../systems/events/eventSteps';
 import { playEvents } from '../systems/events/timeline';
 import { installHudActions, publishHud } from '../systems/hud/hudBridge';
+import { MinimapBridge, toggleMinimap } from '../systems/hud/minimapBridge';
 import { PauseMenu, saveGame, showEndIfOver } from '../systems/hud/matchMenus';
 import { installKeys } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
@@ -35,6 +36,9 @@ const START_YAW = Math.PI / 4;
 
 /** La pausa sale en el centro: la casilla a la que se ancla no cuenta. */
 const PAUSE_ANCHOR = { x: 0, y: 0 };
+
+/** Del borde de una casilla del minimapa a su centro (el punto del mundo). */
+const MINIMAP_TILE_HALF = 0.5;
 
 /** Lo que se ve el cartel de victoria o derrota antes de la pantalla del final. */
 const END_SCREEN_DELAY_MS = 2200;
@@ -52,6 +56,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const camera = new StrategyCamera({ target: startTarget, distance: START_DISTANCE, yaw: START_YAW }, bounds, scene.verticalFov);
   scene.placeCamera(camera.pose);
   const anchorOf = (pos: Pos) => scene.anchorOf(pos);
+  const minimap = new MinimapBridge(images, viewer);
 
   let cursor: Pos | null = null;
   /** Publica la interfaz (de las piezas, solo la barra de vida del enemigo al que se apunta). */
@@ -73,6 +78,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
       anchorOf,
       overheadOf: (pos) => scene.overheadOf(pos),
     });
+    minimap.publishMap(state);
   }
   /** De quien se enseña quien podria atacarle: la unidad propia señalada o, si no, la elegida (sola). */
   function threatFocus(): Unit | null {
@@ -192,6 +198,8 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     renameSquad: (id, name) => void controls.renameSquad(id, name),
     renameClose: () => ui.set({ rename: null }),
     pickInSelection: (uid, shift, ctrl) => controls.pickInSelection(uid, shift, ctrl),
+    // El minimapa cuenta la casilla x de x a x + 1; en el mundo, su centro esta en x.
+    minimapJump: (at) => camera.lookAt({ x: at.x - MINIMAP_TILE_HALF, y: camera.pose.target.y, z: at.y - MINIMAP_TILE_HALF }),
   });
 
   /** Una tecla de grupo; pulsada dos veces seguidas, la camara va hasta el. */
@@ -237,10 +245,12 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     undo: () => controls.undoLastMove(),
     intents: toggleIntents,
     threat: toggleThreat,
+    minimap: toggleMinimap,
   });
   scene.onFrame((seconds) => {
     camera.update(seconds);
     scene.render(seconds, camera.pose);
+    minimap.publishView(scene.viewedArea(camera.pose.target.y));
     // Los bocadillos (menu, prevision) siguen a su casilla mientras la camara se mueve.
     if (controls.menu() || (cursor && controls.forecastAt(cursor))) publish();
   });

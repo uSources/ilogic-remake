@@ -44,7 +44,7 @@ const showsSelection = (s: UIState) => !!s.selection && !s.busy;
 const showsTileTip = (s: UIState) => canAct(s) && !showsSelection(s) && !s.menu && !s.forecast;
 
 /**
- * Columna de la derecha: el minimapa (cuando la vista lo publique). La bandeja de antes (sin mover,
+ * Columna de la derecha: el minimapa (lo publica la vista 3D, systems/hud/minimapBridge.ts). La bandeja de antes (sin mover,
  * amenaza, escuadras) ya no esta: el numero de «Fin del turno», la pausa y la rueda hacen lo suyo.
  */
 const SIDE_PANELS: GamePanel[] = [
