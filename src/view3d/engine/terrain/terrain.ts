@@ -138,6 +138,11 @@ const FOG_TINT = new THREE.Color(0.52, 0.56, 0.72);
 const SEEN = new THREE.Color(1, 1, 1);
 /** Lo que se desplaza el decorado en su casilla, para que no parezca copiado. */
 const DECOR_JITTER = 0.12;
+/**
+ * El tamaño del decorado (arboles, flores, cactus...) respecto a su modelo: algo mas pequeño, para que
+ * tape menos las unidades y las casillas de alrededor (docs/ESTETICA.md, "Tamaños en el tablero").
+ */
+const DECOR_SIZE = new THREE.Vector3(0.82, 0.82, 0.82);
 
 /** Lo que no tiene pieza propia se ve como lo que es. */
 function fallbackPiece(terrain: TerrainType): TerrainPiece {
@@ -244,7 +249,7 @@ function tileFile(s: GameState, pos: Pos): string {
 function decorPlace(pos: Pos, top: number): THREE.Matrix4 {
   const shift = (salt: number) => (tileNoise(pos, salt) - 0.5) * DECOR_JITTER;
   const at = new THREE.Vector3(pos.x + shift(1), top, pos.y + shift(2));
-  return new THREE.Matrix4().compose(at, quarterTurn(pos, 3), new THREE.Vector3(1, 1, 1));
+  return new THREE.Matrix4().compose(at, quarterTurn(pos, 3), DECOR_SIZE);
 }
 
 /** Las casillas de cada clase de modelo; las de agua, con el agua que se mueve (water.ts). */
