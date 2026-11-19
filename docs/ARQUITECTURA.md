@@ -1081,7 +1081,7 @@ src/view3d/
 | `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas; lo que perderia el enemigo al que se apunta (`hitLookOf`) |
 | `systems/camera/` | la camara de estrategia como logica (`StrategyCamera`): desplazar, acercar, girar, limites y suavizado; da su pose como datos |
 | `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`: grupos con numero, ordenes, «Ver órdenes») y raton o dedo sobre el mundo (`pointerInput.ts`: tocar, recuadro, doble clic, borde), a ordenes de la camara y del turno |
-| `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien el numero de «Fin del turno» y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`) |
+| `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien el numero de «Fin del turno» y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`), el minimapa (`minimapBridge.ts`: lo publica solo si cambia algo que se ve en el, y el recuadro de lo que esta en pantalla, que da `MatchScene.viewedArea`) |
 | `systems/sound/`, `systems/weather/` | que suena con cada cosa (`soundCues.ts`); como se ve cada clima (datos: `weatherStyles.ts`) |
 | `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
 | `engine/core/` | lienzo, escena, luz cartoon (y por clima), cielo de bandas con nubes de bloques y niebla del horizonte (`sky.ts`) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`) |
@@ -1108,7 +1108,7 @@ src/view3d/
 - **Depuracion**: en la consola, `window.ilogic3d` (`session`, `board`, `controls`, `camera`, `world`,
   `weather`, `stages`, `wrecks`...). Playground de modelos y animaciones: `units3d.html`
   (`src/view3d/playground/`, `window.ilogicPlayground`).
-- **Aun no en 3D** (estaban en el 2D): escuadras, ordenes permanentes, grupos y recuadro, minimapa dibujado, varias personas en la misma pantalla, repetir el turno enemigo,
+- **Aun no en 3D** (estaban en el 2D): escuadras, ordenes permanentes, grupos y recuadro, varias personas en la misma pantalla, repetir el turno enemigo,
   guardado automatico, tutorial, laboratorio de animaciones y campaña online. Cada uno entra con esta
   forma: su sistema en `systems/`, su dibujo en `engine/` y su puerto en `ports/`.
 - Colores de los lienzos de la interfaz: `PAL_CSS` en `ui/palette.ts` (los mismos que `hud.css`).

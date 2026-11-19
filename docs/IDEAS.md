@@ -23,8 +23,7 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
     las pantallas de salas, `src/menu/online/`) ya están, pero el cliente iba enganchado a la
     escena 2D, que se quitó. Falta que la partida 3D juegue con la conexión (`OnlineMatch`) y dar al
     menú 3D su `openOnline`; hasta entonces la tarjeta «Jugar en línea» no sale.
-19. **Minimapa dibujado** (el panel del HUD y la tecla M están, pero la vista 3D no lo rellena),
-    tutorial y paneles de misión.
+19. **Tutorial y paneles de misión.**
 20. **Varias personas en la misma pantalla** (el aviso de cambio de jugador), repetir el turno
     enemigo y guardado automático.
 21. **El dedo:** pellizcar para acercar y girar con dos dedos (`docs/PLAN-MOVIL.md`).

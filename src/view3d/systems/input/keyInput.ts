@@ -34,6 +34,8 @@ export interface KeyHost {
   orderHere(): void;
   /** Ctrl+Z: deshacer el ultimo movimiento. */
   undo(): void;
+  /** M: abrir o cerrar el minimapa. */
+  minimap(): void;
 }
 
 type CommandOf<K extends InputCommandKind> = Extract<InputCommand, { kind: K }>;
@@ -52,6 +54,7 @@ const KEY_ACTIONS: KeyActions = {
   orderHere: (_command, host) => host.orderHere(),
   threat: (_command, host) => host.threat(),
   undo: (_command, host) => host.undo(),
+  minimap: (_command, host) => host.minimap(),
 };
 
 type AnyKeyAction = (command: InputCommand, host: KeyHost) => void;
