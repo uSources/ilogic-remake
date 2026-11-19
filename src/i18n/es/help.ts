@@ -141,7 +141,7 @@ export const help: HelpTexts = {
     [
       'Minimapa',
       `${keys.minimap} (abrir o cerrar)`,
-      'Clic o arrastrar en él: la cámara va allí. El recuadro blanco es lo que se ve. Con el ratón encima crece; en el móvil, el botón de las cuatro casillas lo abre',
+      'Clic o arrastrar en él: la cámara va allí. El recuadro blanco es lo que se ve. Con el ratón encima crece; con el dedo, el primer toque lo agranda y el siguiente lleva la cámara',
     ],
     [
       'Fin del turno',

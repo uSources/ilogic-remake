@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'preact/compat';
+import { useEffect, useRef, useState } from 'preact/compat';
 import { t } from '../../settings';
 import type { UIState } from '../state';
 import { ui } from '../store';
@@ -73,6 +73,13 @@ function drawMinimap(painter: Painter, minimap: MinimapVM) {
   for (const unit of minimap.units) fillOutlinedTile(painter, unit, sidePaint(unit.side, 'canvasUnit'));
 }
 
+/**
+ * Con el dedo no se puede pasar por encima: el primer toque lo agranda (sin mover la camara) y, ya
+ * grande, tocar o arrastrar lleva la camara alli y al soltar vuelve a su tamaño. Con raton crece al
+ * pasar por encima (side.css) y el clic va directo.
+ */
+const growsOnTouch = (event: PointerEvent): boolean => event.pointerType !== 'mouse';
+
 /** Lleva la camara a la casilla bajo el puntero. */
 function jumpToPointer(event: PointerEvent, minimap: MinimapVM) {
   const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
@@ -84,6 +91,17 @@ function jumpToPointer(event: PointerEvent, minimap: MinimapVM) {
 
 export function Minimap({ minimap, view }: { minimap: MinimapVM; view: UIState['minimapView'] }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const [isEnlarged, setEnlarged] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
+  // Agrandado, tocar fuera (el tablero) lo devuelve a su tamaño.
+  useEffect(() => {
+    if (!isEnlarged) return;
+    const shrinkIfOutside = (event: PointerEvent) => {
+      if (!panel.current?.contains(event.target as Node)) setEnlarged(false);
+    };
+    document.addEventListener('pointerdown', shrinkIfOutside);
+    return () => document.removeEventListener('pointerdown', shrinkIfOutside);
+  }, [isEnlarged]);
   useEffect(() => {
     const painter = canvas.current?.getContext('2d');
     if (painter) drawMinimap(painter, minimap);
@@ -92,15 +110,22 @@ export function Minimap({ minimap, view }: { minimap: MinimapVM; view: UIState['
   const percentPerTileX = 100 / minimap.w;
   const percentPerTileY = 100 / minimap.h;
   return (
-    <div class="px minimap" title={t('minimap')}>
+    <div ref={panel} class={`px minimap ${isEnlarged ? 'enlarged' : ''}`} title={t('minimap')}>
       <div
         class="mm-wrap"
         onPointerDown={(event) => {
+          if (growsOnTouch(event) && !isEnlarged) {
+            setEnlarged(true);
+            return;
+          }
           (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
           jumpToPointer(event, minimap);
         }}
         onPointerMove={(event) => {
-          if (event.buttons & PRIMARY_BUTTON) jumpToPointer(event, minimap);
+          if (event.buttons & PRIMARY_BUTTON && (isEnlarged || !growsOnTouch(event))) jumpToPointer(event, minimap);
+        }}
+        onPointerUp={(event) => {
+          if (growsOnTouch(event) && event.currentTarget.hasPointerCapture(event.pointerId)) setEnlarged(false);
         }}
       >
         <canvas ref={canvas} width={minimap.w * TILE_PX} height={minimap.h * TILE_PX} />

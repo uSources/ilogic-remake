@@ -53,7 +53,6 @@ export const turn = {
   touchHint:
     'Toca una unidad tuya y luego adónde ir (o arrástrala). Para atacar, toca el enemigo dos veces. Mantén pulsado para ver el alcance (con una unidad elegida, para darle una orden allí); pellizca para el zoom.',
   minimap: 'Minimapa (M) · clic para ir',
-  minimapToggle: 'Abrir o cerrar el minimapa (M)',
   hintInspect: 'Alcance: naranja = adonde llega, rojo = lo que puede atacar · Esc: cerrar',
   loading: 'Cargando',
   nextUnit: 'Tab: siguiente unidad',

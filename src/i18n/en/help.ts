@@ -139,7 +139,7 @@ export const help: HelpTexts = {
     [
       'Minimap',
       `${keys.minimap} (open or close)`,
-      'Click or drag on it: the camera goes there. The white box is what you see. It grows with the mouse over it; on a phone, the four-squares button opens it',
+      'Click or drag on it: the camera goes there. The white box is what you see. It grows with the mouse over it; by touch, the first tap enlarges it and the next one moves the camera',
     ],
     [
       'End turn',

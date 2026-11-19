@@ -17,8 +17,6 @@ import { TileTip, tileTipKey } from './TileTip';
 import { SelectionPanel } from './SelectionPanel';
 import { EndTurnChip, TopBar } from './TopBar';
 import { canAct, isOwnTurn } from './turn';
-import { Chip } from '../common/toy';
-import { ui } from '../store';
 
 /**
  * Un panel de la partida: lo que pinta segun el estado, o nada (null/false) si no le toca salir.
@@ -51,7 +49,6 @@ const showsTileTip = (s: UIState) => canAct(s) && !showsSelection(s) && !s.menu 
  */
 const SIDE_PANELS: GamePanel[] = [
   { id: 'minimap', render: (s) => s.minimap && s.minimapOn && <Minimap minimap={s.minimap} view={s.minimapView} /> },
-  { id: 'minimapToggle', render: (s) => s.minimap && <MinimapToggle isOpen={s.minimapOn} /> },
 ];
 
 /** En el orden en que van en la pagina, que es el de apilado. Un panel nuevo es una entrada mas. */
@@ -71,18 +68,6 @@ const GAME_PANELS: GamePanel[] = [
   { id: 'combat', render: (s) => s.combat && <CombatPanel combat={s.combat} /> },
   { id: 'menu', render: (s) => s.menu && <MatchMenu menu={s.menu} /> },
 ];
-
-/** El boton del minimapa (en el movil, sin tecla M, la unica forma de abrirlo): cuatro casillas. */
-function MinimapToggle({ isOpen }: { isOpen: boolean }) {
-  return (
-    <Chip label={t('minimapToggle')} cls={`minimap-btn ${isOpen ? 'on' : ''}`} onClick={() => ui.actions.toggleMinimap()}>
-      <i />
-      <i />
-      <i />
-      <i />
-    </Chip>
-  );
-}
 
 /** Lo que sale junto a lo elegido o encima de todo: fichas, rueda, compra, pausa o el aviso de elegir casilla. */
 function MatchMenu({ menu }: { menu: MenuVM }) {

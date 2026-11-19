@@ -24,34 +24,19 @@
     width 0.15s ease-out,
     height 0.15s ease-out;
 }
-/* Con raton, al pasar por encima crece (hacia la izquierda y hacia arriba: va en la esquina) para verlo mejor. */
+/*
+ * Para verlo mejor crece (hacia la izquierda y hacia arriba: va en la esquina): con raton al pasar
+ * por encima; con el dedo, al tocarlo (Minimap.tsx), algo mas, sin pasar del ancho de la pantalla.
+ */
 @media (hover: hover) {
   .minimap:hover .mm-wrap {
     width: calc(var(--minimap-size, 192px) * 1.6);
     height: calc(var(--minimap-size, 192px) * 1.6);
   }
 }
-/* El boton que lo abre y lo cierra: cuatro casillas, encendido con el minimapa abierto. */
-.minimap-btn {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, 9px);
-  gap: 3px;
-  place-content: center;
-  pointer-events: auto;
-}
-.minimap-btn i {
-  display: block;
-  width: 9px;
-  height: 9px;
-  border-radius: 2px;
-  background: var(--text);
-  opacity: 0.45;
-}
-.minimap-btn.on i {
-  opacity: 1;
+.minimap.enlarged .mm-wrap {
+  width: min(calc(var(--minimap-size, 192px) * 2), calc(100vw - 48px));
+  height: min(calc(var(--minimap-size, 192px) * 2), calc(100vw - 48px));
 }
 .mm-wrap canvas {
   display: block;

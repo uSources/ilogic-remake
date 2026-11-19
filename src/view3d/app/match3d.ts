@@ -199,7 +199,6 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     renameClose: () => ui.set({ rename: null }),
     pickInSelection: (uid, shift, ctrl) => controls.pickInSelection(uid, shift, ctrl),
     // El minimapa cuenta la casilla x de x a x + 1; en el mundo, su centro esta en x.
-    toggleMinimap,
     minimapJump: (at) => camera.lookAt({ x: at.x - MINIMAP_TILE_HALF, y: camera.pose.target.y, z: at.y - MINIMAP_TILE_HALF }),
   });
 

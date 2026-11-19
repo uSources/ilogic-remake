@@ -68,8 +68,6 @@ export interface HudActions {
   nextIdle: () => void;
   /** Un clic o arrastre en el minimapa: la camara va a ese punto (en casillas del minimapa). */
   minimapJump: (at: Pos) => void;
-  /** El boton del minimapa: abrirlo o cerrarlo (como la tecla M). */
-  toggleMinimap: () => void;
 }
 
 const NOTHING_HIDDEN: ReadonlySet<number> = new Set();
