@@ -5,6 +5,7 @@
  */
 import * as THREE from 'three';
 import type { PuffSource } from '../fx/particles';
+import { hideThroughWalls } from '../core/silhouettes';
 
 /** Lo que duran los restos (segundos), los ultimos hundiendose. */
 const WRECK_SECONDS = 16;
@@ -35,6 +36,7 @@ export class Wrecks {
   leave(model: THREE.Object3D): void {
     const object = model.clone();
     for (const sprite of spritesIn(object)) sprite.removeFromParent();
+    hideThroughWalls(object);
     ownMaterials(object);
     this.object.add(object);
     const box = new THREE.Box3().setFromObject(object);
