@@ -31,6 +31,7 @@ export const AI_KEYS = [
   'pushAdvantage',
   'attackNeedRatio',
   'crowdSteps',
+  'memoryDays',
 ] as const;
 export type AiWeights = Record<(typeof AI_KEYS)[number], number>;
 

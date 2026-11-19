@@ -6,12 +6,19 @@
 import { classicAiProfile, defaultAiProfile, influenceAiProfile, type AiProfile } from '@core/ai';
 import type { GameContent } from '@core/content';
 
+/** El perfil sin acordarse de los enemigos que ya no ve (como antes de la fase 3). */
+function withoutMemory(profile: AiProfile): AiProfile {
+  return { ...profile, weights: { ...profile.weights, memoryDays: 0 } };
+}
+
 export const AI_PROFILES: Readonly<Record<string, (content: GameContent) => AiProfile>> = {
   ai: defaultAiProfile,
   /** La de antes de la fase 1 del plan (sin mapas de influencia). */
   fase0: classicAiProfile,
   /** La de la fase 1 del plan (mapas de influencia, sin planes que duran). */
-  fase1: influenceAiProfile,
+  fase1: (content) => withoutMemory(influenceAiProfile(content)),
+  /** La de la fase 2 del plan (planes que duran, sin memoria con la niebla). */
+  fase2: (content) => withoutMemory(defaultAiProfile(content)),
 };
 
 /** Quien juega un equipo en las partidas de equilibrio: un perfil de AI_PROFILES o nadie ('passive', para medir a la IA). */

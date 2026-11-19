@@ -12,6 +12,7 @@ import { capFunds } from './funds';
 import { recordFalls } from './falls';
 import { removeDead } from './lifecycle';
 import { dropStaleUndoableMoves } from './undo';
+import { rememberSightings } from './sightings';
 import type { GameEvent, GameState, TeamId } from '../model';
 
 export interface Invariant {
@@ -40,6 +41,14 @@ export const INVARIANTS: readonly Invariant[] = [
   // Lo que se puede deshacer es de unidades que siguen como las dejo su movimiento (si caen, o vuelven
   // a estar listas con la ronda nueva, ya no). Que otras acciones lo olviden es cosa de dispatch (keepsUndo).
   { id: 'undoWindow', restore: dropStaleUndoableMoves },
+  // Cada equipo recuerda donde vio por ultima vez a cada enemigo que ya no ve (y lo olvida al ver su casilla vacia).
+  {
+    id: 'sightings',
+    restore: (s) => {
+      rememberSightings(s);
+      return [];
+    },
+  },
 ];
 
 /** Deja la partida cumpliendo todas las INVARIANTS (ver Invariant.restore), tras una accion de `actor` o la ronda (null): sus sucesos. */

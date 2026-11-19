@@ -34,4 +34,26 @@ export interface TeamState {
    * accion o la ronda en que cae; el resultado de la partida mira la ultima caida.
    */
   fell: TeamFall | null;
+  /**
+   * Donde vio por ultima vez a cada unidad enemiga que ahora no ve (memoria con la niebla,
+   * rules/sightings.ts). Solo lo sabe su alianza: la niebla lo quita a las demas.
+   */
+  sightings: Sighting[];
+}
+
+/**
+ * Donde vio un equipo por ultima vez a una unidad enemiga (docs/PLAN-IA.md, fase 3: memoria con la
+ * niebla). Lo apunta la partida tras cada accion (invariante 'sightings') y lo olvida cuando ve su
+ * casilla vacia. Solo lo sabe su alianza: la niebla lo quita a las demas (y cada equipo lleva lo suyo).
+ */
+export interface Sighting {
+  uid: number;
+  /** Tipo de unidad (id de units.json). */
+  type: string;
+  team: TeamId;
+  x: number;
+  y: number;
+  life: number;
+  /** Dia en que la vio ahi. */
+  day: number;
 }

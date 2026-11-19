@@ -23,6 +23,7 @@ import { isAlliedOwner } from '../teams';
 import { captureProgress } from '../rules/capture';
 import { buildingAt, isEnemyHq, teamUnits } from '../rules/queries';
 import { effectiveStandingOrder } from '../squads/standingOrderQueries';
+import { foesInMind } from './memory';
 import { knownFoes } from '../playerView';
 import { canFight, isCapturer, isOnMap } from '../util/predicates';
 import { minBy } from '../util/pick';
@@ -93,11 +94,13 @@ function threats(s: GameState, play: PlayCtx): Objective[] {
 }
 
 /**
- * Lo que calcula que tiene el enemigo: lo que ve o, si es mas, lo que tendria con sus edificios si su
- * ejercito fuera como el propio (con la niebla, lo que ve se queda corto y se lanzaria antes de tiempo).
+ * Lo que calcula que tiene el enemigo: lo que ve y recuerda (fase 3) o, si es mas, lo que tendria con
+ * sus edificios si su ejercito fuera como el propio (con la niebla, lo que ve se queda corto y se
+ * lanzaria antes de tiempo).
  */
 function enemyEstimate(s: GameState, play: PlayCtx, ours: number): number {
-  const seen = knownFoes(s, play.me).reduce((total, foe) => total + valueOf(s, foe), 0);
+  const inMind = foesInMind(s, play.me, play.profile.weights.memoryDays);
+  const seen = inMind.reduce((total, { unit, weight }) => total + valueOf(s, unit) * weight, 0);
   const ownBuildings = s.buildings.filter((building) => building.owner === play.me).length;
   const theirBuildings = s.buildings.filter((building) => building.owner !== null && !isAlliedOwner(s, building.owner, play.me)).length;
   return Math.max(seen, (ours * theirBuildings) / Math.max(1, ownBuildings));

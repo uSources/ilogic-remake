@@ -172,6 +172,7 @@ const STEPS_BY_MODULE = {
   'rules/round': ['endRound'],
   'rules/invariants': ['restoreInvariants'],
   'rules/undo': ['forgetUndoableMoves', 'rememberMove', 'dropLastUndoableMove', 'dropStaleUndoableMoves'],
+  'rules/sightings': ['rememberSightings'],
   'rules/falls': ['recordFalls'],
   'rules/control': ['controlRound'],
   'squads/standingOrderSteps': ['giveStandingOrder', 'cancelStandingOrder', 'finishStandingOrder', 'keepCapturing', 'liftStandingOrder'],

@@ -25,7 +25,7 @@ export function* aiTurn(view: PlayerView, profile: AiProfile, rng: Rng): ActionP
   const alone = playCtx(team, profile);
   const { plan, order } = planFire(s, alone);
   // Las unidades juegan como un ejercito, con el fuego concentrado del plan (y sus mapas de influencia, si los usa).
-  const influence = new TurnInfluence(s, team, usesInfluence(profile));
+  const influence = new TurnInfluence(s, team, usesInfluence(profile), profile.weights.memoryDays);
   if (profile.planner) yield* profile.planner(s, playCtx(team, profile, { paths: 'army', influence: influence.now() }));
   for (const uid of order)
     yield* unitTurn(
@@ -54,13 +54,14 @@ class TurnInfluence {
     private readonly s: GameState,
     private readonly team: TeamId,
     private readonly wanted: boolean,
+    private readonly memoryDays: number,
   ) {}
 
   now(): Influence | undefined {
     if (!this.wanted) return undefined;
     const shape = `${knownFoes(this.s, this.team).length}/${teamUnits(this.s, this.team).length}`;
     if (!this.maps || shape !== this.shape) {
-      this.maps = influenceOf(this.s, this.team);
+      this.maps = influenceOf(this.s, this.team, this.memoryDays);
       this.shape = shape;
     }
     return this.maps;

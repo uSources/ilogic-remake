@@ -541,6 +541,12 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   Los guarda como ordenes permanentes de cada unidad con acciones (`giveStandingOrder`), asi que duran,
   se guardan y la niebla los esconde; no las cumple la partida (la IA ya ha usado sus unidades al
   acabar), sino la propia IA, que las lee como destino (`followPlan`).
+- **Memoria con la niebla** (`TeamState.sightings`, docs/PLAN-IA.md, fase 3): tras cada accion y cada
+  ronda, la invariante `sightings` (`rules/sightings.ts`) apunta para cada equipo donde ve a cada
+  enemigo y olvida lo que recordaba en una casilla que ahora ve vacia (sin niebla, nada). La niebla la
+  quita a las demas alianzas (`withoutBooks`). La IA tiene en la cabeza los que ve y los recordados de
+  hace `memoryDays` dias o menos (`foesInMind`, `ai/memory.ts`), con menos peso cuanto mas viejos, en
+  los mapas de influencia y en lo que calcula que tiene el enemigo.
 - **Puntos de extension**:
   - una pieza de reglas que la partida lleva o no (con su ajuste) es un modulo de reglas (ver
     "Modulos de reglas"): un fichero en `ruleModules/` y su entrada en `RULE_MODULES`;

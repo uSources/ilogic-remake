@@ -9,8 +9,11 @@
  * - **Control**: la fuerza propia que llega a una casilla menos la enemiga (valor: coste x vida / 100).
  * - **Frente**: las casillas propias (control a favor o igualado) que tocan una del enemigo.
  *
- * Es aproximado a proposito (cuenta pasos, no el coste de cada terreno, y no mira a los enemigos que no
- * ve): sirve para decidir, no para las reglas.
+ * Los enemigos que no ve cuentan donde los vio por ultima vez, menos cuanto mas viejo es el recuerdo
+ * (`foesInMind`, fase 3), si el perfil se acuerda (`memoryDays`).
+ *
+ * Es aproximado a proposito (cuenta pasos, no el coste de cada terreno): sirve para decidir, no para
+ * las reglas.
  */
 import { unitTypeOf } from '../gameContent';
 import { diamond, neighbors4 } from '../geom';
@@ -21,12 +24,12 @@ import { distanceMap, type Blockers } from '../rules/distance';
 import { moveBudget } from '../rules/movementProfile';
 import { movementOf, teamUnits } from '../rules/queries';
 import { canDamage } from '../rules/weapons';
-import { knownFoes } from '../playerView';
 import { lifeValue } from '../unitValue';
 import { firesAfterMove, isOnMap } from '../util/predicates';
 import type { Grid } from '../util/grid';
 import type { GameState, Pos, TeamId, Unit } from '../model';
 import type { Influence } from '../autopilot/profile';
+import { foesInMind, type FoeInMind } from './memory';
 
 /** Las casillas a las que `unit` puede disparar en su proximo turno. */
 function strikeZone(s: GameState, unit: Unit): Grid<boolean> {
@@ -58,11 +61,11 @@ function hostileTo(s: GameState, team: TeamId): Blockers {
   return (pos) => occupied.at(pos);
 }
 
-/** Suma, casilla a casilla, el valor de cada unidad en las casillas que cubre su zona. */
-function powerMap(s: GameState, units: readonly Unit[], zones: ReadonlyMap<number, Grid<boolean>>): Grid<number> {
+/** Suma, casilla a casilla, el valor de cada unidad (por su peso) en las casillas que cubre su zona. */
+function powerMap(s: GameState, units: readonly FoeInMind[], zones: ReadonlyMap<number, Grid<boolean>>): Grid<number> {
   const power = createLayer(s, 0);
-  for (const unit of units) {
-    const value = lifeValue(s, unit.life, unit);
+  for (const { unit, weight } of units) {
+    const value = lifeValue(s, unit.life, unit) * weight;
     zones.get(unit.uid)?.forEach((covered, pos) => {
       if (covered) power.set(pos, power.at(pos) + value);
     });
@@ -80,11 +83,14 @@ function frontOf(s: GameState, control: Grid<number>): Pos[] {
   return front;
 }
 
-/** Los mapas de influencia del equipo `team` con lo que sabe ahora. */
-export function influenceOf(s: GameState, team: TeamId): Influence {
-  const mine = teamUnits(s, team).filter(isOnMap);
-  const foes = knownFoes(s, team);
-  const zones = new Map([...mine, ...foes].map((unit) => [unit.uid, strikeZone(s, unit)]));
+/** Una unidad propia en el mapa: cuenta entera. */
+const certain = (unit: Unit): FoeInMind => ({ unit, weight: 1 });
+
+/** Los mapas de influencia del equipo `team` con lo que sabe ahora (y recuerda de `memoryDays` dias). */
+export function influenceOf(s: GameState, team: TeamId, memoryDays = 0): Influence {
+  const mine = teamUnits(s, team).filter(isOnMap).map(certain);
+  const foes = foesInMind(s, team, memoryDays);
+  const zones = new Map([...mine, ...foes].map(({ unit }) => [unit.uid, strikeZone(s, unit)]));
   const control = createLayer(s, 0);
   const friendly = powerMap(s, mine, zones);
   const hostile = powerMap(s, foes, zones);
@@ -103,7 +109,8 @@ export function influenceOf(s: GameState, team: TeamId): Influence {
     return damage;
   };
   return {
-    dangerFor: (unit, at) => foes.reduce((total, foe) => (zones.get(foe.uid)?.at(at) ? total + damageOf(foe, unit, at) : total), 0),
+    dangerFor: (unit, at) =>
+      foes.reduce((total, { unit: foe, weight }) => (zones.get(foe.uid)?.at(at) ? total + damageOf(foe, unit, at) * weight : total), 0),
     control: (at) => control.at(at),
     isFront: (at) => frontSet.at(at),
     front,
