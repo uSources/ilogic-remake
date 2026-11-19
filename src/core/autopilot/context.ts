@@ -15,7 +15,7 @@ import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
 import type { ActionPlan, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
 import { isAlive } from '../util/predicates';
-import type { AutopilotProfile } from './profile';
+import type { AutopilotProfile, Influence } from './profile';
 
 /**
  * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
@@ -35,6 +35,8 @@ export interface PlayCtx {
   readonly focusFire: ReadonlyMap<number, number>;
   /** Con que pesos y razones juega (el de las ordenes de la partida, o el de la IA que decide). */
   readonly profile: AutopilotProfile;
+  /** Los mapas de influencia del turno (la IA, ai/influence.ts); sin ellos, solo cuentan los pasos. */
+  readonly influence?: Influence;
 }
 
 /** Como mide los caminos quien juega: cada unidad sola o todo el ejercito a la vez (ver PlayCtx.paths). */
@@ -44,9 +46,23 @@ export type PathPlanning = 'alone' | 'army';
 export function playCtx(
   me: TeamId,
   profile: AutopilotProfile,
-  { paths = 'alone', focusFire = new Map() }: { paths?: PathPlanning; focusFire?: ReadonlyMap<number, number> } = {},
+  {
+    paths = 'alone',
+    focusFire = new Map(),
+    influence,
+  }: { paths?: PathPlanning; focusFire?: ReadonlyMap<number, number>; influence?: Influence } = {},
 ): PlayCtx {
-  return { me, paths, focusFire, profile };
+  return influence ? { me, paths, focusFire, profile, influence } : { me, paths, focusFire, profile };
+}
+
+/**
+ * Lo que cuesta (en pasos) acabar en cada casilla para `unit` segun las razones del perfil
+ * (`placeTerms`) y los mapas de influencia; sin mapas o sin razones, nada.
+ */
+function placeCostFor(s: GameState, play: PlayCtx, unit: Unit): (at: Pos) => number {
+  const { influence, profile } = play;
+  if (!influence || !profile.placeTerms.length) return () => 0;
+  return (at) => profile.placeTerms.reduce((total, term) => total + term.cost({ s, weights: profile.weights, unit, at, influence }), 0);
 }
 
 /**
@@ -77,8 +93,10 @@ export function bestMoveToward(s: GameState, play: PlayCtx, unit: Unit, dest: Po
   const stepsToDest = stepsMap(s, play, unit, dest);
   // Si no puede acabar en el destino, estar en el no es haber llegado: cuenta como lo peor (tiene que salir).
   const stepsLeft = (pos: Pos) => (samePos(pos, dest) ? Infinity : stepsToDest.at(pos));
+  // Con mapas de influencia, cada casilla cuesta ademas lo que digan las razones del perfil (peligro, compañia...).
+  const placeCost = placeCostFor(s, play, unit);
   // A igual distancia, la primera (sin mirar lo que gasta: como siempre).
-  return stepToward(range, { score: (tile) => [stepsLeft(tile.pos)], allows: (pos) => !samePos(pos, dest) });
+  return stepToward(range, { score: (tile) => [stepsLeft(tile.pos) + placeCost(tile.pos)], allows: (pos) => !samePos(pos, dest) });
 }
 
 /** Propone una accion de su equipo: sus sucesos, o null si no valia. */

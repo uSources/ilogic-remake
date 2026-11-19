@@ -7,4 +7,8 @@ import type { AutopilotProfile } from './profile';
 import { ATTACK_SCORE_TERMS } from './scoring';
 
 /** El perfil de autopilot/ con el contenido `content`. */
-export const autopilotProfileOf = (content: GameContent): AutopilotProfile => ({ weights: content.ai, scoreTerms: ATTACK_SCORE_TERMS });
+export const autopilotProfileOf = (content: GameContent): AutopilotProfile => ({
+  weights: content.ai,
+  scoreTerms: ATTACK_SCORE_TERMS,
+  placeTerms: [],
+});

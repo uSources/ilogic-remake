@@ -22,6 +22,12 @@ export const AI_KEYS = [
   'hqCaptureHeadStart',
   'bigUnitCost',
   'minEvictionWeight',
+  'dangerAversion',
+  'supportedDangerShare',
+  'lonelinessCost',
+  'companyRadius',
+  'exposureShare',
+  'coverDangerShare',
 ] as const;
 export type AiWeights = Record<(typeof AI_KEYS)[number], number>;
 
