@@ -172,6 +172,13 @@ Se probó antes con la infantería a 0,6 y los tanques a 0,9 (un tanque tapaba l
 y luego a 0,5 y 0,75 (aún descompensadas al lado de los edificios). Referencia: en Advance Wars
 (también en Re-Boot Camp) y Wargroove las unidades quedan claramente por debajo de los edificios.
 
+**El decorado** (árboles, flores, cactus, muñecos de nieve) va al 0,82 de su modelo (`DECOR_SIZE` en
+`src/view3d/engine/terrain/terrain.ts`): a tamaño completo los bosques tapaban las unidades de dentro
+y las casillas de alrededor. Se probó también agrandar las casillas, que en 3D es encoger todo lo de
+encima y acercar la cámara: las unidades quedaban demasiado pequeñas o cabía mucho menos mapa, y el
+relieve no cambia. Por eso, en su lugar, la cámara empieza más cerca (distancia 13; la rueda deja
+alejarse).
+
 **Una unidad encima de un edificio**: cada uno se va a una esquina de la casilla, la unidad a la de
 delante (la más cerca de la cámara) y el edificio, encogido a 0,8, a la de atrás
 (`src/view3d/engine/pieces/sharedTile.ts`). Así no se atraviesan y se ven los dos. Va por esquinas y

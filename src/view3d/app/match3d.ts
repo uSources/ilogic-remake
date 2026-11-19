@@ -31,7 +31,8 @@ import { ThreatZone } from '../systems/threat/threatZone';
 import type { StartedGame } from './gameStart';
 import type { GroupMode } from '../../controls/inputCommands';
 
-const START_DISTANCE = 16;
+/** De partida, lo bastante cerca para leer las unidades (la rueda deja alejarse para ver mas mapa). */
+const START_DISTANCE = 13;
 const START_YAW = Math.PI / 4;
 
 /** La pausa sale en el centro: la casilla a la que se ancla no cuenta. */
