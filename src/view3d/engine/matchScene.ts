@@ -12,7 +12,7 @@ import type { CameraPose, Point3 } from '../ports/camera';
 import type { FrameListener } from '../ports/frame';
 import type { EffectStage, PieceLookup, PieceStage, PuffKind } from '../ports/stage';
 import type { MovePreview, ScreenView, TileMarks } from '../ports/turn';
-import type { IntentMarks } from '../ports/orders';
+import type { DestinationMarks, IntentMarks } from '../ports/orders';
 import type { ThreatMarks } from '../ports/threat';
 import type { ScreenBox, SelectionBoxView } from '../ports/pointer';
 import { ThreeCameraView } from './camera/cameraView';
@@ -25,6 +25,7 @@ import { UnitOutline, type OutlinedUnits } from './fx/unitOutline';
 import { ThreatLinesView } from './fx/threatLines';
 import { MovePreviewView } from './fx/movePreview';
 import { IntentArrowsView } from './fx/intentArrows';
+import { DestinationFlagsView } from './fx/destinationFlags';
 import { ParticleSystem } from './fx/particles';
 import { BoardPieceStage } from './fx/pieceStage';
 import { WeatherView } from './fx/weather3d';
@@ -77,6 +78,7 @@ export class MatchScene implements ScreenView {
   private hoveredTile: Pos | null = null;
   private readonly preview: MovePreviewView;
   private readonly intents: IntentArrowsView;
+  private readonly flags: DestinationFlagsView;
   private readonly effects = new THREE.Group();
   private readonly particles = new ParticleSystem();
   private readonly marks = new GroundMarks();
@@ -98,6 +100,7 @@ export class MatchScene implements ScreenView {
     this.threatLines = new ThreatLinesView((pos) => this.board.groundOf(pos));
     this.preview = new MovePreviewView(this.board);
     this.intents = new IntentArrowsView((pos) => this.board.groundOf(pos));
+    this.flags = new DestinationFlagsView((pos) => this.board.groundOf(pos));
     this.weather = new WeatherView(container);
     this.sandDust = new SandDust(this.terrain.sandTiles, (pos) => this.board.groundOf(pos));
     this.cameraView = new ThreeCameraView(this.world.camera);
@@ -110,6 +113,7 @@ export class MatchScene implements ScreenView {
       this.threatLines.object,
       this.preview.object,
       this.intents.object,
+      this.flags.object,
       this.effects,
       this.weather.object,
       this.sandDust.object,
@@ -182,6 +186,11 @@ export class MatchScene implements ScreenView {
     return this.intents;
   }
 
+  /** Las banderas de a donde van las unidades con orden. */
+  get destinationMarks(): DestinationMarks {
+    return this.flags;
+  }
+
   /** El recuadro de seleccion mientras se arrastra. */
   get box(): SelectionBoxView {
     return this.selectionBox;
@@ -230,6 +239,7 @@ export class MatchScene implements ScreenView {
     this.highlights.update(seconds);
     this.stars.update(seconds);
     this.threatLines.update(seconds);
+    this.flags.update(seconds);
     this.preview.update(seconds, this.world.camera, this.canvas.clientHeight);
     this.board.update(seconds, this.world.camera.getWorldDirection(this.cameraForward));
     this.terrain.update(seconds);
