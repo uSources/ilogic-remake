@@ -24,5 +24,8 @@
   "lonelinessCost": 1,
   "companyRadius": 2,
   "exposureShare": 0.3,
-  "coverDangerShare": 0.75
+  "coverDangerShare": 0.75,
+  "pushAdvantage": 2,
+  "attackNeedRatio": 1.2,
+  "crowdSteps": 6
 }

@@ -30,6 +30,26 @@ Igual de fuerte (la diferencia está dentro del ruido), regala menos y va más a
 vaivenes (entra y sale del peligro de un turno a otro), que es justo lo que ataca la fase 2. Probado
 y descartado: no perseguir a quien no llega a disparar (38 % contra 50 %: más floja).
 
+**Fase 2 hecha:** cada unidad tiene un objetivo que mantiene de un turno a otro (`ai/plans.ts`),
+guardado como orden permanente y cumplido por la propia IA (opción b de la decisión abierta 1).
+Contra la de la fase 1 (perfil `fase1`), 80 partidas con los lados alternos
+(`balance/reports/ia-fase2.md`; allí la nueva sale como `planes`):
+
+| Medida | Fase 1 | Con planes |
+|---|---|---|
+| Gana (de verdad o con ventaja clara) | 36 % | 53 % |
+| Regaladas por partida | 14,7 | 16,6 |
+| Al aliado más cercano | 3,1 casillas | 3,4 casillas |
+| Vaivenes | 27 % | 28 % |
+| Turno (media / p95) | 58 / 184 ms | 59 / 188 ms |
+
+Claramente más fuerte, algo más agresiva (regala un poco más). Lo que no ha movido: los vaivenes
+(los domina el ir y venir de la pelea, no el objetivo) y las partidas sin terminar. Probado y
+corregido por el camino: con la niebla, «rematar» contaba solo los enemigos a la vista y lanzaba a
+todo el ejército contra la Base demasiado pronto (18 % contra 77 %); ahora estima al enemigo también
+por sus edificios. Y defender cualquier edificio con un enemigo cerca la dejaba en casa: solo se
+defiende lo que están capturando y la Base.
+
 Cada fase es una PR (o dos), se mide antes y después y se puede parar en cualquiera: cada una
 mejora algo por sí sola.
 

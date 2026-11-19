@@ -28,6 +28,9 @@ export const AI_KEYS = [
   'companyRadius',
   'exposureShare',
   'coverDangerShare',
+  'pushAdvantage',
+  'attackNeedRatio',
+  'crowdSteps',
 ] as const;
 export type AiWeights = Record<(typeof AI_KEYS)[number], number>;
 

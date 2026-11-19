@@ -26,6 +26,7 @@ export function* aiTurn(view: PlayerView, profile: AiProfile, rng: Rng): ActionP
   const { plan, order } = planFire(s, alone);
   // Las unidades juegan como un ejercito, con el fuego concentrado del plan (y sus mapas de influencia, si los usa).
   const influence = new TurnInfluence(s, team, usesInfluence(profile));
+  if (profile.planner) yield* profile.planner(s, playCtx(team, profile, { paths: 'army', influence: influence.now() }));
   for (const uid of order)
     yield* unitTurn(
       s,

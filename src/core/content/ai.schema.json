@@ -29,7 +29,10 @@
     "lonelinessCost",
     "companyRadius",
     "exposureShare",
-    "coverDangerShare"
+    "coverDangerShare",
+    "pushAdvantage",
+    "attackNeedRatio",
+    "crowdSteps"
   ],
   "properties": {
     "$schema": {
@@ -159,6 +162,21 @@
       "type": "number",
       "minimum": 0,
       "description": "Con mapas de influencia: en zona del enemigo, una unidad se pone a cubierto si donde esta le pueden quitar esta parte de su vida o mas."
+    },
+    "pushAdvantage": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Planes (docs/PLAN-IA.md, fase 2): con un ejercito que vale esto veces lo que conoce del enemigo, todas a la Base enemiga."
+    },
+    "attackNeedRatio": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Planes: fuerza propia que manda a un grupo enemigo, en veces lo que vale el grupo; con eso cubierto, las demas van a otro sitio."
+    },
+    "crowdSteps": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Planes: pasos de mas que cuesta un objetivo que ya tiene bastante (para no amontonarse)."
     }
   }
 }
