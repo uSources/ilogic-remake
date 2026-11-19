@@ -42,6 +42,12 @@ const WEATHER_REACH = 0.9;
 /** Lo que alumbra la luz del sol alrededor del centro del mapa (por su lado mas largo). */
 const LIGHT_REACH = 0.75;
 /** Las esquinas de arriba de una casilla, desde su centro. */
+/** Las esquinas de la pantalla (coordenadas de -1 a 1), para saber que parte del mapa se ve. */
+const SCREEN_CORNERS = [-1, 1].flatMap((x) => [-1, 1].map((y) => new THREE.Vector2(x, y)));
+/** Una esquina que mira por encima del horizonte llega hasta aqui (en casillas): mas que cualquier mapa. */
+const HORIZON_REACH = 200;
+/** Del centro de una casilla (el punto del mundo) a su borde: en el minimapa la casilla x va de x a x + 1. */
+const TILE_HALF = 0.5;
 const TILE_CORNERS = [-0.5, 0.5].flatMap((dx) => [-0.5, 0.5].map((dz) => new THREE.Vector3(dx, 0, dz)));
 
 /** Los puertos con los que se animan los sucesos (systems/events). */
@@ -288,6 +294,28 @@ export class MatchScene implements ScreenView {
       const point = this.screenOf(pos);
       return !!point && point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom;
     });
+  }
+
+  /**
+   * La parte del mapa que se ve, en casillas del minimapa (la casilla x va de x a x + 1): el rectangulo
+   * que encierra lo que tocan del suelo (a la altura `groundHeight`) las cuatro esquinas de la pantalla,
+   * dentro del mapa. Las esquinas que miran por encima del horizonte llegan hasta el borde del mapa.
+   */
+  viewedArea(groundHeight: number): { x: number; y: number; w: number; h: number } {
+    const grid = mapGrid(this.state);
+    const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), -groundHeight);
+    const raycaster = new THREE.Raycaster();
+    const corners = SCREEN_CORNERS.map((corner) => {
+      raycaster.setFromCamera(corner, this.world.camera);
+      return raycaster.ray.intersectPlane(ground, new THREE.Vector3()) ?? raycaster.ray.at(HORIZON_REACH, new THREE.Vector3());
+    });
+    const side = (pick: (point: THREE.Vector3) => number, size: number) => {
+      const values = corners.map((point) => THREE.MathUtils.clamp(pick(point) + TILE_HALF, 0, size));
+      return { from: Math.min(...values), to: Math.max(...values) };
+    };
+    const across = side((point) => point.x, grid.width);
+    const deep = side((point) => point.z, grid.height);
+    return { x: across.from, y: deep.from, w: across.to - across.from, h: deep.to - deep.from };
   }
 
   /** La casilla bajo un punto de la pantalla: la de la unidad si se toca una, si no la del terreno. */

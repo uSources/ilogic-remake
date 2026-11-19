@@ -136,6 +136,7 @@ export const help: HelpTexts = {
     ['Move the camera', 'Arrows / WASD', 'Drag with the middle button, mouse at the edge or drag with a finger'],
     ['Turn the camera', '—', 'Drag with the right button'],
     ['Zoom', `${keys.zoomIn} / ${keys.zoomOut}`, 'Wheel'],
+    ['Minimap', `${keys.minimap} (open or close)`, 'Click or drag on it: the camera goes there. The white box is what you see'],
     [
       'End turn',
       keys.endTurn,
