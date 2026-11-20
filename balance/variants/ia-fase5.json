@@ -1,0 +1,8 @@
+{
+  "name": "ia-fase5",
+  "notes": "Generada por \"balance tune-ai\" el 2026-11-20",
+  "set": {
+    "AI.minCapturers": 5,
+    "AI.maxCaptureDistance": 6
+  }
+}

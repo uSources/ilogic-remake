@@ -8,6 +8,7 @@ import { runDuels, runGames } from '../tools/balance/runner';
 import { buildVariant } from '../tools/balance/variant';
 import { buildReport, DEFAULT_TARGETS } from '../tools/balance/report';
 import { emptyHumanity } from '../tools/balance/humanity';
+import { isBetter, steppedValues } from '../tools/balance/tuneAi';
 import { entryOf, type GameContent } from '@core/content';
 
 const TANK_INDEX = defaultContent().units.list.findIndex((unitType) => unitType.id === 'Tank');
@@ -253,5 +254,20 @@ describe('herramienta de equilibrio: el informe', () => {
     expect(report.ai?.humanity.map((row) => row.profile)).toEqual(['nueva', 'ai']);
     expect(report.flags.filter((flag) => flag.startsWith('Un bando gana mas'))).toEqual([]);
     expect(report.suggestions).toEqual([]);
+  });
+});
+
+describe('herramienta de equilibrio: ajustar los pesos de la IA (tune-ai, docs/PLAN-IA.md, fase 5)', () => {
+  it('sube y baja cada peso; uno entero sigue entero y cambia al menos 1', () => {
+    expect(steppedValues(10, 1.3)).toEqual([13, 8]);
+    expect(steppedValues(1, 1.3)).toEqual([2, 0]);
+    expect(steppedValues(0, 1.3)).toEqual([1]);
+    expect(steppedValues(0.6, 1.5)).toEqual([0.9, 0.4]);
+  });
+
+  it('solo se queda con un cambio que gane claramente y mas que lo que ya tenia', () => {
+    expect(isBetter(0.12, 0, 0.1)).toBe(true);
+    expect(isBetter(0.08, 0, 0.1)).toBe(false);
+    expect(isBetter(0.15, 0.2, 0.1)).toBe(false);
   });
 });

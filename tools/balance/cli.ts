@@ -7,6 +7,7 @@
  *   npm run balance -- duel --terrain Woods
  *   npm run balance -- compare actual prueba
  *   npm run balance -- tune --iterations 3 --games 150
+ *   npm run balance -- tune-ai --weights dangerAversion,minCapturers --games 40   pesos de la IA contra la de ahora
  *   npm run balance -- run --teams 3                 tres equipos de la IA (todos contra todos)
  *   npm run balance -- run --vs candidata --name c   un perfil de IA (profiles.ts) contra la del juego, lados alternos
  *   npm run balance -- run --vs passive              la IA contra un equipo que no hace nada
@@ -19,6 +20,16 @@ import { cpus } from 'node:os';
 import { join } from 'node:path';
 import { FIRST_TEAM } from './play';
 import { checkPolicy, PASSIVE, type Policy } from './profiles';
+import {
+  CURRENT_PROFILE,
+  DEFAULT_TUNED_WEIGHTS,
+  edgeOf,
+  isBetter,
+  steppedValues,
+  TUNED_PROFILE,
+  tuneMarkdown,
+  type TuneTry,
+} from './tuneAi';
 import { buildReport, compareMarkdown, DEFAULT_TARGETS, duelMarkdown, reportMarkdown, type Report, type Targets } from './report';
 import { buildVariant, type Variant, type VariantSetup } from './variant';
 import { runDuels, runGames, type GamesRun } from './runner';
@@ -47,6 +58,9 @@ const BALANCE_OPTIONS = {
   duel: 'flag',
   trials: 'number',
   iterations: 'number',
+  weights: 'text',
+  step: 'number',
+  margin: 'number',
   'target-days': 'text',
 } as const;
 
@@ -120,31 +134,31 @@ function policiesFrom(parsed: BalanceArgs): Policy[] {
 /** Dos perfiles de IA distintos: cada uno juega la mitad de las partidas de cada lado (con `--vs passive`, no). */
 const playsTwoProfiles = (policies: readonly Policy[]): boolean => new Set(policies).size > 1 && !policies.includes(PASSIVE);
 
-/** Las partidas que pide la linea de ordenes. */
-function gamesRunFrom(parsed: BalanceArgs): GamesRun {
+/** Las partidas que pide la linea de ordenes (con `policies`, esos perfiles en vez de los de `--vs`). */
+function gamesRunFrom(parsed: BalanceArgs, policies = policiesFrom(parsed)): GamesRun {
   const games = parsed.number('games', DEFAULT_GAMES);
   const firstSeed = parsed.number('seed', 1);
   return {
     seeds: Array.from({ length: games }, (_, index) => firstSeed + index),
     maxDays: parsed.number('days', DEFAULT_DAYS),
-    policies: policiesFrom(parsed),
+    policies,
     threads: Math.max(1, Math.min(parsed.number('threads', cpus().length), games)),
     firstTeam: parsed.number('first', FIRST_TEAM),
     rotateStarts: parsed.flag('swap') === true ? 1 : 0,
     size: parsed.number('size', DEFAULT_MAP_SIZE),
-    alternateSides: playsTwoProfiles(policiesFrom(parsed)),
+    alternateSides: playsTwoProfiles(policies),
   };
 }
 
-/** La tabla de duelos del informe (sin `--no-duel`), con la primera semilla de las partidas. */
+/** La tabla de duelos del informe (sin `--no-duel`; `tune-ai` no la mira), con la primera semilla de las partidas. */
 async function reportDuel(setup: VariantSetup, parsed: BalanceArgs, seed: number) {
-  if (parsed.flag('duel') === false) return undefined;
+  if (parsed.flag('duel') === false || parsed.positionals[0] === 'tune-ai') return undefined;
   const terrain = parsed.text('terrain', 'Grass');
   return { terrain, cells: await runDuels(setup, { trials: RUN_DUEL_TRIALS, terrain, seed }) };
 }
 
-async function evaluate(variant: Variant, parsed: BalanceArgs): Promise<Report> {
-  const run = gamesRunFrom(parsed);
+async function evaluate(variant: Variant, parsed: BalanceArgs, policies?: Policy[]): Promise<Report> {
+  const run = gamesRunFrom(parsed, policies);
   const setup = buildVariant(variant, defaultContent()); // aqui se valida: una ruta o un valor mal escrito para antes de jugar
   const { changes } = setup;
   console.log(`Variante "${variant.name}": ${changes.length} cambios. ${run.seeds.length} partidas, ${run.threads} hilos...`);
@@ -195,6 +209,7 @@ const COMMANDS: Record<string, (parsed: BalanceArgs) => void | Promise<void>> = 
     save(`comparar-${before}-vs-${after}`.replace(/\.json/g, ''), markdown);
   },
   tune,
+  'tune-ai': tuneAi,
 };
 
 /** Ajuste automatico de precios: aplica las propuestas, vuelve a jugar y se queda con lo que mejore. */
@@ -225,6 +240,62 @@ async function tune(parsed: BalanceArgs): Promise<void> {
   );
   printSummary(best, save(variant.name, reportMarkdown(best), best));
   console.log(`Variante: ${vpath}`);
+}
+
+/** Lo de siempre de `tune-ai`: cuanto sube o baja cada peso y lo que tiene que ganar un cambio para quedarse. */
+const TUNE_AI_STEP = 1.3;
+const TUNE_AI_MARGIN = 0.1;
+
+/**
+ * Ajuste de los pesos de la IA (docs/PLAN-IA.md, fase 5): sube y baja cada peso de `--weights`, juega
+ * con el cambio contra la IA de ahora y se queda con lo que gane por `--margin` o mas (tuneAi.ts).
+ */
+async function tuneAi(parsed: BalanceArgs): Promise<void> {
+  const name = parsed.text('name') ?? 'ia-ajustada';
+  const weights = parsed.text('weights')?.split(',') ?? [...DEFAULT_TUNED_WEIGHTS];
+  const search: AiSearch = { name, step: parsed.number('step', TUNE_AI_STEP), margin: parsed.number('margin', TUNE_AI_MARGIN) };
+  const state: AiSearchState = { kept: {}, tries: [], best: 0 };
+  for (let round = 1; round <= parsed.number('iterations', 1); round++)
+    for (const weight of weights) await tryWeight(parsed, search, state, weight);
+  mkdirSync(VARIANTS, { recursive: true });
+  const notes = `Generada por "balance tune-ai" el ${new Date().toISOString().slice(0, 10)}`;
+  writeFileSync(join(VARIANTS, `${name}.json`), JSON.stringify({ name, notes, set: aiSet(state.kept) }, null, 2) + '\n');
+  console.log(`Informe: ${save(name, tuneMarkdown(name, state.tries, state.kept, parsed.number('games', DEFAULT_GAMES)))}`);
+}
+
+/** Como busca `tune-ai`: el nombre del resultado, cuanto sube o baja cada peso y lo que tiene que ganar. */
+interface AiSearch {
+  name: string;
+  step: number;
+  margin: number;
+}
+
+/** Lo que lleva `tune-ai`: los cambios que se quedan, cada prueba y la ventaja que tiene ya. */
+interface AiSearchState {
+  kept: Record<string, number>;
+  tries: TuneTry[];
+  best: number;
+}
+
+/** Los cambios de pesos como variante (`AI.<peso>`). */
+const aiSet = (weights: Readonly<Record<string, number>>) =>
+  Object.fromEntries(Object.entries(weights).map(([key, value]) => [`AI.${key}`, value]));
+
+/** Sube y baja un peso; se queda con el primer valor que gane claramente. */
+async function tryWeight(parsed: BalanceArgs, search: AiSearch, state: AiSearchState, weight: string): Promise<void> {
+  const value = state.kept[weight] ?? (defaultContent().files.ai as Record<string, unknown>)[weight];
+  if (typeof value !== 'number') throw new Error(`"${weight}" no es un peso de ai.json`);
+  for (const candidate of steppedValues(value, search.step)) {
+    const variant = { name: `${search.name}-${weight}-${candidate}`, set: aiSet({ ...state.kept, [weight]: candidate }) };
+    const edge = edgeOf(await evaluate(variant, parsed, [TUNED_PROFILE, CURRENT_PROFILE]));
+    const keep = isBetter(edge, state.best, search.margin);
+    state.tries.push({ weight, value: candidate, edge, kept: keep });
+    console.log(`  ${weight} = ${candidate}: ${Math.round(edge * 100)} %${keep ? ' (se queda)' : ''}`);
+    if (!keep) continue;
+    state.kept[weight] = candidate;
+    state.best = edge;
+    return;
+  }
 }
 
 async function main(): Promise<void> {

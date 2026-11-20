@@ -5,20 +5,33 @@
  */
 import { classicAiProfile, defaultAiProfile, influenceAiProfile, styledAiProfile, type AiProfile } from '@core/ai';
 import type { GameContent } from '@core/content';
+import { defaultContent } from '@core/content/default';
 
-/** El perfil sin acordarse de los enemigos que ya no ve (como antes de la fase 3). */
+/** Los pesos de antes de la fase 5 (`tune-ai` los cambio: balance/reports/ia-fase5.md). */
+const BEFORE_TUNING = { minCapturers: 4, maxCaptureDistance: 8 };
+
+/** El perfil con los pesos de antes de la fase 5. */
+function untuned(profile: AiProfile): AiProfile {
+  return { ...profile, weights: { ...profile.weights, ...BEFORE_TUNING } };
+}
+
+/** El perfil sin acordarse de los enemigos que ya no ve (como antes de la fase 3), con los pesos de entonces. */
 function withoutMemory(profile: AiProfile): AiProfile {
-  return { ...profile, weights: { ...profile.weights, memoryDays: 0 } };
+  return untuned({ ...profile, weights: { ...profile.weights, memoryDays: 0 } });
 }
 
 export const AI_PROFILES: Readonly<Record<string, (content: GameContent) => AiProfile>> = {
   ai: defaultAiProfile,
+  /** La del juego con los pesos de ai.json aunque la variante los cambie (contra ella prueba `tune-ai`). */
+  actual: () => defaultAiProfile(defaultContent()),
   /** La de antes de la fase 1 del plan (sin mapas de influencia). */
-  fase0: classicAiProfile,
+  fase0: (content) => untuned(classicAiProfile(content)),
   /** La de la fase 1 del plan (mapas de influencia, sin planes que duran). */
   fase1: (content) => withoutMemory(influenceAiProfile(content)),
   /** La de la fase 2 del plan (planes que duran, sin memoria con la niebla). */
   fase2: (content) => withoutMemory(defaultAiProfile(content)),
+  /** La de las fases 3 y 4 (memoria, personalidades), antes de ajustar sus pesos en la fase 5. */
+  fase4: (content) => untuned(defaultAiProfile(content)),
   // La del juego con otra personalidad o dificultad (ai.json; docs/PLAN-IA.md, fase 4).
   agresiva: (content) => styledAiProfile(content, { personality: 'aggressive', difficulty: 'normal' }),
   cauta: (content) => styledAiProfile(content, { personality: 'cautious', difficulty: 'normal' }),

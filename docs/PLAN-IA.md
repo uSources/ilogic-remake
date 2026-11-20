@@ -103,6 +103,24 @@ ganando casi lo mismo (40-43 %): las partidas se deciden más por el dinero que 
 ahí que la Fácil ahorre sin motivo. Queda para otra PR: que una misión elija la personalidad de su
 IA (`missions.json`), y que la fase 5 mire si la del juego debería parecerse más a la codiciosa.
 
+**Fase 5 hecha (la parte de jugar sola):** `npm run balance -- tune-ai` ajusta los pesos de la IA
+(`balance/README.md`, «Ajustar los pesos de la IA»). Sube y baja cada peso, juega con el cambio
+contra la IA de ahora (perfil `actual`) con los lados alternos y se queda con lo que gane por 10
+puntos o más. Probados los tres pesos que hacían fuerte a la codiciosa, 40 partidas por prueba
+(`balance/reports/ia-fase5.md`):
+
+| Peso | Antes | Después | Ventaja en la búsqueda |
+|---|---|---|---|
+| `minCapturers` | 4 | 5 | +27 puntos |
+| `maxCaptureDistance` | 8 | 6 | +28 puntos (casi lo mismo que solo con el anterior) |
+| `ownedBuildingPreference` | 4 | 4 | sin cambio (ni 3 ni 5 mejoran) |
+
+Confirmado con otras 80 partidas y otras semillas (`balance/reports/ia-fase5-confirmar.md`): 46 %
+contra 38 % de la de antes. Gana menos que en la búsqueda (40 partidas dejan mucho ruido, y la
+búsqueda se queda con lo que tuvo suerte), pero sigue por delante, así que pasa a `ai.json`. La de
+antes de ajustar es el perfil `fase4`. Lo que no se ha hecho: **imitar a personas**, porque aún no
+hay partidas de personas registradas que mirar.
+
 Cada fase es una PR (o dos), se mide antes y después y se puede parar en cualquiera: cada una
 mejora algo por sí sola.
 
@@ -256,7 +274,7 @@ olvida a quien se esconde en un bosque. Tests de la invariante y de la niebla.
 **Hecho cuando:** cada personalidad se distingue en las medidas (la agresiva ataca antes y pierde
 más; la tortuga gana menos edificios...) y Fácil pierde claramente contra Normal.
 
-## Fase 5 (más adelante): que los números se aprendan
+## Fase 5: que los números se aprendan
 
 La estructura sigue escrita a mano (es lo que deja ajustarla y entenderla); lo que se aprende son
 **sus pesos**:
@@ -288,7 +306,7 @@ La estructura sigue escrita a mano (es lo que deja ajustarla y entenderla); lo q
 | 2. Planes que duran | 1 o 2 | No (usa escuadras y órdenes) | No |
 | 3. Memoria | 1 (+1 opcional: fantasmas en 3D) | Sí (`SAVE_VERSION`) | Opcional |
 | 4. Personalidades y dificultad | 2 (IA; menú) | Sí (`TeamSetup`) | El menú |
-| 5. Aprender los pesos | Más adelante | No | No |
+| 5. Aprender los pesos | 1 (herramienta y pesos; imitar a personas, más adelante) | No | No |
 
 ## Decisiones abiertas
 
