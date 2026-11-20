@@ -39,6 +39,13 @@ export interface TeamState {
    * rules/sightings.ts). Solo lo sabe su alianza: la niebla lo quita a las demas.
    */
   sightings: Sighting[];
+  /**
+   * Como juega cuando lo juega la IA (docs/PLAN-IA.md, fase 4): su personalidad y su dificultad, por
+   * su id en ai.json ("personalities", "difficulties"). Un equipo de una persona tambien las tiene:
+   * las usa si se le da a la IA.
+   */
+  personality: string;
+  difficulty: string;
 }
 
 /**

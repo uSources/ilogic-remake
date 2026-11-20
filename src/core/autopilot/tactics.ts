@@ -13,8 +13,8 @@ import type { MoveRange } from '../rules/movement';
 import { mergeTargets } from '../rules/transport';
 import { canStillFire } from '../rules/unitTurn';
 import type { ActionPlan, Building, GameState, Pos, Unit } from '../model';
-import { maxBy, minBy } from '../util/pick';
-import { act, bestMoveToward, doMove, finish, stepsMap, strikeReach, type PlayCtx } from './context';
+import { minBy } from '../util/pick';
+import { act, bestMoveToward, chooseBest, doMove, finish, stepsMap, strikeReach, type PlayCtx } from './context';
 import { knownFoes } from '../playerView';
 import { canRepair } from '../rules/supply';
 import { buildingAt } from '../rules/queries';
@@ -88,7 +88,9 @@ function bestShot(s: GameState, play: PlayCtx, unit: Unit, enemies: Unit[], orig
       .filter((from) => inAttackRange(s, unit, from, target))
       .map((from) => ({ from, target, score: shotScore(s, play, unit, target, from) })),
   );
-  return maxBy(
+  // Con nervios, a veces no el mejor sino uno que se le acerca (chooseBest).
+  return chooseBest(
+    play,
     shots.filter((shot) => shot.score > 0),
     (shot) => shot.score,
   );

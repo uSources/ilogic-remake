@@ -37,7 +37,7 @@ export interface NewGameStateOptions {
 /** Partida sin unidades ni edificios, en el dia 1, con su contenido; el primer equipo aun no ha empezado su turno. */
 export function newGameState(options: NewGameStateOptions): GameState {
   const { map, settings } = options;
-  const teams = newTeams(options.teams, settings.initialFunds);
+  const teams = newTeams(options.teams, settings.initialFunds, options.content);
   const mode = modeIn(options.modes ?? GAME_MODES, options.mode);
   const turnOrder = mode.turnOrder(
     teams.map((team) => team.id),

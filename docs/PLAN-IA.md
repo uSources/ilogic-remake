@@ -71,6 +71,38 @@ perder de vista. Probado y descartado: recordar 3 días (40 % contra 43 %,
 ya no hay nadie, que la vuelve prudente de más. Los fantasmas en el 3D (decisión abierta 2) quedan
 para otra PR (`docs/IDEAS.md`).
 
+**Fase 4 hecha:** cada equipo lleva su personalidad y su dificultad (`TeamState.personality`,
+`difficulty`; en `ai.json`, «personalities» y «difficulties»; `SAVE_VERSION` 16). Su IA es la del
+juego con los pesos que cambian las dos (`aiProfileFor`, `ai/styles.ts`). Una escaramuza da a cada IA
+una personalidad al azar con la semilla del mapa (la revancha la repite), y «Nueva partida» deja
+elegir la dificultad cuando el rival es la IA. Decisiones abiertas 3 y 4, con lo propuesto:
+personalidad al azar, tres dificultades.
+
+- **Nervios** (`nerves`): a quién dispara y qué objetivo sigue lo elige con `chooseBest`, que con
+  nervios toma una opción al azar entre las que se acercan a la mejor (`nearlyBest`, con el azar del
+  turno). Sin nervios, como antes y sin tirar el dado.
+- **Fácil**: nervios 1, apenas mira el peligro (3), no concentra el fuego, no mira lo expuesta que
+  se queda y guarda un 35 % de su dinero sin gastar (`reserveShare`). **Normal**: la IA de antes.
+  **Difícil**: la de antes con un 50 % más de dinero de salida (`startFunds`).
+
+Contra la del juego (Normal, equilibrada), 40 partidas con los lados alternos para cada una
+(`balance/reports/ia-fase4-*.md`):
+
+| Perfil | Gana ella / la del juego | Regaladas por partida (ella / la del juego) |
+|---|---|---|
+| Fácil | 25 % / 63 % (0 victorias de verdad contra 7) | 14,7 / 15,7 |
+| Agresiva | 45 % / 43 % | 19,4 / 14,2 |
+| Cauta | 38 % / 53 % | 15,4 / 15,4 |
+| Codiciosa | 55 % / 35 % | 15,4 / 15,9 |
+| Tortuga | 45 % / 45 % | 16,4 / 15,7 |
+
+Fácil pierde claramente. La agresiva pierde muchas más unidades por igual resultado. La cauta sale
+más floja y la codiciosa más fuerte; con las medidas de ahora, la tortuga no se distingue. Probado
+por el camino: solo con nervios (0,5 y luego 1) y con peores pesos de peligro, la Fácil seguía
+ganando casi lo mismo (40-43 %): las partidas se deciden más por el dinero que por cada disparo, de
+ahí que la Fácil ahorre sin motivo. Queda para otra PR: que una misión elija la personalidad de su
+IA (`missions.json`), y que la fase 5 mire si la del juego debería parecerse más a la codiciosa.
+
 Cada fase es una PR (o dos), se mide antes y después y se puede parar en cualquiera: cada una
 mejora algo por sí sola.
 

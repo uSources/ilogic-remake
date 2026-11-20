@@ -110,12 +110,12 @@ describe('equipos: quien es enemigo de quien', () => {
   });
 
   it('cada equipo tiene lo suyo: dinero y estadisticas', () => {
-    const teams = newTeams([{ controller: 'human', funds: 700 }, { controller: 'ai' }], 300);
+    const teams = newTeams([{ controller: 'human', funds: 700 }, { controller: 'ai' }], 300, defaultContent());
     expect(teams.map((team) => [team.id, team.alliance, team.funds])).toEqual([
       [0, 0, 700],
       [1, 1, 300],
     ]);
-    expect(() => newTeams([{ controller: 'human' }], 300)).toThrow();
+    expect(() => newTeams([{ controller: 'human' }], 300, defaultContent())).toThrow();
     // Todos en la misma alianza: nadie seria enemigo de nadie.
     expect(() =>
       newTeams(
@@ -124,9 +124,24 @@ describe('equipos: quien es enemigo de quien', () => {
           { controller: 'ai', alliance: 3 },
         ],
         300,
+        defaultContent(),
       ),
     ).toThrow(/alianzas/);
     expect(() => teamState(blankState(), 5)).toThrow();
+  });
+
+  it('la IA juega con su personalidad y su dificultad (las de siempre si no se dicen); la dificultad cambia su dinero de salida', () => {
+    const content = defaultContent();
+    const [person, ai] = newTeams(
+      [{ controller: 'human' }, { controller: 'ai', personality: 'turtle', difficulty: 'hard' }],
+      1000,
+      content,
+    );
+    expect([person!.personality, person!.difficulty]).toEqual([content.defaultPersonality.id, content.defaultDifficulty.id]);
+    expect([ai!.personality, ai!.difficulty]).toEqual(['turtle', 'hard']);
+    expect(person!.funds).toBe(1000);
+    expect(ai!.funds).toBe(Math.round(1000 * content.difficulties.byId.hard!.startFunds));
+    expect(() => newTeams([{ controller: 'human' }, { controller: 'ai', personality: 'nadie' }], 1000, content)).toThrow(/personalidad/);
   });
 });
 

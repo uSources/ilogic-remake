@@ -12,8 +12,8 @@ el PvP, después.
 ## En marcha
 
 - **Una IA más humana** (planes que duran, mapas de influencia, memoria, personalidades y
-  dificultad): plan por fases en `docs/PLAN-IA.md`, para revisar antes de tocar código. Recoge
-  también las ideas 1 (partidas que acaben) y 3 (dificultad).
+  dificultad): plan por fases en `docs/PLAN-IA.md`. Recoge también la idea 1 (partidas que acaben); la
+  dificultad en «Nueva partida» ya está (fase 4).
 
 ## Vista 3D (lo que tenía el 2D y aún falta)
 
@@ -53,8 +53,6 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
    ejércitos más pequeños (2) y un asalto escoltado a la Base.
 2. **Ejércitos más pequeños.** Bajar los puntos de mando de 30 a ~20 para que cada unidad pese más y
    haya menos que mover. Medir antes con `npm run balance`.
-3. **Dificultad en «Nueva partida».** Fácil: la IA empieza con menos dinero y sin
-   curarse. Normal: como ahora.
 4. **Modo Escaramuza.** Mapa pequeño (12×12), menos dinero, partidas de ~10 días.
 5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar visión. Ver cómo se juegan primero (PR #47).
 

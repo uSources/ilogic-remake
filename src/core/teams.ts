@@ -5,6 +5,8 @@
  * alianzas o todos contra todos, sin tocar las reglas.
  */
 import type { ControllerKind, GameState, TeamId, TeamState, TeamStats } from './model';
+import { entryOf } from './content/catalog';
+import type { GameContent } from './content';
 
 /** El estado de un equipo de la partida. Un numero que no es de ningun equipo es un fallo de quien lo pide. */
 export function teamState(s: GameState, team: TeamId): TeamState {
@@ -88,9 +90,16 @@ export interface TeamSetup {
   controller: ControllerKind;
   /** Su alianza (si no, una propia: es enemigo de todos los demas). */
   alliance?: number;
-  /** Dinero al empezar (si no, la regla initialFunds). */
+  /** Dinero al empezar (si no, la regla initialFunds; la IA, por lo que diga su dificultad). */
   funds?: number;
+  /** Si lo juega la IA, su personalidad (id de ai.json; si no, la de "default": true). */
+  personality?: string;
+  /** Si lo juega la IA, su dificultad (id de ai.json; si no, la de "default": true). */
+  difficulty?: string;
 }
+
+/** Lo que hace falta del contenido para dar a cada equipo su forma de jugar (sus personalidades y dificultades). */
+export type AiStyles = Pick<GameContent, 'personalities' | 'defaultPersonality' | 'difficulties' | 'defaultDifficulty'>;
 
 /** Dos equipos enemigos: el primero lo juega `first` y el segundo, `second` (una partida normal es humano contra IA). */
 export const duel = (first: ControllerKind, second: ControllerKind): TeamSetup[] => [{ controller: first }, { controller: second }];
@@ -105,19 +114,27 @@ export function duelTeams(s: GameState): [first: TeamId, second: TeamId] {
 
 export const emptyTeamStats = (): TeamStats => ({ built: 0, spent: 0, lost: 0, captured: 0, army: [] });
 
-/** Los equipos de una partida nueva. */
-export function newTeams(setups: readonly TeamSetup[], initialFunds: number): TeamState[] {
+/** Los equipos de una partida nueva (con su forma de jugar si los juega la IA, de `styles`). */
+export function newTeams(setups: readonly TeamSetup[], initialFunds: number, styles: AiStyles): TeamState[] {
   if (setups.length < 2) throw new Error('Una partida necesita al menos dos equipos');
-  const teams = setups.map((setup, id) => ({
-    id,
-    alliance: setup.alliance ?? id,
-    controller: setup.controller,
-    funds: setup.funds ?? initialFunds,
-    stats: emptyTeamStats(),
-    resigned: false,
-    fell: null,
-    sightings: [],
-  }));
+  const teams = setups.map((setup, id) => {
+    const personality = entryOf(styles.personalities, setup.personality ?? styles.defaultPersonality.id, 'personalidad');
+    const difficulty = entryOf(styles.difficulties, setup.difficulty ?? styles.defaultDifficulty.id, 'dificultad');
+    // La dificultad cambia el dinero de salida de la IA (el de una persona, no).
+    const startFunds = setup.controller === 'ai' ? Math.round(initialFunds * difficulty.startFunds) : initialFunds;
+    return {
+      id,
+      alliance: setup.alliance ?? id,
+      controller: setup.controller,
+      funds: setup.funds ?? startFunds,
+      stats: emptyTeamStats(),
+      resigned: false,
+      fell: null,
+      sightings: [],
+      personality: personality.id,
+      difficulty: difficulty.id,
+    };
+  });
   if (allianceCount(teams) < 2) throw new Error('Una partida necesita al menos dos alianzas: si no, nadie es enemigo de nadie');
   return teams;
 }

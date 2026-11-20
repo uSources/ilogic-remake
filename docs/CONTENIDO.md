@@ -12,7 +12,7 @@ Los numeros del juego estan en ficheros JSON, sin tocar codigo:
 | `src/core/content/mapgen.json` | El generador de mapas al azar: unidades y edificios de salida, edificios neutrales y lo que tiene que tener cada salida |
 | `src/core/content/weather.json` | Los climas: cuanto quitan de movimiento, vision y punteria, cuantos dias duran y en que terreno salen |
 | `src/core/content/settings.json` | Reglas por defecto de una partida (dinero inicial, contraataque, niebla, captura...) |
-| `src/core/content/ai.json` | Pesos de la IA (cuanto valora matar, capturar, defender la Base...) |
+| `src/core/content/ai.json` | Pesos de la IA (cuanto valora matar, capturar, defender la Base...), sus personalidades y sus dificultades |
 | `src/core/content/missions.json` | Las misiones de la campaña, en orden: mapa en texto, edificios, unidades y equipos (quien los juega, su dinero y su objetivo, si tiene; skill `nueva-mision`) |
 
 Cada fichero tiene su esquema (`units.schema.json`, `buildings.schema.json`): VS Code y otros editores
@@ -240,6 +240,14 @@ Para probar sin el: `--set SETTINGS.weather=false`.
   sin tocar el fichero. Ningun numero de la IA va suelto en el codigo: `hqCaptureHeadStart` (la
   Base enemiga, al elegir que capturar), `bigUnitCost` (desde que precio un edificio fabrica lo
   grande) y `minEvictionWeight` (lo minimo que pesa echar a quien defiende o captura) tambien son pesos.
+  Ademas tiene las **personalidades** (`personalities`: agresiva, cauta...) y las **dificultades**
+  (`difficulties`: Facil, Normal, Dificil) de la IA (docs/PLAN-IA.md, fase 4): cada una, su `id`, su
+  `name`, los pesos que cambia (`weights`; los demas, los de arriba) y una de cada lista con
+  `"default": true`; la dificultad, ademas, el dinero con el que empieza la IA (`startFunds`, en veces
+  el de la partida). Cada equipo lleva las suyas (`TeamState.personality` y `difficulty`; las da
+  `TeamSetup`): una escaramuza da a cada IA una personalidad al azar con la semilla del mapa, y la
+  dificultad la elige la persona en «Nueva partida». La IA de un equipo es `aiProfileFor(partida,
+  equipo)` (`src/core/ai/styles.ts`).
   `guardRadius` es de las ordenes con destino del jugador: a que distancia de su destino ataca una
   unidad con la orden defender (y cuando da por limpia la zona una con la orden atacar).
   `squadSpread` tambien: cuantas casillas puede adelantarse una unidad de una escuadra en formacion

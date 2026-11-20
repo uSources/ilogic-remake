@@ -136,6 +136,8 @@ export interface SetupVM {
   groups: { title: string; rows: OptionRowVM[] }[];
   /** Quien juega el otro equipo: la IA u otra persona en esta pantalla. */
   rival: OptionRowVM;
+  /** Si el rival es la IA, su dificultad (si no, null). */
+  difficulty: OptionRowVM | null;
   code: string;
   codeError: boolean;
   /** Codigo del mapa que se ve en la vista previa. */

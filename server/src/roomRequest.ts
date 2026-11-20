@@ -43,6 +43,9 @@ const TEAM_SHAPE: ShapeOf<MatchTeam> = {
   controller: isController,
   alliance: optional((value) => isInt(value, 0, MAX_ALLIANCE)),
   funds: optional((value) => isInt(value, 0, MAX_FUNDS)),
+  // Como juega la IA de ese asiento (ai.json): sin decir, una escaramuza le da una personalidad al azar.
+  personality: optional((value, content) => isEntryId(content.personalities, value)),
+  difficulty: optional((value, content) => isEntryId(content.difficulties, value)),
 };
 
 const hasShape =

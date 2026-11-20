@@ -26,8 +26,7 @@ import { effectiveStandingOrder } from '../squads/standingOrderQueries';
 import { foesInMind } from './memory';
 import { knownFoes } from '../playerView';
 import { canFight, isCapturer, isOnMap } from '../util/predicates';
-import { minBy } from '../util/pick';
-import { act, stepsMap, type PlayCtx } from '../autopilot/context';
+import { act, chooseBest, stepsMap, type PlayCtx } from '../autopilot/context';
 import type { ActionPlan, Building, GameState, Pos, StandingOrder, Unit } from '../model';
 
 /** Lo que el plan quiere de una unidad: su orden nueva, o null para quitarle la que tenga. */
@@ -140,7 +139,8 @@ function cheapestFor(s: GameState, play: PlayCtx, unit: Unit, objectives: readon
     .map((objective) => ({ objective, steps: stepsTo(objective.order.at) }))
     .filter((option) => option.steps < Infinity);
   const crowded = (objective: Objective) => (objective.assigned >= objective.need ? play.profile.weights.crowdSteps : 0);
-  return minBy(options, (option) => option.steps + crowded(option.objective))?.objective ?? null;
+  // El que menos cuesta (con nervios, a veces otro que cuesta poco mas: chooseBest).
+  return chooseBest(play, options, (option) => -(option.steps + crowded(option.objective)))?.objective ?? null;
 }
 
 /** Las cuatro casillas de al lado (un objetivo ocupado se alcanza llegando a su lado). */

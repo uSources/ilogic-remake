@@ -41,7 +41,6 @@
  */
 import { actionProblem, isAnyTime } from '../actions/dispatch';
 import { aiController } from '../controllers/aiController';
-import { defaultAiProfile } from '../ai/defaultProfile';
 import type { AiProfile } from '../ai/profile';
 import type { GameContent } from '../content';
 import { savedPart } from '../gameContent';
@@ -203,7 +202,8 @@ export class Room {
   private controllerFor(seat: Seat): Controller {
     if (seat.kind === 'person') return remoteController();
     const named = seat.profile === undefined ? undefined : this.context.aiProfile?.(seat.profile, this.context.content);
-    return aiController(named ?? defaultAiProfile(this.context.content));
+    // Sin perfil con nombre, la del juego con la personalidad y la dificultad de su equipo.
+    return aiController(named);
   }
 
   // --- Lo que el servidor consulta ----------------------------------------------------------------

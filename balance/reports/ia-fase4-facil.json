@@ -1,0 +1,365 @@
+{
+  "name": "ia-fase4-facil",
+  "date": "2026-11-19T23:52:02.316Z",
+  "variant": {
+    "name": "ia-fase4-facil",
+    "set": {}
+  },
+  "changes": [],
+  "games": 40,
+  "maxDays": 60,
+  "seeds": [1, 40],
+  "policies": "facil vs ai (lados alternos)",
+  "outcome": {
+    "wins": [2, 5],
+    "adjudicated": [17, 11],
+    "even": 5,
+    "winRate": [0.05, 0.125],
+    "unfinished": 33,
+    "reasons": {
+      "hq": 7,
+      "wipeout": 0,
+      "days": 0,
+      "timeout": 33
+    },
+    "days": {
+      "median": 32,
+      "p10": 25,
+      "p90": 60,
+      "mean": 36.3
+    }
+  },
+  "snowball": [
+    {
+      "day": 5,
+      "leaderWins": 0.6857142857142857,
+      "games": 35
+    },
+    {
+      "day": 10,
+      "leaderWins": 0.7714285714285715,
+      "games": 35
+    },
+    {
+      "day": 20,
+      "leaderWins": 0.8,
+      "games": 35
+    }
+  ],
+  "economy": {
+    "day10Buildings": [8.85, 9.075],
+    "day10Army": [37375.625, 38217.875],
+    "unitsOnMap": {
+      "day10": 8.0125,
+      "day20": 11.8375
+    }
+  },
+  "units": [
+    {
+      "type": "Soldier",
+      "label": "Soldado",
+      "cost": 1500,
+      "bought": 191,
+      "share": 0.07463853067604533,
+      "spent": 286500,
+      "valueDealt": 351670,
+      "valueLost": 453405,
+      "efficiency": 1.2274694589877837,
+      "survival": 0,
+      "kills": 69,
+      "captures": 2014
+    },
+    {
+      "type": "Tank",
+      "label": "Tanque",
+      "cost": 12000,
+      "bought": 71,
+      "share": 0.027745212973817896,
+      "spent": 852000,
+      "valueDealt": 601055,
+      "valueLost": 695040,
+      "efficiency": 0.7054636150234742,
+      "survival": 0.3661971830985915,
+      "kills": 120,
+      "captures": 0
+    },
+    {
+      "type": "Artillery",
+      "label": "Artillería",
+      "cost": 8000,
+      "bought": 154,
+      "share": 0.06017975771785854,
+      "spent": 1232000,
+      "valueDealt": 986135,
+      "valueLost": 1427360,
+      "efficiency": 0.8004342532467532,
+      "survival": 0.11688311688311692,
+      "kills": 97,
+      "captures": 0
+    },
+    {
+      "type": "Car",
+      "label": "Jeep",
+      "cost": 4000,
+      "bought": 404,
+      "share": 0.15787416959749903,
+      "spent": 1616000,
+      "valueDealt": 844065,
+      "valueLost": 1275800,
+      "efficiency": 0.5223174504950495,
+      "survival": 0.48514851485148514,
+      "kills": 182,
+      "captures": 0
+    },
+    {
+      "type": "LTank",
+      "label": "Tanque ligero",
+      "cost": 7000,
+      "bought": 141,
+      "share": 0.05509964830011723,
+      "spent": 987000,
+      "valueDealt": 887345,
+      "valueLost": 847490,
+      "efficiency": 0.89903242147923,
+      "survival": 0.34751773049645385,
+      "kills": 159,
+      "captures": 0
+    },
+    {
+      "type": "Blocker",
+      "label": "Barricada",
+      "cost": 5000,
+      "bought": 93,
+      "share": 0.03634232121922626,
+      "spent": 465000,
+      "valueDealt": 0,
+      "valueLost": 234550,
+      "efficiency": null,
+      "survival": 0.6344086021505376,
+      "kills": 0,
+      "captures": 0
+    },
+    {
+      "type": "BSoldier",
+      "label": "Bazuca",
+      "cost": 2500,
+      "bought": 186,
+      "share": 0.07268464243845252,
+      "spent": 465000,
+      "valueDealt": 616660,
+      "valueLost": 323400,
+      "efficiency": 1.3261505376344087,
+      "survival": 0.456989247311828,
+      "kills": 95,
+      "captures": 297
+    },
+    {
+      "type": "Transport",
+      "label": "Transporte",
+      "cost": 8000,
+      "bought": 150,
+      "share": 0.05861664712778429,
+      "spent": 1200000,
+      "valueDealt": 0,
+      "valueLost": 994640,
+      "efficiency": null,
+      "survival": 0.31999999999999995,
+      "kills": 0,
+      "captures": 0
+    },
+    {
+      "type": "SSoldier",
+      "label": "Escudero",
+      "cost": 2500,
+      "bought": 183,
+      "share": 0.07151230949589683,
+      "spent": 457500,
+      "valueDealt": 453180,
+      "valueLost": 289400,
+      "efficiency": 0.9905573770491803,
+      "survival": 0.540983606557377,
+      "kills": 76,
+      "captures": 505
+    },
+    {
+      "type": "Missile_truck",
+      "label": "Lanzamisiles",
+      "cost": 11000,
+      "bought": 57,
+      "share": 0.022274325908558032,
+      "spent": 627000,
+      "valueDealt": 723010,
+      "valueLost": 453200,
+      "efficiency": 1.1531259968102074,
+      "survival": 0.38596491228070173,
+      "kills": 75,
+      "captures": 0
+    },
+    {
+      "type": "LFighter",
+      "label": "Caza ligero",
+      "cost": 15000,
+      "bought": 80,
+      "share": 0.03126221180148495,
+      "spent": 1200000,
+      "valueDealt": 1878590,
+      "valueLost": 740100,
+      "efficiency": 1.5654916666666667,
+      "survival": 0.6,
+      "kills": 224,
+      "captures": 0
+    },
+    {
+      "type": "Fighter",
+      "label": "Caza",
+      "cost": 20000,
+      "bought": 23,
+      "share": 0.008987885892926924,
+      "spent": 460000,
+      "valueDealt": 471660,
+      "valueLost": 259000,
+      "efficiency": 1.0253478260869566,
+      "survival": 0.6086956521739131,
+      "kills": 30,
+      "captures": 0
+    },
+    {
+      "type": "Bomber",
+      "label": "Bombardero",
+      "cost": 13000,
+      "bought": 115,
+      "share": 0.044939429464634625,
+      "spent": 1495000,
+      "valueDealt": 2410875,
+      "valueLost": 1200680,
+      "efficiency": 1.6126254180602007,
+      "survival": 0.4347826086956522,
+      "kills": 348,
+      "captures": 0
+    },
+    {
+      "type": "Supplier",
+      "label": "Suministros",
+      "cost": 6000,
+      "bought": 148,
+      "share": 0.05783509183274717,
+      "spent": 888000,
+      "valueDealt": 0,
+      "valueLost": 706260,
+      "efficiency": null,
+      "survival": 0.30405405405405406,
+      "kills": 0,
+      "captures": 0
+    },
+    {
+      "type": "Antiair",
+      "label": "Antiaéreo",
+      "cost": 8000,
+      "bought": 135,
+      "share": 0.05275498241500586,
+      "spent": 1080000,
+      "valueDealt": 1715010,
+      "valueLost": 877600,
+      "efficiency": 1.5879722222222221,
+      "survival": 0.3555555555555555,
+      "kills": 82,
+      "captures": 0
+    },
+    {
+      "type": "THelicopter",
+      "label": "Helicóptero",
+      "cost": 10000,
+      "bought": 105,
+      "share": 0.041031652989449004,
+      "spent": 1050000,
+      "valueDealt": 0,
+      "valueLost": 777300,
+      "efficiency": null,
+      "survival": 0.4571428571428572,
+      "kills": 0,
+      "captures": 0
+    },
+    {
+      "type": "MSoldier",
+      "label": "Mortero",
+      "cost": 2500,
+      "bought": 216,
+      "share": 0.08440797186400938,
+      "spent": 540000,
+      "valueDealt": 405450,
+      "valueLost": 418675,
+      "efficiency": 0.7508333333333334,
+      "survival": 0.3935185185185185,
+      "kills": 27,
+      "captures": 335
+    },
+    {
+      "type": "FSoldier",
+      "label": "Motorizado",
+      "cost": 2500,
+      "bought": 48,
+      "share": 0.01875732708089097,
+      "spent": 120000,
+      "valueDealt": 56770,
+      "valueLost": 95225,
+      "efficiency": 0.47308333333333336,
+      "survival": 0.375,
+      "kills": 4,
+      "captures": 95
+    },
+    {
+      "type": "WTank",
+      "label": "Tanque anfibio",
+      "cost": 11000,
+      "bought": 59,
+      "share": 0.023055881203595155,
+      "spent": 649000,
+      "valueDealt": 322700,
+      "valueLost": 655050,
+      "efficiency": 0.4972265023112481,
+      "survival": 0.23728813559322037,
+      "kills": 48,
+      "captures": 0
+    }
+  ],
+  "ai": {
+    "profiles": [
+      {
+        "profile": "facil",
+        "games": 40,
+        "wins": 0,
+        "adjudicated": 10
+      },
+      {
+        "profile": "ai",
+        "games": 40,
+        "wins": 7,
+        "adjudicated": 18
+      }
+    ],
+    "humanity": [
+      {
+        "profile": "facil",
+        "teams": 40,
+        "turnMsMean": 51.72633304480277,
+        "turnMsP95": 179.297533999983,
+        "giftedPerTeam": 14.725,
+        "giftedShare": 0.7122128174123338,
+        "cohesion": 4.124563659852996,
+        "reversalShare": 0.281963675597914
+      },
+      {
+        "profile": "ai",
+        "teams": 40,
+        "turnMsMean": 64.00650177202425,
+        "turnMsP95": 196.54076899998472,
+        "giftedPerTeam": 15.675,
+        "giftedShare": 0.7750309023485785,
+        "cohesion": 3.473181366203581,
+        "reversalShare": 0.2741642441860465
+      }
+    ]
+  },
+  "flags": ["Duracion mediana 32 dias (objetivo 15-25).", "83 % de partidas sin terminar en 60 dias."],
+  "suggestions": []
+}

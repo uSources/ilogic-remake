@@ -28,5 +28,110 @@
   "pushAdvantage": 2,
   "attackNeedRatio": 1.2,
   "crowdSteps": 6,
-  "memoryDays": 1
+  "memoryDays": 1,
+  "nerves": 0,
+  "reserveShare": 0,
+  "personalities": [
+    {
+      "id": "balanced",
+      "name": {
+        "es": "Equilibrada",
+        "en": "Balanced"
+      },
+      "default": true,
+      "weights": {}
+    },
+    {
+      "id": "aggressive",
+      "name": {
+        "es": "Agresiva",
+        "en": "Aggressive"
+      },
+      "weights": {
+        "dangerAversion": 5,
+        "retreatBelowLife": 25,
+        "pushAdvantage": 1.5,
+        "attackNeedRatio": 0.9,
+        "exposureShare": 0.15,
+        "coverDangerShare": 1
+      }
+    },
+    {
+      "id": "cautious",
+      "name": {
+        "es": "Cauta",
+        "en": "Cautious"
+      },
+      "weights": {
+        "dangerAversion": 20,
+        "retreatBelowLife": 55,
+        "pushAdvantage": 2.6,
+        "coverDangerShare": 0.5,
+        "lonelinessCost": 2
+      }
+    },
+    {
+      "id": "greedy",
+      "name": {
+        "es": "Codiciosa",
+        "en": "Greedy"
+      },
+      "weights": {
+        "maxCaptureDistance": 12,
+        "minCapturers": 6,
+        "ownedBuildingPreference": 6,
+        "enemyHqPreference": 8
+      }
+    },
+    {
+      "id": "turtle",
+      "name": {
+        "es": "Tortuga",
+        "en": "Turtle"
+      },
+      "weights": {
+        "guardRadius": 6,
+        "pushAdvantage": 3.5,
+        "attackNeedRatio": 1.6,
+        "dangerAversion": 16,
+        "maxCaptureDistance": 6
+      }
+    }
+  ],
+  "difficulties": [
+    {
+      "id": "easy",
+      "name": {
+        "es": "Fácil",
+        "en": "Easy"
+      },
+      "weights": {
+        "nerves": 1,
+        "dangerAversion": 3,
+        "focusFireBonus": 0,
+        "exposureShare": 0,
+        "reserveShare": 0.35
+      },
+      "startFunds": 1
+    },
+    {
+      "id": "normal",
+      "name": {
+        "es": "Normal",
+        "en": "Normal"
+      },
+      "default": true,
+      "weights": {},
+      "startFunds": 1
+    },
+    {
+      "id": "hard",
+      "name": {
+        "es": "Difícil",
+        "en": "Hard"
+      },
+      "weights": {},
+      "startFunds": 1.5
+    }
+  ]
 }

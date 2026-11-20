@@ -13,7 +13,9 @@ import { distanceMap, unitsBlock, type Blockers, type DistanceMap } from '../rul
 import { letsAlliesThrough, passBlockers } from '../rules/passage';
 import { endsInterrupted } from '../rules/traverse';
 import { actorProblem } from '../actions/checks';
-import type { ActionPlan, GameAction, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+import type { ActionPlan, GameAction, GameEvent, GameState, Pos, Rng, TeamId, Unit } from '../model';
+import { maxBy } from '../util/pick';
+import { nearlyBest } from '../util/random';
 import { isAlive } from '../util/predicates';
 import type { AutopilotProfile, Influence } from './profile';
 
@@ -37,6 +39,23 @@ export interface PlayCtx {
   readonly profile: AutopilotProfile;
   /** Los mapas de influencia del turno (la IA, ai/influence.ts); sin ellos, solo cuentan los pasos. */
   readonly influence?: Influence;
+  /** Los nervios de la IA (su dificultad): a veces no elige lo mejor (`chooseBest`); sin ellos, siempre. */
+  readonly nerves?: Nerves;
+}
+
+/** Cuanto se equivoca al elegir (el peso `nerves`, 0 a 1) y con que azar (el del turno, repetible). */
+export interface Nerves {
+  readonly slack: number;
+  readonly rng: Rng;
+}
+
+/**
+ * La mejor opcion para quien juega: la de la puntuacion mas alta o, con nervios, una de las que se le
+ * acercan (`nearlyBest`). Lo que elige la IA con margen para equivocarse: a quien dispara y que
+ * objetivo sigue.
+ */
+export function chooseBest<T>(play: PlayCtx, items: readonly T[], scoreOf: (item: T) => number): T | null {
+  return play.nerves ? nearlyBest(items, scoreOf, play.nerves.slack, play.nerves.rng) : maxBy(items, scoreOf);
 }
 
 /** Como mide los caminos quien juega: cada unidad sola o todo el ejercito a la vez (ver PlayCtx.paths). */
@@ -50,9 +69,10 @@ export function playCtx(
     paths = 'alone',
     focusFire = new Map(),
     influence,
-  }: { paths?: PathPlanning; focusFire?: ReadonlyMap<number, number>; influence?: Influence } = {},
+    nerves,
+  }: { paths?: PathPlanning; focusFire?: ReadonlyMap<number, number>; influence?: Influence; nerves?: Nerves } = {},
 ): PlayCtx {
-  return influence ? { me, paths, focusFire, profile, influence } : { me, paths, focusFire, profile };
+  return { me, paths, focusFire, profile, ...(influence ? { influence } : {}), ...(nerves ? { nerves } : {}) };
 }
 
 /**

@@ -76,6 +76,8 @@ export function* produce(s: GameState, play: PlayCtx, rng: Rng): ActionPlan {
   const limited = usesCommandPoints(s);
   const order = productionOrder(s, play, rng, limited);
   const income = projectedIncome(s, me);
+  // Lo que no gasta (su dificultad: la Facil ahorra sin motivo); 0, nada.
+  const reserve = teamState(s, me).funds * play.profile.weights.reserveShare;
   for (const building of order) {
     if (building.owner !== me || hasFullArmy(s, me) || unitAt(s, building)) continue;
     const mine = teamUnits(s, me);
@@ -84,6 +86,7 @@ export function* produce(s: GameState, play: PlayCtx, rng: Rng): ActionPlan {
     const purchase = choosePurchase(options, teamState(s, me).funds + income, rng);
     if (purchase === 'save') break;
     if (!purchase) continue;
+    if (teamState(s, me).funds - purchase.cost < reserve) break;
     yield* act({ kind: 'buy', at: posOf(building), unitType: purchase.unitType.id });
   }
 }
