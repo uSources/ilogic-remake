@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ComponentChildren } from 'preact';
+import type { SoundName } from '../../audio/sounds';
 
 /** Evitar que los botones se queden con el foco (Enter los pulsaria ademas de la accion del juego). */
 export const noFocus = (e: MouseEvent) => e.preventDefault();
@@ -30,12 +31,15 @@ export function Btn(props: {
   onPick: () => void;
   children: ComponentChildren;
   label?: string;
+  /** El efecto al pulsarlo (sfx.ts lee `data-sound`; sin el, `ui_select`): Atras, `ui_back`. */
+  sound?: SoundName;
 }) {
   return (
     <Button
       class={`${props.cls ?? 'px-btn'} ${props.sel ? 'sel' : ''}`}
       disabled={props.disabled}
       aria-label={props.label}
+      data-sound={props.sound}
       onMouseEnter={props.onHover}
       onClick={props.onPick}
       scrollTo={!!props.sel}

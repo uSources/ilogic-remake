@@ -1,28 +1,48 @@
 /**
  * Los efectos de sonido (disparos, pasos, menus...) con Web Audio: la implementacion de `SoundPort`
- * (sounds.ts). Los hace Ashfox (tools/art/ashfox/sounds.mjs) y se guardan en WAV. Suenan con Web Audio para que varios se mezclen sin cortarse; cada sonido tiene
- * variantes y cada vez se elige una al azar, para que no suene siempre igual. Los navegadores no dejan
- * sonar nada hasta la primera tecla o clic: lo que se pide antes no suena.
+ * (sounds.ts). Los hace Ashfox (tools/art/ashfox/sounds.mjs) o la IA (tools/audio) y se guardan en WAV.
+ * Suenan con Web Audio para que varios se mezclen sin cortarse; cada sonido tiene variantes y cada vez
+ * se elige una al azar, para que no suene siempre igual. Lo del tablero suena desde su sitio
+ * (`playSoundAt`, spatial.ts); lo de la interfaz, sin sitio. Se pide por nombre: si aun no hay WAV,
+ * suena su sustituto (soundNames.ts).
  */
 import { asset, assetsAvailable } from '../assets';
 import { settings } from '../settings';
-import { SOUND_IDS, type SoundId, type SoundPort } from './sounds';
+import { audioMixer, runningMixer, unlockOnGesture, whenUnlocked, type Channel, type Mixer } from './audioContext';
+import { SOUND_NAMES, resolveSound, type SoundId, type SoundName } from './soundNames';
+import { SOUND_IDS, type SoundPort } from './sounds';
 import { SOUND_VARIANTS } from './soundList';
+import { pannerAt, type Point3 } from './spatial';
 
-const SFX_VOLUME = 0.8;
 /** Un mismo sonido no se repite antes de esto (segundos): dos a la vez solo suenan mas fuerte. */
 const MIN_GAP = 0.04;
+/** Los que salen a rafagas (pasar por encima, el cursor, la rueda): mas separados, para que no zumben. */
+const MIN_GAPS: Partial<Record<SoundName, number>> = {
+  ui_hover: 0.07,
+  buy_hover: 0.07,
+  cursor_tick: 0.06,
+  path_tick: 0.06,
+  zoom_tick: 0.09,
+};
+/** Entre dos voces de juguete, al menos esto (segundos): nunca una encima de otra ni una tras cada clic. */
+const VOICE_GAP = 1.5;
+/** Lo pedido antes de que el navegador deje sonar suena al abrirse el audio, si no es mas viejo que esto (ms). */
+const PENDING_MAX_AGE_MS = 2000;
+/** Cuantos se recuerdan para `recentSounds` (comprobar sin oir, docs/AGENTES.md). */
+const RECENT_LIMIT = 40;
 
-let context: AudioContext | null = null;
+/** Un efecto pedido: que nombre, que sono de verdad (null: nada) y desde donde. */
+export interface HeardSound {
+  readonly name: SoundName;
+  readonly played: SoundId | null;
+  readonly at: Point3 | null;
+}
+
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
 const lastPlayed = new Map<SoundId, number>();
-
-/** El audio del navegador, creado la primera vez (null si no hay Web Audio). */
-function audioContext(): AudioContext | null {
-  if (context || typeof AudioContext === 'undefined') return context;
-  context = new AudioContext();
-  return context;
-}
+const recent: HeardSound[] = [];
+let lastVoiceAt = -Infinity;
+let pending: { name: SoundName; at: Point3 | null; askedAt: number } | null = null;
 
 const pathOf = (sound: SoundId, variant: number): string => `assets/sfx/${sound}_${variant}.wav`;
 
@@ -40,31 +60,56 @@ function bufferOf(audio: AudioContext, path: string): Promise<AudioBuffer | null
 
 const randomVariant = (sound: SoundId): number => 1 + Math.floor(Math.random() * SOUND_VARIANTS[sound]);
 
-/** Que suene `sound` (una de sus variantes). Sin efectos en ajustes, o si el navegador aun no deja, no hace nada. */
-function playSound(sound: SoundId): void {
-  if (!settings.sfx) return;
-  const audio = audioContext();
-  if (!audio || audio.state !== 'running' || tooSoon(sound, audio.currentTime)) return;
-  const [path] = assetsAvailable([pathOf(sound, randomVariant(sound))]);
-  if (!path) return;
-  void bufferOf(audio, path).then((buffer) => buffer && start(audio, buffer));
+/** Las voces van por su canal (se pueden quitar en ajustes); lo que tiene sitio es del tablero. */
+const channelOf = (name: SoundName, at: Point3 | null): Channel => (name.startsWith('voice_') ? 'voices' : at ? 'effects' : 'interface');
+
+const isAllowed = (name: SoundName): boolean => settings.sfx && (!name.startsWith('voice_') || settings.voices);
+
+/** Que suene `name` (una de sus variantes) en `at`, o sin sitio con null. Sin efectos en ajustes, nada. */
+export function playSoundAt(name: SoundName, at: Point3 | null): void {
+  if (!isAllowed(name)) return;
+  const played = resolveSound(name);
+  remember({ name, played, at });
+  const mixer = runningMixer();
+  if (mixer) playNow(mixer, name, played, at);
+  else pending = { name, at, askedAt: performance.now() };
 }
 
-function tooSoon(sound: SoundId, now: number): boolean {
+/** Suena ya `played` (lo que sale de `name`), salvo que acabe de sonar. */
+function playNow(mixer: Mixer, name: SoundName, played: SoundId | null, at: Point3 | null): void {
+  if (!played || tooSoon(name, played, mixer.context.currentTime)) return;
+  const [path] = assetsAvailable([pathOf(played, randomVariant(played))]);
+  if (!path) return;
+  void bufferOf(mixer.context, path).then((buffer) => buffer && start(mixer, buffer, channelOf(name, at), at));
+}
+
+/** Si `name` acaba de sonar (o, si es una voz, otra voz); si no, apunta que suena ahora. */
+function tooSoon(name: SoundName, sound: SoundId, now: number): boolean {
+  const isVoice = name.startsWith('voice_');
   const last = lastPlayed.get(sound);
-  if (last !== undefined && now - last < MIN_GAP) return true;
+  const isRepeat = last !== undefined && now - last < (MIN_GAPS[name] ?? MIN_GAP);
+  if (isRepeat || (isVoice && now - lastVoiceAt < VOICE_GAP)) return true;
   lastPlayed.set(sound, now);
+  if (isVoice) lastVoiceAt = now;
   return false;
 }
 
-function start(audio: AudioContext, buffer: AudioBuffer): void {
-  const source = audio.createBufferSource();
-  const gain = audio.createGain();
+function start(mixer: Mixer, buffer: AudioBuffer, channel: Channel, at: Point3 | null): void {
+  const source = mixer.context.createBufferSource();
   source.buffer = buffer;
-  gain.gain.value = SFX_VOLUME;
-  source.connect(gain).connect(audio.destination);
+  const output = mixer.channels[channel];
+  if (at) source.connect(pannerAt(mixer.context, at)).connect(output);
+  else source.connect(output);
   source.start();
 }
+
+function remember(heard: HeardSound): void {
+  recent.push(heard);
+  if (recent.length > RECENT_LIMIT) recent.shift();
+}
+
+/** Los ultimos efectos pedidos, del mas viejo al mas nuevo (para comprobar sin oir). */
+export const recentSounds = (): readonly HeardSound[] => [...recent];
 
 /** Descarga los sonidos de antemano, para que el primero de cada uno no llegue tarde. */
 function preload(audio: AudioContext): void {
@@ -75,24 +120,55 @@ function preload(audio: AudioContext): void {
     }
 }
 
-/** Los efectos del juego, por Web Audio. */
-export const webAudioSounds: SoundPort = { play: playSound };
+/**
+ * Lo que se pidio justo antes de poder sonar (el "TU TURNO" al cargar la partida) suena al abrirse el
+ * audio. Ya esta en `recent` desde que se pidio.
+ */
+function playPending(mixer: Mixer): void {
+  const request = pending;
+  pending = null;
+  if (request && performance.now() - request.askedAt <= PENDING_MAX_AGE_MS)
+    playNow(mixer, request.name, resolveSound(request.name), request.at);
+}
+
+/** Los efectos del juego sin sitio (menus, interfaz), por Web Audio. */
+export const webAudioSounds: SoundPort = { play: (sound) => playSoundAt(sound, null) };
+
+const isSoundName = (value: string | undefined): value is SoundName => !!value && (SOUND_NAMES as string[]).includes(value);
+
+/** El sonido de un boton: el de su `data-sound` si lo lleva (Atras, una pestaña...), si no `ui_select`. */
+function buttonSound(target: EventTarget | null): SoundName | null {
+  const button = target instanceof Element ? target.closest('button') : null;
+  if (!button) return null;
+  const declared = button.dataset.sound;
+  return isSoundName(declared) ? declared : 'ui_select';
+}
 
 /**
  * Prepara los efectos: el audio se abre con la primera tecla o clic (antes el navegador no deja) y los
  * botones de la interfaz suenan al pulsarlos.
  */
 export function installSounds(): void {
-  const unlock = () => {
-    const audio = audioContext();
-    if (!audio) return;
-    void audio.resume().then(() => preload(audio));
-    window.removeEventListener('pointerdown', unlock, true);
-    window.removeEventListener('keydown', unlock, true);
-  };
-  window.addEventListener('pointerdown', unlock, true);
-  window.addEventListener('keydown', unlock, true);
+  audioMixer();
+  unlockOnGesture();
+  whenUnlocked((mixer) => {
+    preload(mixer.context);
+    playPending(mixer);
+  });
   document.addEventListener('click', (event) => {
-    if (event.target instanceof Element && event.target.closest('button')) webAudioSounds.play('ui_select');
+    const sound = buttonSound(event.target);
+    if (sound) webAudioSounds.play(sound);
+  });
+  installHoverSound();
+}
+
+/** Pasar el raton por encima de un boton (otro que el de antes) hace un tic flojo; con el dedo, no. */
+function installHoverSound(): void {
+  let hovered: HTMLButtonElement | null = null;
+  document.addEventListener('pointerover', (event) => {
+    const button = event.target instanceof Element ? event.target.closest('button') : null;
+    if (button === hovered) return;
+    hovered = button;
+    if (button && !button.disabled && event.pointerType === 'mouse') webAudioSounds.play('ui_hover');
   });
 }

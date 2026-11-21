@@ -10,15 +10,17 @@ import { isOnMap, unitAt } from '../../core/rules';
 import { screenEnd } from '../../core/session';
 import { ui } from '../../hud/store';
 import type { GameImages } from '../../atlas';
-import { playMusic } from '../../audio/music';
-import type { SoundPort } from '../../audio/sounds';
+import { gameTrackOf, playMusic } from '../../audio/music';
+import type { GameAudio } from '../../audio/gameAudio';
+import { AmbiencePlayer } from '../systems/sound/ambiencePlayer';
+import { CameraListener, zoomLevel } from '../systems/sound/listener';
 import { OptionsPanel } from '../../menu/optionsPanel';
 import { MatchScene } from '../engine/matchScene';
 import type { GlbLibrary } from '../engine/pieces/glbModels';
 import { hitLookOf } from '../systems/board/boardScene';
 import { EndTurnGuard } from '../systems/turn/endTurnGuard';
 import { StrategyCamera } from '../systems/camera/strategyCamera';
-import { incomeSpotsOf } from '../systems/events/eventSteps';
+import { boardLookupOf, incomeSpotsOf } from '../systems/events/eventSteps';
 import { playEvents } from '../systems/events/timeline';
 import { installHudActions, publishHud } from '../systems/hud/hudBridge';
 import { MinimapBridge, toggleMinimap } from '../systems/hud/minimapBridge';
@@ -44,9 +46,10 @@ const MINIMAP_TILE_HALF = 0.5;
 
 /** Lo que se ve el cartel de victoria o derrota antes de la pantalla del final. */
 const END_SCREEN_DELAY_MS = 2200;
+const MS_PER_SECOND = 1000;
 
 /** Juega esa partida en la pagina (hasta que se sale al menu, que recarga). */
-export function playMatch({ session, viewer }: StartedGame, images: GameImages, glbModels: GlbLibrary, sounds: SoundPort): void {
+export function playMatch({ session, viewer }: StartedGame, images: GameImages, glbModels: GlbLibrary, audio: GameAudio): void {
   const state = session.state;
   const scene = new MatchScene(document.getElementById('game')!, state, viewer, glbModels);
   const { board } = scene;
@@ -98,6 +101,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   });
   function refresh(): void {
     scene.sync(state.weather?.kind ?? null);
+    ambience.setWeather(state.weather?.kind ?? null);
     intents.update();
     showDestinations(state, viewer, scene.destinationMarks);
     threat.update();
@@ -106,7 +110,18 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
 
   /** Los sucesos se ven con las piezas y los efectos del motor (systems/events dice que pasos lleva cada uno). */
   const day = { viewer, incomeSpots: (team: TeamId) => incomeSpotsOf(state, team) };
-  const stages = { ...scene.stages, sounds, day };
+  /** El ambiente: el fondo del tema, el clima y lo que suena cerca de donde mira la camara (y los truenos). */
+  const ambience = new AmbiencePlayer({
+    loops: audio.loops,
+    playAt: (sound, at) => audio.playAt(sound, at),
+    later: (seconds, run) => void setTimeout(run, seconds * MS_PER_SECOND),
+    random: Math.random,
+  });
+  ambience.load(state);
+  scene.weather.onLightning(() => ambience.lightning());
+  /** Los sonidos del tablero suenan desde su sitio, respecto a la camara. */
+  const sounds = scene.soundStage(audio);
+  const stages = { ...scene.stages, sounds, day, board: boardLookupOf(state, viewer) };
   /** Lo que haran las ordenes al terminar el turno (al señalar una unidad con orden, o todas con «Ver órdenes»). */
   const intents = new OrderIntents({ session, viewer, marks: scene.intentMarks });
   function toggleIntents(): void {
@@ -239,8 +254,15 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     threat: toggleThreat,
     minimap: toggleMinimap,
   });
+  /** El oyente sigue a la camara: el audio solo se toca cuando ella se mueve. */
+  const hearing = new CameraListener();
   scene.onFrame((seconds) => {
     camera.update(seconds);
+    if (hearing.follow(camera.pose)) {
+      audio.moveListener(hearing.pose);
+      audio.setBoardLevel(zoomLevel(camera.pose.distance));
+    }
+    ambience.update(seconds, hearing.pose.position);
     scene.render(seconds, camera.pose);
     minimap.publishView(scene.viewedArea(camera.pose.target.y));
     // Los bocadillos (menu, prevision) siguen a su casilla mientras la camara se mueve.
@@ -248,7 +270,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   });
   scene.start();
   ui.set({ screen: 'game' });
-  playMusic('game');
+  playMusic(gameTrackOf(state.theme));
   // Se guarda al salir de la pagina (cerrar, recargar): «Continuar» la retoma.
   window.addEventListener('pagehide', () => void (screenEnd(session, viewer) ?? saveGame(session.state)));
   void controls.runUntilInput();
@@ -261,6 +283,8 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     camera,
     world: scene.world,
     weather: scene.weather,
+    ambience,
+    recentSounds: () => audio.recent(),
     sandDust: scene.sandDust,
     stages,
     wrecks: scene.wrecks,

@@ -9,3 +9,4 @@ tools/art/retrodiffusion/inbox/
 .env.*.local
 tests/visual/out/
 tools/perf/out/
+tools/audio/out/

@@ -111,7 +111,7 @@ export function NewGame({ s }: { s: UIState }) {
         </div>
       </div>
       <div class="ng-foot">
-        <Btn sel={setup.focus === 'back'} cls="px-btn plain" onHover={hover('back')} onPick={pick('back')}>
+        <Btn sel={setup.focus === 'back'} cls="px-btn plain" sound="ui_back" onHover={hover('back')} onPick={pick('back')}>
           {t('back')} <span class="key">Esc</span>
         </Btn>
         <Btn sel={setup.focus === 'start'} cls="px-btn start" onHover={hover('start')} onPick={pick('start')}>

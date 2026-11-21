@@ -70,7 +70,7 @@ export class BoardPieceStage implements PieceStage, PieceLookup {
 
   pieceOf(uid: number): ShownPiece | null {
     const piece = this.host.board.pieceOf(uid);
-    return piece ? { motion: piece.motion, isVisible: piece.object.visible } : null;
+    return piece ? { unitType: piece.unitType, motion: piece.motion, isVisible: piece.object.visible } : null;
   }
 
   shotDistance(shooter: number, target: number): number {
