@@ -72,4 +72,11 @@ describe('AiProfile', () => {
     expect(play([other, base])).toEqual(play([other, base]));
     expect(play([other, base])[0]).not.toEqual(play([base, base])[0]);
   });
+
+  it('lo que no gasta (reserveShare, la Facil): con 1 no compra nada', () => {
+    const miser: AiProfile = { ...base, weights: { ...base.weights, reserveShare: 1 } };
+    const [saving, buying] = play([miser, base], 3);
+    expect(saving.some((action) => action.kind === 'buy')).toBe(false);
+    expect(buying.some((action) => action.kind === 'buy')).toBe(true);
+  });
 });

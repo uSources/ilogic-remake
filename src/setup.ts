@@ -24,6 +24,8 @@ export interface NewGameOptions {
   upkeep: number;
   /** Quien juega el otro equipo: la IA u otra persona en esta misma pantalla (por turnos). */
   rival: ControllerKind;
+  /** Si el rival es la IA, su dificultad (id de ai.json, "difficulties"; docs/PLAN-IA.md, fase 4). */
+  difficulty: string;
   /** Codigo de mapa escrito por el jugador ('' = al azar). */
   code: string;
   /** Ajuste elegido en la pantalla de nueva partida. */
@@ -34,7 +36,7 @@ export type PresetId = 'normal' | 'quick' | 'custom';
 export const PRESET_IDS: PresetId[] = ['normal', 'quick', 'custom'];
 
 /** Ajustes ya hechos (el tema del mapa no cambia: lo elige el jugador o la vista previa). */
-export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset' | 'rival'>> = {
+export const PRESETS: Record<Exclude<PresetId, 'custom'>, Omit<NewGameOptions, 'theme' | 'code' | 'preset' | 'rival' | 'difficulty'>> = {
   normal: { size: 32, fog: true, weather: true, funds: 5000, income: 1, dayLimit: null, command: 30, upkeep: 0.1 },
   quick: { size: 20, fog: true, weather: true, funds: 5000, income: 1.5, dayLimit: 20, command: 20, upkeep: 0.1 },
 };
@@ -54,6 +56,10 @@ export const DEFAULT_OPTIONS: NewGameOptions = {
   command: 30,
   upkeep: 0.1,
   rival: 'ai',
+  /** La de "default": true en ai.json (se lee al pedirla, no al cargar el modulo). */
+  get difficulty(): string {
+    return defaultContent().defaultDifficulty.id;
+  },
   code: '',
   preset: 'normal',
 };
@@ -73,6 +79,10 @@ export const CHOICES = {
     return [null, ...defaultContent().themes.list.map((theme) => theme.id)];
   },
   rival: CONTROLLER_KINDS,
+  /** Las dificultades de ai.json, en su orden. */
+  get difficulty(): readonly string[] {
+    return defaultContent().difficulties.list.map((difficulty) => difficulty.id);
+  },
 };
 export type ChoiceKey = keyof typeof CHOICES;
 
@@ -117,7 +127,7 @@ export function matchConfigFor(options: NewGameOptions, seed: number): SkirmishC
     size: options.size,
     theme: options.theme,
     settingChanges: settingChangesFor(options),
-    teams: [{ controller: 'human' }, { controller: options.rival }],
+    teams: [{ controller: 'human' }, { controller: options.rival, difficulty: options.difficulty }],
   });
 }
 
@@ -181,6 +191,7 @@ const CHOICE_LABELS: Record<ChoiceKey, (value: unknown) => string> = {
   command: (value) => (value === null ? noLimit() : `${Number(value)}`),
   upkeep: (value) => (value === 0 ? (isSpanish() ? 'No' : 'Off') : percent(value)),
   rival: (value) => t(value === 'human' ? 'rivalHuman' : 'rivalAi'),
+  difficulty: (value) => nameOf(entryOf(defaultContent().difficulties, value as string, 'dificultad')),
 };
 
 /** Texto de cada valor, para la pantalla. */

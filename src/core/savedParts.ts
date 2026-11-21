@@ -84,9 +84,16 @@ const isTeamFall = (fell: unknown): boolean =>
 function isValidTeam(team: unknown, id: number): team is Saved & { alliance: number } {
   if (!isObject(team) || team.id !== id || !isInt(team.alliance, 0, MAX_COUNT) || !isControllerKind(team.controller)) return false;
   return (
-    isInt(team.funds, 0, MAX_SAVED_FUNDS) && typeof team.resigned === 'boolean' && isTeamFall(team.fell) && Array.isArray(team.sightings)
+    isInt(team.funds, 0, MAX_SAVED_FUNDS) &&
+    typeof team.resigned === 'boolean' &&
+    isTeamFall(team.fell) &&
+    Array.isArray(team.sightings) &&
+    hasStyle(team)
   );
 }
+
+/** La personalidad y la dificultad de un equipo son ids (si el contenido no las tiene, juega con las de siempre: `aiProfileFor`). */
+const hasStyle = (team: Saved): boolean => typeof team.personality === 'string' && typeof team.difficulty === 'string';
 
 /** Lo que recuerda un equipo de una unidad enemiga (TeamState.sightings), bien formado. Solo mira. */
 const isSighting = (value: unknown): boolean =>

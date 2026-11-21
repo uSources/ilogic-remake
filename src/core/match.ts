@@ -18,11 +18,11 @@ import { newUnit } from './rules/lifecycle';
 import { settingsWith } from './matchSettings';
 import { hooksOf } from './ruleModules/ruleset';
 import { sampleArmy } from './stats';
-import { matchSeedsFrom, seededRng } from './util/random';
+import { matchSeedsFrom, pick, seededRng } from './util/random';
 import type { GameModeId, GameSetup, GameState, Pos, Rng, MatchSettings, TeamId } from './model';
 import { teamIds, type TeamSetup } from './teams';
 
-/** Un equipo de una partida nueva: quien lo juega, su alianza y su dinero. */
+/** Un equipo de una partida nueva: quien lo juega, su alianza, su dinero y, si es de la IA, como juega. */
 export type MatchTeam = TeamSetup;
 
 /** Escaramuza: un mapa al azar (el de `map.seed`, de su lado y tema) con estas reglas y estos equipos. */
@@ -109,13 +109,27 @@ function skirmish(config: SkirmishConfig, { content, mapRng, modes }: MatchSetup
     theme,
     settings: settingsWith(content, config.settingChanges ?? {}),
     content,
-    teams: config.teams,
+    teams: withRandomPersonalities(config.teams, content, map.seed),
     firstTeam: config.firstTeam,
     modes,
   });
   s.setup = { ...map };
   if (config.rotateStarts) rotateStarts(s, config.rotateStarts);
   return s;
+}
+
+/** Lo que se suma a la semilla del mapa para el azar de las personalidades (asi no gasta el del mapa). */
+const PERSONALITY_SEED_SALT = 0x5ee0;
+
+/**
+ * Cada IA de una escaramuza que no dice su personalidad lleva una al azar (docs/PLAN-IA.md, fase 4),
+ * con la semilla del mapa: la misma partida, la misma IA; la revancha la repite (`rematchOf`).
+ */
+function withRandomPersonalities(teams: readonly MatchTeam[], content: GameContent, seed: number): MatchTeam[] {
+  const rng = seededRng((seed ^ PERSONALITY_SEED_SALT) >>> 0);
+  return teams.map((team) =>
+    team.controller !== 'ai' || team.personality ? team : { ...team, personality: pick(content.personalities.list, rng)!.id },
+  );
 }
 
 /**
@@ -190,7 +204,7 @@ export function buildMatch(config: MatchConfig, context: MatchSetupContext): Gam
  */
 export function rematchOf(s: GameState): SkirmishConfig | null {
   if (s.mode !== 'skirmish' || !s.setup) return null;
-  const teams = s.teams.map((team) => ({ controller: team.controller, alliance: team.alliance }));
+  const teams = s.teams.map(({ controller, alliance, personality, difficulty }) => ({ controller, alliance, personality, difficulty }));
   return { mode: 'skirmish', map: { ...s.setup }, settingChanges: { ...s.settings }, teams, firstTeam: s.turnOrder[0] };
 }
 

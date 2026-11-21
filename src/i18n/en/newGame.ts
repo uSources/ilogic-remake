@@ -3,6 +3,7 @@ import type { Translation } from '../translation';
 
 export const newGame: Translation<typeof es> = {
   optRival: 'Opponent',
+  optDifficulty: 'Difficulty',
   rivalAi: 'The AI',
   rivalHuman: 'Another person (on this screen)',
   presetNormal: 'Normal',

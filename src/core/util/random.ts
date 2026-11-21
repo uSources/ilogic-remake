@@ -4,6 +4,7 @@
  * misma tirada, en el juego, en las herramientas y en los tests.
  */
 import type { Rng } from '../model';
+import { maxBy } from './pick';
 
 /** Un paso de mulberry32: el numero que sale (en [0, 1)) y el estado siguiente. */
 export interface RandomStep {
@@ -122,4 +123,20 @@ export function shuffleInPlace<T>(list: T[], rng: Rng): void {
     const other = last - randomInt(rng, 0, last);
     [list[last], list[other]] = [list[other]!, list[last]!];
   }
+}
+
+/**
+ * Casi siempre el mejor (los nervios de la IA, docs/PLAN-IA.md, fase 4): con `slack` 0, el de la
+ * puntuacion mas alta (como `maxBy`, sin tirar el dado); con mas, uno al azar entre los que se quedan
+ * a menos de `slack` x |mejor| del mejor, con mas peso cuanto mas cerca. Un mejor infinito o 0 no deja
+ * margen: sale el mejor. null si la lista esta vacia.
+ */
+export function nearlyBest<T>(items: readonly T[], scoreOf: (item: T) => number, slack: number, rng: Rng): T | null {
+  const scored = items.map((item) => ({ item, score: scoreOf(item) }));
+  const best = maxBy(scored, (entry) => entry.score);
+  if (!best) return null;
+  const margin = slack * Math.abs(best.score);
+  if (!(margin > 0) || !Number.isFinite(margin)) return best.item;
+  const floor = best.score - margin;
+  return weightedPick(scored, (entry) => entry.score - floor, rng, best).item;
 }

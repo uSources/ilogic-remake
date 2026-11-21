@@ -17,6 +17,7 @@
  * | `turn` | el turno completo (`aiTurn`): plan de fuego, cada unidad y la compra |
  * | `profile` | como juega una IA (`AiProfile`: pesos, razones de ataque, comportamientos y su turno, `turn`) |
  * | `defaultProfile` | la IA del juego: `defaultAiProfile` |
+ * | `styles` | la de cada equipo, con su personalidad y su dificultad: `aiProfileFor` |
  *
  * Lo que hace una unidad paso a paso (retirarse, atacar, capturar, ir en formacion: `PlayCtx` y
  * autopilot/) no es de la IA: lo usan tambien las ordenes permanentes, que cumple la partida para
@@ -27,4 +28,5 @@
 export { aiTurn } from './ai/turn';
 export { classicAiProfile, defaultAiProfile, influenceAiProfile } from './ai/defaultProfile';
 export type { AiProfile, AiTurn } from './ai/profile';
+export { aiProfileFor, styledAiProfile, type AiStyleChoice } from './ai/styles';
 export { UNIT_BEHAVIOURS, type UnitBehaviour, type UnitTurnContext } from './ai/unitTurn';

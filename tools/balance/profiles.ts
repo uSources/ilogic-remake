@@ -3,7 +3,7 @@
  * ('ai') y los candidatos que se esten probando (docs/PLAN-IA.md). Un perfil nuevo es una entrada
  * mas: el mismo contenido de la partida, otro `AiProfile` (otros pesos, comportamientos o turno).
  */
-import { classicAiProfile, defaultAiProfile, influenceAiProfile, type AiProfile } from '@core/ai';
+import { classicAiProfile, defaultAiProfile, influenceAiProfile, styledAiProfile, type AiProfile } from '@core/ai';
 import type { GameContent } from '@core/content';
 
 /** El perfil sin acordarse de los enemigos que ya no ve (como antes de la fase 3). */
@@ -19,6 +19,13 @@ export const AI_PROFILES: Readonly<Record<string, (content: GameContent) => AiPr
   fase1: (content) => withoutMemory(influenceAiProfile(content)),
   /** La de la fase 2 del plan (planes que duran, sin memoria con la niebla). */
   fase2: (content) => withoutMemory(defaultAiProfile(content)),
+  // La del juego con otra personalidad o dificultad (ai.json; docs/PLAN-IA.md, fase 4).
+  agresiva: (content) => styledAiProfile(content, { personality: 'aggressive', difficulty: 'normal' }),
+  cauta: (content) => styledAiProfile(content, { personality: 'cautious', difficulty: 'normal' }),
+  codiciosa: (content) => styledAiProfile(content, { personality: 'greedy', difficulty: 'normal' }),
+  tortuga: (content) => styledAiProfile(content, { personality: 'turtle', difficulty: 'normal' }),
+  /** Fácil: con nervios (sin el dinero de mas o de menos de su dificultad, que es del equipo, no del perfil). */
+  facil: (content) => styledAiProfile(content, { personality: 'balanced', difficulty: 'easy' }),
 };
 
 /** Quien juega un equipo en las partidas de equilibrio: un perfil de AI_PROFILES o nadie ('passive', para medir a la IA). */

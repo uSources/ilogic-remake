@@ -26,11 +26,13 @@ export function* aiTurn(view: PlayerView, profile: AiProfile, rng: Rng): ActionP
   const { plan, order } = planFire(s, alone);
   // Las unidades juegan como un ejercito, con el fuego concentrado del plan (y sus mapas de influencia, si los usa).
   const influence = new TurnInfluence(s, team, usesInfluence(profile), profile.weights.memoryDays);
-  if (profile.planner) yield* profile.planner(s, playCtx(team, profile, { paths: 'army', influence: influence.now() }));
+  // Con nervios (su dificultad), a veces no elige lo mejor: con el azar del turno, repetible.
+  const nerves = profile.weights.nerves > 0 ? { slack: profile.weights.nerves, rng } : undefined;
+  if (profile.planner) yield* profile.planner(s, playCtx(team, profile, { paths: 'army', influence: influence.now(), nerves }));
   for (const uid of order)
     yield* unitTurn(
       s,
-      playCtx(team, profile, { paths: 'army', focusFire: plan, influence: influence.now() }),
+      playCtx(team, profile, { paths: 'army', focusFire: plan, influence: influence.now(), nerves }),
       profile.behaviours,
       uid,
       rng,

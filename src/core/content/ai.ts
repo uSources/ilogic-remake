@@ -32,15 +32,20 @@ export const AI_KEYS = [
   'attackNeedRatio',
   'crowdSteps',
   'memoryDays',
+  'nerves',
+  'reserveShare',
 ] as const;
 export type AiWeights = Record<(typeof AI_KEYS)[number], number>;
 
-/** Cada peso es un numero no negativo y no hay ninguno que la IA no lea. */
+/** Lo que hay en ai.json ademas de los pesos: su esquema, las personalidades y las dificultades (aiStyles.ts). */
+const NOT_WEIGHTS: readonly string[] = ['$schema', 'personalities', 'difficulties'];
+
+/** Cada peso es un numero no negativo y no hay ninguno que la IA no lea (las personalidades y dificultades, en aiStyles.ts). */
 export function validateAi(ai: Record<string, unknown>, check: Checker): void {
   const scope = check.scope('ai.json');
   for (const weight of AI_KEYS) scope.num(weight, ai?.[weight], { min: 0 });
   for (const field of Object.keys(ai ?? {}))
-    if (field !== '$schema') scope.expect((AI_KEYS as readonly string[]).includes(field), `peso desconocido "${field}"`);
+    if (!NOT_WEIGHTS.includes(field)) scope.expect((AI_KEYS as readonly string[]).includes(field), `peso desconocido "${field}"`);
 }
 
 /** Los pesos ya comprobados (validateAi), por su nombre. */

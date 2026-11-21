@@ -63,7 +63,7 @@ function Presets({ setup }: { setup: SetupVM }) {
   );
 }
 
-/** Una opcion suelta (el rival). */
+/** Una opcion suelta (el rival, su dificultad). */
 function ChoiceRow({ row, focused, actionId }: { row: OptionRowVM; focused: string; actionId: string }) {
   return (
     <div class="ng-group ng-choice">
@@ -107,6 +107,7 @@ export function NewGame({ s }: { s: UIState }) {
         <div class="ng-side">
           <Presets setup={setup} />
           <ChoiceRow row={setup.rival} focused={setup.focus} actionId="opt-rival" />
+          {setup.difficulty && <ChoiceRow row={setup.difficulty} focused={setup.focus} actionId="opt-difficulty" />}
           {setup.preset === 'custom' ? <CustomOptions setup={setup} /> : <p class="ng-note">{preset?.note}</p>}
         </div>
       </div>

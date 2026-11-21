@@ -7,6 +7,7 @@
 import type { MatchSettings } from '../model';
 import type { DeepReadonly } from '../util/freeze';
 import { buildAiWeights, type AiWeights } from './ai';
+import { buildDifficulties, buildPersonalities, type AiDifficulty, type AiStyle, type AiStylesFile } from './aiStyles';
 import { buildBuildingTypes, type BuildingType } from './buildings';
 import { catalogOf, type Catalog } from './catalog';
 import type { MapgenDef, MapgenSettings } from './mapgen';
@@ -57,6 +58,14 @@ export interface ResolvedContent {
   maxFunds: number;
   /** Pesos de la IA (ai.json). */
   ai: Readonly<AiWeights>;
+  /** Personalidades de la IA (ai.json, "personalities"; docs/PLAN-IA.md, fase 4). */
+  personalities: Catalog<AiStyle>;
+  /** La personalidad de quien no dice otra (la de "default": true). */
+  defaultPersonality: AiStyle;
+  /** Dificultades de la IA (ai.json, "difficulties"). */
+  difficulties: Catalog<AiDifficulty>;
+  /** La dificultad de quien no dice otra (la de "default": true). */
+  defaultDifficulty: AiDifficulty;
 }
 
 export function resolveContent(files: Content): ResolvedContent {
@@ -64,6 +73,9 @@ export function resolveContent(files: Content): ResolvedContent {
   const movementIds = files.movements.map((movement) => movement.id);
   const weather = catalogOf(buildWeatherTypes(files.weather, movementIds));
   const terrain = catalogOf(buildTerrainTypes(files.terrain));
+  const styles = files.ai as unknown as AiStylesFile;
+  const personalities = catalogOf(buildPersonalities(styles));
+  const difficulties = catalogOf(buildDifficulties(styles));
   return {
     units: catalogOf(buildUnitTypes(files.units, files.movements)),
     buildings,
@@ -79,5 +91,9 @@ export function resolveContent(files: Content): ResolvedContent {
     defaultSettings: { ...files.settings.defaults },
     maxFunds: files.settings.maxFunds,
     ai: buildAiWeights(files.ai),
+    personalities,
+    defaultPersonality: personalities.list.find((style) => style.isDefault)!,
+    difficulties,
+    defaultDifficulty: difficulties.list.find((style) => style.isDefault)!,
   };
 }

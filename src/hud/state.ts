@@ -157,6 +157,7 @@ export const initialState: UIState = {
     presets: [],
     groups: [],
     rival: { id: 'opt-rival', group: '', label: '', choices: [], index: 0 },
+    difficulty: null,
     code: '',
     codeError: false,
     mapCode: '',

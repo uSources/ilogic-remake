@@ -146,6 +146,7 @@ export class SetupScreen {
         presets: PRESET_IDS.map(presetVM),
         groups: this.customGroups(),
         rival: this.choiceRow('rival', 'optRival'),
+        difficulty: options.rival === 'ai' ? this.choiceRow('difficulty', 'optDifficulty') : null,
         code: this.code,
         codeError: this.codeError,
         mapCode: seedToCode(this.seed),
@@ -241,8 +242,8 @@ export class SetupScreen {
     }));
   }
 
-  /** Una opcion que no es de "Personalizada" (el rival): su fila. */
-  private choiceRow(key: 'rival', label: TextKey): OptionRowVM {
+  /** Una opcion que no es de "Personalizada" (el rival y su dificultad): su fila. */
+  private choiceRow(key: 'rival' | 'difficulty', label: TextKey): OptionRowVM {
     return {
       id: `${OPTION_PREFIX}${key}`,
       group: t(label),
@@ -282,6 +283,7 @@ export class SetupScreen {
 
   private rows(): string[][] {
     const rows: string[][] = [PRESET_IDS.map((preset) => `${PRESET_PREFIX}${preset}`), [`${OPTION_PREFIX}rival`]];
+    if (this.options.rival === 'ai') rows.push([`${OPTION_PREFIX}difficulty`]);
     if (this.options.preset === 'custom')
       for (const group of CUSTOM_GROUPS) for (const { k: key } of group.keys) rows.push([`${OPTION_PREFIX}${key}`]);
     rows.push(['code', 'reroll']);

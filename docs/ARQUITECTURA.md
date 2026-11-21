@@ -547,6 +547,13 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   quita a las demas alianzas (`withoutBooks`). La IA tiene en la cabeza los que ve y los recordados de
   hace `memoryDays` dias o menos (`foesInMind`, `ai/memory.ts`), con menos peso cuanto mas viejos, en
   los mapas de influencia y en lo que calcula que tiene el enemigo.
+- **Personalidad, dificultad y nervios** (docs/PLAN-IA.md, fase 4): cada equipo lleva su personalidad y
+  su dificultad (`TeamState.personality`, `difficulty`; ai.json), y su IA es la del juego con los pesos
+  que cambian las dos (`aiProfileFor`, `ai/styles.ts`; `aiController()` sin perfil la usa). Los
+  **nervios** (el peso `nerves`) dejan que a veces no elija lo mejor: lo que tiene margen para
+  equivocarse lo elige con `chooseBest(play, opciones, puntuacion)` (autopilot/context.ts; hoy, a quien
+  dispara y que objetivo sigue), que con nervios usa `nearlyBest` (util/random.ts) con el azar del
+  turno; sin ellos, la mejor, sin tirar el dado. `reserveShare` es lo que no gasta al comprar.
 - **Puntos de extension**:
   - una pieza de reglas que la partida lleva o no (con su ajuste) es un modulo de reglas (ver
     "Modulos de reglas"): un fichero en `ruleModules/` y su entrada en `RULE_MODULES`;
