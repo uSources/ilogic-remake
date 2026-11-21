@@ -90,6 +90,9 @@ La primera vez: `npx playwright install chromium`.
   lluvia, lleva semilla. Asi que cualquier cambio salta. Si es a proposito: `npm run shots:update`.
   Una escena nueva es una entrada en `SCENES` (`tests/visual/shots.mjs`), con lo que hacer antes de la
   captura (`act`, sin `await`: con el reloj parado no acabaria) y el tamaño de la ventana.
+  Hacerlas con la carpeta quieta: si alguien (otra sesion) edita el codigo mientras tanto, Vite
+  recarga la pagina a mitad y salen capturas en blanco. En un worktree aparte, con `npm ci` dentro
+  (un enlace a otro `node_modules` no vale: Vite no sirve ficheros de fuera y faltan las fuentes).
 - `npm run perf`: la partida 2013 en calma y con lluvia (carga, tiempo por fotograma: mediana, 5 % peor
   y el peor; llamadas de dibujo, triangulos, geometrias, texturas) y el peso de los modelos, frente a
   `tools/perf/baseline.json`. Usa la GPU de la maquina y sin el limite de 60 fps, asi que el tiempo es
