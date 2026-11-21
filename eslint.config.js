@@ -251,6 +251,9 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       // Promesas sin esperar ni marcar con void: suelen ser errores que se pierden.
       '@typescript-eslint/no-floating-promises': 'error',
+      // Nada obsoleto (lo marcado @deprecated en los tipos de three.js, Preact, el DOM...). Si hace
+      // falta a proposito (un apaño para un navegador viejo), eslint-disable en su linea con el porque.
+      '@typescript-eslint/no-deprecated': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': ['error', { considerDefaultExhaustiveForUnions: true }],
     },
   },

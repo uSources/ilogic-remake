@@ -3,7 +3,7 @@
  * esquinas de la partida, las fichas junto a una unidad, la rueda, la compra y las chapas que flotan
  * sobre una casilla. Estilo en styles/base/toy.css.
  */
-import type { ComponentChildren, JSX } from 'preact';
+import type { ComponentChildren, HTMLAttributes } from 'preact';
 import type { Anchor } from '../vm/common';
 import { Button } from './buttons';
 import { Icon } from './Icon';
@@ -13,11 +13,7 @@ import { scaled } from './Popover';
 export type ChipTone = 'own' | 'enemy' | 'plain';
 
 /** Pastilla de esquina: lo que se ve siempre (dinero, dia). Lo de dentro lo pone quien la usa. */
-export function Pill({
-  cls = '',
-  children,
-  ...events
-}: { cls?: string; children: ComponentChildren } & JSX.HTMLAttributes<HTMLDivElement>) {
+export function Pill({ cls = '', children, ...events }: { cls?: string; children: ComponentChildren } & HTMLAttributes<HTMLDivElement>) {
   return (
     <div class={`pill ${cls}`} {...events}>
       {children}
