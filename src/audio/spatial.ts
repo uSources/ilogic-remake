@@ -36,19 +36,22 @@ export function pannerAt(context: AudioContext, at: Point3): PannerNode {
 }
 
 function movePanner(panner: PannerNode, at: Point3): void {
-  if (panner.positionX) {
-    panner.positionX.value = at.x;
-    panner.positionY.value = at.y;
-    panner.positionZ.value = at.z;
-  } else panner.setPosition(at.x, at.y, at.z);
+  panner.positionX.value = at.x;
+  panner.positionY.value = at.y;
+  panner.positionZ.value = at.z;
 }
 
-/** Mueve el oyente. Safari antiguo no tiene `positionX`: alli, con `setPosition` y `setOrientation`. */
+/**
+ * Mueve el oyente. Firefox (y Safari antiguo) no tienen `positionX` en el oyente, aunque los tipos digan
+ * que si: alli, con `setPosition` y `setOrientation`, obsoletos pero lo unico que hay.
+ */
 export function setListener(context: AudioContext, pose: ListenerPose): void {
   const listener = context.listener;
   const { position, forward, up } = pose;
   if (!listener.positionX) {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Firefox no tiene positionX en el oyente
     listener.setPosition(position.x, position.y, position.z);
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Firefox no tiene forwardX en el oyente
     listener.setOrientation(forward.x, forward.y, forward.z, up.x, up.y, up.z);
     return;
   }
