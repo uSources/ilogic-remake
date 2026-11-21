@@ -25,6 +25,6 @@
  * Fuera de aqui se importa de este fichero.
  */
 export { aiTurn } from './ai/turn';
-export { classicAiProfile, defaultAiProfile } from './ai/defaultProfile';
+export { classicAiProfile, defaultAiProfile, influenceAiProfile } from './ai/defaultProfile';
 export type { AiProfile, AiTurn } from './ai/profile';
 export { UNIT_BEHAVIOURS, type UnitBehaviour, type UnitTurnContext } from './ai/unitTurn';

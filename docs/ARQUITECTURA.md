@@ -534,6 +534,13 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   pasos: `bestMoveToward` las suma a los pasos que faltan; `ai/placeTerms.ts`: peligro y compañia),
   la de un ataque `exposure` (lo expuesta que se queda) y los comportamientos `takeCover` y
   `holdFront`. Una razon nueva para elegir casilla es una entrada mas en `PLACE_TERMS`.
+- **Planes que duran** (`ai/plans.ts`, docs/PLAN-IA.md): al empezar su turno (`planner` del perfil),
+  la IA revisa el objetivo de cada unidad y solo lo cambia si ya no vale (el edificio ya es suyo, no
+  quedan enemigos en la zona) o si hay que defender algo (un edificio que le estan capturando, la Base
+  con enemigos al lado); con clara ventaja sobre lo que calcula que tiene el enemigo, todas a su Base.
+  Los guarda como ordenes permanentes de cada unidad con acciones (`giveStandingOrder`), asi que duran,
+  se guardan y la niebla los esconde; no las cumple la partida (la IA ya ha usado sus unidades al
+  acabar), sino la propia IA, que las lee como destino (`followPlan`).
 - **Puntos de extension**:
   - una pieza de reglas que la partida lleva o no (con su ajuste) es un modulo de reglas (ver
     "Modulos de reglas"): un fichero en `ruleModules/` y su entrada en `RULE_MODULES`;

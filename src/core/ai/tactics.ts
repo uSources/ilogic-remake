@@ -6,18 +6,20 @@
 
 import { areAllied, isAlliedOwner } from '../teams';
 import { isHq } from '../gameContent';
-import { diamond, samePos } from '../geom';
+import { diamond, manhattan, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { canDamage } from '../rules/weapons';
 import { isContested } from '../rules/control';
-import { reachableTiles, stepToward, type MoveRange } from '../rules/movement';
+import { moveRange, reachableTiles, stepToward, type MoveRange } from '../rules/movement';
 import { buildingAt, isEnemyHq, unitAt } from '../rules/queries';
 import { knownFoes, sightIn } from '../playerView';
 import type { ActionPlan, Building, ControlPoint, GameState, Pos, Rng, Unit } from '../model';
 import { minBy } from '../util/pick';
 import { pick } from '../util/random';
 import { bestMoveToward, doMove, finish, stepsMap, type PlayCtx } from '../autopilot/context';
-import { captureHere } from '../autopilot/tactics';
+import { captureHere, tryAttack } from '../autopilot/tactics';
+import { SHOOT_FROM_HERE } from '../autopilot/engagement';
+import { effectiveStandingOrder } from '../squads/standingOrderQueries';
 import { isCapturer } from '../util/predicates';
 
 // ---------------------------------------------------------------------------------------------
@@ -113,6 +115,39 @@ export function* advance(s: GameState, play: PlayCtx, unit: Unit, range: MoveRan
   if (!destination) return false;
   yield* doMove(unit, destination);
   yield* finish(s, unit);
+  return true;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Seguir el plan
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Ir hacia el objetivo de su plan (plans.ts: su orden permanente, que la IA lee como destino):
+ * capturar su edificio o acercarse a su zona de ataque o defensa, disparando desde donde llegue a lo
+ * que tenga a tiro. Ya en la zona (a 1 casilla o menos), o sin plan, no hace nada: alli pelea con lo
+ * de siempre.
+ */
+export function* followPlan(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
+  const order = effectiveStandingOrder(s, unit);
+  if (!order) return false;
+  if (order.kind === 'capture') return yield* captureAt(s, play, unit, range, order.at);
+  if (manhattan(unit, order.at) <= 1) return false;
+  // Sin quedarse encima de un edificio (taparia a las que capturan).
+  const destination = bestMoveToward(s, play, unit, order.at, range, !!buildingAt(s, order.at));
+  if (!destination) return false;
+  const interrupted = yield* doMove(unit, destination);
+  if (!interrupted && !(yield* tryAttack(s, play, unit, moveRange(s, unit), SHOOT_FROM_HERE))) yield* finish(s, unit);
+  return true;
+}
+
+/** Capturar el edificio de `at`: si esta encima, capturarlo; si no, acercarse y capturarlo si llega. */
+function* captureAt(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange, at: Pos): ActionPlan<boolean> {
+  if (samePos(unit, at)) return yield* captureHere(s, unit);
+  const destination = bestMoveToward(s, play, unit, at, range);
+  if (!destination) return false;
+  yield* doMove(unit, destination);
+  if (!(yield* captureHere(s, unit))) yield* finish(s, unit);
   return true;
 }
 

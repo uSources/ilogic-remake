@@ -6,7 +6,8 @@
  * (defaultProfile.ts).
  */
 import type { AutopilotProfile } from '../autopilot/profile';
-import type { ActionPlan, Rng } from '../model';
+import type { ActionPlan, GameState, Rng } from '../model';
+import type { PlayCtx } from '../autopilot/context';
 import type { PlayerView } from '../playerView';
 import type { UnitBehaviour } from './unitTurn';
 
@@ -18,4 +19,9 @@ export interface AiProfile extends AutopilotProfile {
   readonly behaviours: readonly UnitBehaviour[];
   /** Su turno entero (el del juego: `aiTurn`, que usa lo de arriba). */
   readonly turn: AiTurn;
+  /**
+   * Lo que hace al empezar su turno, antes de mover ninguna unidad, con su contexto (los planes que
+   * duran: `updatePlans`, plans.ts). Sin el, nada.
+   */
+  readonly planner?: (s: GameState, play: PlayCtx) => ActionPlan;
 }

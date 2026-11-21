@@ -11,8 +11,8 @@ import { posOf } from '../geom';
 import type { ActionPlan, GameState, Rng, Unit } from '../model';
 import { bestMoveToward, canAct, doMove, finish, needsRepair, type PlayCtx } from '../autopilot/context';
 import { captureHere, retreat, tryAttack } from '../autopilot/tactics';
-import { HUNT } from '../autopilot/engagement';
-import { advance, holdFront, randomMove, takeCover, tryCapture } from './tactics';
+import { fireOnTheWay, HUNT } from '../autopilot/engagement';
+import { advance, followPlan, holdFront, randomMove, takeCover, tryCapture } from './tactics';
 
 /** Lo que necesita un comportamiento para decidir y actuar con una unidad. */
 export interface UnitTurnContext {
@@ -146,3 +146,30 @@ export function* unitTurn(s: GameState, play: PlayCtx, behaviours: readonly Unit
     if (yield* behaviour.run(turn)) return;
   }
 }
+
+/** Disparar a lo que tenga a tiro (moviendose si hace falta), sin ir a por nadie: a donde ir lo dice su plan. */
+const SHOOT_IN_REACH: UnitBehaviour = {
+  id: 'shootInReach',
+  when: () => true,
+  run: ({ s, play, unit, range }) => tryAttack(s, play, unit, range, fireOnTheWay('anywhere')),
+};
+
+/** Ir hacia el objetivo de su plan (plans.ts), si lo tiene y aun no ha llegado. */
+const FOLLOW_PLAN: UnitBehaviour = {
+  id: 'followPlan',
+  when: () => true,
+  run: ({ s, play, unit, range }) => followPlan(s, play, unit, range),
+};
+
+/**
+ * Los de la IA con planes que duran (docs/PLAN-IA.md, fase 2): primero disparar a lo que tiene a
+ * tiro; si no, ir hacia el objetivo de su plan; ya alli (o sin plan), lo de la fase 1.
+ */
+export const PLAN_BEHAVIOURS: readonly UnitBehaviour[] = [
+  behaviourNamed('finishCapture'),
+  behaviourNamed('stepOffEnemyHq'),
+  behaviourNamed('retreat'),
+  SHOOT_IN_REACH,
+  FOLLOW_PLAN,
+  ...INFLUENCE_BEHAVIOURS.filter((behaviour) => !['finishCapture', 'stepOffEnemyHq', 'retreat'].includes(behaviour.id)),
+];
