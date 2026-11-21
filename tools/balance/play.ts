@@ -11,8 +11,10 @@ import { unitTypeOf } from '@core/gameContent';
 import { armyValue } from '@core/stats';
 import { lifeValue } from '@core/unitValue';
 import type { EndReason, GameEvent, GameEventOf, GameState, Rng, MatchSettings, TeamId, Unit } from '@core/model';
+import { HumanityLog, type HumanityTally } from './humanity';
+import { PASSIVE, profileOf, type Policy } from './profiles';
 
-export type Policy = 'ai' | 'passive';
+export type { Policy } from './profiles';
 
 /**
  * Un valor por equipo, por su numero (el numero de un equipo es su puesto en `GameState.teams`).
@@ -26,8 +28,16 @@ export const FIRST_TEAM: TeamId = 0;
 export interface PlayOptions {
   seed: number;
   maxDays: number;
-  /** Quien juega cada equipo, por numero de equipo (hay tantos equipos como politicas). 'passive' no hace nada (para medir a la IA). */
+  /**
+   * Quien juega cada equipo, por numero de equipo (hay tantos equipos como politicas): un perfil de IA
+   * (profiles.ts) o 'passive', que no hace nada (para medir a la IA).
+   */
   policies: readonly Policy[];
+  /**
+   * Cambiar los lados en las partidas de semilla par (las politicas, al reves): con dos perfiles
+   * distintos, cada uno juega la mitad de las veces de cada lado y no cuenta quien empieza.
+   */
+  alternateSides?: boolean;
   /** Equipo que mueve primero en cada ronda (si no, FIRST_TEAM). */
   firstTeam?: TeamId;
   /** Girar las salidas del mapa generado tantos puestos (rotateStarts; para ver si el mapa favorece a alguien). */
@@ -78,6 +88,10 @@ export interface GameRecord {
   /** Lo de cada tipo de unidad, por equipo y por id de tipo. */
   units: PerTeam<Record<string, UnitTally>>;
   events: number;
+  /** Quien jugo cada equipo (su politica: perfil de IA o 'passive'). */
+  profiles: PerTeam<Policy>;
+  /** Las medidas de «humanidad» de cada equipo (humanity.ts). */
+  humanity: PerTeam<HumanityTally>;
 }
 
 /** Nada apuntado todavia. */
@@ -162,10 +176,17 @@ function tallyEvent(s: GameState, event: GameEvent, team: TeamId, tallies: Talli
   }
 }
 
-/** Quien juega cada equipo: la IA (con el azar de la partida) o nadie ('passive'). */
+/** Quien juega cada equipo: la IA con su perfil (con el azar de la partida) o nadie ('passive'). */
 function controllersOf(s: GameState, policies: PlayOptions['policies']): Controller[] {
-  return teamIds(s).map((team) => (policyOf(policies, team) === 'passive' ? passiveController() : aiController()));
+  return teamIds(s).map((team) => {
+    const policy = policyOf(policies, team);
+    return policy === PASSIVE ? passiveController() : aiController(profileOf(policy, s.content));
+  });
 }
+
+/** Las politicas de esta partida: con `alternateSides`, al reves en las de semilla par. */
+const policiesOf = (options: PlayOptions): readonly Policy[] =>
+  options.alternateSides && options.seed % 2 === 0 ? [...options.policies].reverse() : options.policies;
 
 function policyOf(policies: PlayOptions['policies'], team: TeamId): Policy {
   const policy = policies[team];
@@ -241,10 +262,22 @@ export function playGame(options: PlayOptions): GameRecord {
   const rng = seededRng(options.seed);
   const s = balanceMatch(options, rng);
   const log = new GameLog(s);
-  const session = new GameSession(s, controllersOf(s, options.policies));
+  const humanity = new HumanityLog(s);
+  const policies = policiesOf(options);
+  const session = new GameSession(s, controllersOf(s, policies));
   session.subscribe(log.record);
+  session.subscribe(humanity.record);
   runMatch(session, { until: (state) => state.day > options.maxDays });
   const outcome = outcomeOf(s);
   if (outcome.reason === 'timeout') log.samples.push(sample(s));
-  return { seed: options.seed, ...outcome, days: s.day, samples: log.samples, units: log.units, events: log.events };
+  return {
+    seed: options.seed,
+    ...outcome,
+    days: s.day,
+    samples: log.samples,
+    units: log.units,
+    events: log.events,
+    profiles: [...policies],
+    humanity: humanity.tallies,
+  };
 }

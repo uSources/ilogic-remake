@@ -7,6 +7,7 @@ import { FIRST_TEAM, playGame, type GameRecord, type UnitTally } from '../tools/
 import { runDuels, runGames } from '../tools/balance/runner';
 import { buildVariant } from '../tools/balance/variant';
 import { buildReport, DEFAULT_TARGETS } from '../tools/balance/report';
+import { emptyHumanity } from '../tools/balance/humanity';
 import { entryOf, type GameContent } from '@core/content';
 
 const TANK_INDEX = defaultContent().units.list.findIndex((unitType) => unitType.id === 'Tank');
@@ -103,9 +104,43 @@ describe('herramienta de equilibrio: partidas y duelos', () => {
       settings: settingsWith(defaultContent()),
       content: defaultContent(),
     });
-    expect(first).toEqual(second);
+    // Lo que tarda cada turno depende de la maquina: todo lo demas, igual.
+    const withoutTimes = (record: GameRecord) => ({ ...record, humanity: record.humanity.map((tally) => ({ ...tally, turnMs: [] })) });
+    expect(withoutTimes(first)).toEqual(withoutTimes(second));
     expect(first.samples.length).toBeGreaterThan(5);
     expect(Object.values(first.units[0]!).reduce((sum, unitTally) => sum + unitTally.bought, 0)).toBeGreaterThan(0);
+  });
+
+  it('apunta la «humanidad» de cada equipo y quien lo jugo', () => {
+    const record = playGame({
+      seed: 5,
+      maxDays: 6,
+      policies: ['ai', 'ai'],
+      settings: settingsWith(defaultContent()),
+      content: defaultContent(),
+    });
+    expect(record.profiles).toEqual(['ai', 'ai']);
+    for (const tally of record.humanity) {
+      expect(tally.turns).toBeGreaterThanOrEqual(5);
+      expect(tally.turnMs).toHaveLength(tally.turns);
+      expect(tally.cohesionSamples).toBeGreaterThan(0);
+      expect(tally.gifted).toBeLessThanOrEqual(tally.losses);
+      expect(tally.reversals).toBeLessThanOrEqual(tally.moves);
+    }
+  });
+
+  it('con lados alternos, las partidas de semilla par cambian quien juega cada equipo', () => {
+    const sidesOf = (seed: number) =>
+      playGame({
+        seed,
+        maxDays: 1,
+        policies: ['passive', 'ai'],
+        alternateSides: true,
+        settings: settingsWith(defaultContent()),
+        content: defaultContent(),
+      }).profiles;
+    expect(sidesOf(5)).toEqual(['passive', 'ai']);
+    expect(sidesOf(6)).toEqual(['ai', 'passive']);
   });
 
   it('duelos: sin contraataque el defensor no devuelve daño; con el, si', () => {
@@ -174,7 +209,7 @@ describe('herramienta de equilibrio: el informe', () => {
     captures: 0,
   });
   const tallies = () => Object.fromEntries(defaultContent().units.list.map((unitType) => [unitType.id, noTally()]));
-  const won = (seed: number, winner: 0 | 1): GameRecord => ({
+  const won = (seed: number, winner: 0 | 1, profiles = ['ai', 'ai']): GameRecord => ({
     seed,
     winners: [winner],
     reason: 'hq',
@@ -182,18 +217,22 @@ describe('herramienta de equilibrio: el informe', () => {
     samples: [{ day: 1, funds: [0, 0], buildings: [1, 1], army: [0, 0], units: [0, 0] }],
     units: [tallies(), tallies()],
     events: 0,
+    profiles,
+    humanity: [emptyHumanity(), emptyHumanity()],
+  });
+  const meta = (games: number) => ({
+    name: 'x',
+    variant: { name: 'x', set: {} },
+    changes: [],
+    maxDays: 60,
+    seeds: [0, games - 1] as [number, number],
+    policies: 'ai vs ai',
   });
   const sideFlags = (firstWins: number, games: number) => {
     const records = Array.from({ length: games }, (_, i) => won(i, i < firstWins ? 0 : 1));
-    const meta = {
-      name: 'x',
-      variant: { name: 'x', set: {} },
-      changes: [],
-      maxDays: 60,
-      seeds: [0, games - 1] as [number, number],
-      policies: 'ai vs ai',
-    };
-    return buildReport(records, meta, DEFAULT_TARGETS, defaultContent()).flags.filter((flag) => flag.startsWith('Un bando gana mas'));
+    return buildReport(records, meta(games), DEFAULT_TARGETS, defaultContent()).flags.filter((flag) =>
+      flag.startsWith('Un bando gana mas'),
+    );
   };
 
   it('el aviso de un bando que gana mas es igual para los dos: 58/42 y 42/58 pasan, 60/40 y 40/60 no', () => {
@@ -201,5 +240,18 @@ describe('herramienta de equilibrio: el informe', () => {
     expect(sideFlags(21, 50)).toEqual([]);
     expect(sideFlags(30, 50)).toHaveLength(1);
     expect(sideFlags(20, 50)).toHaveLength(1);
+  });
+
+  it('con dos perfiles de IA, cuenta lo que gana cada uno (en los dos lados) y no da avisos de lados ni de precios', () => {
+    // La candidata juega de los dos lados (lados alternos) y gana 3 de 4.
+    const records = [won(1, 0, ['nueva', 'ai']), won(2, 1, ['ai', 'nueva']), won(3, 0, ['nueva', 'ai']), won(4, 0, ['ai', 'nueva'])];
+    const report = buildReport(records, meta(4), DEFAULT_TARGETS, defaultContent());
+    expect(report.ai?.profiles).toEqual([
+      { profile: 'nueva', games: 4, wins: 3, adjudicated: 0 },
+      { profile: 'ai', games: 4, wins: 1, adjudicated: 0 },
+    ]);
+    expect(report.ai?.humanity.map((row) => row.profile)).toEqual(['nueva', 'ai']);
+    expect(report.flags.filter((flag) => flag.startsWith('Un bando gana mas'))).toEqual([]);
+    expect(report.suggestions).toEqual([]);
   });
 });

@@ -8,6 +8,8 @@
  *   npm run balance -- compare actual prueba
  *   npm run balance -- tune --iterations 3 --games 150
  *   npm run balance -- run --teams 3                 tres equipos de la IA (todos contra todos)
+ *   npm run balance -- run --vs candidata --name c   un perfil de IA (profiles.ts) contra la del juego, lados alternos
+ *   npm run balance -- run --vs passive              la IA contra un equipo que no hace nada
  *
  * Informes en balance/reports/<nombre>.md y .json. Todas las variantes usan las mismas semillas
  * por defecto, asi que las diferencias entre informes se deben a los cambios y no a la suerte.
@@ -15,7 +17,8 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { cpus } from 'node:os';
 import { join } from 'node:path';
-import { FIRST_TEAM, type Policy } from './play';
+import { FIRST_TEAM } from './play';
+import { checkPolicy, PASSIVE, type Policy } from './profiles';
 import { buildReport, compareMarkdown, DEFAULT_TARGETS, duelMarkdown, reportMarkdown, type Report, type Targets } from './report';
 import { buildVariant, type Variant, type VariantSetup } from './variant';
 import { runDuels, runGames, type GamesRun } from './runner';
@@ -100,12 +103,22 @@ const DEFAULT_TEAMS = 2;
 const DUEL_TRIALS = 300;
 const TUNE_ROUNDS = 3;
 
-/** Quien juega cada equipo: todos la IA; con `--vs passive`, el primero no hace nada (para medir a la IA). */
+/** El perfil de la IA del juego (profiles.ts): el de todos los equipos, salvo el primero con `--vs`. */
+const GAME_PROFILE: Policy = 'ai';
+
+/**
+ * Quien juega cada equipo: todos la IA del juego; con `--vs <nombre>`, el primero lo juega ese perfil
+ * (profiles.ts) o, con `--vs passive`, nadie (para medir a la IA).
+ */
 function policiesFrom(parsed: BalanceArgs): Policy[] {
   const teams = parsed.number('teams', DEFAULT_TEAMS);
-  const firstPolicy = parsed.text('vs', 'ai') === 'passive' ? 'passive' : 'ai';
-  return Array.from({ length: teams }, (_, team): Policy => (team === 0 ? firstPolicy : 'ai'));
+  const firstPolicy = parsed.text('vs', GAME_PROFILE);
+  checkPolicy(firstPolicy);
+  return Array.from({ length: teams }, (_, team): Policy => (team === 0 ? firstPolicy : GAME_PROFILE));
 }
+
+/** Dos perfiles de IA distintos: cada uno juega la mitad de las partidas de cada lado (con `--vs passive`, no). */
+const playsTwoProfiles = (policies: readonly Policy[]): boolean => new Set(policies).size > 1 && !policies.includes(PASSIVE);
 
 /** Las partidas que pide la linea de ordenes. */
 function gamesRunFrom(parsed: BalanceArgs): GamesRun {
@@ -119,6 +132,7 @@ function gamesRunFrom(parsed: BalanceArgs): GamesRun {
     firstTeam: parsed.number('first', FIRST_TEAM),
     rotateStarts: parsed.flag('swap') === true ? 1 : 0,
     size: parsed.number('size', DEFAULT_MAP_SIZE),
+    alternateSides: playsTwoProfiles(policiesFrom(parsed)),
   };
 }
 
@@ -137,7 +151,8 @@ async function evaluate(variant: Variant, parsed: BalanceArgs): Promise<Report> 
   const records = await runGames(setup, run);
   const duel = await reportDuel(setup, parsed, run.seeds[0]!);
   const seeds: [number, number] = [run.seeds[0]!, run.seeds[run.seeds.length - 1]!];
-  const meta = { name: variant.name, variant, changes, maxDays: run.maxDays, seeds, policies: run.policies.join(' vs ') };
+  const sides = run.alternateSides ? ' (lados alternos)' : '';
+  const meta = { name: variant.name, variant, changes, maxDays: run.maxDays, seeds, policies: `${run.policies.join(' vs ')}${sides}` };
   return buildReport(records, meta, targetsFrom(parsed), setup.content, duel);
 }
 

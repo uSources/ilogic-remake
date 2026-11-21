@@ -2,8 +2,20 @@
 
 ## Estado (19-11-2026)
 
-Sin empezar. Este documento es el plan para revisar antes de tocar código. Cada fase es una PR (o
-dos), se mide antes y después y se puede parar en cualquiera: cada una mejora algo por sí sola.
+**Fase 0 hecha:** `npm run balance` enfrenta perfiles de IA y da las medidas de «humanidad»
+(`balance/README.md`, «Una IA contra otra»). Línea de partida, la IA de ahora en 100 partidas
+(`balance/reports/ia-base.md`):
+
+| Medida | IA de ahora |
+|---|---|
+| Partidas con ganador antes del día 60 | 7 % (93 sin terminar) |
+| Unidades regaladas por partida (de cada bando) | 19,0 (el 67 % de sus bajas) |
+| Al aliado más cercano | 3,3 casillas |
+| Vaivenes | 24 % de los movimientos |
+| Tiempo por turno (media / p95) | 34 / 109 ms (en la máquina de las pruebas) |
+
+Lo siguiente: la fase 1. Cada fase es una PR (o dos), se mide antes y después y se puede parar en
+cualquiera: cada una mejora algo por sí sola.
 
 ## Qué queremos decir con «más humana»
 
@@ -67,9 +79,9 @@ Sin medidas, «más humana» es una opinión. Dos cosas en `tools/balance/`:
    - **Unidades regaladas**: las que acaban el turno donde el enemigo las puede destruir y las
      destruyen sin haber hecho daño ese turno.
    - **Cohesión**: distancia media de cada unidad a su aliado más cercano.
-   - **Constancia**: cuántas veces cambia una unidad de objetivo. Para esto la IA deja una **traza**
-     de lo que decide (objetivo de cada unidad, en un sitio aparte que solo llenan las herramientas;
-     la partida no cambia).
+   - **Constancia**: cuántas veces cambia una unidad de idea. Se mide desde fuera, sin tocar la IA:
+     **vaivenes**, los movimientos que van en contra del anterior de la misma unidad. (Si hace falta
+     afinar más, la fase 2 puede dejar una traza de sus objetivos.)
    - **Tiempo por turno** de la IA, con un tope (el turno no puede tardar más en un móvil).
 
 **Hecho cuando:** `npm run balance` da estas medidas para la IA de ahora (la línea de partida) y

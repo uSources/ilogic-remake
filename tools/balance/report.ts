@@ -6,6 +6,8 @@ import { emptyTally, type DaySample, type GameRecord, type PerTeam, type UnitTal
 import { unitFieldPath, type Variant } from './variant';
 import { clearLeader, strengthRanking, type Holdings } from './strength';
 import { mean, median, pct, quantile, roundTo, sum, toTenths } from './numbers';
+import { comparisonRow, orDash, tableHead, tableRow } from './markdown';
+import { aiComparisonRows, aiFindingsOf, aiSection, isMirror, type AiFindings } from './profileReport';
 
 export interface Targets {
   /** Duracion deseada (mediana de dias). */
@@ -107,6 +109,8 @@ export interface Report extends ReportMeta {
   economy: Economy;
   units: UnitRow[];
   duel?: DuelSummary;
+  /** Perfiles enfrentados y su «humanidad» (en informes de antes de la fase 0 de docs/PLAN-IA.md, no esta). */
+  ai?: AiFindings;
   flags: string[];
   suggestions: Suggestion[];
 }
@@ -279,6 +283,10 @@ interface Findings {
   outcome: Outcome;
   snowball: readonly SnowballPoint[];
   units: readonly UnitRow[];
+  /** Perfiles enfrentados y su «humanidad» (profileReport.ts). */
+  ai: AiFindings;
+  /** Todos los equipos los juega la misma IA: valen los avisos de lados y precios. */
+  mirror: boolean;
 }
 
 /** Avisa si algun equipo gana (contando ventaja al final) mas de lo que le toca. */
@@ -385,7 +393,7 @@ function adviceOf(
   context: { meta: ReportMeta; targets: Targets; content: GameContent },
 ): Pick<Report, 'flags' | 'suggestions'> {
   const { meta, targets, content } = context;
-  const mirror = !meta.policies.includes('passive');
+  const { mirror } = findings;
   const prices = mirror ? priceFindings(findings, targets, content) : { flags: [], suggestions: [] };
   const flags = [
     ...(mirror ? sideFlags(findings, targets) : []),
@@ -405,6 +413,8 @@ function findingsOf(records: readonly GameRecord[], teams: readonly TeamId[], co
     outcome: outcomeOf(records, teams, winners),
     snowball: snowballOf(winners.winners),
     units: unitRowsOf(records, content),
+    ai: aiFindingsOf(records, winners.winners),
+    mirror: isMirror(records),
   };
 }
 
@@ -434,22 +444,11 @@ export function buildReport(
     economy: economyOf(records, teams),
     units: [...findings.units],
     duel: duelSummary,
+    ai: findings.ai,
     flags,
     suggestions,
   };
 }
-
-/** Una fila de una tabla de Markdown. */
-const tableRow = (cells: readonly (string | number)[]): string => `| ${cells.join(' | ')} |`;
-
-/** La cabecera de una tabla de Markdown: los nombres y cada columna a la izquierda o, con `right`, a la derecha. */
-const tableHead = (headers: readonly string[], right: readonly boolean[]): string[] => [
-  tableRow(headers),
-  `|${right.map((alignedRight) => (alignedRight ? '---:' : '---')).join('|')}|`,
-];
-
-/** Un numero que puede faltar: con su formato, o una raya. */
-const orDash = (value: number | null, format: (value: number) => string): string => (value === null ? '—' : format(value));
 
 /** Una razon de daño hecho / devuelto: "sin respuesta" (o `noReply`) si casi no se devuelve nada. */
 const exchangeText = (ratio: number, noReply = 'sin respuesta'): string => (ratio > NO_REPLY_RATIO ? noReply : ratio.toFixed(1));
@@ -596,7 +595,16 @@ function duelSection({ duel }: Report): string[] {
 
 /** El informe en Markdown, seccion a seccion. */
 export function reportMarkdown(report: Report): string {
-  const sections = [headerSection, changesSection, flagsSection, suggestionsSection, resultSection, unitsSection, duelSection];
+  const sections = [
+    headerSection,
+    changesSection,
+    flagsSection,
+    suggestionsSection,
+    resultSection,
+    (report: Report) => (report.ai ? aiSection(report.ai) : []),
+    unitsSection,
+    duelSection,
+  ];
   return sections.flatMap((section) => section(report)).join('\n');
 }
 
@@ -610,12 +618,6 @@ export function duelMarkdown(cells: DuelCell[], terrain: string): string {
     ...cells.map((cell) => tableRow([...duelCells(cell), orDash(cell.firstStrikeWins, pct)])),
   ];
   return lines.join('\n') + '\n';
-}
-
-/** Una fila de la comparacion: antes, despues y el cambio (vacio si falta uno de los dos). */
-function comparisonRow(label: string, before: number | null, after: number | null, format: (value: number) => string): string {
-  const change = before !== null && after !== null ? after - before : null;
-  return tableRow([label, orDash(before, format), orDash(after, format), change === null ? '' : (change > 0 ? '+' : '') + format(change)]);
 }
 
 function comparisonRows(before: Report, after: Report): string[] {
@@ -633,6 +635,7 @@ function comparisonRows(before: Report, after: Report): string[] {
       pct,
     ),
   );
+  rows.push(...aiComparisonRows(before.ai, after.ai));
   if (before.duel || after.duel)
     rows.push(
       comparisonRow('Daño hecho / devuelto (iguales)', before.duel?.exchangeRatio ?? null, after.duel?.exchangeRatio ?? null, (ratio) =>
