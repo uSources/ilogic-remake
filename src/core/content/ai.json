@@ -1,7 +1,7 @@
 {
   "$schema": "./ai.schema.json",
   "maxMergedLife": 130,
-  "maxCaptureDistance": 8,
+  "maxCaptureDistance": 6,
   "retreatBelowLife": 40,
   "costPerPoint": 1000,
   "killBonus": 50,
@@ -11,7 +11,7 @@
   "fullBonusDamage": 50,
   "enemyHqPreference": 12,
   "ownedBuildingPreference": 4,
-  "minCapturers": 4,
+  "minCapturers": 5,
   "guardRadius": 4,
   "controlPointHeadStart": 6,
   "focusFireBonus": 100,

@@ -13,6 +13,8 @@ npm run balance -- run --games 200 --name antes                     # linea base
 npm run balance -- run --set UNIT.cost.Tank=10000 --name tanque-10k # probar un cambio
 npm run balance -- compare antes tanque-10k                         # comparar
 npm run balance -- duel --terrain Woods                             # unidad contra unidad
+npm run balance -- run --vs candidata --no-duel --games 60          # un perfil de IA contra la del juego
+npm run balance -- tune-ai --weights minCapturers --games 40        # buscar pesos de la IA mejores
 ```
 
 Como leerlo y decidir:

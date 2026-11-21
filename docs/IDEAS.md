@@ -11,9 +11,11 @@ el PvP, después.
 
 ## En marcha
 
-- **Una IA más humana** (planes que duran, mapas de influencia, memoria, personalidades y
-  dificultad): plan por fases en `docs/PLAN-IA.md`. Recoge también la idea 1 (partidas que acaben); la
-  dificultad en «Nueva partida» ya está (fase 4).
+- **Una IA más humana:** las cinco fases de `docs/PLAN-IA.md` están hechas (influencia, planes,
+  memoria, personalidades y dificultad, pesos ajustados jugando sola). Queda:
+  - que una misión elija la personalidad de su IA;
+  - ajustar los pesos imitando a personas, cuando haya partidas suyas registradas;
+  - la idea 1 (partidas que acaben): casi todas siguen llegando al día 60.
 
 ## Vista 3D (lo que tenía el 2D y aún falta)
 

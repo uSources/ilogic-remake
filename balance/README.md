@@ -70,6 +70,23 @@ Una variante es un JSON en `balance/variants/` con los cambios que se quieren pr
 - Con dos perfiles, **los lados se alternan**: en las partidas de semilla par cada uno juega del otro lado, para que no cuente quién empieza ni el mapa.
 - El informe dice cuánto gana cada perfil (de verdad o con ventaja clara al final).
 - Los avisos de lados y precios solo salen cuando todos los bandos los juega la misma IA: con dos perfiles distintos no dicen nada del juego.
+- Las personalidades y las dificultades de `ai.json` tienen su perfil (`agresiva`, `cauta`, `codiciosa`, `tortuga`, `facil`). Las IAs de antes también (`fase0` a `fase2`), para comparar con lo de ahora.
+
+## Ajustar los pesos de la IA
+
+```
+npm run balance -- tune-ai --weights minCapturers,dangerAversion --games 40 --name ia-ajustada
+```
+
+`tune-ai` busca pesos mejores para la IA jugando sola (`docs/PLAN-IA.md`, fase 5). Para cada peso de `--weights`:
+
+1. Lo sube y lo baja `--step` veces (1,3 por defecto). Un peso entero sigue entero y cambia al menos 1.
+2. Juega con ese cambio (perfil `ai`) contra la IA de ahora, que usa los pesos de `ai.json` (perfil `actual`), con los lados alternos.
+3. Se queda con el primer valor que saque `--margin` más que ella (10 puntos por defecto) y más que lo que ya tenía.
+
+Los cambios se acumulan y `--iterations` repite la vuelta. Sin `--weights`, prueba los que cambian las personalidades.
+
+El resultado sale como variante (`balance/variants/<nombre>.json`) y como informe con cada prueba. Antes de llevarlo a `ai.json`, hay que confirmarlo con más partidas: `run --variant <nombre> --vs actual --games 80`.
 
 ## Avisos y propuestas
 
