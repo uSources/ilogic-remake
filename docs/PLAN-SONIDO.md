@@ -149,7 +149,11 @@ Descargados (21-11-2026) en `~/ComfyUI-Shared/models`:
 
 - **Estilo**: se usa la propuesta de arriba ("guerra de juguete"); falta que el usuario la confirme
   escuchando los primeros candidatos.
-- **Escuchar y elegir** los sonidos de prioridad A.
+- **Elegidos (21-11-2026)**: las armas que faltaban (pistola, bazuca, mortero, ametralladora, cañon
+  pesado, antiaereo, lanzamisiles, bomba), las orugas, las 7 voces y los 18 ambientes (9 de zona, 5 de
+  fondo y 4 de clima). **Faltan por generar y elegir**: los otros 111 efectos (motores de ruedas, helices
+  y helicoptero, pasos por suelo, impactos, caidas, interfaz, sucesos), `thunder`, la musica de cada tema,
+  `briefing`, `enemy_turn` y los jingles; `npm run sonidos -- lista` dice cuales tienen candidatos.
 - **Que suenen en la partida (hecho, 21-11-2026)**, con sonido 3D (`docs/ARQUITECTURA.md`, "Sonido 3D"):
   - cada efecto del tablero suena desde su sitio respecto a la camara (a un lado, mas flojo lejos);
   - por unidad: disparo, motor y caida (`UNIT_SOUNDS`, `soundCues.ts`); los pasos de la infanteria
