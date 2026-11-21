@@ -3,11 +3,12 @@
 Lista viva de lo que se ha hablado para Ilogic y aún no está hecho (o se descartó, y por qué). Se
 actualiza al terminar cada cosa: lo hecho sale de aquí y va a las notas de versión (`CHANGELOG.md`).
 
-Estado a 16 de noviembre de 2026, con la versión 0.11.0 (efectos de sonido, la vista 3D por
-sistemas, y en 3D el camino con fantasma, el clic que acierta con su barra, elegir varias, órdenes,
-escuadras y las flechas de lo que hará cada orden). Ahora el foco es que la vista 3D tenga lo que
-tenía el 2D, con su forma por sistemas (`docs/ARQUITECTURA.md`, "Vista 3D"), y un núcleo PvE bueno;
-el PvP, después.
+Estado a 19 de noviembre de 2026, con la versión 0.13.1 publicada y, aún sin versión, que el
+tablero se lea mejor: siluetas de las unidades tapadas, contorno en la elegida y la señalada,
+minimapa en 3D (siempre abierto, con los colores del tablero y que crece al señalarlo), decorado
+más pequeño y la cámara de partida más cerca. Ahora el foco es que la vista 3D tenga lo que tenía
+el 2D, con su forma por sistemas (`docs/ARQUITECTURA.md`, "Vista 3D"), y un núcleo PvE bueno; el
+PvP, después.
 
 ## En marcha
 
@@ -29,8 +30,6 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 21. **El dedo:** pellizcar para acercar y girar con dos dedos (`docs/PLAN-MOVIL.md`).
 22. **Laboratorio de animaciones** (se quitó con el 2D; para los modelos está `units3d.html`) y fondo
     vivo del menú (se quitó también su opción).
-23. **Comprobar lo visual sin mirar:** ya no hay capturas comparadas (`npm run shots` se quitó con
-    el 2D) ni API de depuración para agentes (solo `window.ilogic3d` en la consola).
 24. **Edificios con explanada delante** (como en Advance Wars): rehacer los seis en Ashfox ocupando
     la mitad de atrás de la casilla, para que la unidad de encima quede delante sin tener que
     encogerlos ni moverlos a una esquina (ahora lo hace `sharedTile.ts`). Para cuando se retoquen los
@@ -78,7 +77,7 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     del navegador). Decidido: el servidor manda (las acciones pasan por la sesión
     como las de cualquiera, la IA rival y los dados juegan allí) y un cliente nunca recibe más que la
     vista de su equipo (si no, se puede mirar a través de la niebla). Las clasificatorias, después.
-16. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
+17. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
 
 Para competir hará falta: equilibrio estricto, mapas simétricos o probados (los de azar
 dan algo de ventaja a una salida) y quizá una opción "sin azar" en el daño. El PvE se queda: enseña a
@@ -131,3 +130,9 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   detalle, que es el estilo del juego; con las unidades más pequeñas ya se lee bien.
 - **Peana del color del equipo bajo cada unidad** (como una figurita, para que no se confunda con lo
   que tiene detrás de su color): se probó y no gustó.
+- **Casillas más grandes:** en 3D es encoger todo lo de encima y acercar la cámara. Con la misma
+  cámara las unidades quedaban demasiado pequeñas; acercándola cabía mucho menos mapa, y el relieve
+  no cambia. Lo que sí daba claridad era que el decorado tapara menos (se encogió al 0,82) y empezar
+  con la cámara algo más cerca (`docs/ESTETICA.md`).
+- **Botón para abrir y cerrar el minimapa:** mejor siempre abierto (también en el móvil) y que crezca
+  al pasar el ratón o al tocarlo; la tecla M lo sigue cerrando.
