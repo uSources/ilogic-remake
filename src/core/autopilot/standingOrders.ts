@@ -1,8 +1,8 @@
 /**
  * [CAMBIO] Ordenes permanentes de un equipo (ver StandingOrder en model/standingOrder.ts): las cumple
  * la partida al terminar el turno de cada equipo (assistTurn, fase de TURN_END_PHASES; los pasos de
- * unidad son los mismos que reutiliza la IA), o al darlas (startStandingOrder). Lo que haran se
- * puede prever sin tocar la partida: autopilot/preview.ts.
+ * unidad son los mismos que reutiliza la IA). Lo que haran se puede prever sin tocar la partida:
+ * autopilot/preview.ts.
  */
 
 import { isAlliedOwner } from '../teams';
@@ -31,11 +31,6 @@ export function* assistTurn(s: GameState, team: TeamId, moment: StandingOrderMom
   for (const unit of standingOrderPlayOrder(s, withStandingOrder))
     if (yield* unitStandingOrderTurn(s, play, unit.uid)) fulfilled.push(unit.uid);
   return fulfilled;
-}
-
-/** [CAMBIO] La unidad empieza ya su orden recien dada (si aun no se ha movido). */
-export function* startStandingOrder(s: GameState, uid: number, team: TeamId): ActionPlan<boolean> {
-  return yield* unitStandingOrderTurn(s, playCtx(team, autopilotProfileOf(s.content)), uid);
 }
 
 /** Lo que necesita cada tipo de orden para jugar el turno de una unidad. */

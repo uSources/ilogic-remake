@@ -31,7 +31,7 @@ Para los modelos 3D, ademas, la skill `ashfox`. Del juego 2D de antes solo queda
   Fuera de core se importa de la fachada; dentro, del modulo concreto, sin crear ciclos. Un import
   por modulo, con los tipos dentro (`import { a, type B }`; lo vigila ESLint).
 - `src/core` **no** importa three.js, Preact, DOM, `localStorage` ni `settings` (lo impide ESLint).
-  Si una regla se escribe dentro de la vista, no se puede probar: va a core (ver `core/targeting.ts`).
+  Si una regla se escribe dentro de la vista, no se puede probar: va a core (ver `core/trail.ts`).
 - **La vista 3D: sistemas agnosticos al motor; solo el motor dibuja.** three.js solo se importa en
   `src/view3d/engine/` (y el playground: `ENGINE_FILES` de `eslint.config.js`). Los sistemas
   (`systems/`: turno, entrada, que se anima con cada suceso, que se ve en el tablero, la camara,

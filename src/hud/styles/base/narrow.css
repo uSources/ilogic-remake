@@ -3,28 +3,6 @@
   white-space: nowrap;
 }
 @media (max-width: 720px) {
-  .combat {
-    bottom: 10px;
-    gap: 4px;
-  }
-  .combat-vs {
-    font-size: 14px;
-  }
-  .combat-side {
-    width: calc(50vw - 30px);
-    max-width: 200px;
-    padding: 8px;
-  }
-  .cs-portrait {
-    width: 36px;
-    height: 36px;
-  }
-  .cs-name {
-    font-size: 12px;
-  }
-  .cs-hit {
-    display: none;
-  }
   .top {
     left: 10px;
     right: 10px;

@@ -23,7 +23,6 @@ export {
   turnEndOrderOf,
   isDetached,
   standingOrderBlock,
-  standingOrderChoices,
   atStandingOrder,
   sameFormation,
   squadInFormation,

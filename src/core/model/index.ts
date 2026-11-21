@@ -22,7 +22,6 @@ export type { WeatherState } from './weather';
 export type { Objective, ObjectiveGoal, ObjectiveStatus } from './objective';
 export type {
   CombatInfo,
-  EventActor,
   GameEvent,
   GameEventKind,
   AttackEventBase,
@@ -30,7 +29,6 @@ export type {
   IncomeSource,
   IncomeSources,
   CoreGameEvent,
-  CoreGameEventKind,
   ModuleEvent,
   ModuleEvents,
   ModuleEventsAreNew,

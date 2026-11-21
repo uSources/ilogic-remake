@@ -8,7 +8,7 @@ import { isRuleOn } from './ruleset';
 /** Cuanto acierto de mas da atacar a quien ya han atacado hoy (0 si la partida no lleva flanqueo). */
 const flankBonusOnceHit = (s: GameState): number => (isRuleOn(s, 'flank') ? s.settings.flankBonus : 0);
 
-/** Cuanto acierto de mas da atacar a `target` ahora (0 si la partida no lleva flanqueo o no le han atacado hoy): lo enseña el panel de combate. */
+/** Cuanto acierto de mas da atacar a `target` ahora (0 si la partida no lleva flanqueo o no le han atacado hoy): lo enseña la prevision de combate. */
 export function flankBonusFor(s: GameState, target: Unit): number {
   return wasHitToday(s, target) ? flankBonusOnceHit(s) : 0;
 }

@@ -9,10 +9,9 @@ import { options } from './options';
 import { menu } from './menu';
 import { newGame } from './newGame';
 import { online } from './online';
-import { lab } from './lab';
 
 /** Los textos por tema, para encontrarlos; `t()` busca en todos a la vez (ES). */
-export const ES_BY_FEATURE = { turn, actions, cards, combat, economy, orders, weather, options, menu, newGame, online, lab };
+export const ES_BY_FEATURE = { turn, actions, cards, combat, economy, orders, weather, options, menu, newGame, online };
 
 export const ES = {
   ...turn,
@@ -26,7 +25,6 @@ export const ES = {
   ...menu,
   ...newGame,
   ...online,
-  ...lab,
 };
 
 export type TextKey = keyof typeof ES;

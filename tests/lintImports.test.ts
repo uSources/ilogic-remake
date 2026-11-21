@@ -165,7 +165,7 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
       'src/core/session/gameSession.ts',
       'src/core/controllers/aiController.ts',
       'src/core/playerView.ts',
-      'src/core/targeting.ts',
+      'src/core/trail.ts',
     ];
     for (const file of files) {
       const config = (await eslint.calculateConfigForFile(file)) as { rules?: Record<string, unknown[]> };

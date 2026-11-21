@@ -55,7 +55,7 @@ return gotCloser ? best.pos : null;
 7. **Depender de poco.** Cada modulo pide una interfaz pequena con lo que usa (`...Host`), no la
    vista entera ni el estado entero. El nucleo (`src/core`) no importa nada de fuera.
 8. **Funciones puras donde se pueda.** Calcular y aplicar por separado: primero se decide (puro, con
-   test), despues se cambia el estado o se dibuja. Una funcion con nombre de consulta (`statsOf`,
+   test), despues se cambia el estado o se dibuja. Una funcion con nombre de consulta (`armyValue`,
    `captureProgress`) nunca escribe en la partida.
 9. **Tipos que cuentan la verdad.** Uniones con nombre (`'attack' | 'capture'`) en vez de `string`;
    `null` solo cuando "no hay" es un caso real, y entonces se trata arriba (regla 3).

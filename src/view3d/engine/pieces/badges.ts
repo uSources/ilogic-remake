@@ -6,8 +6,6 @@
  */
 import * as THREE from 'three';
 
-const BAR_WIDTH = 64;
-const BAR_HEIGHT = 12;
 const BORDER = 2;
 /** Tamaño de la marca en el mundo (casillas). */
 const BADGE_SCALE = new THREE.Vector2(0.5, 0.1);
@@ -21,46 +19,8 @@ function lifeColor(share: number): string {
 /** Lo que perderia en un ataque: rayas de rojo claro y oscuro, como en la tarjeta de la prevision. */
 const LOSS_LIGHT = '#ff8a82';
 const LOSS_DARK = '#6b1f1c';
-const LOSS_STRIPE = 4;
-
-/** De `after` a `share` (de 0 a 1 de la barra), las rayas de lo que perderia. */
-function drawLoss(draw: CanvasRenderingContext2D, after: number, share: number): void {
-  const inner = BAR_WIDTH - BORDER * 2;
-  const start = BORDER + Math.round(inner * after);
-  const end = BORDER + Math.round(inner * share);
-  for (let x = start; x < end; x++) {
-    draw.fillStyle = Math.floor((x - start) / LOSS_STRIPE) % 2 === 0 ? LOSS_LIGHT : LOSS_DARK;
-    draw.fillRect(x, BORDER, 1, BAR_HEIGHT - BORDER * 2);
-  }
-}
-
-function barTexture(share: number, color: string, after: number | null): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = BAR_WIDTH;
-  canvas.height = BAR_HEIGHT;
-  const draw = canvas.getContext('2d')!;
-  draw.fillStyle = '#0b1220';
-  draw.fillRect(0, 0, BAR_WIDTH, BAR_HEIGHT);
-  draw.fillStyle = color;
-  draw.fillRect(BORDER, BORDER, Math.round((BAR_WIDTH - BORDER * 2) * (after ?? share)), BAR_HEIGHT - BORDER * 2);
-  if (after !== null) drawLoss(draw, after, share);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.NearestFilter;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
-}
 
 const textures = new Map<string, THREE.CanvasTexture>();
-
-function cachedBar(share: number, color: string, after: number | null = null): THREE.CanvasTexture {
-  const key = `${Math.round(share * 100)}${color}${after === null ? '' : `-${Math.round(after * 100)}`}`;
-  let texture = textures.get(key);
-  if (!texture) {
-    texture = barTexture(share, color, after);
-    textures.set(key, texture);
-  }
-  return texture;
-}
 
 /** Pone esa textura en la marca (si no la tiene ya) y la enseña. */
 function paint(badge: THREE.Sprite, texture: THREE.CanvasTexture, scale: THREE.Vector2): void {
@@ -191,7 +151,7 @@ export function showLifeDrop(badge: THREE.Sprite, shown: number, after: number):
   paint(badge, cachedLife(`${Math.ceil(shown * 100)}%`, life), LIFE_SCALE);
 }
 
-/** Una marca vacia (sin dibujo hasta que se le pone uno con `showBar`, `showNumber`...). */
+/** Una marca vacia (sin dibujo hasta que se le pone uno con `showLife`, `showNumber`...). */
 export function newBadge(height: number): THREE.Sprite {
   const badge = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, transparent: true }));
   badge.scale.set(BADGE_SCALE.x, BADGE_SCALE.y, 1);
@@ -199,12 +159,6 @@ export function newBadge(height: number): THREE.Sprite {
   badge.renderOrder = 10;
   badge.visible = false;
   return badge;
-}
-
-/** Enseña una barra (`share` de 0 a 1) o, con null, la esconde. */
-export function showBar(badge: THREE.Sprite, share: number | null, color?: string): void {
-  badge.visible = share !== null;
-  if (share !== null) paint(badge, cachedBar(share, color ?? lifeColor(share)), BADGE_SCALE);
 }
 
 /** La chapa de un numero: un poco mas ancha que alta, del color que se le diga y el numero en blanco con tinta. */

@@ -52,9 +52,6 @@ export const isControllerKind = (value: unknown): value is ControllerKind => (CO
 export const teamsControlledBy = (s: GameState, controller: ControllerKind): TeamId[] =>
   s.teams.filter((team) => team.controller === controller).map((team) => team.id);
 
-/** El equipo lo lleva la IA del juego. */
-export const isAiControlled = (s: GameState, team: TeamId): boolean => teamState(s, team).controller === 'ai';
-
 /**
  * El equipo de la persona: el primero que lleva una persona (con varias en la misma pantalla, cada
  * una mira en su turno: la escena). Es el de las tarjetas de la partida guardada. Si todos son de la

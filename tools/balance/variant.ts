@@ -219,5 +219,3 @@ export function buildVariant(variant: Variant, base: GameContent): VariantSetup 
   for (const [path, value] of Object.entries(variant.set ?? {})) applySetting(files, path, value, changes);
   return { name: variant.name, content: loadContent(files), changes };
 }
-
-export const BASELINE: Variant = { name: 'actual' };

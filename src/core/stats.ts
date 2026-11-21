@@ -42,11 +42,6 @@ export function armyByDay(s: GameState, team: TeamId): number[] {
   return [...Array.from({ length: pastDays }, (_, day) => samples[day] ?? 0), armyValue(s, team)];
 }
 
-/** Las estadisticas de un equipo, para leerlas. */
-export function statsOf(s: GameState, team: TeamId): Readonly<TeamStats> {
-  return teamState(s, team).stats;
-}
-
 /** Lo que apunta un suceso en las estadisticas: en las de quien lo ha hecho (`counts`) y, si toca, en las de otro equipo. */
 export type StatCounter<K extends GameEventKind> = (s: GameState, counts: TeamStats, event: GameEventOf<K>) => void;
 

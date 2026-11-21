@@ -12,7 +12,7 @@
  * | `session/log` | el registro: `LoggedAction`, `isOffTurnAction` y como se lee (`LogCursor`) |
  * | `session/replay` | repetir lo apuntado (`replaySession`) |
  * | `session/autopilotController` | `autopilotController`: cumple ya, en el turno, las ordenes permanentes |
- * | `session/gameSession` | `GameSession` y como llevarla: seguida (`runMatch`) o paso a paso (`playMatch`) |
+ * | `session/gameSession` | `GameSession` y como llevarla: hasta el final o hasta que decida alguien de fuera (`runMatch`) |
  * | `session/screen` | lo que mira la pantalla: quien es una persona (`isPerson`, `people`), cuando se acaba para ella (`screenEnd`) y cuando se guarda sola (`isAutosaveMoment`) |
  */
 export {
@@ -33,7 +33,6 @@ export { replaySession } from './session/replay';
 export { autopilotController } from './session/autopilotController';
 export {
   GameSession,
-  playMatch,
   runMatch,
   type ActedStep,
   type RunOptions,

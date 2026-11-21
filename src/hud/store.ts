@@ -1,6 +1,5 @@
 import type { UIActions } from './actions';
 import { initialState, type UIState } from './state';
-import type { ReportLineVM } from './vm/notices';
 
 /**
  * Estado de la interfaz (HTML) compartido con la partida 3D y el menu.
@@ -15,13 +14,11 @@ export type { UIActions } from './actions';
 export type { UIState } from './state';
 export type { Anchor, BySide, OwnerSide, Side, StatChipVM } from './vm/common';
 export type { EndOutcome, EndStatsVM } from './vm/end';
-export type { IdleVM, MoveTipVM, PickedVM, SelectionVM, SquadVM } from './vm/army';
-export type { CombatSideVM, CombatVM, ForecastVM } from './vm/combat';
-export type { LabVM } from './vm/lab';
+export type { PickedVM, SelectionVM } from './vm/army';
+export type { ForecastVM } from './vm/combat';
 export type {
   CampaignItemVM,
   HomeVM,
-  MainMenuItemVM,
   MarkVM,
   MenuItemVM,
   MenuVM,
@@ -34,12 +31,11 @@ export type {
   OptionsTabVM,
   OptionsVM,
   PresetVM,
-  SetupRowVM,
   SetupVM,
 } from './vm/menus';
 export type { MinimapVM } from './vm/minimap';
 export type { NotesVM } from './vm/notes';
-export type { HandoffVM, ReportLineVM } from './vm/notices';
+export type { HandoffVM } from './vm/notices';
 export type { AbilityVM, TileVM, UnitVM } from './vm/tile';
 export type { BreakdownLineVM, DayInfoVM, EconomyVM, WeatherVM } from './vm/topBar';
 
@@ -47,29 +43,17 @@ const noop = () => {};
 
 /** Acciones por defecto: no hacen nada (salvo cerrar la ayuda). El menu y la partida ponen las suyas al empezar. */
 const DEFAULT_ACTIONS: UIActions = {
-  labPlay: noop,
-  labSet: noop,
-  labExit: noop,
-  mainMenuPick: noop,
-  mainMenuHover: noop,
   menuPick: noop,
   menuHover: noop,
   menuClose: noop,
   endTurn: noop,
-  multiSelect: noop,
-  selectSquad: noop,
   renameSquad: noop,
   renameClose: () => ui.set({ rename: null }),
   handoffReady: noop,
   openGameMenu: noop,
-  toggleThreat: noop,
-  toggleIntents: noop,
   nextIdle: noop,
-  toggleMinimap: noop,
   minimapJump: noop,
-  focusUnit: noop,
   pickInSelection: noop,
-  endContinue: noop,
   endHover: noop,
   endPick: noop,
   closeHelp: () => ui.set({ help: false }),
@@ -84,8 +68,6 @@ const DEFAULT_ACTIONS: UIActions = {
   optionsPick: noop,
   optionsTab: noop,
   optionsClose: noop,
-  pauseHover: noop,
-  pausePick: noop,
   campaignHover: noop,
   campaignPick: noop,
   campaignBack: noop,
@@ -93,7 +75,6 @@ const DEFAULT_ACTIONS: UIActions = {
   onlinePick: noop,
   onlineSet: noop,
   onlineText: noop,
-  surrender: noop,
 };
 
 type Listener = () => void;
@@ -121,22 +102,14 @@ export const ui = {
   actions: { ...DEFAULT_ACTIONS },
 };
 
-/** Un numero nuevo para cada aviso, resumen o cartel: con el de `key`, uno nuevo vuelve a empezar su animacion. */
+/** Un numero nuevo para cada aviso o cartel: con el de `key`, uno nuevo vuelve a empezar su animacion. */
 let lastNoticeId = 0;
 const nextNoticeId = () => ++lastNoticeId;
 
 export function showToast(text: string): void {
   ui.set({ toast: { text, id: nextNoticeId() } });
 }
-export function showReport(title: string, lines: ReportLineVM[]): void {
-  ui.set({ report: { title, lines, id: nextNoticeId() } });
-}
 
 export function showBanner(small: string, big: string, tone: 'blue' | 'red', weather: string | null = null): void {
   ui.set({ banner: { small, big, tone, weather, id: nextNoticeId() } });
-}
-
-/** Quita las acciones registradas (nada de botones que actuen sobre una pantalla cerrada). */
-export function resetActions(): void {
-  Object.assign(ui.actions, DEFAULT_ACTIONS);
 }

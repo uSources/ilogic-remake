@@ -3,7 +3,7 @@ import { defaultContent } from '@core/content/default';
 import { endRound } from '@core/rules/round';
 import { newUnit } from '@core/measure';
 import { deserialize, serialize } from '@core/save';
-import { armyByDay, armyValue, recordEvent, sampleArmy, statsOf } from '@core/stats';
+import { armyByDay, armyValue, recordEvent, sampleArmy } from '@core/stats';
 import { emptyTeamStats, teamState } from '@core/teams';
 import { posOf } from '@core/geom';
 import type { CombatInfo } from '@core/model';
@@ -23,8 +23,8 @@ describe('estadisticas', () => {
     recordEvent(s, { kind: 'capture', actor: 1, uid: unit.uid, at: { x: 3, y: 3 }, owner: 1, left: 0, total: 20 });
     // El fin de ronda (sin actor) no cuenta.
     recordEvent(s, { kind: 'income', actor: null, team: 0, amount: 1000, source: 'buildings' });
-    expect(statsOf(s, 0)).toEqual({ built: 1, spent: unitTypeNamed('Tank').cost, lost: 0, captured: 0, army: [] });
-    expect(statsOf(s, 1)).toEqual({ built: 0, spent: 0, lost: 1, captured: 1, army: [] });
+    expect(teamState(s, 0).stats).toEqual({ built: 1, spent: unitTypeNamed('Tank').cost, lost: 0, captured: 0, army: [] });
+    expect(teamState(s, 1).stats).toEqual({ built: 0, spent: 0, lost: 1, captured: 1, army: [] });
   });
 
   it('la baja es del equipo de la unidad atacada, aunque haya mas de dos', () => {
@@ -54,17 +54,17 @@ describe('estadisticas', () => {
     sampleArmy(s);
     s.day = 3;
     sampleArmy(s);
-    expect(statsOf(s, 0).army).toEqual([0, 0, 0]);
-    expect(statsOf(s, 1).army).toEqual(Array(3).fill(unitTypeNamed('Tank').cost));
+    expect(teamState(s, 0).stats.army).toEqual([0, 0, 0]);
+    expect(teamState(s, 1).stats.army).toEqual(Array(3).fill(unitTypeNamed('Tank').cost));
   });
 
   it('se guardan con la partida y unas rotas se leen a cero', () => {
     const s = blankState();
     teamState(s, 0).stats.built = 4;
-    expect(statsOf(deserialize(serialize(s), defaultContent())!, 0).built).toBe(4);
+    expect(teamState(deserialize(serialize(s), defaultContent())!, 0).stats.built).toBe(4);
     const bad = JSON.parse(serialize(s)) as { teams: { stats: unknown }[] };
     bad.teams[0]!.stats = { built: 'x' };
-    expect(statsOf(deserialize(JSON.stringify(bad), defaultContent())!, 0)).toEqual(emptyTeamStats());
+    expect(teamState(deserialize(JSON.stringify(bad), defaultContent())!, 0).stats).toEqual(emptyTeamStats());
   });
 });
 
@@ -73,9 +73,9 @@ describe('las estadisticas salen de los sucesos, no de lo que se anima', () => {
     const s = blankState();
     s.buildings.push({ type: 'City', owner: 0, x: 4, y: 4 });
     act(s, 0, { kind: 'buy', at: { x: 4, y: 4 }, unitType: 'Soldier' });
-    expect(statsOf(s, 0)).toMatchObject({ built: 1, spent: unitTypeNamed('Soldier').cost });
+    expect(teamState(s, 0).stats).toMatchObject({ built: 1, spent: unitTypeNamed('Soldier').cost });
     endRound(s);
-    expect(statsOf(s, 0).army).toHaveLength(2);
+    expect(teamState(s, 0).stats.army).toHaveLength(2);
     expect(armyByDay(s, 0)).toHaveLength(2);
     expect(armyByDay(s, 0).at(-1)).toBe(armyValue(s, 0));
   });

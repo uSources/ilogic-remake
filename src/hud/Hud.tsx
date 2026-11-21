@@ -7,7 +7,7 @@ import { NewGame } from './menus/NewGame';
 import { Online } from './menus/Online';
 import { Options } from './menus/Options';
 import { Help } from './overlays/Help';
-import { Banner, Loading, Report, Toast } from './overlays/Notices';
+import { Banner, Loading, Toast } from './overlays/Notices';
 import { PatchNotes } from './overlays/PatchNotes';
 import { RenameSquad } from './overlays/RenameSquad';
 import { Handoff } from './overlays/Handoff';
@@ -41,7 +41,6 @@ export function Hud() {
       {s.handoff && s.screen === 'game' && <Handoff handoff={s.handoff} />}
       {s.notes && <PatchNotes notes={s.notes} />}
       {s.toast && <Toast key={s.toast.id} toast={s.toast} />}
-      {s.report && s.screen === 'game' && <Report key={s.report.id} report={s.report} />}
       {s.banner && <Banner key={s.banner.id} banner={s.banner} />}
     </>
   );

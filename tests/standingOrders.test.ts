@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assistTurn, startStandingOrder, standingOrderPlayOrder } from '@core/autopilot';
+import { assistTurn, standingOrderPlayOrder } from '@core/autopilot';
 import { defaultContent } from '@core/content/default';
 import { manhattan, posOf } from '@core/geom';
 import { newUnit } from '@core/measure';
@@ -9,7 +9,6 @@ import {
   SQUAD_NAME_MAX,
   squadByKey,
   standingOrderBlock,
-  standingOrderChoices,
   effectiveStandingOrder,
   isDetached,
   sameFormation,
@@ -21,7 +20,6 @@ import { STANDING_ORDER_KINDS, STANDING_ORDER_TYPES } from '@core/squads/standin
 import { turnEndOrderOf } from '@core/squads/standingOrderQueries';
 import { cancelStandingOrder, finishStandingOrder, giveStandingOrder } from '@core/squads/standingOrderSteps';
 import type { GameState } from '@core/model';
-import { squadsVM } from '../src/ui/hudModels';
 import { act, blankState, unitTypeNamed, hqId, placedBuildings, playPlan } from './helpers';
 import { teamState } from '@core/teams';
 
@@ -135,34 +133,11 @@ describe('ordenes con destino', () => {
     expect(kindsWith('holdsPosition')).toEqual(['defend']);
     expect(kindsWith('takesBuilding')).toEqual(['capture']);
     expect(kindsWith('leadsSquad')).toEqual(['capture']);
-    // Las de cada unidad no son de una escuadra: ni mandan en ella ni se ofrecen en el menu de una casilla.
-    for (const kind of STANDING_ORDER_KINDS.filter((candidate) => STANDING_ORDER_TYPES[candidate].unitOnly)) {
+    // Las de cada unidad no son de una escuadra: no mandan en ella.
+    for (const kind of STANDING_ORDER_KINDS.filter((candidate) => STANDING_ORDER_TYPES[candidate].unitOnly))
       expect(STANDING_ORDER_TYPES[kind].leadsSquad).toBe(false);
-      expect(STANDING_ORDER_TYPES[kind].menuRank({ enemyHere: true, canGive: () => true })).toBeNull();
-    }
     // Con capturar, quien no captura va de escolta atacando.
     expect(STANDING_ORDER_TYPES.capture.escort?.as).toBe('attack');
-  });
-
-  it('ordenes que se ofrecen en una casilla (gesto en el mapa): atacar primero si hay enemigo, capturar si se puede', () => {
-    const s = world();
-    const tank = newUnit(s, TANK, 0, { x: 5, y: 5 });
-    const sol = newUnit(s, SOLDIER, 0, { x: 5, y: 6 });
-    const foe = newUnit(s, SOLDIER, 1, { x: 9, y: 9 });
-    // Casilla vacia: atacar o defender.
-    expect(standingOrderChoices(s, 0, { x: 3, y: 3 }, [sol], false)).toEqual(['attack', 'defend']);
-    // Ciudad neutral: capturar va primero, pero solo si alguna puede capturar.
-    expect(standingOrderChoices(s, 0, { x: 12, y: 5 }, [sol], false)).toEqual(['capture', 'attack', 'defend']);
-    expect(standingOrderChoices(s, 0, { x: 12, y: 5 }, [tank], false)).toEqual(['attack', 'defend']);
-    expect(standingOrderChoices(s, 0, { x: 12, y: 5 }, [tank, sol], false)).toEqual(['capture', 'attack', 'defend']);
-    // Edificio propio: no se captura.
-    expect(standingOrderChoices(s, 0, { x: 0, y: 0 }, [sol], false)).toEqual(['attack', 'defend']);
-    // Enemigo visible: atacar primero (tambien sobre un edificio que se puede capturar).
-    expect(standingOrderChoices(s, 0, foe, [sol], true)).toEqual(['attack', 'defend']);
-    expect(standingOrderChoices(s, 0, { x: 19, y: 19 }, [sol], true)).toEqual(['attack', 'capture', 'defend']);
-    // Sin unidades propias no hay nada que ofrecer.
-    expect(standingOrderChoices(s, 0, { x: 3, y: 3 }, [foe], false)).toEqual([]);
-    expect(standingOrderChoices(s, 0, { x: 3, y: 3 }, [], false)).toEqual([]);
   });
 
   it('solo juegan las que tienen orden y siguen sin usar; nunca compra', () => {
@@ -181,12 +156,10 @@ describe('ordenes con destino', () => {
     expect(teamState(s, 0).funds).toBe(50000);
   });
 
-  it('startStandingOrder la pone en marcha ya; cancelar la deja esperando', () => {
+  it('cancelar la orden la deja esperando', () => {
     const s = world();
     const unit = newUnit(s, SOLDIER, 0, { x: 5, y: 5 });
     giveStandingOrder(s, 0, [unit], 'capture', { x: 12, y: 5 });
-    playPlan(s, 0, startStandingOrder(s, unit.uid, 0));
-    expect(unit.x).toBeGreaterThan(5);
     cancelStandingOrder(s, [unit]);
     expect(unit.standingOrder).toBeUndefined();
   });
@@ -410,7 +383,7 @@ describe('orden de la escuadra y unidades destacadas', () => {
     expect(squad.standingOrder?.kind).toBe('attack');
     expect(isDetached(s, firstSoldier)).toBe(true);
     expect(effectiveStandingOrder(s, secondSoldier)?.kind).toBe('attack');
-    expect(squadsVM(s)[0]).toMatchObject({ detached: 1 });
+
     // Darle justo la orden de la escuadra la devuelve con ella.
     giveStandingOrder(s, 0, [firstSoldier], 'attack', { x: 15, y: 15 });
     expect(firstSoldier.standingOrder).toBeUndefined();

@@ -5,11 +5,10 @@
  * standingOrderSteps.ts.
  */
 import { manhattan, samePos, posOf } from '../geom';
-import { teamUnits } from '../rules/queries';
 import { isAlive } from '../util/predicates';
 import type { GameState, Pos, Squad, StandingOrder, StandingOrderKind, StandingOrderMoment, TeamId, TurnEndOrder, Unit } from '../model';
 import { squadById, squadUnits } from './queries';
-import { isTurnEndOrder, momentOf, STANDING_ORDER_KINDS, STANDING_ORDER_TYPES, type StandingOrderBlock } from './standingOrderTypes';
+import { isTurnEndOrder, momentOf, STANDING_ORDER_TYPES, type StandingOrderBlock } from './standingOrderTypes';
 
 export const sameStandingOrder = (first: StandingOrder, second: StandingOrder): boolean =>
   first.kind === second.kind && samePos(first.at, second.at);
@@ -91,24 +90,6 @@ export function standingOrderBlock(
   units: readonly Unit[],
 ): StandingOrderBlock | null {
   return STANDING_ORDER_TYPES[kind].block(s, team, at, units);
-}
-
-/**
- * Ordenes que tiene sentido ofrecer en una casilla (clic derecho o pulsacion larga en el destino, con
- * unidades elegidas), en el orden del menu: el `menuRank` de cada tipo (con un enemigo visible ahi,
- * atacar va primero; si no, con un edificio que estas unidades pueden capturar, capturar; defender
- * siempre se puede). `enemyHere`: hay un enemigo que el jugador ve en esa casilla (la niebla la decide
- * la escena).
- */
-export function standingOrderChoices(s: GameState, team: TeamId, at: Pos, units: readonly Unit[], enemyHere: boolean): StandingOrderKind[] {
-  const mine = teamUnits(s, team, units);
-  if (!mine.length) return [];
-  const ranked = STANDING_ORDER_KINDS.flatMap((kind) => {
-    const rank = STANDING_ORDER_TYPES[kind].menuRank({ enemyHere, canGive: () => standingOrderBlock(s, team, kind, at, mine) === null });
-    return rank === null ? [] : [{ kind, rank }];
-  });
-  // sort es estable: a igual puesto, el orden de STANDING_ORDER_TYPES.
-  return ranked.sort((first, second) => first.rank - second.rank).map((entry) => entry.kind);
 }
 
 /** Ya ha llegado a la zona de su orden (a 1 casilla o menos). */

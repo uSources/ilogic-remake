@@ -170,7 +170,7 @@ src/
     rules.ts     Reglas (fachada de rules/: movimiento, combate, captura, union, transporte, compra, fin de ronda)
     abilities.ts Lo que hace cada clase de habilidad de las unidades (ABILITY_EFFECTS)
     squads.ts    Escuadras y ordenes permanentes del jugador (fachada de squads/)
-    targeting.ts Desde donde atacar; trail.ts: el camino trazado con el cursor
+    trail.ts     El camino trazado con el cursor
     ai.ts        Inteligencia artificial (fachada de ai/: un plan que propone cada accion, con su perfil
                  AiProfile); las reglas, las acciones, autopilot/ y session/ no la importan (ESLint)
     playerView.ts Lo que sabe cada equipo (PlayerView): lo que recibe quien decide por el

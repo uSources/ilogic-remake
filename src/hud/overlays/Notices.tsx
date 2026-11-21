@@ -1,10 +1,8 @@
 import { t } from '../../settings';
-import { Icon } from '../common/Icon';
 import { WeatherIcon } from '../common/WeatherIcon';
 import type { UIState } from '../state';
-import type { ReportLineVM } from '../vm/notices';
 
-/** Avisos que salen solos y se van (sus animaciones, en styles/): carga, aviso corto, resumen y cartel. */
+/** Avisos que salen solos y se van (sus animaciones, en styles/): carga, aviso corto y cartel. */
 
 /** Un aviso dura al menos esto, en segundos... */
 const TOAST_MIN_SECONDS = 2.4;
@@ -29,27 +27,6 @@ export function Toast({ toast }: { toast: NonNullable<UIState['toast']> }) {
   return (
     <div class="px toast" role="status" style={{ animationDuration: `${seconds.toFixed(1)}s` }}>
       {toast.text}
-    </div>
-  );
-}
-
-function ReportLine({ line }: { line: ReportLineVM }) {
-  return (
-    <div class={`line ${line.tone}`}>
-      {line.weather ? <WeatherIcon id={line.weather} cls="px-icon wx-icon" /> : <Icon k={line.icon} />}
-      <span>{line.text}</span>
-    </div>
-  );
-}
-
-/** Resumen de la ronda (ingresos, reparaciones, clima...). */
-export function Report({ report }: { report: NonNullable<UIState['report']> }) {
-  return (
-    <div class="px report" role="status">
-      <span class="label">{report.title}</span>
-      {report.lines.map((line) => (
-        <ReportLine line={line} />
-      ))}
     </div>
   );
 }

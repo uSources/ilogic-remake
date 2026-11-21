@@ -154,7 +154,7 @@ export const DECIDERS_ONLY_PROPOSE = [
  * estadisticas): solo los llaman el
  * `apply` de las acciones (actions/), los pasos de ronda y de turno, las INVARIANTS y lo que prepara
  * una partida. Quien decide (la IA, autopilot/), la sesion, los controladores, la vista y lo que
- * apunta (targeting, trail) solo preguntan: no los importan. Fuera del nucleo ya no se ven (las
+ * traza (trail) solo preguntan: no los importan. Fuera del nucleo ya no se ven (las
  * fachadas no los dan: tests/layers.test.ts). Lo prueba tests/lintImports.test.ts, que ademas busca en
  * todo el nucleo las funciones que cambian la partida: una que no este aqui (ni sea de las que crean
  * o cargan una partida) hace fallar el test, asi la lista no se queda atras.
@@ -201,13 +201,7 @@ export const APPLY_STEPS = Object.entries(STEPS_BY_MODULE).map(stepPattern);
 const ROOT_STEPS = Object.entries(STEPS_BY_MODULE)
   .filter(([module]) => !module.includes('/'))
   .map(stepPattern);
-const READER_FILES = [
-  'src/core/controllers/**/*.ts',
-  'src/core/controllers.ts',
-  'src/core/playerView.ts',
-  'src/core/targeting.ts',
-  'src/core/trail.ts',
-];
+const READER_FILES = ['src/core/controllers/**/*.ts', 'src/core/controllers.ts', 'src/core/playerView.ts', 'src/core/trail.ts'];
 const SESSION_FILES = ['src/core/session/**/*.ts', 'src/core/session.ts'];
 const AI_FILES = ['src/core/ai/**/*.ts', 'src/core/ai.ts'];
 const AUTOPILOT_FILES = ['src/core/autopilot/**/*.ts', 'src/core/autopilot.ts'];

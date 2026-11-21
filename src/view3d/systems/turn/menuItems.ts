@@ -3,10 +3,9 @@
  * opciones), la compra (precio y datos de cada unidad) y lo que cobra un equipo cada dia (la barra de
  * arriba).
  */
-import { buildingIncome, buildingsOf, upkeepOf, type BuyOption } from '../../../core/rules';
-import { buildingTypeOf } from '../../../core/gameContent';
+import type { BuyOption } from '../../../core/rules';
 import type { UnitType } from '../../../core/content';
-import type { GameState, TeamId, Unit } from '../../../core/model';
+import type { GameState, Unit } from '../../../core/model';
 import type { MenuItemVM } from '../../../hud/store';
 import { nameOf, t } from '../../../settings';
 import { abilitiesVM, buyBlockedText, captureHintText, unitStatChips, unitStatsText } from '../../../ui/hudModels';
@@ -92,10 +91,4 @@ function buyDetail(s: GameState, option: BuyOption): string {
     .join('');
   const blocked = option.blocked ? ` · ${buyBlockedText(s, option.blocked)}` : '';
   return `${unitStatsText(unitType)} · ${t('vision')} ${unitType.vision}${command}${abilities}${blocked}`;
-}
-
-/** Lo que cobra un equipo cada dia: sus edificios menos el mantenimiento de su ejercito. */
-export function teamIncome(s: GameState, team: TeamId): number {
-  const owned = buildingsOf(s, team);
-  return owned.reduce((sum, building) => sum + buildingIncome(s, buildingTypeOf(s, building)), 0) - upkeepOf(s, team);
 }

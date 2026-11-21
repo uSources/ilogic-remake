@@ -44,6 +44,3 @@ export type InputCommand =
 export type GroupMode = 'select' | 'set' | 'add';
 
 export type InputCommandKind = InputCommand['kind'];
-
-/** Ordenes que cierran la ayuda si esta abierta (cualquier otra se ignora mientras tanto). */
-export const CLOSES_HELP: readonly InputCommandKind[] = ['cancel', 'stepBack', 'help', 'accept'];

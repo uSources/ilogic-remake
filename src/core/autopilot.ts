@@ -12,13 +12,13 @@
  * | `autopilot/scoring` | cuanto vale cada ataque (`ATTACK_SCORE_TERMS`) |
  * | `autopilot/tactics` | retirarse, atacar, capturar lo de debajo |
  * | `autopilot/formation` | escuadras que avanzan juntas |
- * | `autopilot/standingOrders` | cumplir las ordenes de un equipo (`assistTurn`) y empezar una recien dada |
+ * | `autopilot/standingOrders` | cumplir las ordenes de un equipo (`assistTurn`) |
  * | `autopilot/preview` | lo que haran las ordenes al acabar el turno, sobre una copia con la niebla del equipo (`previewStandingOrders`) |
  *
  * Son planes (`ActionPlan`): proponen sus acciones y las manda quien los cumple (la sesion, el paso de
  * fin de turno, la prevision).
  */
-export { assistTurn, startStandingOrder } from './autopilot/standingOrders';
+export { assistTurn } from './autopilot/standingOrders';
 export { plannedStandingOrders, previewStandingOrders, type PlannedAction, type StandingOrderIntent } from './autopilot/preview';
 export { fireOnTheWay, guardZone, HUNT, SHOOT_FROM_HERE, type EngagementPolicy, type FiringPositions } from './autopilot/engagement';
 export type { AutopilotProfile, AttackPlan, AttackScoreTerm } from './autopilot/profile';
