@@ -32,7 +32,8 @@
     "coverDangerShare",
     "pushAdvantage",
     "attackNeedRatio",
-    "crowdSteps"
+    "crowdSteps",
+    "memoryDays"
   ],
   "properties": {
     "$schema": {
@@ -177,6 +178,11 @@
       "type": "number",
       "minimum": 0,
       "description": "Planes: pasos de mas que cuesta un objetivo que ya tiene bastante (para no amontonarse)."
+    },
+    "memoryDays": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Memoria (docs/PLAN-IA.md, fase 3): dias que la IA tiene en cuenta a un enemigo que ya no ve, donde lo vio por ultima vez (pesa menos cuanto mas viejo); 0, solo los que ve."
     }
   }
 }

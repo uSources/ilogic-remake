@@ -83,8 +83,16 @@ const isTeamFall = (fell: unknown): boolean =>
 /** Un equipo bien formado en lo que tiene que tener (su numero es su puesto). Solo mira. */
 function isValidTeam(team: unknown, id: number): team is Saved & { alliance: number } {
   if (!isObject(team) || team.id !== id || !isInt(team.alliance, 0, MAX_COUNT) || !isControllerKind(team.controller)) return false;
-  return isInt(team.funds, 0, MAX_SAVED_FUNDS) && typeof team.resigned === 'boolean' && isTeamFall(team.fell);
+  return (
+    isInt(team.funds, 0, MAX_SAVED_FUNDS) && typeof team.resigned === 'boolean' && isTeamFall(team.fell) && Array.isArray(team.sightings)
+  );
 }
+
+/** Lo que recuerda un equipo de una unidad enemiga (TeamState.sightings), bien formado. Solo mira. */
+const isSighting = (value: unknown): boolean =>
+  isObject(value) &&
+  typeof value.type === 'string' &&
+  [value.uid, value.team, value.x, value.y, value.life, value.day].every((field) => isInt(field, 0, MAX_COUNT));
 
 /** Entre 2 y MAX_TEAMS equipos, todos bien formados, y al menos dos alianzas (si no, nadie es enemigo de nadie). Solo mira. */
 export function hasValidTeams(teams: readonly unknown[]): boolean {
@@ -93,10 +101,12 @@ export function hasValidTeams(teams: readonly unknown[]): boolean {
   return checked.length === teams.length && allianceCount(checked) >= 2;
 }
 
-/** Las estadisticas de cada equipo, si estan rotas, se arreglan (despues de hasValidTeams). */
+/** Las estadisticas de cada equipo, si estan rotas, se arreglan, y sus recuerdos rotos se olvidan (despues de hasValidTeams). */
 export function cleanTeams(teams: readonly unknown[]): void {
   for (const team of objectsIn(teams)) {
     team.stats = sanitizeTeamStats(team.stats);
+    // Un recuerdo roto se olvida (es memoria de la IA: no cambia las reglas).
+    if (Array.isArray(team.sightings)) team.sightings = team.sightings.filter(isSighting);
   }
 }
 

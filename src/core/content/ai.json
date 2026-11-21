@@ -27,5 +27,6 @@
   "coverDangerShare": 0.75,
   "pushAdvantage": 2,
   "attackNeedRatio": 1.2,
-  "crowdSteps": 6
+  "crowdSteps": 6,
+  "memoryDays": 1
 }

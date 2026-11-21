@@ -50,6 +50,27 @@ todo el ejército contra la Base demasiado pronto (18 % contra 77 %); ahora esti
 por sus edificios. Y defender cualquier edificio con un enemigo cerca la dejaba en casa: solo se
 defiende lo que están capturando y la Base.
 
+**Fase 3 hecha:** cada equipo recuerda dónde vio por última vez a cada enemigo
+(`TeamState.sightings`, puesta al día por la invariante `sightings`, `core/rules/sightings.ts`; la
+niebla se la quita a las demás alianzas; `SAVE_VERSION` 15). La IA cuenta a los recordados en el
+peligro, el control y lo que calcula que tiene el enemigo (`ai/memory.ts`), menos cuanto más viejo es
+el recuerdo, durante `memoryDays` días (`ai.json`). Contra la de la fase 2 (perfil `fase2`), 60
+partidas con los lados alternos (`balance/reports/ia-fase3.md`; allí la nueva sale como `memoria`):
+
+| Medida | Fase 2 | Con memoria (1 día) |
+|---|---|---|
+| Gana (de verdad o con ventaja clara) | 43 % | 45 % |
+| Regaladas por partida | 16,3 | 16,3 |
+| Al aliado más cercano | 3,4 casillas | 3,5 casillas |
+| Vaivenes | 28 % | 28 % |
+| Turno (media / p95) | 65 / 200 ms | 64 / 199 ms |
+
+Igual de fuerte (dentro del ruido) y con lo que sabe un jugador: ya no olvida al enemigo que acaba de
+perder de vista. Probado y descartado: recordar 3 días (40 % contra 43 %,
+`balance/reports/ia-fase3-3dias.md`): los enemigos se mueven, y un recuerdo viejo es un peligro donde
+ya no hay nadie, que la vuelve prudente de más. Los fantasmas en el 3D (decisión abierta 2) quedan
+para otra PR (`docs/IDEAS.md`).
+
 Cada fase es una PR (o dos), se mide antes y después y se puede parar en cualquiera: cada una
 mejora algo por sí sola.
 

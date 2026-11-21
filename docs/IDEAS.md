@@ -40,6 +40,10 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 25. **«Ir allí» (viaje de varios turnos).** El núcleo lo tiene (orden `goto`, `gotoStep`), pero la
     vista 3D no deja darlo: en el 2D era tocar una casilla fuera del alcance (`giveTravel`, quitado
     en c52298a2). Las banderas de destino ya lo marcan cuando hay uno.
+26. **Fantasmas de los enemigos perdidos de vista.** El núcleo ya recuerda, para cada equipo, dónde
+    vio por última vez a cada enemigo (`TeamState.sightings`, `docs/PLAN-IA.md`, fase 3); la vista 3D
+    podría dibujar ahí una silueta apagada con los días que hace, que es lo que un jugador lleva en
+    la cabeza.
 
 ## Jugabilidad
 

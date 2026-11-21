@@ -67,6 +67,7 @@ const withoutBooks = (other: TeamState): TeamState => ({
   ...other,
   stats: emptyTeamStats(),
   funds: HIDDEN_FUNDS,
+  sightings: [],
 });
 
 /** Lo que ve un enemigo del dinero de un equipo (nada: siempre lo mismo). */
@@ -94,8 +95,9 @@ const FOG: readonly FogRule[] = [
   },
   {
     // Lo que un enemigo lleva en la caja: sus estadisticas (lo que ha comprado, gastado, perdido y
-    // capturado, y el valor de su ejercito cada dia, que cuenta las unidades que no se ven) y su
-    // dinero (diria lo que ha comprado o cobrado sin verlo). Solo lo de su alianza se sabe entero.
+    // capturado, y el valor de su ejercito cada dia, que cuenta las unidades que no se ven), su
+    // dinero (diria lo que ha comprado o cobrado sin verlo) y su memoria (donde vio a quien: diria lo
+    // que ve). Solo lo de su alianza se sabe entero.
     id: 'foreignBooks',
     hide: (s, team) => ({
       teams: s.teams.map((other) => (areAllied(s, other.id, team) ? other : withoutBooks(other))),
