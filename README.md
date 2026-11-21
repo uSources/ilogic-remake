@@ -188,7 +188,7 @@ src/
                minimapa, por panel en models/), sprites.ts (claves de imagen), sides.ts, palette.ts (PAL_CSS)
   menu/        Pantallas del menu (inicio, partida nueva, campaña, opciones), sin dibujo propio
   controls/    Teclado, menus, gestos y seleccion: funciones puras que traducen lo pulsado a ordenes
-  audio/       Musica (music.ts, con <audio>) y efectos de sonido (sfx.ts, con Web Audio; WAV de Ashfox)
+  audio/       Musica (music.ts, con <audio>) y efectos de sonido (sfx.ts, con Web Audio; WAV de Ashfox o de IA)
   net/         Partidas por la red desde el navegador: la conexion con la sala (serverLink), lo que llega
                como partida y jugadas (roomClient), las rutas (roomApi) y «Mis partidas en línea»
   patchNotes/  Novedades: notas de parche de GitHub y del CHANGELOG
@@ -198,7 +198,8 @@ src/
                la vista; tipos en state.ts, actions.ts y vm/) y hud.css (estilo "retro pixel", por partes en styles/)
 public/assets/ img/ (cada imagen suelta, material de partida), atlas/ (lo que carga la interfaz), models/ (GLB) y musica
 tools/art/     Scripts que compilan las imagenes a partir de los dibujos guardados (Retro Diffusion)
-               y ashfox/ (fuentes de los modelos 3D)
+               y ashfox/ (fuentes de los modelos 3D y de los efectos sintetizados)
+tools/audio/   Sonidos con IA local: Stable Audio 3 en ComfyUI (npm run sonidos, skill sonidos)
 docs/          Especificacion del juego original sacada del codigo Java
 tests/         Tests (vitest)
 scripts/       assets.mjs (compila los graficos), gen-assets.mjs (lista de imagenes) y
@@ -236,6 +237,13 @@ GitHub publica la web, las previews y las Releases con esos graficos (`npm run b
 `npm run assets`), asi que tras retocar un dibujo hay que ejecutar `npm run assets` y subir lo que cambie. `npm run assets:pack` rehace
 solo la lista, el atlas y la comprobacion (para cuando se retoca a mano un PNG de `public/assets/img`).
 En `dist` van el atlas, los modelos GLB, los punteros del raton (`raton*.png`) y los iconos de `public/icons`; en la version de un fichero (que incrusta tambien los `.glb`) la musica va solo en mp3.
+
+### Sonidos
+
+Los efectos sintetizados (disparos, pasos, menus...) salen de Ashfox (skill `ashfox`). Los efectos nuevos,
+los ambientes y la musica nueva se hacen con IA local: Stable Audio 3 Medium en ComfyUI, con
+`npm run sonidos` (`tools/audio/`, skill `sonidos`, plan en `docs/PLAN-SONIDO.md`). Genera candidatos
+que se escuchan en una pagina y los elegidos pasan a `public/assets/` ya recortados; tambien se suben al repo.
 
 ## Calidad del codigo
 

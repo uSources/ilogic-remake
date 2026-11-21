@@ -141,14 +141,15 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
 Los efectos de sonido del juego (disparos, pasos, golpes, explosion, captura, menus, turno, final)
 salen de Ashfox igual que los modelos: se describen en corto en `tools/art/ashfox/models/sounds.mjs`
 (voces: `noise`, `fm` o `resonator`; notas: cuando suena cada voz) y `tools/art/ashfox/sounds.mjs`
-escribe los `.ashfox` (`tools/art/ashfox/sounds/`, no se tocan a mano), la lista del juego
-(`src/audio/soundList.ts`, generada) y, con `--export`, los WAV (`public/assets/sfx/<id>_<n>.wav`,
-uno por variante; el juego elige una al azar cada vez).
+escribe los `.ashfox` (`tools/art/ashfox/sounds/`, no se tocan a mano) y, con `--export`, los WAV
+(`public/assets/sfx/<id>_<n>.wav`, uno por variante; el juego elige una al azar cada vez) y la lista
+del juego (`src/audio/soundList.ts`, generada desde los WAV de la carpeta por `tools/audio/soundList.mjs`,
+que comparte con la herramienta de IA). Los efectos nuevos, ambientes y musica con IA: skill `sonidos`.
 
 ```sh
-node tools/art/ashfox/sounds.mjs                                   # .ashfox y lista
+node tools/art/ashfox/sounds.mjs                                   # .ashfox
 ashfox check tools/art/ashfox/sounds/hit.ashfox                    # valida uno
-ASHFOX=<ejecutable> node tools/art/ashfox/sounds.mjs --export      # y los WAV (--only hit,explosion)
+ASHFOX=<ejecutable> node tools/art/ashfox/sounds.mjs --export      # y los WAV y la lista (--only hit,explosion)
 ```
 
 - Referencia: https://ashfox.io/docs/language/sounds/ y los ejemplos de `examples/sounds/src` del repo
