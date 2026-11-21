@@ -68,7 +68,7 @@ Primero hay que saber cómo se juega hoy en números. Si no, cada cambio se deci
    - a) el daño es el esperado ±10 %;
    - b) se mantiene la tirada, pero con mínimo y máximo más estrechos.
    La previsión ya enseña el margen, así que es una decisión de diseño.
-3. **Terreno que se note.** Revisar la defensa de bosque, montaña y ciudad para que colocarse bien compense de verdad. La ficha ya enseña las estrellas.
+3. **Terreno que se note.** Revisar la defensa de bosque, montaña y ciudad para que colocarse bien compense de verdad. La ficha de la casilla ya enseña su defensa en %.
 4. **Ventaja por flanqueo** (opcional): +10 % de acierto por cada aliado junto al objetivo. Premia rodear.
 
 **Hecho cuando:** entre unidades iguales, atacar primero haga como mucho 3 veces el daño que se recibe (hoy no se recibe nada). Nota: en un duelo a muerte entre iguales siempre gana quien empieza (como en Advance Wars); lo que importa es que el primer golpe ya no salga gratis.

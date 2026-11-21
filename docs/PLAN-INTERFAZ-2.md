@@ -81,7 +81,7 @@ Boceto (escritorio):
  │        ▢▢[S]▢▣ ←── ( −45  ☠40% )   ↩ (−10) en tu unidad   │
  │          ▢▢▢▣      ▢ mover: losas azules con borde        │
  │            ▣       ▣ atacar: borde rojo                   │
- │   ★★ ← estrellas de bloque al señalar una casilla         │
+ │   (Llanura · def. 0%) ← ficha de la casilla señalada      │
  │   T ┄┄➜ S   línea roja: ese enemigo te alcanza            │
  │                                                          │
  │                                   ( Fin del turno  ③ )   │
@@ -121,10 +121,14 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
 - Una pieza `Badge` en `src/hud/common/toy.tsx`, junto a `Pill` y `Chip`, sirve para todas las chapas.
 
 ### Fase 3. Casilla y unidad sin tarjeta (hecha)
-- **Defensa**: al señalar una casilla, salen sobre ella sus estrellas como bloquecitos amarillos
-  (pieza del motor, como la letra de la orden en `badges.ts`).
-- **Ficha de la casilla** (`TileTip.tsx`): se queda solo con el nombre y la vida de la unidad. La
-  defensa ya se ve en las estrellas, y Alt sigue dando la tarjeta entera.
+- **Defensa**: primero salían sobre la casilla sus estrellas como bloquecitos amarillos. No se
+  entendía qué eran y se confundían con el cursor (el mismo amarillo), así que el 21-11-2026 pasó a
+  la ficha de la casilla, en % y con el escudo.
+- **Ficha de la casilla** (`TileTip.tsx`): el nombre y la vida de la unidad, el sitio (edificio con
+  su dueño, o terreno) y lo que da la casilla en chapas con icono: defensa, lo que cuesta entrar,
+  ingresos y lo que falta por capturar (solo lo que tenga). Con Alt, la misma ficha crece con el
+  resto (de quién es la unidad, escuadra y orden, movimiento, alcance y visión, carga, habilidades y
+  el punto de control); antes eran dos tarjetas con otro aspecto.
 - **Vida en las unidades**: un número en una chapa solo cuando están heridas, como en Wargroove. Hoy
   hay una barra; se prueba el número frente a la barra en el navegador y se apunta en `ESTETICA.md`
   lo que se quede.
@@ -171,7 +175,7 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
 - Chapas y abanico que no tapen la unidad. Comprobarlo con `settings.uiScale` a 0,75 y a 1,5 (las
   escalas que da Opciones son 0,9, 1 y 1,25: se comprobó con esas).
 - Documentación:
-  - `docs/ESTETICA.md` («Interfaz»): chapas, banderola, losas y bordes, y estrellas de bloque;
+  - `docs/ESTETICA.md` («Interfaz»): chapas, banderola, losas y bordes, y la ficha de la casilla;
   - `docs/SPEC-INTERFAZ.md` y `src/i18n/*/help.ts`: lo nuevo;
   - `docs/ARQUITECTURA.md`: los puertos nuevos;
   - `docs/IDEAS.md`: quitar lo que se haga y apuntar lo descartado (direcciones B y C) con el porqué.

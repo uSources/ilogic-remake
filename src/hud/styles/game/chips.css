@@ -200,7 +200,7 @@
   }
 }
 
-/* La ficha de la casilla señalada (game/TileTip.tsx): lo justo; con Alt, la tarjeta entera. */
+/* La ficha de la casilla señalada (game/TileTip.tsx): lo justo; con Alt, la misma ficha con el resto. */
 .px.tile-tip {
   position: absolute;
   display: flex;
@@ -208,6 +208,7 @@
   gap: 4px;
   padding: 8px 12px;
   min-width: 150px;
+  max-width: 280px;
   pointer-events: none;
   animation: tip-in 0.12s ease-out;
 }
@@ -236,16 +237,71 @@
   font-size: 18px;
 }
 .tt-ground {
-  justify-content: space-between;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 15px;
+}
+/* Bajo una unidad, el sitio pasa a segundo plano: lo principal es ella. */
+.tt-ground.under-unit {
+  font-family: var(--body);
+  font-weight: 400;
+  font-size: 13px;
+  color: var(--muted);
+}
+/* Lo que da la casilla (defensa, paso, ingresos, captura): chapas con su icono y su cifra. */
+.tt-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.tt-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px 1px 2px;
+  border-radius: 999px;
+  background: var(--slot);
   font-size: 14px;
+  white-space: nowrap;
 }
+.tt-rank {
+  color: var(--gold);
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+/* Con Alt, la misma ficha crece: lineas de texto pequeño bajo la unidad y bajo el sitio. */
 .px.tile-tip.detailed {
-  padding: 6px;
+  max-width: 300px;
 }
-.tt-cards {
+.tt-line {
+  font-size: 13px;
+  line-height: 1.3;
+}
+.tt-warn {
+  color: var(--red-lo);
+}
+.tt-help {
+  color: var(--muted);
+}
+.tt-abilities {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--muted);
+}
+.tt-abilities b {
+  color: var(--gold);
+}
+/* Entre la unidad y su casilla, una raya: son dos cosas, aunque vayan en la misma ficha. */
+.px.tile-tip.detailed .tt-ground.under-unit {
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 2px dashed var(--lo);
 }
 @media (prefers-reduced-motion: reduce) {
   .px.tile-tip {

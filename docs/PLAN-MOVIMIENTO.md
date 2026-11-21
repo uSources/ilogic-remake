@@ -44,7 +44,7 @@ Hoy mover son tres pasos: pulsar la unidad, pulsar el destino y elegir en un men
   - Si te pasas del movimiento, se recalcula el más corto hasta donde estás.
 - **Bocadillo junto al puntero:**
   - movimiento gastado y restante, por ejemplo "3/5";
-  - defensa del terreno de esa casilla (estrellas);
+  - defensa del terreno de esa casilla (en %, con el escudo, como en la ficha de la casilla);
   - combustible que quedaría;
   - un icono de peligro si el enemigo visible puede atacar ahí el turno siguiente.
 - **Casillas no válidas:** fuera del alcance o ocupadas, el fantasma se pone rojo y el cursor muestra una ✕.

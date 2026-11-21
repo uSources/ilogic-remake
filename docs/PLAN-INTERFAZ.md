@@ -147,7 +147,7 @@ Todo lo que se decide va en `src/view3d/systems/turn/` (puro y con tests). El HU
 ### Fase 5. Información cuando se pide
 - **Ficha de la casilla**:
   - al parar el ratón ~400 ms sobre una casilla, una `Card` pequeña junto a ella;
-  - con Alt o pulsación larga, la tarjeta entera (lo que hoy hay en `game/Cards.tsx`);
+  - con Alt o pulsación larga, la tarjeta entera (hoy, la misma ficha con el resto: `game/TileParts.tsx`);
   - los datos ya salen de `src/ui/models/*`;
   - fuera las tarjetas fijas de abajo a la izquierda.
 - **Previsión** (`game/Forecast.tsx`): más compacta, encima del objetivo (daño, % de matar y

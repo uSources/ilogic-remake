@@ -19,7 +19,6 @@ import { ThreeCameraView } from './camera/cameraView';
 import { World } from './core/world';
 import { ScreenBoxView } from './core/screenBox';
 import { FxEffectStage } from './fx/effectStage';
-import { DefenseStars } from './fx/defenseStars';
 import { Highlights } from './fx/highlights';
 import { UnitOutline, type OutlinedUnits } from './fx/unitOutline';
 import { ThreatLinesView } from './fx/threatLines';
@@ -82,7 +81,6 @@ export class MatchScene implements ScreenView {
   private readonly effects = new THREE.Group();
   private readonly particles = new ParticleSystem();
   private readonly marks = new GroundMarks();
-  private readonly stars = new DefenseStars();
   private readonly threatLines: ThreatLinesView;
   private readonly cameraView: ThreeCameraView;
   private readonly selectionBox: ScreenBoxView;
@@ -109,7 +107,6 @@ export class MatchScene implements ScreenView {
       this.terrain.object,
       this.board.object,
       this.highlights.object,
-      this.stars.object,
       this.threatLines.object,
       this.preview.object,
       this.intents.object,
@@ -211,11 +208,10 @@ export class MatchScene implements ScreenView {
     return this.board.groundOf(pos);
   }
 
-  /** La casilla señalada: el cuadro amarillo y sus estrellas de defensa (cuantas, lo dice la partida). */
-  hover(pos: Pos | null, stars = 0): void {
+  /** La casilla señalada: sus esquinas amarillas (lo que da la casilla va en su ficha, TileTip.tsx). */
+  hover(pos: Pos | null): void {
     this.highlights.hover(pos);
     this.hoveredTile = pos;
-    this.stars.show(pos ? this.board.groundOf(pos) : null, stars);
   }
 
   /** Deja las piezas y el clima (su id, null si no hay) como estan en la partida. */
@@ -237,7 +233,6 @@ export class MatchScene implements ScreenView {
   render(seconds: number, pose: CameraPose): void {
     this.cameraView.place(pose);
     this.highlights.update(seconds);
-    this.stars.update(seconds);
     this.threatLines.update(seconds);
     this.flags.update(seconds);
     this.preview.update(seconds, this.world.camera, this.canvas.clientHeight);

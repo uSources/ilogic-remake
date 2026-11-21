@@ -4,19 +4,6 @@
   height: 24px;
   flex: none;
 }
-.unitcard .chips {
-  display: flex;
-  /* Si no caben (fichas estrechas del movil), pasan a otra linea en vez de salirse de la ficha. */
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  font-size: 14px;
-}
-.unitcard .chip {
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
 
 /* Icono a tamaño real (12x12) dentro de una linea de texto pequeño. */
 .px-icon.ico-sm {
