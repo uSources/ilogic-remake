@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { BED_AMBIENTS, WEATHER_AMBIENTS, ZONE_AMBIENTS, type AmbientName, type LoopPort } from '../src/audio/ambientNames';
+import {
+  BED_AMBIENTS,
+  WEATHER_AMBIENTS,
+  ZONE_AMBIENTS,
+  type AmbientName,
+  type LoopPort,
+  type ZoneAmbient,
+} from '../src/audio/ambientNames';
 import { SOUND_FALLBACKS, hasSound, resolveSound } from '../src/audio/soundNames';
 import type { Point3 } from '../src/view3d/ports/camera';
 import type { EffectStage, PieceStage, Spot } from '../src/view3d/ports/stage';
@@ -113,19 +120,31 @@ describe('ambiente por zonas', () => {
   });
 });
 
-const emitterAt = (x: number, y: number): AmbientEmitter => ({ sound: 'amb_woods', at: { x, y }, level: 1 });
+const ZONE_SOUNDS: readonly ZoneAmbient[] = ['amb_woods', 'amb_sea', 'amb_meadow', 'amb_peaks', 'amb_dunes'];
+const emitterAt = (x: number, y: number, sound: ZoneAmbient = 'amb_woods'): AmbientEmitter => ({ sound, at: { x, y }, level: 1 });
 const point = (x: number, z: number): Point3 => ({ x, y: 1, z });
 
 describe('que emisores suenan', () => {
   it('los cercanos; lo que ya suena aguanta algo mas lejos', () => {
-    const emitters = [emitterAt(0, 0), emitterAt(16, 0), emitterAt(40, 0)];
+    const emitters = [emitterAt(0, 0), emitterAt(16, 0, 'amb_sea'), emitterAt(40, 0, 'amb_peaks')];
     expect(emittersInEarshot(emitters, point(0, 0), new Set())).toEqual(new Set([0]));
     expect(emittersInEarshot(emitters, point(0, 0), new Set([1]))).toEqual(new Set([0, 1]));
   });
 
-  it('como mucho ocho a la vez, los mas cercanos', () => {
-    const emitters = Array.from({ length: 12 }, (_, index) => emitterAt(index, 0));
-    expect(emittersInEarshot(emitters, point(0, 0), new Set())).toEqual(new Set([0, 1, 2, 3, 4, 5, 6, 7]));
+  it('cada ambiente suena desde un solo sitio, el mas cercano', () => {
+    const emitters = [emitterAt(5, 0), emitterAt(1, 0), emitterAt(3, 0)];
+    expect(emittersInEarshot(emitters, point(0, 0), new Set())).toEqual(new Set([1]));
+  });
+
+  it('el que ya suena no se cambia a otro sitio suyo por poco (sin parpadeos)', () => {
+    const emitters = [emitterAt(2, 0), emitterAt(4, 0), emitterAt(10, 0)];
+    expect(emittersInEarshot(emitters, point(0, 0), new Set([1]))).toEqual(new Set([1]));
+    expect(emittersInEarshot(emitters, point(0, 0), new Set([2]))).toEqual(new Set([0]));
+  });
+
+  it('como mucho tres ambientes a la vez, los mas cercanos', () => {
+    const emitters = ZONE_SOUNDS.map((sound, index) => emitterAt(index, 0, sound));
+    expect(emittersInEarshot(emitters, point(0, 0), new Set())).toEqual(new Set([0, 1, 2]));
   });
 
   it('el trueno suena lejos y llega despues, mas tarde cuanto mas lejos', () => {

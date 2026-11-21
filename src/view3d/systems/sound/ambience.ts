@@ -120,19 +120,44 @@ export function ambientEmitters(s: GameState): AmbientEmitter[] {
 /** Se oye lo que esta a menos de esto del oyente (casillas); lo que ya suena, hasta `KEEP_RADIUS` (sin parpadeos). */
 const HEAR_RADIUS = 14;
 const KEEP_RADIUS = 18;
-/** Como mucho suenan a la vez estos emisores (los mas cercanos). */
-const MAX_PLAYING = 8;
+/** Como mucho suenan a la vez estos ambientes distintos (los mas cercanos), cada uno desde un solo sitio. */
+const MAX_SOUNDS = 3;
+/** Un ambiente que ya suena no se cambia a otro sitio suyo salvo que este quede esto mas cerca (casillas). */
+const SWITCH_MARGIN = 3;
 
 const groundDistance = (at: Pos, listener: Point3): number => Math.hypot(at.x - listener.x, at.y - listener.z);
 
-/** Los emisores (por su indice) que deben sonar con el oyente en `listener`, si ahora suenan `playing`. */
+interface Heard {
+  readonly index: number;
+  readonly sound: ZoneAmbient;
+  readonly distance: number;
+}
+
+/** De los sitios de un mismo ambiente, el que suena: el mas cercano, o el que ya sonaba si no queda mucho mas lejos. */
+function placeOf(places: readonly Heard[], playing: ReadonlySet<number>): Heard {
+  const nearest = places[0]!;
+  const current = places.find((place) => playing.has(place.index));
+  return current && current.distance <= nearest.distance + SWITCH_MARGIN ? current : nearest;
+}
+
+/**
+ * Los emisores (por su indice) que deben sonar con el oyente en `listener`, si ahora suenan `playing`:
+ * un solo sitio por ambiente (varios del mismo a la vez solo emborronan) y pocos ambientes.
+ */
 export function emittersInEarshot(emitters: readonly AmbientEmitter[], listener: Point3, playing: ReadonlySet<number>): Set<number> {
   const audible = emitters
-    .map((emitter, index) => ({ index, distance: groundDistance(emitter.at, listener) }))
+    .map((emitter, index) => ({ index, sound: emitter.sound, distance: groundDistance(emitter.at, listener) }))
     .filter(({ index, distance }) => distance <= (playing.has(index) ? KEEP_RADIUS : HEAR_RADIUS))
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, MAX_PLAYING);
-  return new Set(audible.map(({ index }) => index));
+    .sort((a, b) => a.distance - b.distance);
+  const sounds = new Set(audible.map((heard) => heard.sound));
+  const chosen = [...sounds].map((sound) =>
+    placeOf(
+      audible.filter((heard) => heard.sound === sound),
+      playing,
+    ),
+  );
+  const nearest = chosen.sort((a, b) => a.distance - b.distance).slice(0, MAX_SOUNDS);
+  return new Set(nearest.map(({ index }) => index));
 }
 
 /** Un trueno: cuanto mas lejos del oyente, mas tarda en llegar despues del relampago (a ojo, no a la velocidad del sonido). */

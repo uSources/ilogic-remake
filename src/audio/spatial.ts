@@ -17,20 +17,30 @@ export interface ListenerPose {
   readonly up: Point3;
 }
 
-/** A esta distancia (casillas) suena a todo volumen; mas lejos, cada vez mas flojo hasta `MAX_DISTANCE`. */
-const REFERENCE_DISTANCE = 6;
-const MAX_DISTANCE = 40;
-/** Lo rapido que baja el volumen con la distancia (modelo `inverse`: 1 es como en la realidad). */
-const ROLLOFF = 0.8;
+/**
+ * Como se apaga un sonido con la distancia: hasta `reference` casillas suena entero; mas lejos, cada vez
+ * mas flojo, tanto mas rapido cuanto mayor `rolloff` (modelo `inverse`: 1 es como en la realidad).
+ */
+export interface Falloff {
+  readonly reference: number;
+  readonly rolloff: number;
+}
 
-/** Un nodo que pone en `at` lo que pase por el. */
-export function pannerAt(context: AudioContext, at: Point3): PannerNode {
+/** Los efectos del tablero se oyen enteros en lo que cabe en pantalla. */
+export const EFFECT_FALLOFF: Falloff = { reference: 6, rolloff: 0.8 };
+/** Los ambientes se apagan antes: manda lo que tienes al lado, no todo lo que hay en pantalla. */
+export const AMBIENT_FALLOFF: Falloff = { reference: 3, rolloff: 1 };
+/** Mas alla de esto (casillas) ya no baja mas. */
+const MAX_DISTANCE = 40;
+
+/** Un nodo que pone en `at` lo que pase por el, apagandose con la distancia segun `falloff`. */
+export function pannerAt(context: AudioContext, at: Point3, falloff: Falloff = EFFECT_FALLOFF): PannerNode {
   const panner = context.createPanner();
   panner.panningModel = 'equalpower';
   panner.distanceModel = 'inverse';
-  panner.refDistance = REFERENCE_DISTANCE;
+  panner.refDistance = falloff.reference;
   panner.maxDistance = MAX_DISTANCE;
-  panner.rolloffFactor = ROLLOFF;
+  panner.rolloffFactor = falloff.rolloff;
   movePanner(panner, at);
   return panner;
 }

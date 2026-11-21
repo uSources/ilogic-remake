@@ -162,8 +162,9 @@ Descargados (21-11-2026) en `~/ComfyUI-Shared/models`:
     emboscada, fin del turno...) sin delatar lo que tapa la niebla; botones con su sonido
     (`data-sound`), pasar por encima, errores, la rueda;
   - voces de juguete al elegir, atacar y capturar (una cada 1,5 s como mucho; opcion en ajustes);
-  - ambiente por zonas (los 8 emisores mas cercanos a la camara), fondo del tema, clima con fundido y
-    truenos con cada relampago (opcion en ajustes);
+  - ambiente por zonas (los 3 mas cercanos a la camara, cada uno desde un solo sitio y apagandose antes
+    que los efectos con la distancia), fondo del tema, clima con fundido y truenos con cada relampago
+    (opcion en ajustes);
   - musica de batalla por tema (si aun no esta, la de siempre).
   - Todo se pide por nombre aunque no haya WAV (`src/audio/soundNames.ts`): hasta que se elija, suena su
     sustituto o nada. Lo que falta es **generar y elegir** los sonidos; lo que queda por enchufar, en

@@ -1,14 +1,14 @@
 /**
  * Los ambientes con Web Audio: la implementacion de `LoopPort` (ambientNames.ts). Cada ambiente se baja y
  * decodifica una sola vez y todos sus emisores comparten el buffer (seis o siete por mapa, unos 40 MB en
- * memoria). Cada bucle empieza en un punto al azar, para que dos emisores del mismo no suenen a la par, y
- * entra y sale con un fundido. Sin ambiente en ajustes, no suena.
+ * memoria). Cada bucle empieza en un punto al azar y entra y sale con un fundido; con sitio, se apaga con
+ * la distancia antes que los efectos (`AMBIENT_FALLOFF`). Sin ambiente en ajustes, no suena.
  */
 import { asset, assetsAvailable } from '../assets';
 import { settings } from '../settings';
 import type { AmbientName, LoopHandle, LoopPort } from './ambientNames';
 import { whenUnlocked, type Mixer } from './audioContext';
-import { pannerAt, type Point3 } from './spatial';
+import { AMBIENT_FALLOFF, pannerAt, type Point3 } from './spatial';
 
 /** Cuanto tarda un bucle en entrar y en salir (segundos). */
 const FADE_SECONDS = 2.5;
@@ -57,7 +57,7 @@ function play(mixer: Mixer, buffer: AudioBuffer, at: Point3 | null, level: numbe
   gain.gain.setValueAtTime(0, context.currentTime);
   gain.gain.linearRampToValueAtTime(level, context.currentTime + FADE_SECONDS);
   const faded = source.connect(gain);
-  const placed = at ? faded.connect(pannerAt(context, at)) : faded;
+  const placed = at ? faded.connect(pannerAt(context, at, AMBIENT_FALLOFF)) : faded;
   placed.connect(mixer.channels.ambience);
   source.start(0, Math.random() * buffer.duration);
   return { source, gain };
