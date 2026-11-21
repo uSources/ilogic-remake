@@ -12,7 +12,9 @@ PvP, después.
 
 ## En marcha
 
-Nada.
+- **Una IA más humana** (planes que duran, mapas de influencia, memoria, personalidades y
+  dificultad): plan por fases en `docs/PLAN-IA.md`, para revisar antes de tocar código. Recoge
+  también las ideas 1 (partidas que acaben) y 3 (dificultad).
 
 ## Vista 3D (lo que tenía el 2D y aún falta)
 
