@@ -47,12 +47,3 @@ export function boxSelect(current: Selection, inside: readonly Unit[], add: bool
   const ids = inside.map((unit) => unit.uid);
   return add ? new Set([...current, ...ids]) : new Set(ids);
 }
-
-/** Quitar de la seleccion las que ya no se pueden elegir (muertas, cargadas en un transporte...). */
-export function pruneSelection(current: Selection, canSelect: (uid: number) => boolean): Selection {
-  const next = [...current].filter(canSelect);
-  return next.length === current.size ? current : new Set(next);
-}
-
-export const sameSelection = (firstSelection: Selection, secondSelection: Selection): boolean =>
-  firstSelection.size === secondSelection.size && [...firstSelection].every((id) => secondSelection.has(id));

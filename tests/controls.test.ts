@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KEY_BINDINGS, keyCommand, type KeyInput } from '../src/controls/keyboard';
-import { MENU_BINDINGS, listStep, menuKeyCommand, wrappedStep } from '../src/controls/menu';
+import { MENU_BINDINGS, listStep, menuKeyCommand } from '../src/controls/menu';
 
 const key = (code: string, o: Partial<KeyInput> = {}): KeyInput => ({
   code,
@@ -129,15 +129,10 @@ describe('adaptador de teclado en los menus', () => {
     expect(menuKeyCommand(k('ArrowDown'), 'typing')).toEqual({ kind: 'move', dx: 0, dy: 1 });
   });
 
-  it('fin de partida: Tab y Mayusculas+Tab pasan los dos al siguiente boton (no hay "anterior"), dando la vuelta', () => {
+  it('fin de partida: Tab y Mayusculas+Tab pasan los dos al siguiente boton (no hay "anterior")', () => {
     // La tecla es la misma (code Tab), con o sin Mayusculas: un paso adelante cada vez.
     const shiftTab = { code: 'Tab', repeat: false, shiftKey: true };
-    const step = listStep(menuKeyCommand(shiftTab, 'end')!);
-    expect(step).toBe(listStep(menuKeyCommand(k('Tab'), 'end')!));
-    const buttons = 3;
-    const visited = [0];
-    for (let press = 0; press < buttons; press++) visited.push(wrappedStep(visited.at(-1)!, step, buttons));
-    expect(visited).toEqual([0, 1, 2, 0]);
+    expect(listStep(menuKeyCommand(shiftTab, 'end')!)).toBe(listStep(menuKeyCommand(k('Tab'), 'end')!));
   });
 
   it('fin de partida: Tab pasa al siguiente, Esc vuelve al menu, Retroceso y teclado numerico no', () => {

@@ -34,7 +34,6 @@ export interface Settings {
   alwaysThreat: boolean;
   /** [CAMBIO] Al terminar el turno con unidades sin mover, el boton pide confirmarlo. */
   warnIdle: boolean;
-  /** Fondo del menu principal: partida en directo o la imagen original de 2013. */
   /** Los dibujos de las unidades y los edificios en los paneles y menus: los nuevos o los de 2013. */
   terrainArt: 'new' | 'classic';
   /** Teclas del mapa que el jugador ha cambiado (solo esas; las de serie, en controls/keyboard.ts). */

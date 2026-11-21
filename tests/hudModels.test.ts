@@ -12,7 +12,6 @@ import { settings } from '../src/settings';
 import {
   armyChartVM,
   captureHintText,
-  combatVM,
   endScoreVM,
   endStatsVM,
   dayInfoVM,
@@ -23,7 +22,7 @@ import {
   weatherEffectsText,
   weatherVM,
 } from '../src/ui/hudModels';
-import { blankState, diceFrom, hqId, unitTypeNamed, fight, withoutHeadquarters } from './helpers';
+import { blankState, hqId, unitTypeNamed, withoutHeadquarters } from './helpers';
 import { ownerSideOf, sideLetter, sideOf, sidePaint, unitSideLetter } from '../src/ui/sides';
 import { teamState } from '@core/teams';
 
@@ -112,75 +111,6 @@ describe('clima en la barra de arriba', () => {
 
   it('sin la regla no hay indicador', () => {
     expect(weatherVM(blankState(settingsWith(defaultContent(), { weather: false })))).toBeNull();
-  });
-});
-
-describe('panel de combate', () => {
-  const icons = { attacker: 'a', defender: 'd' };
-  const both = { attacker: true, defender: true };
-
-  it('las vidas bajan por etapas y tu unidad sale a la izquierda', () => {
-    const s = blankState();
-    const enemy = newUnit(s, unitType('Tank'), 1, { x: 10, y: 10 });
-    const mine = newUnit(s, unitType('Tank'), 0, { x: 10, y: 11 });
-    const event = fight(
-      s,
-      enemy,
-      mine,
-      diceFrom(() => 0.5),
-    );
-    const start = combatVM(blankState(), 0, event, 'start', icons, both);
-    expect(start.left.side).toBe('own');
-    expect(start.left.role).toBe('defender');
-    expect(start.right.role).toBe('attacker');
-    expect(start.left.life).toBe(100);
-    expect(start.left.hurt).toBeNull();
-    const hit = combatVM(blankState(), 0, event, 'hit', icons, both);
-    expect(hit.left.life).toBe(100 - event.damage);
-    expect(hit.left.hurt).toBe(event.damage);
-    expect(hit.right.life).toBe(100);
-    expect(hit.counter).toBe(true);
-    const counter = combatVM(blankState(), 0, event, 'counter', icons, both);
-    expect(counter.right.life).toBe(100 - event.counter);
-    expect(counter.right.hurt).toBe(event.counter);
-  });
-
-  it('una unidad en la niebla no se delata', () => {
-    const s = blankState();
-    const art = newUnit(s, unitType('Artillery'), 1, { x: 10, y: 10 });
-    const mine = newUnit(s, unitType('Soldier'), 0, { x: 10, y: 13 });
-    const event = fight(
-      s,
-      art,
-      mine,
-      diceFrom(() => 0.5),
-    );
-    const vm = combatVM(blankState(), 0, event, 'hit', icons, { attacker: false, defender: true });
-    expect(vm.right).toMatchObject({ name: '???', icon: null, hit: null, rank: 0 });
-    expect(vm.left.icon).toBe('d');
-    expect(vm.counter).toBe(false);
-  });
-
-  it('marca la unidad destruida', () => {
-    const s = blankState();
-    const attacker = newUnit(s, unitType('Tank'), 0, { x: 10, y: 10 });
-    const defender = newUnit(s, unitType('Soldier'), 1, { x: 10, y: 11 });
-    defender.life = 1;
-    const vm = combatVM(
-      blankState(),
-      0,
-      fight(
-        s,
-        attacker,
-        defender,
-        diceFrom(() => 0.5),
-      ),
-      'hit',
-      icons,
-      both,
-    )!;
-    expect(vm.right).toMatchObject({ life: 0, ko: true });
-    expect(vm.counter).toBe(false);
   });
 });
 

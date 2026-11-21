@@ -13,7 +13,4 @@ export interface SoundPort {
   play(sound: SoundId): void;
 }
 
-/** Un puerto que no suena nunca. */
-export const SILENCE: SoundPort = { play: () => {} };
-
 export const SOUND_IDS = Object.keys(SOUND_VARIANTS) as SoundId[];

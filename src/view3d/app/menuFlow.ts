@@ -92,10 +92,8 @@ export class MenuFlow {
     ui.set({
       screen: 'menu',
       options: null,
-      pause: null,
       toast: null,
       banner: null,
-      report: null,
       helpRules: helpRulesForSettingsOnly(settingsWith(defaultContent())),
     });
     this.home.publish();

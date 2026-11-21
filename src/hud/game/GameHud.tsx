@@ -5,12 +5,9 @@ import type { UIState } from '../state';
 import type { MenuVM, NetVM } from '../vm/menus';
 import { ActionChips } from './ActionChips';
 import { BuyFan } from './BuyFan';
-import { CombatPanel } from './Combat';
 import { Forecast } from './Forecast';
-import { LabPanel } from './LabPanel';
 import { Minimap } from './Minimap';
 import { MissionPanel } from './MissionPanel';
-import { MoveTip } from './MoveTip';
 import { PopMenu } from './PopMenu';
 import { RadialMenu } from './RadialMenu';
 import { TileTip, tileTipKey } from './TileTip';
@@ -63,9 +60,8 @@ const GAME_PANELS: GamePanel[] = [
   },
   { id: 'side', render: (s) => <div class="side">{renderPanels(SIDE_PANELS, s)}</div> },
   { id: 'endTurn', render: (s) => <EndTurnChip s={s} /> },
-  { id: 'moveTip', render: (s) => s.moveTip && <MoveTip moveTip={s.moveTip} /> },
+
   { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },
-  { id: 'combat', render: (s) => s.combat && <CombatPanel combat={s.combat} /> },
   { id: 'menu', render: (s) => s.menu && <MatchMenu menu={s.menu} /> },
 ];
 
@@ -78,12 +74,6 @@ function MatchMenu({ menu }: { menu: MenuVM }) {
   return <PopMenu menu={menu} />;
 }
 
-/** Laboratorio de animaciones: solo su panel y lo que enseña un combate (el resto estorba). */
-const LAB_PANELS: GamePanel[] = [
-  { id: 'lab', render: (s) => s.lab && <LabPanel lab={s.lab} busy={s.busy} /> },
-  { id: 'combat', render: (s) => s.combat && <CombatPanel combat={s.combat} /> },
-];
-
 function renderPanels(panels: GamePanel[], s: UIState) {
   return panels.map((panel) => <Fragment key={panel.id}>{panel.render(s)}</Fragment>);
 }
@@ -93,5 +83,5 @@ function renderPanels(panels: GamePanel[], s: UIState) {
  * en styles/ (ver hud.css); un panel nuevo es una entrada en GAME_PANELS, en el orden en que se apila.
  */
 export function GameHud({ s }: { s: UIState }) {
-  return <>{renderPanels(s.lab ? LAB_PANELS : GAME_PANELS, s)}</>;
+  return <>{renderPanels(GAME_PANELS, s)}</>;
 }

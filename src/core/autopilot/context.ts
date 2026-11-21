@@ -18,7 +18,7 @@ import { isAlive } from '../util/predicates';
 import type { AutopilotProfile } from './profile';
 
 /**
- * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn, startStandingOrder) y se pasa a cada
+ * Estado de un turno de ordenes o de IA. Se crea al empezarlo (aiTurn, assistTurn) y se pasa a cada
  * paso, asi que dos turnos (o una prevision en medio de un turno) no se mezclan. No manda nada: los
  * pasos proponen sus acciones (`ActionPlan`) y las manda quien cumple el plan.
  * [CAMBIO] Antes eran variables del modulo (ME, GROUP, PLAN).

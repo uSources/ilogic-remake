@@ -106,7 +106,7 @@ export const HIT_MODIFIERS: readonly HitModifier[] = [
 /**
  * [CAMBIO] Todo lo que cambia el acierto en esta partida, en el orden en que se multiplica: el poder
  * y la proteccion, y despues lo de sus modulos de reglas (en su orden). Una regla nueva que cambie el
- * acierto es una entrada mas en su modulo: la prevision, el panel de combate y la IA la ven solas
+ * acierto es una entrada mas en su modulo: la prevision y la IA la ven solas
  * porque todas pasan por hitChance. El orden importa (redondeo de coma flotante: las partidas de
  * referencia lo notarian).
  */

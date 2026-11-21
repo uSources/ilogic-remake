@@ -13,7 +13,7 @@ flowchart TB
     actions["actions.ts + actions/<br/>GameAction, ACTIONS, dispatch:<br/>la unica via para cambiar la partida"]
     rules["rules.ts + rules/<br/>alcance, combate, captura, economia, fin de ronda"]
     ruleModules["ruleModules/<br/>RULE_MODULES: piezas de reglas que<br/>se enchufan segun los ajustes"]
-    orders["targeting.ts / trail.ts<br/>a donde apuntar y camino trazado"]
+    orders["trail.ts<br/>camino trazado"]
     squads["squads.ts + squads/<br/>escuadras y ordenes permanentes"]
     autopilot["autopilot.ts + autopilot/<br/>cumplir ordenes permanentes:<br/>pasos de unidad (atacar, retirarse, formacion)<br/>que proponen acciones"]
     ai["ai.ts + ai/<br/>IA: un plan que propone acciones<br/>(ActionPlan), con su perfil (AiProfile)"]
@@ -81,7 +81,7 @@ acciones ni la sesion, no se hacen su propia vista de la partida y no tiran de l
 los pasos con los que se cambia la partida (`advanceCapture`, `mergeInto`, `earn`, `spendUnit`,
 `giveStandingOrder`, `formSquad`...): solo los llaman el `apply` de las acciones, los pasos de ronda
 y de turno, las `INVARIANTS` y lo que prepara una partida. La IA, autopilot/, la sesion, los
-controladores, la vista y lo que apunta la vista (`targeting.ts`, `trail.ts`) no los importan
+controladores, la vista y el camino que traza la vista (`trail.ts`) no los importan
 (`APPLY_STEPS`, eslint.config.js; tambien los del clima y las estadisticas:
 `advanceWeather`, `recordEvents`...), y las fachadas no los dan
 (tests/lintImports.test.ts, que ademas busca con los tipos de TypeScript toda funcion del nucleo que
@@ -306,7 +306,7 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   editores (lo comprueba un test). `settingsWith` usa `content.defaultSettings`; nunca `{ ...ajustes, ...
   }` a mano.
 - `teams.ts`: `teamState`, `isHostile`/`areAllied`, `isHostileOwner`/`isAlliedOwner`,
-  `enemiesOf`/`alliesOf`, `teamsControlledBy`, `isAiControlled`, `playerTeam`, `perTeam`,
+  `enemiesOf`/`alliesOf`, `teamsControlledBy`, `playerTeam`, `perTeam`,
   `duel`/`duelTeams`, `newTeams`.
 
 #### El azar
@@ -358,7 +358,7 @@ unidad o edificio.
 del mapa en `s.map`, los equipos en `s.teams` y el contenido va unido a la partida (`s.content`); no hay variables de modulo
 con la partida en curso, y dos partidas con otro tamaño, otras reglas u otro contenido se juegan a la
 vez en el mismo proceso (tests/gameContent.test.ts, tests/mapSizes.test.ts). Las consultas no la cambian
-(`statsOf`, `captureProgress`); lo que la cambia son las acciones (`dispatch`), el fin de ronda y lo
+(`armyValue`, `captureProgress`); lo que la cambia son las acciones (`dispatch`), el fin de ronda y lo
 que la prepara, y lo dice en el nombre (`recordEvent`, `newUnit`...).
 
 `src/core/squads/` (escuadras y ordenes permanentes del jugador): `queries` (unidades de una
@@ -370,8 +370,8 @@ de una escuadra, `squadEvent`): las piezas con las que se hacen las acciones de 
 (`actions/squads.ts`, `actions/standingOrders.ts`); la fachada `squads.ts` solo da las consultas.
 Las cumple la partida al acabar el turno de cada equipo, sea quien sea quien lo juegue (la fase
 'standingOrders' de `TURN_END_PHASES`, con `assistTurn` de `autopilot/standingOrders.ts`).
-`targeting.ts` y `trail.ts`: desde donde atacar (con la regla del ataque, `attackProblem` con
-`from`) y el camino trazado con el cursor, para la vista.
+`trail.ts`: el camino trazado con el cursor, para la vista (desde donde atacar lo elige la vista con
+la regla del ataque, `attackProblem` con `from`: `view3d/systems/turn/attackPlan.ts`).
 
 `src/core/rules/` (cada modulo solo importa los de encima en la tabla; no hay ciclos):
 
@@ -718,7 +718,7 @@ pone la vista. Cada pieza en su sitio:
 
 | Que | Donde |
 |---|---|
-| El store (`ui`, `showToast`, `resetActions`...) | `store.ts` (reexporta todos los tipos: se importan de ahi) |
+| El store (`ui`, `showToast`, `showBanner`...) | `store.ts` (reexporta todos los tipos: se importan de ahi) |
 | Forma del estado y valor al arrancar | `state.ts` (`UIState`, `initialState`) |
 | Lo que piden los botones, agrupado por pantalla | `actions.ts` (`UIActions`; su valor por defecto, en `store.ts`) |
 | Tipo de lo que enseña cada panel | `vm/<panel>.ts` (`TileVM` en `vm/tile.ts`...) |
@@ -1187,7 +1187,7 @@ traduce lo que pulsa el jugador a **ordenes**, y la vista las cumple.
   `menuKeyCommand(key, context)` (tabla `MENU_BINDINGS`, una por menu) en los menus; el contexto
   `keyCapture` (Opciones esperando una tecla) da cualquier tecla como orden `key`. Son las unicas
   tablas de teclas: la ayuda, los botones y la linea de abajo enseñan la tecla de cada orden con
-  `hud/keyLabels.ts` (`keyLabelOf`, `withKeyLabels`; nombres por idioma en `i18n/<idioma>/keyNames.ts`),
+  `hud/keyLabels.ts` (`keyLabelOf`, `currentKeyLabels`; nombres por idioma en `i18n/<idioma>/keyNames.ts`),
   nunca una letra escrita a mano. Una orden nueva en la partida es una entrada en `KEY_ACTIONS`.
 - **Raton y dedos**: `view3d/systems/input/pointerInput.ts` (izquierdo: tocar la casilla o arrastrar para
   desplazar; central: desplazar; derecho: girar; rueda: acercar); la casilla tocada la decide un

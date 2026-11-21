@@ -7,7 +7,7 @@
  * cuando alguien de fuera tiene que decidir o cuando la partida se ha decidido.
  *
  * Avanza paso a paso (`step`): quien la juega decide como esperar entre pasos. Las herramientas la
- * llevan seguida (`runMatch`), la pantalla anima cada paso (`playMatch`).
+ * llevan seguida (`runMatch`); la vista 3D pide cada paso y anima sus sucesos.
  */
 import { dispatch, isAnyTime } from '../actions/dispatch';
 import { sessionOnlyProblem } from '../actions/turn';
@@ -264,17 +264,5 @@ export function runMatch(session: GameSession, options: RunOptions = {}): Sessio
   for (;;) {
     const step = session.step();
     if (step.kind !== 'acted' || options.until?.(session.state)) return step;
-  }
-}
-
-/**
- * Lleva la partida paso a paso, esperando a `onActed` tras cada uno (la pantalla anima sus sucesos):
- * hasta el final, hasta que tenga que decidir alguien de fuera o hasta que `onActed` diga que no
- * siga (false: se ha cambiado de partida). Devuelve el ultimo paso.
- */
-export async function playMatch(session: GameSession, onActed: (step: ActedStep) => Promise<boolean>): Promise<SessionStep> {
-  for (;;) {
-    const step = session.step();
-    if (step.kind !== 'acted' || !(await onActed(step))) return step;
   }
 }

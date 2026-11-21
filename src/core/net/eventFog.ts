@@ -107,7 +107,7 @@ function bothKnownWithPath<Event extends GameEventOf<'merge' | 'load'>>(event: E
 /**
  * El combate se ve donde cae el disparo. Si no conoce a quien dispara, no sabe cual es (uid null) ni
  * si contraatacaron (counterHit null: diria si estaba al alcance); si sabe que tipo, con que vida y
- * rango, lo que enseña el panel de combate, como en la pantalla de hoy.
+ * rango.
  */
 const attackSeen: EventFogRule<'attack'> = (event, witness) => {
   if (!witness.sees(event.at)) return null;

@@ -35,14 +35,6 @@ export type StandingOrderBlock = Extract<ActionRejection, 'noBuilding' | 'noCapt
 
 type BlockCheck = (s: GameState, team: TeamId, at: Pos, units: readonly Unit[]) => StandingOrderBlock | null;
 
-/** Lo que se sabe de la casilla al ofrecer las ordenes en ella (clic derecho o pulsacion larga con unidades elegidas). */
-export interface OrderPlace {
-  /** Hay un enemigo que quien mira ve en esa casilla. */
-  readonly enemyHere: boolean;
-  /** Esta orden se puede dar ahi a esas unidades (su `block`). */
-  readonly canGive: () => boolean;
-}
-
 /** Como la cumple quien no puede cumplirla (con capturar, las que no capturan: escoltan atacando al mismo sitio). */
 interface Escort {
   readonly canFulfil: (s: GameState, unit: Unit) => boolean;
@@ -80,8 +72,6 @@ interface StandingOrderType<Kind extends StandingOrderKind> {
   readonly squadDone: (s: GameState, squad: Squad, at: Pos, followersArrived: () => boolean) => boolean;
   /** Es un viaje: la unidad va hasta su destino (`gotoDestination`), y no pelea por el camino. */
   readonly travels: boolean;
-  /** Su puesto en el menu de ordenes de una casilla (menor, antes), o null si ahi no se ofrece. */
-  readonly menuRank: (place: OrderPlace) => number | null;
 }
 
 /** Atacar y defender: alguna tiene que poder luchar. */
@@ -109,8 +99,6 @@ export const STANDING_ORDER_TYPES: { readonly [Kind in StandingOrderKind]: Stand
     leadsSquad: false,
     travels: false,
     squadDone: whenAllArrive,
-    // Con un enemigo a la vista ahi, lo primero.
-    menuRank: ({ enemyHere }) => (enemyHere ? 0 : 1),
   },
   capture: {
     name: 'capturar',
@@ -126,8 +114,6 @@ export const STANDING_ORDER_TYPES: { readonly [Kind in StandingOrderKind]: Stand
     leadsSquad: true,
     travels: false,
     squadDone: (s, squad, at) => isOwnedOrMissing(s, squad.team, at),
-    // Solo si estas unidades pueden tomar el edificio; sin enemigo a la vista, lo primero.
-    menuRank: ({ enemyHere, canGive }) => (!canGive() ? null : enemyHere ? 1 : 0),
   },
   defend: {
     name: 'defender',
@@ -139,8 +125,6 @@ export const STANDING_ORDER_TYPES: { readonly [Kind in StandingOrderKind]: Stand
     leadsSquad: false,
     travels: false,
     squadDone: whenAllArrive,
-    // Siempre se puede, la ultima.
-    menuRank: () => 2,
   },
   goto: {
     name: 'ir',
@@ -151,8 +135,6 @@ export const STANDING_ORDER_TYPES: { readonly [Kind in StandingOrderKind]: Stand
     leadsSquad: false,
     travels: true,
     squadDone: neverForSquads,
-    // Ir alli se da moviendo (el viaje), no desde el menu de ordenes de una casilla.
-    menuRank: () => null,
     // Cada una tiene que poder ir (en el mapa, a donde no llegue ya este turno: travelProblem).
     block: (s, _team, at, units) => {
       for (const unit of units) {

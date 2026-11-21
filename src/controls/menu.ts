@@ -25,11 +25,10 @@ export type MenuCommand =
   | { kind: 'tab'; dir: -1 | 1 };
 
 /**
- * Donde esta el foco de los mandos. 'map': el mapa (ordenes InputCommand); el resto son menus
- * (MenuCommand) y cada uno tiene sus teclas. Las escenas lo dicen con `controlContext()`.
+ * Que menu tiene el foco de los mandos: cada uno tiene sus teclas (MenuCommand). En el mapa no hay
+ * menu: alli mandan las ordenes InputCommand.
  */
 export type MenuContext = 'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'online' | 'end';
-export type ControlContext = 'map' | MenuContext;
 
 export interface MenuBinding {
   codes: readonly string[];
@@ -99,9 +98,6 @@ export function menuKeyCommand(key: Pick<KeyInput, 'code' | 'repeat'>, context: 
   if (binding.command.kind === 'ok') return { kind: 'ok', repeat: key.repeat };
   return binding.command;
 }
-
-/** El puesto al que se pasa en una lista de `count` dando la vuelta (despues del ultimo, el primero). */
-export const wrappedStep = (from: number, step: number, count: number): number => (from + step + count) % count;
 
 /** Paso en una lista de una sola dimension: izquierda o arriba es -1, derecha o abajo es +1. */
 export function listStep(command: MenuCommand): -1 | 0 | 1 {

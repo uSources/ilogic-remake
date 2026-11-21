@@ -6,8 +6,8 @@
  * las escenas y los tests los siguen importando de '../ui/hudModels'.
  */
 
-export { standingOrderLabel, squadsVM } from './models/army';
-export { combatVM, forecastVM } from './models/combat';
+export { standingOrderLabel } from './models/army';
+export { forecastVM } from './models/combat';
 export { buyBlockedText, dayInfoVM, economyVM } from './models/economy';
 export { armyChartVM, endScoreVM, endStatsVM } from './models/end';
 export { minimapVM } from './models/minimap';

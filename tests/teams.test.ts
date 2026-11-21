@@ -33,7 +33,6 @@ import {
   areAllied,
   duel,
   duelTeams,
-  isAiControlled,
   enemiesOf,
   isHostile,
   isHostileOwner,
@@ -252,7 +251,7 @@ describe('cuatro equipos en dos alianzas', () => {
 
   it('quien lo lleva', () => {
     const s = fourCorners();
-    expect(teamIds(s).map((team) => isAiControlled(s, team))).toEqual([true, true, false, true]);
+    expect(teamIds(s).map((team) => teamState(s, team).controller)).toEqual(['ai', 'ai', 'human', 'ai']);
     expect(() => duelTeams(s)).toThrow(/dos equipos/);
     expect(duelTeams(blankState())).toEqual([0, 1]);
   });

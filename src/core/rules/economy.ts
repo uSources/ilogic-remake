@@ -20,7 +20,7 @@ const roundToMoneyStep = (amount: number): number => Math.round(amount / MONEY_S
 /** El equipo ya tiene todas las unidades que caben (`maxUnits`). */
 /**
  * [CAMBIO] Lo que cobra quien destruye una unidad como `lost`: lo de los `killRewards` de los modulos
- * (el botin), 0 si la partida no lleva ninguno. Lo preguntan el panel de combate y la IA.
+ * (el botin), 0 si la partida no lleva ninguno. Lo preguntan la prevision de combate y la IA.
  */
 export const killReward = (s: GameState, lost: Pick<Unit, 'type'>): number =>
   hooksOf(s, 'killRewards').reduce((total, reward) => total + reward.amount(s, lost), 0);

@@ -12,7 +12,6 @@ export const cards = {
   vision: 'Visión',
   hp: 'Vida',
   noAttack: 'No ataca',
-  expected: 'Daño estimado',
   kill: '¡Lo destruye!',
   cargo: 'Carga',
   empty: 'Vacío',

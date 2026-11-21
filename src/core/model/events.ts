@@ -4,12 +4,6 @@ import type { StandingOrder } from './standingOrder';
 import type { DefeatReason } from './defeat';
 import type { TeamId } from './team';
 
-/**
- * Quien ha hecho algo (`GameEvent.actor`): el equipo que mando la accion, o null si es la propia
- * partida (el fin de ronda: ingresos, curas, mantenimiento, clima, puntos de control).
- */
-export type EventActor = GameEvent['actor'];
-
 /** Lo que ha curado algo a una unidad (abastecer, un edificio al acabar la ronda). */
 export interface Healing {
   uid: number;
@@ -58,7 +52,8 @@ export type StandingOrderEnd = 'fulfilled' | 'arrived' | 'withinReach' | Interru
 export type SquadChange = 'formed' | 'grouped' | 'left' | 'renamed' | 'disbanded' | 'removed';
 
 /**
- * Lo que acaba de pasar, completo: quien lo hizo (`actor`), a quien (uids) y lo que hace falta para
+ * Lo que acaba de pasar, completo: quien lo hizo (`actor`: el equipo que mando la accion, o null si
+ * es la propia partida, como el fin de ronda), a quien (uids) y lo que hace falta para
  * contarlo sin mirar la partida (tipos, equipos, casillas). Con ellos se anima, se cuentan las
  * estadisticas y se podria repetir una partida o mandarla a otra pantalla. Lo dan las acciones
  * (`dispatch`) y el fin de ronda (`endRound`).
@@ -161,14 +156,12 @@ export type CoreGameEvent =
 
 /** Tipo de evento ('move', 'attack'... y los de los modulos). */
 export type GameEventKind = GameEvent['kind'];
-/** Tipo de un suceso de cualquier partida (no de un modulo). */
-export type CoreGameEventKind = CoreGameEvent['kind'];
 /** El evento de un tipo concreto, p. ej. `GameEventOf<'attack'>`. */
 export type GameEventOf<K extends GameEventKind> = Extract<GameEvent, { kind: K }>;
 
 /**
  * Como estaban las dos unidades justo antes de un combate. La interfaz lo usa para enseñarlo
- * (panel de combate, barras de vida) aunque una de las dos haya caido.
+ * (las barras de vida) aunque una de las dos haya caido.
  */
 export interface CombatInfo {
   /** Tipos de unidad (id de units.json). */

@@ -1,5 +1,5 @@
 import { keyLabel, keyLabels, type KeyLabels } from '../controls/keyNames';
-import { KEY_BINDING_IDS, type KeyBindingId } from '../controls/keyboard';
+import type { KeyBindingId } from '../controls/keyboard';
 import { KEY_NAMES } from '../i18n';
 import { settings } from '../settings';
 
@@ -13,7 +13,3 @@ export const keyLabelOf = (id: KeyBindingId): string => keyLabel(id, settings.ke
 
 /** Las teclas de todas las ordenes, para la ayuda. */
 export const currentKeyLabels = (): KeyLabels => keyLabels(settings.keys, KEY_NAMES[settings.lang]);
-
-/** Un texto con huecos `{endTurn}`, `{threat}`... rellenos con la tecla de cada orden. */
-export const withKeyLabels = (text: string): string =>
-  KEY_BINDING_IDS.reduce((filled, id) => filled.replaceAll(`{${id}}`, keyLabelOf(id)), text);

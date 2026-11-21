@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY, boxSelect, clickSelect, pruneSelection, sameSelection } from '../src/controls/selection';
+import { EMPTY, boxSelect, clickSelect } from '../src/controls/selection';
 import type { Unit } from '@core/model';
 
 /** [CAMBIO] Seleccion como en los juegos de estrategia en tiempo real (controls/selection.ts). */
@@ -32,13 +32,5 @@ describe('seleccion', () => {
     expect(ids(boxSelect(new Set([7]), [unitWith(1), unitWith(2)], false))).toEqual([1, 2]);
     expect(ids(boxSelect(new Set([7]), [unitWith(1), unitWith(2)], true))).toEqual([1, 2, 7]);
     expect(boxSelect(new Set([7]), [], false).size).toBe(0);
-  });
-
-  it('quitar las que ya no valen y comparar', () => {
-    const current = new Set([1, 2, 3]);
-    expect(pruneSelection(current, () => true)).toBe(current);
-    expect(ids(pruneSelection(current, (id) => id !== 2))).toEqual([1, 3]);
-    expect(sameSelection(new Set([1, 2]), new Set([2, 1]))).toBe(true);
-    expect(sameSelection(new Set([1, 2]), new Set([1]))).toBe(false);
   });
 });

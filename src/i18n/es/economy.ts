@@ -1,7 +1,5 @@
-/** Desglose del dinero y resumen de la ronda. */
+/** Desglose del dinero. */
 export const economy = {
-  perDay: 'por día',
-  buildingsN: 'edificios',
   ecoIncome: 'Ingresos por día',
   ecoNoBuildings: 'Sin edificios',
   ecoScale: 'Regla de ingresos',
@@ -13,10 +11,4 @@ export const economy = {
   ecoShortfall: 'No llega para todo: solo se pagan',
   ecoCommand: 'Puntos de mando',
   ecoFree: 'libres',
-  reportIncome: 'de ingresos',
-  reportUpkeep: 'de mantenimiento',
-  reportControl: 'de puntos de control',
-  reportContested: 'Puntos de control disputados (no pagan)',
-  reportHealed: 'unidades reparadas',
-  reportHealed1: 'unidad reparada',
 };

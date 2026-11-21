@@ -244,7 +244,6 @@ export function showEndIfOver(session: GameSession, viewer: TeamId): boolean {
     toast: null,
     forecast: null,
     tile: null,
-    pause: null,
     end: {
       outcome: shown.outcome,
       day: s.day,

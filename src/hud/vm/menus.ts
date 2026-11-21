@@ -33,7 +33,7 @@ export interface BuyFactsVM {
 
 export interface MenuVM {
   /** `chips`: las fichas junto a lo elegido; `radial`: su rueda (clic derecho); `prompt`: elegir una casilla. */
-  kind: 'chips' | 'radial' | 'prompt' | 'unit' | 'game' | 'buy' | 'cargo';
+  kind: 'chips' | 'radial' | 'prompt' | 'game' | 'buy';
   title?: string;
   subtitle?: string;
   /** Lineas extra (objetivo de la mision) en el panel de pausa. */
@@ -41,23 +41,6 @@ export interface MenuVM {
   items: MenuItemVM[];
   selected: number;
   anchor: Anchor;
-}
-
-export interface MainMenuItemVM {
-  id: string;
-  label: string;
-  value?: string;
-  disabled?: boolean;
-  primary?: boolean;
-}
-
-export interface SetupRowVM {
-  id: string;
-  label: string;
-  kind: 'choice' | 'code' | 'start' | 'back';
-  value?: string;
-  /** Explicacion corta que sale debajo cuando la fila esta elegida. */
-  note?: string;
 }
 
 /** Fila de la pantalla de opciones: un grupo, un nombre y botones de segmento. */

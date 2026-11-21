@@ -2,24 +2,12 @@ import type { HelpRules } from '../i18n/help';
 import type { TextKey } from '../settings';
 import type { EndOutcome, EndStatsVM } from './vm/end';
 import type { Anchor, BySide, Side } from './vm/common';
-import type { CombatVM, ForecastVM } from './vm/combat';
-import type { MoveTipVM, IdleVM, SelectionVM, SquadVM } from './vm/army';
-import type { LabVM } from './vm/lab';
-import type {
-  CampaignItemVM,
-  HomeVM,
-  MainMenuItemVM,
-  MenuItemVM,
-  MenuVM,
-  NetVM,
-  OnlineVM,
-  OptionsVM,
-  SetupRowVM,
-  SetupVM,
-} from './vm/menus';
+import type { ForecastVM } from './vm/combat';
+import type { SelectionVM } from './vm/army';
+import type { CampaignItemVM, HomeVM, MenuVM, NetVM, OnlineVM, OptionsVM, SetupVM } from './vm/menus';
 import type { MinimapVM } from './vm/minimap';
 import type { NotesVM } from './vm/notes';
-import type { HandoffVM, ReportLineVM } from './vm/notices';
+import type { HandoffVM } from './vm/notices';
 import type { TileVM } from './vm/tile';
 import type { DayInfoVM, EconomyVM, WeatherVM } from './vm/topBar';
 
@@ -32,9 +20,7 @@ export interface UIState {
   home: HomeVM;
   setup: SetupVM;
   options: OptionsVM | null;
-  /** Panel de pausa centrado (menu de partida). */
-  pause: { title: string; info: string[]; items: MenuItemVM[]; selected: number } | null;
-  screen: 'loading' | 'logo' | 'menu' | 'setup' | 'campaign' | 'online' | 'game' | 'outro' | 'end';
+  screen: 'loading' | 'menu' | 'setup' | 'campaign' | 'online' | 'game' | 'end';
   /** Jugar en línea (la pantalla del menu). */
   online: OnlineVM;
   /** La conexion con el servidor en una partida por la red (null en una partida de esta pantalla). */
@@ -47,22 +33,13 @@ export interface UIState {
   };
   /** Panel de la mision en curso (null fuera de la campaña). */
   mission: { title: string; objective: string; status: string | null; tip: string | null; step: string | null } | null;
-  newGame: { rows: SetupRowVM[]; selected: number; code: string; codeError: boolean };
   loading: number;
-  mainMenu: { items: MainMenuItemVM[]; selected: number };
   // Partida
   funds: number;
-  /** Ingresos por dia ya restado el mantenimiento (puede ser negativo). */
-  income: number;
-  /** Puntos de mando usados y maximos (null = regla desactivada). */
-  commandPoints: { used: number; max: number } | null;
   /** Desglose de dinero y mando (al pasar por encima del dinero). */
   economy: EconomyVM | null;
   /** Desglose del dia (al pasar por encima del dia). */
   dayInfo: DayInfoVM | null;
-  /** Laboratorio de animaciones (null en una partida normal). */
-  lab: LabVM | null;
-  buildings: number;
   day: number;
   /** De quien es el turno, visto por quien mira: suyo, de un aliado o de un enemigo. */
   turn: Side;
@@ -73,17 +50,9 @@ export interface UIState {
   forecast: ForecastVM | null;
   /** Clima (null si la partida no tiene). */
   weather: WeatherVM | null;
-  combat: CombatVM | null;
-  moveTip: MoveTipVM | null;
   tile: TileVM | null;
   /** Donde esta en la pantalla la casilla de `tile` (su ficha sale al lado); null: no se sabe (2D). */
   tileAt: Anchor | null;
-  cursorScreen: { x: number; y: number };
-  idle: IdleVM[];
-  /** [CAMBIO] Escuadras del jugador y la que se esta renombrando (null = ninguna). */
-  squads: SquadVM[];
-  /** [CAMBIO] Modo "Elegir varias": cuantas hay elegidas (null = modo apagado). */
-  multi: number | null;
   /** [CAMBIO] Panel de lo elegido (con dos o mas unidades; null = no se enseña). */
   selection: SelectionVM | null;
   /**
@@ -91,11 +60,8 @@ export interface UIState {
    * y si esta esperando la confirmacion (primer clic con unidades sin mover y el aviso activado).
    */
   endTurn: { pending: number; armed: boolean };
+  /** La escuadra que se esta renombrando (null = ninguna). */
   rename: { id: number; name: string; max: number } | null;
-  threat: boolean;
-  /** [CAMBIO] Se ven las intenciones de todas las unidades con orden (tecla V) y si hay alguna con orden. */
-  intents: boolean;
-  anyStandingOrder: boolean;
   toast: { text: string; id: number } | null;
   /** El cartel que cae: lo grande («Día 4»), lo pequeño («Tu turno»), su color y el clima si ha cambiado (su id). */
   banner: { small: string; big: string; tone: 'blue' | 'red'; weather: string | null; id: number } | null;
@@ -123,7 +89,6 @@ export interface UIState {
   dayLimit: number | null;
   /** Reglas que cuenta la ayuda: las de la partida en curso, o en el menu las de una partida nueva (null hasta que la escena las pone). */
   helpRules: HelpRules | null;
-  report: { title: string; lines: ReportLineVM[]; id: number } | null;
   /** Cambio de persona en la misma pantalla (null: no hay que cambiar). */
   handoff: HandoffVM | null;
   minimap: MinimapVM | null;
@@ -141,8 +106,6 @@ export interface UIState {
 export const initialState: UIState = {
   screen: 'loading',
   loading: 0,
-  mainMenu: { items: [], selected: 0 },
-  newGame: { rows: [], selected: 0, code: '', codeError: false },
   home: {
     focus: 'quick',
     save: null,
@@ -175,43 +138,28 @@ export const initialState: UIState = {
   },
   net: null,
   options: null,
-  pause: null,
   campaign: { items: [], selected: 0, brief: '', objective: '' },
   mission: null,
   funds: 0,
   economy: null,
-  lab: null,
   dayInfo: null,
-  income: 0,
-  commandPoints: null,
-  buildings: 0,
   day: 1,
   turn: 'own',
   busy: false,
   watching: false,
   menu: null,
   forecast: null,
-  combat: null,
-  moveTip: null,
   tile: null,
   tileAt: null,
-  cursorScreen: { x: 0, y: 0 },
-  idle: [],
-  squads: [],
-  multi: null,
   selection: null,
   endTurn: { pending: 0, armed: false },
   rename: null,
-  threat: false,
-  intents: false,
-  anyStandingOrder: false,
   toast: null,
   banner: null,
   weather: null,
   end: null,
   dayLimit: null,
   helpRules: null,
-  report: null,
   handoff: null,
   minimap: null,
   minimapView: { x: 0, y: 0, w: 0, h: 0 },

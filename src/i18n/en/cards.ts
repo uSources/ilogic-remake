@@ -14,7 +14,6 @@ export const cards: Translation<typeof es> = {
   vision: 'Vision',
   hp: 'HP',
   noAttack: 'No attack',
-  expected: 'Expected damage',
   kill: 'Destroys it!',
   cargo: 'Cargo',
   empty: 'Empty',
