@@ -35,9 +35,6 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
     la mitad de atrás de la casilla, para que la unidad de encima quede delante sin tener que
     encogerlos ni moverlos a una esquina (ahora lo hace `sharedTile.ts`). Para cuando se retoquen los
     modelos; no corre prisa (`docs/ESTETICA.md`, «Tamaños en el tablero»).
-25. **«Ir allí» (viaje de varios turnos).** El núcleo lo tiene (orden `goto`, `gotoStep`), pero la
-    vista 3D no deja darlo: en el 2D era tocar una casilla fuera del alcance (`giveTravel`, quitado
-    en c52298a2). Las banderas de destino ya lo marcan cuando hay uno.
 
 ## Jugabilidad
 
