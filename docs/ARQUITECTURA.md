@@ -526,6 +526,14 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
   vez cada vez que la vista se pone al dia (y eso, la primera vez que se mira despues de una accion,
   no en cada una), no en cada unidad que decide; en otra partida (la copia de la prevision) se mira
   en ella.
+- **Mapas de influencia** (`ai/influence.ts`, docs/PLAN-IA.md): al empezar su turno, la IA calcula
+  con su vista la zona de golpe de cada unidad (a donde puede disparar en su proximo turno), y de ahi
+  el peligro de cada casilla para cada unidad, el control (fuerza propia menos la enemiga) y el frente.
+  Van en el `PlayCtx` del turno (`influence`; las ordenes no los tienen) y se recalculan si cambian
+  las unidades que conoce. Los usan las razones para elegir casilla (`placeTerms` del perfil, en
+  pasos: `bestMoveToward` las suma a los pasos que faltan; `ai/placeTerms.ts`: peligro y compañia),
+  la de un ataque `exposure` (lo expuesta que se queda) y los comportamientos `takeCover` y
+  `holdFront`. Una razon nueva para elegir casilla es una entrada mas en `PLACE_TERMS`.
 - **Puntos de extension**:
   - una pieza de reglas que la partida lleva o no (con su ajuste) es un modulo de reglas (ver
     "Modulos de reglas"): un fichero en `ruleModules/` y su entrada en `RULE_MODULES`;

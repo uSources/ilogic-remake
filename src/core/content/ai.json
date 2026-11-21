@@ -18,5 +18,11 @@
   "squadSpread": 2,
   "hqCaptureHeadStart": 4,
   "bigUnitCost": 10000,
-  "minEvictionWeight": 0.5
+  "minEvictionWeight": 0.5,
+  "dangerAversion": 12,
+  "supportedDangerShare": 0.6,
+  "lonelinessCost": 1,
+  "companyRadius": 2,
+  "exposureShare": 0.3,
+  "coverDangerShare": 0.75
 }

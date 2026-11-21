@@ -10,7 +10,7 @@ import { diamond, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { canDamage } from '../rules/weapons';
 import { isContested } from '../rules/control';
-import { reachableTiles, type MoveRange } from '../rules/movement';
+import { reachableTiles, stepToward, type MoveRange } from '../rules/movement';
 import { buildingAt, isEnemyHq, unitAt } from '../rules/queries';
 import { knownFoes, sightIn } from '../playerView';
 import type { ActionPlan, Building, ControlPoint, GameState, Pos, Rng, Unit } from '../model';
@@ -111,6 +111,51 @@ export function* advance(s: GameState, play: PlayCtx, unit: Unit, range: MoveRan
   const wouldBlock = !isCapturer(s, unit) && !!buildingAt(s, goal);
   const destination = bestMoveToward(s, play, unit, goal, range, wouldBlock);
   if (!destination) return false;
+  yield* doMove(unit, destination);
+  yield* finish(s, unit);
+  return true;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ponerse a cubierto
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Si donde esta le pueden quitar casi toda la vida (`coverDangerShare` de la que tiene) y la zona es
+ * del enemigo, irse a la casilla del alcance con menos peligro (a igualdad, la que menos gasta). Sin
+ * mapas de influencia o sin peligro, no hace nada.
+ */
+export function* takeCover(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
+  const influence = play.influence;
+  if (!influence || influence.control(unit) >= 0) return false;
+  const danger = (pos: Pos) => influence.dangerFor(unit, pos);
+  if (danger(unit) < unit.life * play.profile.weights.coverDangerShare) return false;
+  const shelter = stepToward(range, { score: (tile) => [danger(tile.pos), tile.cost] });
+  if (!shelter) return false;
+  yield* doMove(unit, shelter);
+  yield* finish(s, unit);
+  return true;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ir al frente
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * Sin nada mejor que hacer, ir a la casilla del frente mas cercana (mapas de influencia: la linea entre
+ * los dos ejercitos) en vez de pasear: alli hace falta y no se queda sola en casa. Sin mapas o sin
+ * frente (ningun enemigo a la vista), no hace nada.
+ */
+export function* holdFront(s: GameState, play: PlayCtx, unit: Unit, range: MoveRange): ActionPlan<boolean> {
+  const front = play.influence?.front ?? [];
+  if (!front.length) return false;
+  const steps = stepsMap(s, play, unit);
+  const nearest = minBy(
+    front.filter((pos) => steps.at(pos) < Infinity),
+    (pos) => steps.at(pos),
+  );
+  if (!nearest) return false;
+  const destination = samePos(nearest, unit) ? null : bestMoveToward(s, play, unit, nearest, range);
   yield* doMove(unit, destination);
   yield* finish(s, unit);
   return true;

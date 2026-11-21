@@ -96,6 +96,7 @@ export function attackScore(s: GameState, play: PlayCtx, attacker: Unit, target:
     target,
     damage: expectedDamage(s, engagement(attacker, target, { from })),
     targetBuilding: buildingAt(s, target),
+    influence: play.influence,
   };
   return play.profile.scoreTerms.reduce((score, term) => score + term.value(attack), 0);
 }

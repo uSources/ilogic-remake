@@ -14,8 +14,24 @@
 | Vaivenes | 24 % de los movimientos |
 | Tiempo por turno (media / p95) | 34 / 109 ms (en la máquina de las pruebas) |
 
-Lo siguiente: la fase 1. Cada fase es una PR (o dos), se mide antes y después y se puede parar en
-cualquiera: cada una mejora algo por sí sola.
+**Fase 1 hecha:** la IA del juego usa mapas de influencia. Contra la de antes (perfil `fase0`), 80
+partidas con los lados alternos (`balance/reports/ia-fase1.md`; allí la nueva sale como
+`influencia`):
+
+| Medida | Antes (`fase0`) | Con influencia |
+|---|---|---|
+| Gana (de verdad o con ventaja clara) | 44 % | 40 % (5 victorias de verdad contra 1) |
+| Regaladas por partida | 19,2 | 16,5 |
+| Al aliado más cercano | 3,5 casillas | 3,1 casillas |
+| Vaivenes | 24 % | 28 % |
+| Turno (media / p95) | 36 / 116 ms | 59 / 191 ms |
+
+Igual de fuerte (la diferencia está dentro del ruido), regala menos y va más agrupada; da más
+vaivenes (entra y sale del peligro de un turno a otro), que es justo lo que ataca la fase 2. Probado
+y descartado: no perseguir a quien no llega a disparar (38 % contra 50 %: más floja).
+
+Cada fase es una PR (o dos), se mide antes y después y se puede parar en cualquiera: cada una
+mejora algo por sí sola.
 
 ## Qué queremos decir con «más humana»
 

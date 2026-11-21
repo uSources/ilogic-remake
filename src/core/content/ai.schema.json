@@ -23,7 +23,13 @@
     "squadSpread",
     "hqCaptureHeadStart",
     "bigUnitCost",
-    "minEvictionWeight"
+    "minEvictionWeight",
+    "dangerAversion",
+    "supportedDangerShare",
+    "lonelinessCost",
+    "companyRadius",
+    "exposureShare",
+    "coverDangerShare"
   ],
   "properties": {
     "$schema": {
@@ -123,6 +129,36 @@
       "type": "number",
       "minimum": 0,
       "description": "Echar a quien defiende su Base o captura un edificio propio: lo minimo que pesa el ataque aunque el golpe sea flojo (por cada fullBonusDamage de dano, 1)."
+    },
+    "dangerAversion": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Pasos que cuesta acabar el turno donde los enemigos que conoce le pueden quitar toda la vida (en proporcion si menos; IA con mapas de influencia, docs/PLAN-IA.md)."
+    },
+    "supportedDangerShare": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Parte del peligro que cuenta en zona propia (donde los suyos responderian), de 0 a 1."
+    },
+    "lonelinessCost": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Pasos que cuesta acabar el turno sin ninguna unidad suya cerca (a companyRadius o menos)."
+    },
+    "companyRadius": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Distancia (en linea) a la que una unidad suya cuenta como compañia."
+    },
+    "exposureShare": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Parte del daño que le pueden hacer donde dispara que se resta al valor del ataque (quedarse expuesta)."
+    },
+    "coverDangerShare": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Con mapas de influencia: en zona del enemigo, una unidad se pone a cubierto si donde esta le pueden quitar esta parte de su vida o mas."
     }
   }
 }

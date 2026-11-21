@@ -12,7 +12,7 @@ import type { ActionPlan, GameState, Rng, Unit } from '../model';
 import { bestMoveToward, canAct, doMove, finish, needsRepair, type PlayCtx } from '../autopilot/context';
 import { captureHere, retreat, tryAttack } from '../autopilot/tactics';
 import { HUNT } from '../autopilot/engagement';
-import { advance, randomMove, tryCapture } from './tactics';
+import { advance, holdFront, randomMove, takeCover, tryCapture } from './tactics';
 
 /** Lo que necesita un comportamiento para decidir y actuar con una unidad. */
 export interface UnitTurnContext {
@@ -94,6 +94,45 @@ export const UNIT_BEHAVIOURS: readonly UnitBehaviour[] = [
       return true;
     },
   },
+];
+
+/** Salir de donde la pueden destruir, en zona del enemigo (mapas de influencia). */
+const TAKE_COVER: UnitBehaviour = {
+  id: 'takeCover',
+  when: ({ play }) => !!play.influence,
+  run: ({ s, play, unit, range }) => takeCover(s, play, unit, range),
+};
+
+/** Ir al frente (mapas de influencia) cuando no hay nada mejor que hacer, antes de pasear al azar. */
+const HOLD_FRONT: UnitBehaviour = {
+  id: 'holdFront',
+  when: ({ play }) => !!play.influence,
+  run: ({ s, play, unit, range }) => holdFront(s, play, unit, range),
+};
+
+/** El comportamiento de siempre con ese nombre (falla si no esta: la lista de abajo se escribe con ellos). */
+function behaviourNamed(id: string): UnitBehaviour {
+  const behaviour = UNIT_BEHAVIOURS.find((candidate) => candidate.id === id);
+  if (!behaviour) throw new Error(`No hay comportamiento "${id}" en UNIT_BEHAVIOURS`);
+  return behaviour;
+}
+
+/**
+ * Los de la IA con mapas de influencia (docs/PLAN-IA.md, fase 1), de mas a menos urgente: los de
+ * siempre (atacar o acercarse ya miran el peligro al elegir casilla), ponerse a cubierto si la pueden
+ * destruir y, sin nada que hacer, ir al frente antes de pasear. [Probado: atacar solo a lo que tiene a
+ * tiro, sin perseguir, la hacia mas floja: 38 % contra 50 % en 40 partidas.]
+ */
+export const INFLUENCE_BEHAVIOURS: readonly UnitBehaviour[] = [
+  behaviourNamed('finishCapture'),
+  behaviourNamed('stepOffEnemyHq'),
+  behaviourNamed('retreat'),
+  behaviourNamed('attack'),
+  behaviourNamed('capture'),
+  TAKE_COVER,
+  behaviourNamed('advance'),
+  HOLD_FRONT,
+  behaviourNamed('randomMove'),
 ];
 
 /** Lo que hace la IA con una unidad en su turno (si sigue activa): el primero de `behaviours` (los del perfil) que la usa. */
