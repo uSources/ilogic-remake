@@ -261,13 +261,24 @@ En `dist` van el atlas, los modelos GLB, los punteros del raton (`raton*.png`) y
 
 - `.github/workflows/claude.yml`: escribir `@claude ...` en una issue o en un PR y Claude lo hace
   (responde, cambia el codigo en una rama, abre PR), siguiendo `CLAUDE.md` y las skills.
-- `.github/workflows/claude-review.yml`: revision automatica de cada PR con las normas del proyecto.
+- `.github/workflows/claude-review.yml`: revision automatica de cada PR: secretos, codigo obsoleto,
+  normas del proyecto y mejoras, en comentarios en linea y un resumen.
 - Plantillas de issue (`tarea`, `fallo`) con criterios de aceptacion, y de PR con lo que hay que comprobar.
 
 Para activarlo (una vez): instalar la app de Claude (https://github.com/apps/claude) en el repo y crear
 **uno** de estos secretos en *Settings → Secrets and variables → Actions*: `CLAUDE_CODE_OAUTH_TOKEN`
 (planes Pro/Max: `claude setup-token` en tu ordenador) o `ANTHROPIC_API_KEY`. Sin secreto no hacen
 nada.
+
+Lo que se puede mirar con reglas fijas no se deja solo a la IA:
+
+- **Secretos**: `.github/workflows/secretos.yml` pasa [gitleaks](https://github.com/gitleaks/gitleaks)
+  por los commits de cada PR (job `gitleaks`; la salida sale tapada, el repo es publico). Un falso
+  positivo se marca en su linea con un comentario `gitleaks:allow` y el porque. Si salta uno de
+  verdad, borrarlo del commit no basta: ya se ha subido, hay que revocarlo.
+- **Codigo obsoleto**: ESLint (`@typescript-eslint/no-deprecated`, dentro de `npm run check`) no deja
+  usar lo marcado `@deprecated` en los tipos. Si hace falta a proposito, en su linea:
+  `// eslint-disable-next-line @typescript-eslint/no-deprecated -- el porque`.
 
 Para gastar pocos minutos de Actions, cada cosa se hace una vez: los tests (`npm run check`) solo en
 las PR (`main` solo cambia por PR), y la web y las

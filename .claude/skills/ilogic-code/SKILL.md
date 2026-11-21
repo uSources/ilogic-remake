@@ -173,6 +173,11 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   `isOnBoard(s, pos)` de `core/mapGrid.ts`): no hay tamaño global; un `!` sobre algo que puede no existir (unidad por uid, seleccion) es un fallo
   esperando a pasar.
 - `switch` sobre uniones: con todos los casos o con `default:` explicito (lo pide el lint).
+- Nada obsoleto: lo marcado `@deprecated` en los tipos (three.js, Preact, DOM, Web Audio) no pasa el
+  lint (`no-deprecated`); se usa lo nuevo. Un apaño a proposito para un navegador viejo va con
+  `// eslint-disable-next-line @typescript-eslint/no-deprecated -- el porque`.
+- Nunca claves, tokens ni contraseñas en el repo (es publico): lo vigilan gitleaks y la revision de
+  Claude en cada PR (README, "Claude en GitHub").
 - Las reglas cambiadas respecto al juego de 2013 llevan `[CAMBIO]` en un comentario con el porque.
 - Comentarios y nombres de cara al jugador en español, sin tildes en el codigo (si en los textos).
 - Vista 3D: cada partida va en su carga de pagina (`gameStart.ts`), asi que no hay que deshacer
