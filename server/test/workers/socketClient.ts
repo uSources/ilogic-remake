@@ -1,11 +1,11 @@
 /**
- * Un cliente de prueba por WebSocket contra el Worker de verdad (`SELF`): abre la conexion de una
+ * Un cliente de prueba por WebSocket contra el Worker de verdad (`exports.default`): abre la conexion de una
  * sala, manda mensajes y guarda los que llegan en una bandeja (`take` coge el primero de un tipo, o
  * espera a que llegue). Lleva dentro el cliente simulado del nucleo (`NetClient`, tests/sim), que
  * comprueba cada mensaje que llega (que nunca trae nada que su equipo no deba saber, que llegan
  * seguidos) y juega su turno con la IA del juego.
  */
-import { SELF } from 'cloudflare:test';
+import { exports } from 'cloudflare:workers';
 import type { ClientMessage, ServerMessage } from '@core/net';
 import { NetClient } from '../../../tests/sim/netClient';
 
@@ -25,7 +25,7 @@ interface Waiter {
 
 /** La conexion de una sala, abierta (el saludo va aparte: `hello`). */
 export async function openSocket(code: string, origin = 'https://usources.github.io'): Promise<WebSocket> {
-  const response = await SELF.fetch(`https://servidor/rooms/${code}/ws`, { headers: { Upgrade: 'websocket', Origin: origin } });
+  const response = await exports.default.fetch(`https://servidor/rooms/${code}/ws`, { headers: { Upgrade: 'websocket', Origin: origin } });
   if (!response.webSocket) throw new Error(`Sin WebSocket: ${response.status} ${await response.text()}`);
   response.webSocket.accept();
   return response.webSocket;

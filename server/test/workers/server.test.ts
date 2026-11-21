@@ -1,4 +1,5 @@
-import { env, evictDurableObject, runDurableObjectAlarm, runInDurableObject, SELF } from 'cloudflare:test';
+import { evictDurableObject, runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test';
+import { env, exports } from 'cloudflare:workers';
 import { describe, expect, it } from 'vitest';
 import { CURRENT_PROTOCOL, type SeatId } from '@core/net';
 import { isRoomCode } from '../../src/codes';
@@ -29,7 +30,7 @@ interface Created {
 
 async function post(body: unknown, headers: Record<string, string> = {}): Promise<Response> {
   const text = typeof body === 'string' ? body : JSON.stringify(body);
-  return SELF.fetch(`${BASE}/rooms`, {
+  return exports.default.fetch(`${BASE}/rooms`, {
     method: 'POST',
     body: text,
     headers: { Origin: ORIGIN, 'Content-Type': 'application/json', ...headers },
@@ -43,7 +44,7 @@ async function createRoom(changes: Partial<RoomRequest> = {}): Promise<Created> 
 }
 
 const lobbyOf = async (code: string): Promise<{ status: number; info: LobbyInfo | null }> => {
-  const response = await SELF.fetch(`${BASE}/rooms/${code}`, { headers: { Origin: ORIGIN } });
+  const response = await exports.default.fetch(`${BASE}/rooms/${code}`, { headers: { Origin: ORIGIN } });
   return { status: response.status, info: response.ok ? await response.json<LobbyInfo>() : null };
 };
 
@@ -115,8 +116,8 @@ describe('las rutas del servidor', () => {
   it('una sala que no existe, un codigo mal escrito y una ruta que no hay', async () => {
     expect((await lobbyOf('ABCDEF')).status).toBe(404);
     expect((await lobbyOf('abcdef')).status).toBe(400);
-    expect((await SELF.fetch(`${BASE}/otra`, { headers: { Origin: ORIGIN } })).status).toBe(404);
-    const noUpgrade = await SELF.fetch(`${BASE}/rooms/ABCDEF/ws`, { headers: { Origin: ORIGIN } });
+    expect((await exports.default.fetch(`${BASE}/otra`, { headers: { Origin: ORIGIN } })).status).toBe(404);
+    const noUpgrade = await exports.default.fetch(`${BASE}/rooms/ABCDEF/ws`, { headers: { Origin: ORIGIN } });
     expect(noUpgrade.status).toBe(400);
   });
 
@@ -127,15 +128,15 @@ describe('las rutas del servidor', () => {
   });
 
   it('CORS: la web del juego, localhost y file:// (null) pueden; otra web, no', async () => {
-    const preflight = await SELF.fetch(`${BASE}/rooms`, { method: 'OPTIONS', headers: { Origin: ORIGIN } });
+    const preflight = await exports.default.fetch(`${BASE}/rooms`, { method: 'OPTIONS', headers: { Origin: ORIGIN } });
     expect(preflight.status).toBe(204);
     expect(preflight.headers.get('Access-Control-Allow-Origin')).toBe(ORIGIN);
     expect(preflight.headers.get('Access-Control-Allow-Methods')).toContain('POST');
     for (const origin of ['http://localhost:5173', 'http://127.0.0.1:8080', 'null']) {
-      const response = await SELF.fetch(`${BASE}/rooms/ABCDEF`, { headers: { Origin: origin } });
+      const response = await exports.default.fetch(`${BASE}/rooms/ABCDEF`, { headers: { Origin: origin } });
       expect(response.headers.get('Access-Control-Allow-Origin')).toBe(origin);
     }
-    const other = await SELF.fetch(`${BASE}/rooms/ABCDEF`, { headers: { Origin: 'https://otra.example' } });
+    const other = await exports.default.fetch(`${BASE}/rooms/ABCDEF`, { headers: { Origin: 'https://otra.example' } });
     expect(other.status).toBe(403);
     expect(other.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });

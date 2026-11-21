@@ -1,5 +1,7 @@
-# Revision automatica de cada PR por Claude con las normas del proyecto (skills ilogic-code y ashfox).
-# Necesita el mismo secreto que claude.yml; sin el, no hace nada.
+# Revision automatica de cada PR por Claude: secretos, codigo obsoleto, normas del proyecto (skills
+# ilogic-code y ashfox) y mejoras. Lo que se puede mirar con reglas fijas lo miran tambien otros:
+# los secretos, gitleaks (secretos.yml); lo marcado obsoleto en los tipos, ESLint (no-deprecated,
+# en npm run check). Necesita el mismo secreto que claude.yml; sin el, no hace nada.
 name: Revision de Claude
 
 on:
@@ -37,18 +39,32 @@ jobs:
             REPO: ${{ github.repository }}
             PR: ${{ github.event.pull_request.number }}
 
-            Revisa este PR del juego Ilogic en español. Antes, lee CLAUDE.md, docs/ARQUITECTURA.md y
-            .claude/skills/ilogic-code/SKILL.md (y .claude/skills/ashfox/SKILL.md si toca modelos 3D).
+            Revisa este PR del juego Ilogic en español. Antes, lee CLAUDE.md, docs/ARQUITECTURA.md,
+            docs/ESTILO.md y .claude/skills/ilogic-code/SKILL.md (y .claude/skills/ashfox/SKILL.md si
+            toca modelos 3D). Mira solo lo que cambia el PR (gh pr diff).
 
-            Comprueba sobre todo:
-            1. Capas: src/core sin three.js/DOM/interfaz; logica nueva en core con test.
-            2. Reglas o IA cambiadas: ¿se ha actualizado tests/aiGolden.test.ts a proposito y se explica por que?
-            3. Vista 3D (src/view3d): nada creado por fotograma (geometrias, materiales, vectores en bucles calientes).
-            4. Numeros en el contenido (core/content/*.json), textos en src/i18n (es y en); nada duplicado.
-            5. Ficheros generados editados a mano (atlas, assetList, .ashfox, GLB): deben salir de sus generadores.
-            6. Claves, tokens o secretos en el codigo: bloqueante.
-            7. Si cambia algo que ve el jugador: CHANGELOG.md a juego.
+            1. Secretos (bloqueante): claves, tokens, contraseñas, URLs con credenciales, ficheros .env
+               o claves privadas. gitleaks ya busca los conocidos; tu mira lo que una regla no ve: uno
+               troceado, en base64, en un JSON de configuracion o en un comentario. Si hay uno, no lo
+               copies en tu comentario: di fichero y linea, y que hay que revocarlo (el repo es publico).
+            2. Codigo obsoleto: APIs que estan de salida (three.js, Preact, Web Audio, DOM, Node, Vite,
+               Vitest), dependencias nuevas obsoletas o sin mantener, y apaños para navegadores viejos
+               que ya no hacen falta. ESLint ya pilla lo marcado @deprecated en los tipos; tu mira lo que
+               no esta en los tipos y cada `eslint-disable` de no-deprecated: ¿su porque sigue valiendo?
+            3. Normas del proyecto:
+               - Capas: src/core sin three.js/DOM/interfaz; logica nueva en core con test.
+               - Reglas o IA cambiadas: ¿se ha actualizado tests/aiGolden.test.ts a proposito y se explica por que?
+               - Vista 3D (src/view3d): nada creado por fotograma (geometrias, materiales, vectores en bucles calientes).
+               - Numeros en el contenido (core/content/*.json), textos en src/i18n (es y en).
+               - Ficheros generados editados a mano (atlas, assetList, .ashfox, GLB): deben salir de sus generadores.
+               - Si cambia algo que ve el jugador: CHANGELOG.md a juego.
+            4. Mejoras: lo que pide docs/ESTILO.md (nombres claros, funciones cortas, salir pronto,
+               piezas comunes en vez de bucles a mano), codigo repetido o que ya existia en otro sitio,
+               fallos probables (casos sin tratar, `!` o `as` que pueden fallar, promesas perdidas) y lo
+               que quede mas simple. Solo lo que merezca la pena, no gustos.
 
-            Comentarios en linea para problemas concretos; un resumen corto al final. Sin elogios de relleno.
+            Comentarios en linea para problemas concretos, con la propuesta (un bloque `suggestion` si
+            es corta). Al final, un resumen corto con cuatro apartados (Secretos, Obsoleto, Normas,
+            Mejoras), "nada" en los que no tengan. Sin elogios de relleno.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
