@@ -15,14 +15,37 @@ const FAR_LEVEL = 0.6;
 
 const UP = { x: 0, y: 1, z: 0 };
 
-/** El oyente para la camara en `pose`. La camara esta detras del objetivo segun `yaw` (cameraView.ts). */
-export function listenerOf(pose: CameraPose): ListenerPose {
-  const { target, distance, yaw } = pose;
-  return {
-    position: { x: target.x, y: target.y + distance * HEIGHT_PER_DISTANCE, z: target.z },
-    forward: { x: -Math.sin(yaw), y: 0, z: -Math.cos(yaw) },
-    up: UP,
-  };
+interface MovablePoint {
+  x: number;
+  y: number;
+  z: number;
+}
+
+/**
+ * El oyente que sigue a la camara. Se mira cada fotograma, asi que no crea nada: cambia por dentro su
+ * `pose` (siempre el mismo objeto) y solo cuando la camara se ha movido.
+ */
+export class CameraListener {
+  private readonly position: MovablePoint = { x: 0, y: 0, z: 0 };
+  private readonly forward: MovablePoint = { x: 0, y: 0, z: -1 };
+  /** Hacia donde mira la camara; NaN al principio, para que la primera vez siempre cuente como movida. */
+  private yaw = NaN;
+  readonly pose: ListenerPose = { position: this.position, forward: this.forward, up: UP };
+
+  /** Pone el oyente para la camara en `camera` (detras del objetivo segun `yaw`, cameraView.ts); true si se ha movido. */
+  follow(camera: CameraPose): boolean {
+    const { target, distance, yaw } = camera;
+    const height = target.y + distance * HEIGHT_PER_DISTANCE;
+    const { position, forward } = this;
+    if (position.x === target.x && position.y === height && position.z === target.z && this.yaw === yaw) return false;
+    position.x = target.x;
+    position.y = height;
+    position.z = target.z;
+    this.yaw = yaw;
+    forward.x = -Math.sin(yaw);
+    forward.z = -Math.cos(yaw);
+    return true;
+  }
 }
 
 /** Lo fuerte que suena el tablero con la camara a `distance`: 1 de cerca, `FAR_LEVEL` de lejos. */

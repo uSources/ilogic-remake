@@ -7,7 +7,7 @@ import { feet, sound } from '../src/view3d/systems/events/steps';
 import { runSteps } from '../src/view3d/systems/events/timeline';
 import { ambientEmitters, emittersInEarshot, thunderOf, type AmbientEmitter } from '../src/view3d/systems/sound/ambience';
 import { AmbiencePlayer } from '../src/view3d/systems/sound/ambiencePlayer';
-import { listenerOf, zoomLevel } from '../src/view3d/systems/sound/listener';
+import { CameraListener, zoomLevel } from '../src/view3d/systems/sound/listener';
 import { CATALOG } from '../tools/audio/catalog';
 import { blankState } from './helpers';
 
@@ -37,13 +37,26 @@ describe('nombres con sustituto', () => {
 });
 
 describe('el oyente sigue a la camara', () => {
+  const cameraAt = (yaw: number) => ({ target: { x: 5, y: 0, z: 7 }, distance: 10, yaw, pitch: 1 });
+
   it('esta sobre el punto al que mira y mira hacia donde ella', () => {
-    const listener = listenerOf({ target: { x: 5, y: 0, z: 7 }, distance: 10, yaw: 0, pitch: 1 });
-    expect(listener.position).toEqual({ x: 5, y: 1.5, z: 7 });
+    const hearing = new CameraListener();
+    expect(hearing.follow(cameraAt(0))).toBe(true);
+    expect(hearing.pose.position).toEqual({ x: 5, y: 1.5, z: 7 });
     // Con yaw 0 la camara esta en +z mirando a -z: lo de +x sale a la derecha de la pantalla.
-    expect(listener.forward.x).toBeCloseTo(0);
-    expect(listener.forward.z).toBeCloseTo(-1);
-    expect(listener.up).toEqual({ x: 0, y: 1, z: 0 });
+    expect(hearing.pose.forward.x).toBeCloseTo(0);
+    expect(hearing.pose.forward.z).toBeCloseTo(-1);
+    expect(hearing.pose.up).toEqual({ x: 0, y: 1, z: 0 });
+  });
+
+  it('solo cambia si la camara se mueve, y siempre en la misma pose', () => {
+    const hearing = new CameraListener();
+    const pose = hearing.pose;
+    hearing.follow(cameraAt(0));
+    expect(hearing.follow(cameraAt(0))).toBe(false);
+    expect(hearing.follow(cameraAt(Math.PI / 2))).toBe(true);
+    expect(hearing.pose).toBe(pose);
+    expect(pose.forward.x).toBeCloseTo(-1);
   });
 
   it('el tablero suena algo mas flojo al alejar la camara, sin apagarse', () => {

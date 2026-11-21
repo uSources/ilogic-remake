@@ -71,22 +71,26 @@ export function playSoundAt(name: SoundName, at: Point3 | null): void {
   const played = resolveSound(name);
   remember({ name, played, at });
   const mixer = runningMixer();
-  if (!mixer) {
-    pending = { name, at, askedAt: performance.now() };
-    return;
-  }
+  if (mixer) playNow(mixer, name, played, at);
+  else pending = { name, at, askedAt: performance.now() };
+}
+
+/** Suena ya `played` (lo que sale de `name`), salvo que acabe de sonar. */
+function playNow(mixer: Mixer, name: SoundName, played: SoundId | null, at: Point3 | null): void {
   if (!played || tooSoon(name, played, mixer.context.currentTime)) return;
   const [path] = assetsAvailable([pathOf(played, randomVariant(played))]);
   if (!path) return;
   void bufferOf(mixer.context, path).then((buffer) => buffer && start(mixer, buffer, channelOf(name, at), at));
 }
 
+/** Si `name` acaba de sonar (o, si es una voz, otra voz); si no, apunta que suena ahora. */
 function tooSoon(name: SoundName, sound: SoundId, now: number): boolean {
-  if (name.startsWith('voice_') && now - lastVoiceAt < VOICE_GAP) return true;
-  if (name.startsWith('voice_')) lastVoiceAt = now;
+  const isVoice = name.startsWith('voice_');
   const last = lastPlayed.get(sound);
-  if (last !== undefined && now - last < (MIN_GAPS[name] ?? MIN_GAP)) return true;
+  const isRepeat = last !== undefined && now - last < (MIN_GAPS[name] ?? MIN_GAP);
+  if (isRepeat || (isVoice && now - lastVoiceAt < VOICE_GAP)) return true;
   lastPlayed.set(sound, now);
+  if (isVoice) lastVoiceAt = now;
   return false;
 }
 
@@ -116,11 +120,15 @@ function preload(audio: AudioContext): void {
     }
 }
 
-/** Lo que se pidio justo antes de poder sonar (el "TU TURNO" al cargar la partida) suena al abrirse el audio. */
-function playPending(): void {
+/**
+ * Lo que se pidio justo antes de poder sonar (el "TU TURNO" al cargar la partida) suena al abrirse el
+ * audio. Ya esta en `recent` desde que se pidio.
+ */
+function playPending(mixer: Mixer): void {
   const request = pending;
   pending = null;
-  if (request && performance.now() - request.askedAt <= PENDING_MAX_AGE_MS) playSoundAt(request.name, request.at);
+  if (request && performance.now() - request.askedAt <= PENDING_MAX_AGE_MS)
+    playNow(mixer, request.name, resolveSound(request.name), request.at);
 }
 
 /** Los efectos del juego sin sitio (menus, interfaz), por Web Audio. */
@@ -145,7 +153,7 @@ export function installSounds(): void {
   unlockOnGesture();
   whenUnlocked((mixer) => {
     preload(mixer.context);
-    playPending();
+    playPending(mixer);
   });
   document.addEventListener('click', (event) => {
     const sound = buttonSound(event.target);

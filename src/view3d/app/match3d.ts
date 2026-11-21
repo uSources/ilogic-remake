@@ -13,7 +13,7 @@ import type { GameImages } from '../../atlas';
 import { gameTrackOf, playMusic } from '../../audio/music';
 import type { GameAudio } from '../../audio/gameAudio';
 import { AmbiencePlayer } from '../systems/sound/ambiencePlayer';
-import { listenerOf, zoomLevel } from '../systems/sound/listener';
+import { CameraListener, zoomLevel } from '../systems/sound/listener';
 import { OptionsPanel } from '../../menu/optionsPanel';
 import { MatchScene } from '../engine/matchScene';
 import type { GlbLibrary } from '../engine/pieces/glbModels';
@@ -254,12 +254,15 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     threat: toggleThreat,
     minimap: toggleMinimap,
   });
+  /** El oyente sigue a la camara: el audio solo se toca cuando ella se mueve. */
+  const hearing = new CameraListener();
   scene.onFrame((seconds) => {
     camera.update(seconds);
-    const listener = listenerOf(camera.pose);
-    audio.moveListener(listener);
-    ambience.update(seconds, listener.position);
-    audio.setBoardLevel(zoomLevel(camera.pose.distance));
+    if (hearing.follow(camera.pose)) {
+      audio.moveListener(hearing.pose);
+      audio.setBoardLevel(zoomLevel(camera.pose.distance));
+    }
+    ambience.update(seconds, hearing.pose.position);
     scene.render(seconds, camera.pose);
     minimap.publishView(scene.viewedArea(camera.pose.target.y));
     // Los bocadillos (menu, prevision) siguen a su casilla mientras la camara se mueve.

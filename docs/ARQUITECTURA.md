@@ -1145,7 +1145,8 @@ la boca de una pieza, una casilla), el puerto `SoundStage` (`ports/stage.ts`) lo
 (`engine/fx/soundStage.ts`) lo pasa a un punto del mundo con `worldOf`, que da a un anfitrion; `app/`
 lo junta con `src/audio` (`gameAudio.ts`). El audio no es three.js y el motor no lo importa:
 `src/audio/spatial.ts` pone el efecto a un lado y mas flojo lejos (`PannerNode`, sin HRTF), y el oyente
-lo calcula un sistema puro con la pose de la camara (`systems/sound/listener.ts`), cada fotograma. Lo
+lo calcula un sistema puro con la pose de la camara (`systems/sound/listener.ts`) y solo se toca cuando
+ella se mueve (sin crear nada por fotograma). Lo
 de la interfaz suena sin sitio (`SoundPort`). El ambiente tambien decide puro: que suena en cada sitio
 del mapa (`systems/sound/ambience.ts`: costa, bosque, cumbres, cienaga, fabricas...) y cuales quedan
 cerca del oyente; `ambiencePlayer.ts` los enciende y apaga con un `LoopPort` (`src/audio/loops.ts`).

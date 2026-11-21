@@ -4,7 +4,7 @@
  * tablero, que la vista mueve con la camara.
  */
 import type { LoopPort } from './ambientNames';
-import { runningMixer, setChannelLevel } from './audioContext';
+import { audioMixer, setChannelLevel } from './audioContext';
 import { webAudioLoops } from './loops';
 import { playSoundAt, recentSounds, webAudioSounds, type HeardSound } from './sfx';
 import type { SoundName, SoundPort } from './sounds';
@@ -25,8 +25,10 @@ export const webAudio: GameAudio = {
   sounds: webAudioSounds,
   playAt: playSoundAt,
   loops: webAudioLoops,
+  // Tambien con el audio aun cerrado: la vista solo lo mueve cuando se mueve la camara, y al abrirse
+  // el audio el oyente ya tiene que estar en su sitio.
   moveListener: (pose) => {
-    const mixer = runningMixer();
+    const mixer = audioMixer();
     if (mixer) setListener(mixer.context, pose);
   },
   setBoardLevel: (level) => setChannelLevel('effects', level),
