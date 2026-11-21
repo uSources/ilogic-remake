@@ -85,7 +85,10 @@ export const help: HelpTexts = {
       '#d8262a',
       'Enemy threat: where enemies can reach (red veil with an edge); pointing at one of your units, a red arrow from each enemy that could attack it',
     ],
-    ['#ffd447', 'The pointed tile and its defense stars (yellow blocks)'],
+    [
+      '#ffd447',
+      'The pointed tile (four yellow corners); hover a moment and its card shows its defense, what it costs to enter and what it pays',
+    ],
   ],
   controlsTitle: 'Controls',
   head: ['Action', 'Keyboard', 'Mouse / touch'],

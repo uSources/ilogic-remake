@@ -77,24 +77,6 @@
     width: 44px;
     height: 42px;
   }
-  .cards {
-    left: 10px;
-    bottom: 10px;
-  }
-  .cards .terrain {
-    display: none;
-  }
-  .unitcard {
-    width: 220px;
-  }
-  /* Retrato mas pequeño: deja sitio a los datos (movimiento, alcance, vision) en una linea. */
-  .unitcard .head {
-    gap: 8px;
-  }
-  .unitcard .portrait {
-    width: 48px;
-    height: 48px;
-  }
   .forecast {
     width: 220px;
   }
@@ -102,11 +84,6 @@
     top: 112px;
     width: max-content;
     max-width: calc(100vw - 32px);
-  }
-}
-@media (max-width: 480px) {
-  .unitcard {
-    width: min(220px, calc(100vw - 150px));
   }
 }
 

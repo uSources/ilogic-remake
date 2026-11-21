@@ -727,7 +727,7 @@ pone la vista. Cada pieza en su sitio:
 | Paneles de la partida y donde va cada uno | `game/*.tsx`, colocados en `game/GameHud.tsx` (lista `GAME_PANELS`) |
 | Pantallas del menu, pausa y final | `menus/*.tsx` |
 | Dialogos (ayuda, novedades, nombre de escuadra) y avisos (carga, aviso, resumen, cartel) | `overlays/*.tsx` |
-| Piezas compartidas | `common/`: `Pill`, `Chip` y `Badge` (`toy.tsx`, las piezas "caja de juguete": pastillas de esquina, fichas que se pulsan y chapas sobre una casilla, como las de la prevision: numero y color en `ui/models/forecastBadges.ts`), `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useFold`/`FoldMark`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
+| Piezas compartidas | `common/`: `Pill`, `Chip` y `Badge` (`toy.tsx`, las piezas "caja de juguete": pastillas de esquina, fichas que se pulsan y chapas sobre una casilla, como las de la prevision: numero y color en `ui/models/forecastBadges.ts`), `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
 | Estilos | `styles/<grupo>/<panel>.css`, juntados en orden por `hud.css` |
 
 - **Un panel nuevo**: su tipo en `vm/`, su campo en `UIState` (null = no se ve) y en `initialState`,
@@ -1087,7 +1087,7 @@ src/view3d/
 | `engine/core/` | lienzo, escena, luz cartoon (y por clima), cielo de bandas con nubes de bloques y niebla del horizonte (`sky.ts`) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`) |
 | `engine/terrain/` | casillas y decorado (`TERRAIN_PIECES`), relieve de montañas y dunas (`relief.ts`; los macizos, `massif.ts`; sus colores, `reliefColors.ts`), agua, polvo de la arena, el mar alrededor del mapa con sus bajíos (`sea.ts`) y los islotes de bloques (`islets.ts`) |
 | `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`, y `previewHit` para la barra a rayas de lo que perderia; `overheadOf`, encima de la barra, para las chapas), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, chapas y barras (`badges.ts`: la vida y la captura en numero), restos y rodadas |
-| `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`: losas azules con su contorno, `tileOutline.ts`; marco rojo, diana y cursor de esquinas, piezas en `markParts.ts`), las estrellas de defensa de la casilla señalada (`defenseStars.ts`; cuantas, `defenseStars` del nucleo), las flechas rojas de quien podria atacar (`threatLines.ts`), la flecha de bloques y el fantasma al mover (`movePreview.ts`), el visor de puntitos de la artilleria (`aimArc.ts`) y las flechas de las ordenes (`intentArrows.ts`; piezas comunes en `arrowParts.ts`), lluvia y nieve (`weather3d.ts`), el contorno de la unidad elegida y la señalada (`unitOutline.ts`: una pasada encima de la escena, `World.addOverlay`, con el stencil) |
+| `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`: losas azules con su contorno, `tileOutline.ts`; marco rojo, diana y cursor de esquinas, piezas en `markParts.ts`), las flechas rojas de quien podria atacar (`threatLines.ts`), la flecha de bloques y el fantasma al mover (`movePreview.ts`), el visor de puntitos de la artilleria (`aimArc.ts`) y las flechas de las ordenes (`intentArrows.ts`; piezas comunes en `arrowParts.ts`), lluvia y nieve (`weather3d.ts`), el contorno de la unidad elegida y la señalada (`unitOutline.ts`: una pasada encima de la escena, `World.addOverlay`, con el stencil) |
 | `engine/camera/` | situa la camara de three.js en la pose que da `systems/camera` |
 
 - **La partida cambia con acciones**: `TurnControls` manda por la sesion (`session.act`) y enseña los
@@ -1220,7 +1220,7 @@ Un fichero nuevo, `src/controls/gamepad.ts`, con la misma forma que el teclado:
 | Cambiar una regla | su modulo en `src/core/rules/` (ver "El nucleo por dentro"; + test en `tests/`) |
 | Cambiar cuando vale una accion o lo que hace, o añadir una | su entrada en `src/core/actions/` (ver "Acciones"; + test en `tests/dispatch.test.ts`) |
 | Cambiar como juega la IA | `src/core/ai/` (`unitTurn.ts` prioridades, `tactics.ts` cada paso, `production.ts` compras), pesos en `data.AI` |
-| Cambiar lo que enseña una ficha | `src/ui/models/tile.ts` y `src/hud/game/Cards.tsx` (ver "Interfaz HTML") |
+| Cambiar lo que enseña una ficha | `src/ui/models/tile.ts` y `src/hud/game/TileParts.tsx` (ver "Interfaz HTML") |
 | Añadir un panel o una pantalla a la interfaz | `src/hud/` (ver "Interfaz HTML") |
 | Cambiar como se ve el tablero (terreno, relieve, piezas, luz, clima) | su modulo de `src/view3d/engine/` (ver "Vista 3D"); lo que se ve para quien mira, `systems/board/`; los modelos, `tools/art/ashfox/` (skill `ashfox`) |
 | Añadir una marca sobre el tablero o un efecto | `src/view3d/engine/fx/highlights.ts`; `engine/fx/fx.ts`, `particles.ts` (y si va con un suceso, su paso en `systems/events/`) |

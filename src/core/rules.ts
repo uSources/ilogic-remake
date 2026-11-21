@@ -103,7 +103,6 @@ export {
   attackProblem,
   targetProblem,
   tileProtection,
-  defenseStars,
   hitChance,
   hitModifiersOf,
   expectedDamage,

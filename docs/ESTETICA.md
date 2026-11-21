@@ -283,9 +283,12 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   - La barra queda solo para **lo que perdería** al apuntarle (a rayas), que es una proporción.
   - La captura a medias, una chapa con **los puntos que le faltan**, del color de quien captura y a la
     izquierda (encima está la unidad que captura, con su vida en el centro y su orden a la derecha).
-  - La defensa de la casilla señalada, **estrellas de bloque**: cubitos amarillos sombreados como un
-    vóxel, con borde de tinta, en fila al borde de la casilla y botando en ola. La ficha de la casilla
-    ya no las repite.
+  - La defensa de la casilla señalada va en **su ficha** (`TileTip.tsx`), no en el tablero: una chapa
+    con el escudo y el %, junto a las de lo que cuesta entrar, lo que cobra y lo que le falta por
+    capturar (solo las que tenga). Antes eran estrellas de bloque (cubitos amarillos) sobre la casilla:
+    no se entendía qué eran y se confundían con el cursor, del mismo amarillo (21-11-2026). Con Alt,
+    la misma ficha crece con el resto, en las mismas chapas y líneas de texto pequeño: nada de una
+    tarjeta aparte con otro aspecto.
   - La previsión de combate, **chapas de plástico** (`Badge`): la del daño encima de la barra de vida
     del enemigo y la del contraataque a los pies de tu unidad (encima, junto al enemigo de al lado,
     chocaban). Comprobadas con la interfaz a 0,9 y a 1,25 (las escalas de Opciones).

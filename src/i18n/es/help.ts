@@ -87,7 +87,10 @@ export const help: HelpTexts = {
       '#d8262a',
       'Ver amenaza: a donde llegan los enemigos (velo rojo con borde); al señalar una unidad tuya, una flecha roja desde cada enemigo que podría atacarla',
     ],
-    ['#ffd447', 'La casilla señalada y sus estrellas de defensa (bloques amarillos)'],
+    [
+      '#ffd447',
+      'La casilla señalada (cuatro esquinas amarillas); al parar el ratón, su ficha dice su defensa, lo que cuesta entrar y lo que da',
+    ],
   ],
   controlsTitle: 'Controles',
   head: ['Acción', 'Teclado', 'Ratón / táctil'],

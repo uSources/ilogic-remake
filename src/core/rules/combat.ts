@@ -83,15 +83,6 @@ export function tileProtection(s: GameState, pos: Pos): number {
   return terrainProtection * (building ? buildingTypeOf(s, building).protection : 1);
 }
 
-/** Estrellas de defensa que se enseñan como mucho. */
-const MAX_DEFENSE_STARS = 4;
-
-/** Estrellas de defensa que se enseñan para una casilla (0..4): una por cada 10 % que protege. */
-export function defenseStars(s: GameState, pos: Pos): number {
-  const protectionPercent = (1 - tileProtection(s, pos)) * 100;
-  return Math.max(0, Math.min(MAX_DEFENSE_STARS, Math.round(protectionPercent / 10)));
-}
-
 /**
  * Proteccion de la casilla que le queda al defensor frente a este atacante: la de la casilla, menos
  * la parte que perfora el atacante (la mayor de las que aporten los modulos; piercing).

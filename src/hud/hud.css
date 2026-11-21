@@ -12,7 +12,6 @@
 @import './styles/game/popmenu.css';
 @import './styles/game/forecast.css';
 @import './styles/game/combat.css';
-@import './styles/game/cards.css';
 @import './styles/overlays/notices.css';
 @import './styles/overlays/loading.css';
 @import './styles/base/narrow.css';
@@ -33,10 +32,8 @@
 @import './styles/menus/end.css';
 @import './styles/overlays/notes.css';
 @import './styles/base/icons.css';
-@import './styles/game/fold.css';
 @import './styles/game/endturn.css';
 @import './styles/overlays/rename.css';
-@import './styles/game/control-point.css';
 @import './styles/game/selection.css';
 @import './styles/overlays/handoff.css';
 @import './styles/menus/online.css';

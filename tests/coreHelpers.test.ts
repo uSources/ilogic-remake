@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
-import { attackZone, captureEvent, defenseStars, moveEvent, moveRange, reachableTiles, tileProtection, unitThreat } from '@core/rules';
+import { attackZone, captureEvent, moveEvent, moveRange, reachableTiles, tileProtection, unitThreat } from '@core/rules';
 import { newUnit } from '@core/measure';
 import { deserialize, serialize } from '@core/save';
 import { blankState, unitTypeNamed, terrainNamed, hqId } from './helpers';
@@ -14,23 +14,15 @@ const SOLDIER = unitTypeNamed('Soldier'),
 const WOODS = 'Woods';
 
 describe('ayudas de reglas', () => {
-  it('proteccion de casilla: terreno por edificio, y estrellas de 0 a 4', () => {
+  it('proteccion de casilla: terreno por edificio', () => {
     const s = blankState();
     s.map[3]![3] = WOODS;
     s.buildings.push({ type: HQ, owner: 0, x: 5, y: 5, capture: null });
     expect(tileProtection(s, { x: 0, y: 0 })).toBe(defaultContent().plainTerrain.protection);
     expect(tileProtection(s, { x: 3, y: 3 })).toBe(terrainNamed('Woods').protection);
     expect(tileProtection(s, { x: 5, y: 5 })).toBeCloseTo(defaultContent().plainTerrain.protection * defaultContent().hq.protection);
-    for (const pos of [
-      { x: 0, y: 0 },
-      { x: 3, y: 3 },
-      { x: 5, y: 5 },
-    ]) {
-      const stars = defenseStars(s, pos);
-      expect(stars).toBeGreaterThanOrEqual(0);
-      expect(stars).toBeLessThanOrEqual(4);
-    }
-    expect(defenseStars(s, { x: 5, y: 5 })).toBeGreaterThanOrEqual(defenseStars(s, { x: 0, y: 0 }));
+    // La Base cubre al menos como el llano de debajo (proteger es quitar daño: un factor menor).
+    expect(tileProtection(s, { x: 5, y: 5 })).toBeLessThanOrEqual(tileProtection(s, { x: 0, y: 0 }));
   });
 
   it('casillas alcanzables = las que tienen coste (no null), en orden de columnas', () => {

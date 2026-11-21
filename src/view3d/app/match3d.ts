@@ -6,7 +6,7 @@
  */
 import { mapGrid } from '../../core/mapGrid';
 import type { Pos, TeamId, Unit } from '../../core/model';
-import { defenseStars, isOnMap, unitAt } from '../../core/rules';
+import { isOnMap, unitAt } from '../../core/rules';
 import { screenEnd } from '../../core/session';
 import { ui } from '../../hud/store';
 import type { GameImages } from '../../atlas';
@@ -219,7 +219,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     const isSame = pos && cursor ? pos.x === cursor.x && pos.y === cursor.y : pos === cursor;
     if (isSame) return;
     cursor = pos;
-    scene.hover(pos, pos ? defenseStars(state, pos) : 0);
+    scene.hover(pos);
     controls.hover(pos);
     intents.hover(pos);
     publish();
