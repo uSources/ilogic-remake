@@ -343,6 +343,18 @@ describe('el clic que acierta, las fichas y la rueda', () => {
     expect(marks.selected).toMatchObject({ x: 20, y: 20 });
   });
 
+  it('tocar una casilla lejos le da la orden de ir alli y da ya el primer paso', async () => {
+    const { soldier, events, controls } = await myTurn();
+    await controls.tap(soldier);
+    await controls.tap({ x: 20, y: 5 });
+    await settle();
+    expect(soldier.standingOrder).toEqual({ kind: 'goto', at: { x: 20, y: 5 } });
+    expect(events.played.map(kindsOf)).toContainEqual(['move']);
+    expect(soldier.x).toBeGreaterThan(5);
+    expect(soldier.turnState).toBe('done');
+    expect(controls.selectedUnits()).toEqual([]);
+  });
+
   it('tocar un edificio ajeno a su alcance va y empieza a capturarlo', async () => {
     const { s, soldier, events, controls } = await myTurn();
     s.buildings.push({ type: 'City', owner: null, x: 7, y: 5, capture: null });

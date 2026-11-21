@@ -47,7 +47,7 @@ import { attackPlan, type AttackPlan } from './attackPlan';
 import type { EventPlayer, MovePreview, ScreenView, TileMarks } from '../../ports/turn';
 import { arcShotOf, pathFor, previewAt } from './movePreview';
 import { attackReachTiles } from './attackReach';
-import { clickIntent, type ClickIntent } from './clickIntent';
+import { clickIntent, travelOrder, type ClickIntent } from './clickIntent';
 import { chipOptions, groupRadialOptions, optionAction, orderForTile, ORDER_KINDS, radialOptions, type UnitOption } from './unitOptions';
 import { isSelectable, pickedFrom } from './selection';
 
@@ -455,6 +455,8 @@ export class TurnControls {
         return this.actThenSelect(unit, { kind: 'merge', uid: unit.uid, into: intent.into.uid });
       case 'move':
         return this.moveTo(mode, intent.to, intent.thenCapture);
+      case 'travel':
+        return this.travelTo(unit, intent.to);
       case 'elsewhere':
         this.setMode({ kind: 'idle' });
         return this.tapIdle(pos);
@@ -515,6 +517,17 @@ export class TurnControls {
     const canCapture = thenCapture && availableActions(this.s, this.host.viewer, unit).includes('capture');
     if (canCapture) return this.actThenSelect(unit, { kind: 'capture', uid: unit.uid });
     this.select(unit);
+  }
+
+  /**
+   * «Ir alli»: le da la orden de varios turnos y el primer paso es ya, con este turno. Despues nada
+   * queda elegido (dejarla, que se ha movido, es esperar: leavingMovedUnit).
+   */
+  private async travelTo(unit: Unit, goal: Pos): Promise<void> {
+    this.setMode({ kind: 'idle' });
+    if (!(await this.perform(travelOrder(unit, goal)))) return;
+    showToast(t('travelSet'));
+    await this.perform({ kind: 'gotoStep', uid: unit.uid });
   }
 
   /** Va a donde dice el plan (por el camino trazado, si lo hay) y ataca. false si algo no vale. */
