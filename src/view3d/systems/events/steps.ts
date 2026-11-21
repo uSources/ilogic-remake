@@ -3,13 +3,13 @@
  * lleva cada suceso) y los cumple timeline.ts sobre los puertos del motor (ports/stage.ts). Un paso
  * nuevo es una forma mas aqui y su entrada en STEP_RUNNERS (timeline.ts): el compilador pide las dos.
  */
-import type { SoundId } from '../../../audio/sounds';
+import type { SoundName } from '../../../audio/sounds';
 import type { Pos } from '../../../core/model';
 import type { PieceClip, PuffKind, Spot } from '../../ports/stage';
 
 export type AnimationStep =
   /** Suena a la vez que se ve el paso siguiente (no espera). */
-  | { kind: 'sound'; sound: SoundId }
+  | { kind: 'sound'; sound: SoundName; at?: Spot }
   | { kind: 'clip'; uid: number; clip: PieceClip }
   | { kind: 'walk'; uid: number; from: Pos; to: Pos }
   | { kind: 'aim'; uid: number; target: number }
@@ -36,4 +36,5 @@ export type StepOf<K extends AnimationStepKind> = Extract<AnimationStep, { kind:
 export const muzzle = (uid: number): Spot => ({ kind: 'muzzle', uid });
 export const feet = (uid: number): Spot => ({ kind: 'feet', uid });
 export const together = (...steps: AnimationStep[]): AnimationStep => ({ kind: 'together', steps });
-export const sound = (id: SoundId): AnimationStep => ({ kind: 'sound', sound: id });
+/** Que suene `id`, desde `at` si se da (sin sitio, como la interfaz). */
+export const sound = (id: SoundName, at?: Spot): AnimationStep => (at ? { kind: 'sound', sound: id, at } : { kind: 'sound', sound: id });

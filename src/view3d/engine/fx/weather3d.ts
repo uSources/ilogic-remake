@@ -22,6 +22,8 @@ const FLAKE_SIZE = 0.11;
 /** Tamaño de las nubes de polvo de la tormenta de arena: casillas por cada pixel del estilo 2D. */
 const DUST_TILES_PER_PIXEL = 0.012;
 const FLASH_FADE = 4;
+/** Lo blanca que se pone la pantalla con un relampago (luego se apaga a `FLASH_FADE`). */
+const FLASH_PEAK = 0.55;
 /** A menos de esta distancia de la camara (casillas) los copos y el polvo ya no crecen: son tiempo, no piedras. */
 const NEAREST_PARTICLE = 12;
 
@@ -44,6 +46,7 @@ export class WeatherView {
   private readonly veil: HTMLDivElement;
   private readonly flash: HTMLDivElement;
   private flashLevel = 0;
+  private readonly lightningListeners: Array<() => void> = [];
 
   constructor(overlayParent: HTMLElement, maxDrops = 1200) {
     this.streaks = streakLines(maxDrops);
@@ -96,11 +99,21 @@ export class WeatherView {
     drawClouds(this.clouds, this.dust, style);
   }
 
-  /** Los relampagos de la tormenta: un destello blanco que se apaga. */
+  /** Avisa de cada relampago (para su trueno). */
+  onLightning(listener: () => void): void {
+    this.lightningListeners.push(listener);
+  }
+
+  /** Los relampagos de la tormenta: un destello blanco que se apaga (sin movimiento, solo el trueno). */
   private updateFlash(seconds: number, style: Style | null): void {
-    if (style?.lightning && !reducedMotion() && Math.random() < style.lightning * seconds) this.flashLevel = 0.55;
+    if (style?.lightning && Math.random() < style.lightning * seconds) this.strike();
     this.flashLevel = Math.max(0, this.flashLevel - seconds * FLASH_FADE);
     this.flash.style.opacity = String(this.flashLevel);
+  }
+
+  private strike(): void {
+    if (!reducedMotion()) this.flashLevel = FLASH_PEAK;
+    for (const listener of this.lightningListeners) listener();
   }
 }
 

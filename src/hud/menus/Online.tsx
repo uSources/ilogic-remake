@@ -199,6 +199,7 @@ export function Online({ s }: { s: UIState }) {
         <Btn
           sel={focus === 'back' || focus === 'leave'}
           cls="px-btn plain"
+          sound="ui_back"
           onHover={hover(isLobby ? 'leave' : 'back')}
           onPick={pick(isLobby ? 'leave' : 'back')}
         >

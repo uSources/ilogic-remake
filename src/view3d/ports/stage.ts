@@ -4,6 +4,7 @@
  * casilla), no puntos del mundo: el motor los convierte (engine/fx/spots.ts). Lo implementa el motor
  * (engine/fx/) y los tests, con puertos falsos (docs/PLAN-VISTA3D.md, "Los puertos").
  */
+import type { SoundName } from '../../audio/sounds';
 import type { MovementMotion } from '../../core/content';
 import type { Pos } from '../../core/model';
 
@@ -21,6 +22,8 @@ export type Spot =
 
 /** Lo que se sabe de la pieza de una unidad al ir a animarla. */
 export interface ShownPiece {
+  /** La clase de unidad (id de units.json): su disparo, su motor y su caida. */
+  readonly unitType: string;
   /** Como se mueve (movements.json, "motion"): su paso, su disparo y si deja restos. */
   readonly motion: MovementMotion;
   /** La niebla no la tapa: lo que no se ve no se anima (no se delata). */
@@ -70,4 +73,13 @@ export interface EffectStage {
   explosion(at: Spot, ground: Spot, size: number): Promise<void>;
   /** Una mancha quemada en el suelo. */
   scorch(at: Spot): void;
+}
+
+/**
+ * Pedir que suene un efecto del tablero desde un sitio (`at`): suena a ese lado del oyente y mas flojo
+ * lejos (src/audio/spatial.ts). Sin sitio, como la interfaz. Lo implementa el motor
+ * (engine/fx/soundStage.ts), que convierte el sitio en un punto del mundo.
+ */
+export interface SoundStage {
+  play(sound: SoundName, at?: Spot): void;
 }

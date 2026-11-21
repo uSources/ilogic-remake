@@ -43,7 +43,7 @@ export function RenameSquad({ rename }: { rename: NonNullable<UIState['rename']>
         />
         {/* Botones normales (con foco y "submit"): aqui si se escribe con el teclado. */}
         <div class="rename-buttons">
-          <button type="button" class="px-btn plain" onClick={() => ui.actions.renameClose()}>
+          <button type="button" class="px-btn plain" data-sound="ui_back" onClick={() => ui.actions.renameClose()}>
             {t('cancel')}
           </button>
           <button type="submit" class="px-btn">

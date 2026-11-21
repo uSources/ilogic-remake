@@ -71,7 +71,7 @@ export function Campaign({ s }: { s: UIState }) {
         ))}
       </div>
       {selectedMission && <MissionBrief campaign={campaign} mission={selectedMission} />}
-      <Btn cls="px-btn plain cp-back" onPick={() => ui.actions.campaignBack()}>
+      <Btn cls="px-btn plain cp-back" sound="ui_back" onPick={() => ui.actions.campaignBack()}>
         {t('back')} <span class="key">Esc</span>
       </Btn>
     </div>

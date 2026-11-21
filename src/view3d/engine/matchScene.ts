@@ -10,7 +10,7 @@ import type { GameState, Pos, TeamId } from '../../core/model';
 import type { Anchor } from '../../hud/store';
 import type { CameraPose, Point3 } from '../ports/camera';
 import type { FrameListener } from '../ports/frame';
-import type { EffectStage, PieceLookup, PieceStage, PuffKind } from '../ports/stage';
+import type { EffectStage, PieceLookup, PieceStage, PuffKind, SoundStage } from '../ports/stage';
 import type { MovePreview, ScreenView, TileMarks } from '../ports/turn';
 import type { DestinationMarks, IntentMarks } from '../ports/orders';
 import type { ThreatMarks } from '../ports/threat';
@@ -27,6 +27,7 @@ import { IntentArrowsView } from './fx/intentArrows';
 import { DestinationFlagsView } from './fx/destinationFlags';
 import { ParticleSystem } from './fx/particles';
 import { BoardPieceStage } from './fx/pieceStage';
+import { SpotSoundStage, type SoundHost } from './fx/soundStage';
 import { WeatherView } from './fx/weather3d';
 import { BoardView } from './pieces/boardView';
 import type { GlbLibrary } from './pieces/glbModels';
@@ -140,6 +141,11 @@ export class MatchScene implements ScreenView {
     });
     const effectStage = new FxEffectStage({ board: this.board, layer: this.effects, animate, puff, scorch: (at) => this.marks.scorch(at) });
     return { lookup: pieceStage, pieces: pieceStage, effects: effectStage };
+  }
+
+  /** Los sonidos del tablero, cada uno desde su sitio, con `host` para sonar (el audio). */
+  soundStage(host: SoundHost): SoundStage {
+    return new SpotSoundStage(this.board, host);
   }
 
   /** Las marcas del tablero que pide el turno (alcance, objetivos, lo elegido, con su contorno). */

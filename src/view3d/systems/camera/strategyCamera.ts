@@ -6,8 +6,8 @@
  */
 import type { CameraPose, Point3 } from '../../ports/camera';
 
-const MIN_DISTANCE = 6;
-const MAX_DISTANCE = 40;
+export const MIN_DISTANCE = 6;
+export const MAX_DISTANCE = 40;
 const degrees = (value: number): number => (value * Math.PI) / 180;
 /** Inclinacion de partida: bastante desde arriba para leer el tablero, sin perder el volumen de los bloques. */
 const START_PITCH = degrees(52);
