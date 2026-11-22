@@ -161,10 +161,10 @@ Descargados (21-11-2026) en `~/ComfyUI-Shared/models`:
   - sucesos nuevos con sonido (compras de cualquiera, subir y bajar, unir, curar, esperar, deshacer,
     emboscada, fin del turno...) sin delatar lo que tapa la niebla; botones con su sonido
     (`data-sound`), pasar por encima, errores, la rueda;
-  - voces de juguete al elegir, atacar y capturar (una cada 1,5 s como mucho; opcion en ajustes);
+  - voces de juguete al elegir, atacar y capturar (una cada 1,5 s como mucho; su volumen en Opciones);
   - ambiente por zonas (los 3 mas cercanos a la camara, cada uno desde un solo sitio y apagandose antes
     que los efectos con la distancia), fondo del tema, clima con fundido y truenos con cada relampago
-    (opcion en ajustes). El fondo y las zonas se oyen con la camara baja y casi nada desde arriba
+    (su volumen en Opciones). El fondo y las zonas se oyen con la camara baja y casi nada desde arriba
     (`ambienceZoomLevel`); el clima, siempre. Cada ambiente tiene su volumen (`AMBIENT_VOLUMES`): el agua,
     un murmullo de orilla (ni el hielo ni el borde del tablero suenan a agua);
   - musica de batalla por tema (si aun no esta, la de siempre).

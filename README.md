@@ -109,8 +109,10 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
   Siguiente misión o Reintentar.
 - **Menú con tarjetas:** Continuar (con miniatura de la partida guardada), Nueva partida (Rápida o
   Personalizar) y Campaña, sobre la imagen original del menú.
-  **Opciones** (también con la tecla O en partida): sonido, autoguardado, avisar de unidades sin mover, velocidades, tamaño de la
-  interfaz (90/100/125 %), reducir el movimiento, ver siempre la amenaza e idioma.
+  **Opciones** (también con la tecla O en partida): volumen general y de cada sonido (música, efectos del
+  tablero, ambiente, voces e interfaz; cada uno con su silencio), silenciar en segundo plano, autoguardado,
+  avisar de unidades sin mover, velocidades, tamaño de la interfaz (90/100/125 %), reducir el movimiento,
+  ver siempre la amenaza e idioma.
 - **Nueva partida** enseña el mapa que va a tocar ("Otro mapa" o R para sortear otro) y tiene los
   ajustes Normal, Rápida (20×20, 20 días) y Personalizada, que deja elegir tamaño del mapa (20, 32 o 40),
   terreno, niebla, dinero inicial, ingresos y límite de días (al acabar gana quien tenga más puntos:
@@ -126,7 +128,7 @@ navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada
   niebla, el bosque esconde: si tu camino choca con un enemigo escondido, emboscada. Los edificios
   propios vigilan a su alrededor (la Base y la fortaleza 3 casillas, fábricas y aeropuertos 2, ciudades y pozos 1).
 - Opciones dentro de la partida (menú > Opciones): esperar sola al soltar, saltar a la siguiente
-  unidad, velocidad de las animaciones propias y del enemigo, música y autoguardado, en pestañas (Q y
+  unidad, velocidad de las animaciones propias y del enemigo, volúmenes y autoguardado, en pestañas (Q y
   E cambian de pestaña). En la pestaña «Controles» se cambia la tecla de cada orden del mapa (fin de
   turno, amenaza, órdenes, zoom...; las flechas, Enter y los números son fijos); la ayuda y los
   botones enseñan las teclas elegidas.
@@ -188,7 +190,8 @@ src/
                minimapa, por panel en models/), sprites.ts (claves de imagen), sides.ts, palette.ts (PAL_CSS)
   menu/        Pantallas del menu (inicio, partida nueva, campaña, opciones), sin dibujo propio
   controls/    Teclado, menus, gestos y seleccion: funciones puras que traducen lo pulsado a ordenes
-  audio/       Musica (music.ts, con <audio>) y efectos de sonido (sfx.ts, con Web Audio; WAV de Ashfox o de IA)
+  audio/       Musica (music.ts, con <audio>), efectos de sonido (sfx.ts, con Web Audio; WAV de Ashfox o de IA)
+               y los volumenes de Opciones (volumes.ts) que pone el mezclador (audioContext.ts)
   net/         Partidas por la red desde el navegador: la conexion con la sala (serverLink), lo que llega
                como partida y jugadas (roomClient), las rutas (roomApi) y «Mis partidas en línea»
   patchNotes/  Novedades: notas de parche de GitHub y del CHANGELOG
