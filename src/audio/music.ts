@@ -60,16 +60,19 @@ function startTrack(track: MusicTrack, restart = false): void {
   if (current?.track === track && !current.audio.paused && !restart) return applyMusicVolume();
   stopMusic();
   const audio = audioFor(track);
-  if (!audio) return;
+  if (!audio) return startFallback(track);
   current = { track, audio };
-  audio.addEventListener('error', () => playFallback(track, audio), { once: true });
+  audio.addEventListener('error', () => current?.audio === audio && startFallback(track), { once: true });
   void audio.play().catch(() => startOnFirstGesture(audio));
 }
 
-/** La pista no se ha podido bajar: si tiene sustituta y sigue tocandole, la sustituta. */
-function playFallback(track: MusicTrack, audio: HTMLAudioElement): void {
+/**
+ * La sustituta de `track`, si tiene. Suena cuando la suya no esta (en la version de un fichero solo va lo
+ * que hay) o no se ha podido bajar (en la web).
+ */
+function startFallback(track: MusicTrack): void {
   const fallback = FALLBACK_TRACKS[track];
-  if (fallback && current?.audio === audio) startTrack(fallback, true);
+  if (fallback) startTrack(fallback, true);
 }
 
 /**
