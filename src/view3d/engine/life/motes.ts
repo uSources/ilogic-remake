@@ -148,13 +148,18 @@ export class MoteSwarm {
     return { home, age: 0, life: randomBetween(this.kind.life), seed: Math.random() * SEED_SPREAD };
   }
 
+  /** Va en cada fotograma por cada mota y cada capa: con bucles sencillos, sin crear nada (ni funciones). */
   private draw(): void {
-    this.motes.forEach((mote, index) => {
-      const at = mote && this.kind.flight(mote, this.at);
-      const brightness = mote ? this.kind.brightness(mote) : 0;
-      this.layers.forEach((points, layer) => setPoint(points, index, at, mote ? this.sizeOf(mote, layer) : 0, brightness));
-    });
+    for (let index = 0; index < this.motes.length; index++) this.drawMote(index, this.motes[index] ?? null);
     for (const points of this.layers) points.commit();
+  }
+
+  private drawMote(index: number, mote: Mote | null): void {
+    const at = mote && this.kind.flight(mote, this.at);
+    const brightness = mote ? this.kind.brightness(mote) : 0;
+    for (let layer = 0; layer < this.layers.length; layer++) {
+      setPoint(this.layers[layer]!, index, at, mote ? this.sizeOf(mote, layer) : 0, brightness);
+    }
   }
 
   private sizeOf(mote: Mote, layer: number): number {
