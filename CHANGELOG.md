@@ -7,6 +7,46 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.14.0] - 2026-11-22 — Banderas, minimapa y un mundo que suena
+
+### Novedades
+- **El tablero suena**: cada disparo, paso y motor suena desde su casilla, a un lado o al otro y más flojo cuanto más lejos. Cada unidad tiene su disparo, su motor y su caída, y los soldados suenan según el suelo que pisan. Hay ambiente por zonas (costa, bosque, cumbres, ciénaga, fábricas), el del tema y el del clima, con un trueno en cada relámpago, que se oye más con la cámara baja. También suenan las compras (las de la IA también), subir y bajar, unir, curar y esperar, los botones y unas voces de juguete. Lo que pasa bajo la niebla no suena. En Opciones, volumen nuevo para «Ambiente» y «Voces de las unidades».
+- **Minimapa**: siempre abierto en una esquina, con los colores del tablero, la niebla, los edificios, las unidades y un recuadro con lo que ves. Crece al pasar el ratón (o al tocarlo con el dedo), y tocarlo o arrastrar en él lleva la cámara allí. La M lo cierra.
+- **Ir allí en varios turnos**: con una unidad elegida, toca una casilla libre a la que no llega este turno. Da ya el primer paso y sigue sola cada turno; moverla tú lo cancela.
+- **Banderas de destino**: una banderita azul marca la casilla a la que va cada unidad tuya con orden (atacar, capturar, defender o ir allí) hasta que llega. Lleva el retrato de la unidad o la tecla de su escuadra; si van varias al mismo sitio, sale una de cada (hasta tres, y «+N» si son más).
+- **Siluetas y contornos**: una unidad tapada por una montaña o un edificio se ve a través, como una silueta del color de su bando. La unidad elegida lleva un borde amarillo y la señalada, uno blanco.
+- **Cada tema con su alrededor**: el desierto está rodeado de un mar de dunas con mesetas de cañón, y el nevado, de un mar helado con témpanos, banquisa e icebergs.
+- **El pantano tiene su propio aspecto**: suelo oliva con charcos, agua turbia, cipreses con musgo, troncos secos, nenúfares, juncos, ranitas que saltan y luciérnagas. Con «Reducir el movimiento», ni saltos ni luciérnagas.
+- **Se ven mejor las unidades**: árboles, flores y cactus son algo más pequeños para que no tapen lo que hay en su casilla, y la cámara empieza más cerca.
+
+### Interfaz
+- La ficha de la casilla enseña su defensa en % (en vez de los cubitos amarillos sobre la casilla), lo que cuesta entrar, lo que da y lo que falta por capturar. Con Alt crece con todos los datos de la unidad.
+- El minimapa y las miniaturas de los mapas pintan el pantano de verde, como se ve en el tablero.
+
+### Arreglos
+- El lateral del tablero ya no parpadea a rayas en el borde del mapa ni en los desniveles.
+- Los números de las chapas y los textos que suben ya no se quedan con otra letra al empezar la partida.
+
+<!-- en -->
+
+### New
+- **The board has sound**: every shot, step and engine sounds from its tile, to one side or the other and quieter the farther it is. Each unit has its own shot, engine and death sound, and soldiers' steps depend on the ground. There's ambience by area (coast, forest, peaks, marsh, factories), for the theme and for the weather, with thunder on every lightning bolt, louder with the camera low. Purchases (the AI's too), loading and unloading, joining, healing and waiting, buttons and some toy voices make sounds too. Whatever happens under the fog stays silent. Options has new volumes for “Ambience” and “Unit voices”.
+- **Minimap**: always open in a corner, with the board's colors, fog, buildings, units and a box showing what you see. It grows when you hover it (or tap it), and tapping or dragging on it moves the camera there. M closes it.
+- **Go there over several turns**: with a unit selected, tap a free tile it can't reach this turn. It takes the first step now and keeps going on its own every turn; moving it yourself cancels it.
+- **Destination flags**: a little blue flag marks the tile each of your units with an order (attack, capture, hold or go there) is heading to, until it arrives. It shows the unit's portrait or its squad's key; when several go to the same place, one of each appears (up to three, and “+N” for more).
+- **Silhouettes and outlines**: a unit hidden behind a mountain or a building shows through as a silhouette in its side's color. The selected unit gets a yellow outline and the hovered one a white one.
+- **Each theme has its own surroundings**: the desert is surrounded by a sea of dunes with canyon mesas, and the snowy theme by a frozen sea with ice floes, pack ice and icebergs.
+- **The swamp has its own look**: olive ground with puddles, murky water, mossy cypresses, dead trunks, water lilies, reeds, hopping frogs and fireflies. With “Reduce motion”, no hopping and no fireflies.
+- **Units are easier to see**: trees, flowers and cacti are a bit smaller so they don't hide what's on their tile, and the camera starts closer.
+
+### Interface
+- The tile card shows its defense in % (instead of the little yellow cubes on the tile), what it costs to enter, what it pays and what's left to capture. Hold Alt and it grows with all of the unit's details.
+- The minimap and map thumbnails paint the swamp green, as it looks on the board.
+
+### Fixes
+- The side of the board no longer flickers in stripes at the map edge or between height levels.
+- Numbers on chips and floating texts no longer get stuck with a different font when a match starts.
+
 ## [0.13.1] - 2026-11-17 — Con los pies en el suelo
 
 ### Arreglos
