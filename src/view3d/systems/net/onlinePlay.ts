@@ -29,7 +29,7 @@ import type { GameAction, GameState, MatchResult, TeamId } from '../../../core/m
 import { fillWith } from '../../../core/net';
 import type { GameSession } from '../../../core/session';
 import { shownTeamNumber, teamState } from '../../../core/teams';
-import { showToast, ui } from '../../../hud/store';
+import { showToast, ui, type NetVM } from '../../../hud/store';
 import { closeText } from '../../../menu/online/shared';
 import { mirrorSession } from '../../../net/mirrorSession';
 import type { OnlineListener } from '../../../net/onlineMatch';
@@ -40,6 +40,14 @@ import type { MatchRunner, RunnerReply, RunnerStop, ShowEvents } from '../turn/m
 
 /** Lo que se deja leer el aviso de que la sala ha cerrado antes de volver al menu. */
 const ROOM_CLOSED_QUIT_MS = 2500;
+
+/** Como se enseña cada estado del enlace en la linea de la conexion (conectando por primera vez, como volviendo). */
+const LINK_LINE: Record<LinkStatus, NetVM['status']> = {
+  connecting: 'reconnecting',
+  online: 'online',
+  reconnecting: 'reconnecting',
+  closed: 'offline',
+};
 
 /** Lo que se usa de la conexion con la sala (`OnlineMatch`, src/net/onlineMatch.ts). */
 export interface OnlineRoom {
@@ -273,7 +281,7 @@ export class OnlinePlay implements MatchRunner {
   /** La linea de la conexion (sin tocar «Esperando al equipo N…»). */
   private publishLink(status: LinkStatus): void {
     const waiting = ui.get().net?.waiting ?? null;
-    ui.set({ net: { status: status === 'online' ? 'online' : status === 'closed' ? 'offline' : 'reconnecting', waiting } });
+    ui.set({ net: { status: LINK_LINE[status], waiting } });
   }
 
   /** La sala no deja seguir: se avisa y, si la partida no ha acabado ya, se vuelve al menu. */
