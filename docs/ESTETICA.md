@@ -402,7 +402,9 @@ falta relieve de columnas alrededor, y eso sí costaría.
   luego, témpanos separados por canales de agua; y lejos, la banquisa, placas juntas con grietas
   finas. Las placas son celdas de Voronoi en texels, cada una entera de un tono (hielo, hielo en
   sombra o nevada): con un círculo de nieve en el centro de cada una parecían huevos fritos. Al pie
-  de la tierra, un reborde de hielo blanco (quieto, en vez de la espuma) y escarcha que titila.
+  de la tierra, un reborde de hielo blanco (quieto, en vez de la espuma) y escarcha que titila. Es
+  el suelo más caro (mira 9 placas por píxel): con el temporizador de la GPU, solo el suelo, unos
+  0,15 ms por fotograma, frente a unos 0,1 del mar y de las dunas.
 - **Islotes** alrededor (14, siempre los mismos): cada uno es una sierra pequeña con el relieve de
   las montañas del tablero (`massif.ts`, `reliefColors.ts`): playa baja, tierra del tema, roca pelada
   en las laderas empinadas y manchas de color, con su propio bajío y espuma. En el desierto son
