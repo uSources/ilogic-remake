@@ -77,6 +77,10 @@ export class HostedRoom {
   private meta: RoomMeta | null = null;
   /** La carga en curso: dos llamadas seguidas no recuperan la sala dos veces. */
   private loading: Promise<RoomAdapter | null> | null = null;
+  /**
+   * La ventana de rechazos de cada asiento (rateLimit.ts). No se borra al irse el asiento: si volver a
+   * entrar la pusiera a cero, quien insiste se saltaria el tope reconectando. Hay una por asiento como mucho.
+   */
   private readonly rejections = new Map<SeatId, RejectionWindow>();
 
   constructor(private readonly host: RoomHost) {}
