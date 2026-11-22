@@ -11,7 +11,7 @@ const ZONES: SoundSpec[] = [
   zone('amb_meadow', 'A meadow up close: crickets chirping, bees buzzing past and tall grass swaying'),
   zone('amb_dunes', 'Sand dunes: dry wind sweeping over the sand with a fine sand hiss'),
   zone('amb_peaks', 'A rocky mountain peak: cold wind whistling between the rocks and small pebbles trickling down'),
-  zone('amb_snowfield', 'An open snowfield: soft cold wind over the snow and a faint icy creak'),
+  zone('amb_snowfield', 'A soft cold breeze blowing over an open plain: smooth airy wind, steady and gentle'),
   zone('amb_marsh', 'A marsh nearby: frogs croaking, insects buzzing and mud bubbling in still water'),
   zone('amb_factory', 'A small factory working: steady machinery hum, rhythmic metal stamping and hissing steam'),
   zone('amb_oil_pump', 'An oil pumpjack working: the slow rhythmic creak and clank of the pump over a low motor hum'),
@@ -22,7 +22,7 @@ const THEME_BEDS: SoundSpec[] = [
   ambient('amb_desert', 'Hot desert: dry wind blowing over sand dunes, faint sand hiss, very sparse'),
   ambient('amb_forest', 'Forest by day: leaves rustling in the wind, a woodpecker and many birds singing in the distance'),
   ambient('amb_swamp', 'Swamp: croaking frogs, buzzing insects, slow bubbling mud and still water'),
-  ambient('amb_snowy', 'Snowy plain: a light icy breeze, soft and steady, with a fine hiss of drifting snow'),
+  ambient('amb_snowy', 'Snowy mountains: cold whistling wind, muffled and lonely'),
 ];
 
 /** El clima va encima del tema; los truenos sueltos, con la tormenta y al azar, son un efecto. */

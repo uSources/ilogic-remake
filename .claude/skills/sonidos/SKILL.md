@@ -60,6 +60,12 @@ npm run sonidos -- grafo shot_flak                # el grafo para abrirlo a mano
 - El texto acaba en `Length: N seconds` (entero): asi se entreno. Se genera algo mas largo (la cola, o
   el fundido del bucle) y luego se recorta.
 - "Single", "one short burst" ayudan a que salga uno solo (si no, rafagas o varios pasos seguidos).
+- Ambientes (lo vimos con la nieve): pedir algo cercano y en miniatura ("close and focused",
+  "miniature") llena el viento de chasquidos que suenan a crujido de bicho; por eso el estilo de zona
+  dice "toy diorama landscape, smooth, airy". "Snow", "frozen" o "icy" tambien tiran a crujir, y
+  "whistling" mete una nota pura que se oye como campanitas (el fondo de la nieve, `amb_snowy`, la tiene
+  y gusta). Para descartar sin oir: contar subidas bruscas por segundo (crujido) y buscar un pico que
+  destaque mucho en el espectro (silbido).
 - No oye por ti: mirar el espectrograma ayuda a descartar basura (ruido sin ataque ni cola), pero
   quien elige es el usuario escuchando la pagina de candidatos.
 - Licencia (Stability AI Community): lo generado es del usuario y se puede usar gratis por debajo de 1 M$ al año.

@@ -82,7 +82,7 @@ export const KINDS: Readonly<Record<SoundKind, KindSettings>> = {
     folder: 'sfx',
   },
   zone: {
-    style: 'Soft ambience heard from one spot of a miniature toy diorama, close and focused, calm and even, no music, no voices',
+    style: 'Soft ambience from one spot of a toy diorama landscape, smooth, airy and even, no music, no voices',
     extraSeconds: AMBIENT_CROSSFADE_SECONDS,
     decode: MONO_44K,
     shape: shapeAmbient,
