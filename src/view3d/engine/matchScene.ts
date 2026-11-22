@@ -5,6 +5,7 @@
  * pasos de los sucesos, la pose de la camara) y app/match3d.ts los junta.
  */
 import * as THREE from 'three';
+import type { GameImages } from '../../atlas';
 import { isOnBoard, mapGrid } from '../../core/mapGrid';
 import type { GameState, Pos, TeamId } from '../../core/model';
 import type { Anchor } from '../../hud/store';
@@ -90,6 +91,7 @@ export class MatchScene implements ScreenView {
     private readonly state: GameState,
     viewer: TeamId,
     glbModels: GlbLibrary,
+    images: GameImages,
   ) {
     this.world = new World(container);
     this.terrain = buildTerrain(state, glbModels);
@@ -98,7 +100,7 @@ export class MatchScene implements ScreenView {
     this.threatLines = new ThreatLinesView((pos) => this.board.groundOf(pos));
     this.preview = new MovePreviewView(this.board);
     this.intents = new IntentArrowsView((pos) => this.board.groundOf(pos));
-    this.flags = new DestinationFlagsView((pos) => this.board.groundOf(pos));
+    this.flags = new DestinationFlagsView((pos) => this.board.groundOf(pos), images);
     this.weather = new WeatherView(container);
     this.sandDust = new SandDust(this.terrain.sandTiles, (pos) => this.board.groundOf(pos));
     this.cameraView = new ThreeCameraView(this.world.camera);
@@ -234,7 +236,7 @@ export class MatchScene implements ScreenView {
     this.cameraView.place(pose);
     this.highlights.update(seconds);
     this.threatLines.update(seconds);
-    this.flags.update(seconds);
+    this.flags.update(seconds, this.world.camera.position);
     this.preview.update(seconds, this.world.camera, this.canvas.clientHeight);
     this.board.update(seconds, this.world.camera.getWorldDirection(this.cameraForward));
     this.terrain.update(seconds);
