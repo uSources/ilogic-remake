@@ -40,12 +40,11 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 ## Vida en los biomas
 
 El pantano (luciérnagas, ranas), el bosque (hojas, ardillas, ciervos, pájaros), el desierto
-(remolinos, lagartijas, bolas rodadoras, buitres) y la nieve (copos que brillan, pingüinos, focas) ya
-tienen la suya y el sistema común está hecho (`src/view3d/engine/life/`; cómo se ve,
-`docs/ESTETICA.md`, «Lo que vive en cada bioma»). Falta, cada bioma en su PR:
+(remolinos, lagartijas, bolas rodadoras, buitres), la nieve (copos que brillan, pingüinos, focas) y la
+llanura (mariposas, conejos, peces, bandadas en V) ya tienen la suya y el sistema común está hecho
+(`src/view3d/engine/life/`; cómo se ve, `docs/ESTETICA.md`, «Lo que vive en cada bioma»). Falta, cada
+cosa en su PR:
 
-28. **Llanura:** mariposas sobre las flores, conejos que asoman en la hierba, peces que saltan y
-    bandadas de pájaros en V.
 29. **Pantano:** libélulas y burbujas en el agua turbia.
 30. **Que reaccionen a la partida:** los pájaros salen volando cuando una unidad entra en el bosque,
     las ranas se tiran al agua si pasa un tanque y los pingüinos se deslizan al acercarse alguien.

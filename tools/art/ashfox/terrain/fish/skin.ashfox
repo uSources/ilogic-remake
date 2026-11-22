@@ -1,0 +1,12 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 16px; }
+    chart nose box { width = 6px; height = 3px; coverage = opaque; }
+    chart body box { width = 16px; height = 9px; coverage = opaque; }
+    chart belly box { width = 12px; height = 5px; coverage = opaque; }
+    chart fin box { width = 6px; height = 3px; coverage = opaque; }
+    chart tail box { width = 6px; height = 6px; coverage = opaque; }
+    material = opaque;
+  }
+}

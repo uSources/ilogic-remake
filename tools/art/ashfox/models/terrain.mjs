@@ -111,6 +111,18 @@ export const PAINTS = {
   penguin_beak: { ramp: ['#b8662a', '#cc7a34', '#dc8e40'] },
   seal: { ramp: ['#5e636b', '#727880', '#878d95'], blotch: { ramp: ['#4a4e55', '#565a62', '#62666e'], scale: [1, 1, 1], density: 0.25 } },
   seal_snout: { ramp: ['#868b93', '#989da5', '#aab0b8'] },
+  // Lo de la llanura (apagado, nunca de un equipo): el conejo pardo gris con la cola blanca, las
+  // mariposas amarilla y blanca de cuerpo oscuro, el pez verde plateado y el ganso pardo de cuello negro.
+  rabbit: { ramp: ['#76685a', '#8a7c6c', '#9e907e'] },
+  rabbit_tail: { ramp: ['#d6d0c4', '#e4ded2', '#f0ebe0'] },
+  butterfly_yellow: { ramp: ['#d2b23a', '#e2c654', '#efd86e'] },
+  butterfly_white: { ramp: ['#d4d2c6', '#e4e2d8', '#f2f0e8'] },
+  butterfly_body: { ramp: ['#2a2620', '#36302a', '#423a32'] },
+  fish: { ramp: ['#5e7468', '#72887c', '#869c90'] },
+  fish_belly: { ramp: ['#c4c8bc', '#d4d8cc', '#e2e6da'] },
+  goose: { ramp: ['#6a6054', '#7e7466', '#928878'] },
+  goose_wing: { ramp: ['#5a5044', '#6c6254', '#7e7466'] },
+  goose_neck: { ramp: ['#1e1e20', '#2a2a2c', '#36363a'] },
 };
 
 /**
@@ -577,6 +589,67 @@ const seal = {
   ],
 };
 
+/**
+ * Los animales de la llanura, a 32 por casilla: el conejo (el juego lo asoma de su madriguera), las
+ * mariposas con las alas abiertas (el juego se las bate), el pez centrado en su origen (salta del agua
+ * en arco) y el ganso de las bandadas en V, con las alas abiertas y el cuello estirado.
+ */
+const rabbit = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'body', origin: [-2, 0, -2], size: [4, 4, 6], paint: 'rabbit' },
+    { name: 'head', origin: [-1.5, 3, -5], size: [3, 3, 3], paint: 'rabbit', stamps: [ANIMAL_EYES] },
+    { name: 'ear_left', origin: [-1.5, 6, -3.5], size: [1, 4, 1], paint: 'rabbit' },
+    { name: 'ear_right', origin: [0.5, 6, -3.5], size: [1, 4, 1], paint: 'rabbit' },
+    { name: 'paw_left', origin: [-1.5, 0, -3], size: [1, 1, 1], paint: 'rabbit' },
+    { name: 'paw_right', origin: [0.5, 0, -3], size: [1, 1, 1], paint: 'rabbit' },
+    { name: 'tail', origin: [-1, 2, 4], size: [2, 2, 1], paint: 'rabbit_tail' },
+  ],
+};
+
+/** Una mancha oscura en la punta de cada ala de delante. */
+const WING_TIP = { name: 'wing_tip', face: 'up', pixels: 'd', colors: { d: '#2a2620' }, at: [[0, 0]] };
+
+/** Una mariposa de un color, con el cuerpo oscuro y las alas de delante mas grandes que las de atras. */
+const butterfly = (paint) => ({
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'body', origin: [-0.5, 0, -2], size: [1, 1, 4], paint: 'butterfly_body' },
+    { name: 'forewing_left', origin: [-4.5, 0, -2.5], size: [4, 1, 3], paint, stamps: [WING_TIP] },
+    { name: 'forewing_right', origin: [0.5, 0, -2.5], size: [4, 1, 3], paint, stamps: [{ ...WING_TIP, at: [[3, 0]] }] },
+    { name: 'hindwing_left', origin: [-3.5, 0, 0.5], size: [3, 1, 2], paint },
+    { name: 'hindwing_right', origin: [0.5, 0, 0.5], size: [3, 1, 2], paint },
+  ],
+});
+
+const FISH_EYE = { name: 'fish_eye', face: 'east', pixels: 'k', colors: { k: '#141824' }, at: [[0, 0]] };
+
+const fish = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'nose', origin: [-1, -1, -4], size: [2, 2, 1], paint: 'fish', stamps: [FISH_EYE, { ...FISH_EYE, face: 'west' }] },
+    { name: 'body', origin: [-1, -1.5, -3], size: [2, 3, 6], paint: 'fish' },
+    { name: 'belly', origin: [-1, -2.5, -2], size: [2, 1, 4], paint: 'fish_belly' },
+    { name: 'fin', origin: [-0.5, 1.5, -1], size: [1, 1, 2], paint: 'fish' },
+    { name: 'tail', origin: [-0.5, -2, 3], size: [1, 4, 2], paint: 'fish' },
+  ],
+};
+
+const GOOSE_CHEEK = { name: 'goose_cheek', face: 'east', pixels: 'w', colors: { w: '#e8e4da' }, at: [[1, 0]] };
+
+const goose = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'body', origin: [-2, 0, -3], size: [4, 3, 8], paint: 'goose' },
+    { name: 'neck', origin: [-1, 1, -7], size: [2, 2, 4], paint: 'goose_neck' },
+    { name: 'head', origin: [-1, 1, -10], size: [2, 2, 3], paint: 'goose_neck', stamps: [GOOSE_CHEEK, { ...GOOSE_CHEEK, face: 'west' }] },
+    { name: 'beak', origin: [-0.5, 1, -11], size: [1, 1, 1], paint: 'goose_neck' },
+    { name: 'wing_left', origin: [-10, 2, -2], size: [8, 1, 5], paint: 'goose_wing' },
+    { name: 'wing_right', origin: [2, 2, -2], size: [8, 1, 5], paint: 'goose_wing' },
+    { name: 'tail', origin: [-1.5, 1, 5], size: [3, 1, 2], paint: 'goose_neck' },
+  ],
+};
+
 export const MODELS = {
   ...groundVariants('grass', 'grass', 'earth', 4),
   ...groundVariants('forest', 'forest_floor', 'earth', 3),
@@ -847,6 +920,26 @@ export const MODELS = {
   vulture,
   penguin,
   seal,
+  rabbit,
+  butterfly_yellow: butterfly('butterfly_yellow'),
+  butterfly_white: butterfly('butterfly_white'),
+  fish,
+  goose,
+  // La madriguera del conejo, en una esquina de algunas casillas de hierba (en el centro va la unidad):
+  // un bulto bajo de hierba con la boca de tierra arriba; de ahi asoma el conejo. Bajo y del color de la
+  // hierba: de tierra y mas alto parecia una maceta.
+  burrow: {
+    cubes: [
+      { name: 'mound', origin: [2, -1.5, 2], size: [6, 2, 6], paint: 'grass' },
+      {
+        name: 'mouth',
+        origin: [3, 0.5, 3],
+        size: [4, 1, 4],
+        paint: 'earth',
+        stamps: [{ name: 'hole', face: 'up', pixels: '..../.kk./.kk./....', colors: { k: '#24160c' }, at: [[0, 0]] }],
+      },
+    ],
+  },
   snowman: {
     cubes: [
       { name: 'body', origin: [-3, 0, -3], size: [6, 5, 6], paint: 'snowcap' },

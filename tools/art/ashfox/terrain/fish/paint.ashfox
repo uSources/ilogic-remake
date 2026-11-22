@@ -1,0 +1,23 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = fish; background-alpha = 255;
+      palette {
+        fish = (#5e7468, #72887c, #869c90);
+        fish_eye_k = #141824;
+        fish_belly = (#c4c8bc, #d4d8cc, #e2e6da);
+      }
+      stamp fish_eye { pixels = "k"; k = fish_eye_k; }
+      chart nose box { origin = (37px, 0px); fill = fish; face east { stamp fish_eye { at = (0px, 0px); } } face west { stamp fish_eye { at = (0px, 0px); } } }
+      chart body box { origin = (0px, 0px); fill = fish; }
+      chart belly box { origin = (24px, 0px); fill = fish_belly; }
+      chart fin box { origin = (44px, 0px); fill = fish; }
+      chart tail box { origin = (17px, 0px); fill = fish; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

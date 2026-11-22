@@ -18,6 +18,8 @@ export interface Flier {
   age: number;
   life: number;
   seed: number;
+  /** Su puesto en su tanda (`BirthPlan.together`), desde 0: el ganso que va en cabeza de la V y los de detras. */
+  rank?: number;
 }
 
 /** A que otra de sus casillas va el que nace (el pajaro que cambia de copa, la bola que rueda con el viento). */
@@ -121,7 +123,10 @@ export class Births {
     this.ready -= 1;
     const flier = this.bornOn(tile);
     const together = this.plan.together ?? 1;
-    if (together > 1) this.batch = { first: flier, left: together - 1 };
+    if (together > 1) {
+      flier.rank = 0;
+      this.batch = { first: flier, left: together - 1 };
+    }
     return flier;
   }
 
@@ -139,12 +144,13 @@ export class Births {
     return flier;
   }
 
-  /** Otra de la tanda: en el mismo sitio y con la misma vida que la primera, pero con su semilla. */
+  /** Otra de la tanda: en el mismo sitio y con la misma vida que la primera, pero con su semilla y su puesto. */
   private nextOfBatch(batch: { first: Flier; left: number }): Flier {
     batch.left -= 1;
     if (batch.left <= 0) this.batch = null;
     const { first } = batch;
-    const flier: Flier = { home: first.home.clone(), age: 0, life: first.life, seed: this.random() * SEED_SPREAD };
+    const rank = (this.plan.together ?? 1) - 1 - batch.left;
+    const flier: Flier = { home: first.home.clone(), age: 0, life: first.life, seed: this.random() * SEED_SPREAD, rank };
     if (first.goal) flier.goal = first.goal.clone();
     return flier;
   }

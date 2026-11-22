@@ -1,0 +1,22 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 8px); background = grass; background-alpha = 255;
+      palette {
+        grass = (#4f9a2e, #7cc63e, #a8e05a);
+        grass_spots = (#3f8526, #5fae34, #8fd14f);
+        earth = (#5a3420, #8a5530, #b47a45);
+        earth_spots = (#4a2a18, #6e4228, #8f5b36);
+        hole_k = #24160c;
+      }
+      stamp hole { pixels = "..../.kk./.kk./...."; k = hole_k; }
+      chart mound box { origin = (0px, 0px); fill = grass; pattern blotch { paint = grass_spots; scale = (2px, 2px, 2px); density = 0.18ratio; phase = 7; } }
+      chart mouth box { origin = (25px, 0px); fill = earth; pattern blotch { paint = earth_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 7; } face up { stamp hole { at = (0px, 0px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

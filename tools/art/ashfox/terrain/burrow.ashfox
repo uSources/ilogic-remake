@@ -1,0 +1,12 @@
+ashfox-model 1
+asset burrow {
+  import "./burrow/rig.ashfox" as rig;
+  import "./burrow/paint.ashfox" as paint;
+  import "./burrow/body.ashfox" as body;
+  export asset burrow {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}
