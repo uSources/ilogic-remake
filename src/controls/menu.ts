@@ -28,7 +28,8 @@ export type MenuCommand =
  * Que menu tiene el foco de los mandos: cada uno tiene sus teclas (MenuCommand). En el mapa no hay
  * menu: alli mandan las ordenes InputCommand.
  */
-export type MenuContext = 'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'online' | 'end';
+export type MenuContext =
+  'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'online' | 'end' | 'pause';
 
 export interface MenuBinding {
   codes: readonly string[];
@@ -89,6 +90,9 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
     { codes: KEY_OK, command: { kind: 'ok', repeat: false } },
     { codes: ['Escape'], command: { kind: 'back' } },
   ],
+  // La pausa de la partida: moverse por sus opciones, elegir y cerrarla. Sus atajos (fin del turno,
+  // amenaza...) son las teclas del mapa que tenga el jugador: no van aqui (KeyPanel.shortcut, keyInput.ts).
+  pause: MENU_KEYS,
 };
 
 /** La orden de una pulsacion en un menu, o null si en ese menu la tecla no hace nada. */
