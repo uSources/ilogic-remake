@@ -187,6 +187,7 @@ movimiento de una unidad), `canMoveOn(unitType.movement, terrainAt(s, pos))`,
 |---|---|
 | `id`, `name` | Nombre interno (lo guardan las partidas y los mapas de "Nueva partida") y el que ve el jugador |
 | `mapLetters` | Que terreno es cada letra que depende del tema en los mapas en texto: `.` suelo, `T` bosque, `M` monte, `*` adorno |
+| `mapColors` | Opcional: el color en el minimapa y las miniaturas (`#rrggbb`) de los terrenos que en este tema se ven de otro color en el tablero 3D (el pantano: agua turbia verde, suelo oliva); los demas, su `mapColor` |
 | `generator.terrainChance` | Mapas al azar: para cada terreno que sale en el tema, la probabilidad de partida (`base`) y lo que suma cada vecino igual (`perNeighbour`) |
 | `generator.openWater`, `narrowWater`, `shoreWater`, `deepWater` | Que terreno es el agua abierta, los pasos estrechos, la orilla y el agua profunda (null si el tema no la tiene) |
 | `generator.mountains` | Mapas al azar: las cordilleras. `terrain` (la montaña del tema), `share` (la parte de la tierra que es montaña) y `spacing` (cada cuantas casillas cambia el ruido: lo largas que son las sierras). Se levantan donde un ruido de crestas es mas alto, no casilla a casilla; sin el, el tema no tiene montañas |

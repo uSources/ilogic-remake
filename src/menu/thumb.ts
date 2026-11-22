@@ -1,16 +1,13 @@
-import { isHq, terrainAt } from '../core/gameContent';
+import { isHq } from '../core/gameContent';
 import { mapGrid } from '../core/mapGrid';
 import type { GameState } from '../core/model';
 import { playerTeam } from '../core/teams';
 import { isOnMap } from '../core/rules';
 import { ownerSideOf, sideOf, sidePaint } from '../ui/sides';
 import { PAL_CSS } from '../ui/palette';
-import type { TerrainPalette } from '../ui/terrainColors';
+import { tileMapColor, type TerrainPalette } from '../ui/terrainColors';
 
 const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`;
-
-/** Color de una casilla cuyo terreno no esta en la paleta. */
-const FALLBACK_TERRAIN = 0x3a7a3a;
 
 /** Pixeles por casilla segun el lado del mapa, para que todas las miniaturas midan parecido. */
 const defaultTileSize = (mapSize: number) => (mapSize <= 20 ? 6 : mapSize <= 32 ? 4 : 3);
@@ -24,7 +21,7 @@ interface ThumbOptions {
 
 function drawTerrain(context: CanvasRenderingContext2D, s: GameState, palette: TerrainPalette, px: number): void {
   for (const { pos } of mapGrid(s).cells()) {
-    context.fillStyle = hex(palette[terrainAt(s, pos).id] ?? FALLBACK_TERRAIN);
+    context.fillStyle = hex(tileMapColor(palette, s, pos));
     context.fillRect(pos.x * px, pos.y * px, px, px);
   }
 }

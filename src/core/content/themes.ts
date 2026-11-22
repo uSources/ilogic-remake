@@ -1,8 +1,8 @@
 /**
  * Temas de mapa (themes.json): llanura, desierto, bosque... Cada uno dice como crece el terreno en
  * el generador de mapas (probabilidades del original, RandomMap de 2013), que hace con el agua y que
- * terreno es cada letra de los mapas en texto de las misiones. El clima de cada tema esta en
- * weather.json ("chance").
+ * terreno es cada letra de los mapas en texto de las misiones y, si alguno cambia, el color de sus
+ * terrenos en el minimapa. El clima de cada tema esta en weather.json ("chance").
  */
 import type { DeepReadonly } from '../util/freeze';
 import { type Checker, type Scope } from './check';
@@ -50,6 +50,12 @@ export interface ThemeDef {
   /** Letras de los mapas en texto que dependen del tema (las demas, terrain.json "mapLetter"). */
   mapLetters: Record<string, string>;
   generator: ThemeGenerator;
+  /**
+   * El color en el minimapa y las miniaturas de los terrenos que en este tema se ven de otro color en
+   * el tablero 3D (#rrggbb, por id de terreno); los demas, el suyo (terrain.json "mapColor"). El
+   * pantano: agua turbia verde y suelo oliva.
+   */
+  mapColors?: Record<string, string>;
 }
 
 /** Un tema de mapa de la partida: el de themes.json tal cual (no hace falta resolver nada mas), de solo lectura. */
@@ -93,5 +99,9 @@ export function validateThemes(themes: readonly ThemeDef[], terrainIds: Readonly
       scope.known(`mapLetters.${letter}`, terrain, terrainIds, 'el terreno ');
     }
     validateGenerator(scope, theme?.generator, terrainIds);
+    for (const [terrain, color] of Object.entries(theme?.mapColors ?? {})) {
+      scope.known('mapColors', terrain, terrainIds, 'el terreno ');
+      scope.color(`mapColors.${terrain}`, color);
+    }
   }
 }

@@ -32,6 +32,9 @@ export class Checker {
   }
 }
 
+/** Un color como #rrggbb. */
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
 export class Scope {
   constructor(
     readonly where: string,
@@ -50,6 +53,11 @@ export class Scope {
 
   num(field: string, value: unknown, limits: NumberLimits = {}): boolean {
     return this.expect(isNumberWithin(value, limits), `${field} tiene que ser ${describeLimits(limits)}`);
+  }
+
+  /** Un color como #rrggbb (los del minimapa y las miniaturas). */
+  color(field: string, value: unknown): boolean {
+    return this.expect(typeof value === 'string' && HEX_COLOR.test(value), `${field} tiene que ser un color #rrggbb`);
   }
 
   bool(field: string, value: unknown): boolean {

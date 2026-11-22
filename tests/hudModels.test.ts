@@ -88,6 +88,20 @@ describe('datos de la interfaz', () => {
     expect(minimapVM({}, s, { viewer: 0, vis, hidden: new Set() }).units).toEqual([{ x: 1, y: 1, side: 'own' }]);
     expect(minimapVM({}, s, { viewer: 0, vis, hidden: new Set([mine.uid]) }).units).toEqual([]);
   });
+
+  it('minimapa: el tema puede cambiar el color de un terreno (el agua turbia del pantano)', () => {
+    const s = blankState();
+    s.map[2]![3] = 'Water';
+    const palette = { Water: 0x4f9be0 };
+    const view = { viewer: 0, vis: createLayer(s, true), hidden: new Set<number>() };
+    const waterColor = () => {
+      const minimap = minimapVM(palette, s, view);
+      return minimap.terrain[3 * minimap.w + 2];
+    };
+    expect(waterColor()).toBe(0x4f9be0);
+    s.theme = 'Swamp';
+    expect(waterColor()).toBe(0x3a8a80);
+  });
 });
 
 describe('clima en la barra de arriba', () => {
