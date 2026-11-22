@@ -397,14 +397,19 @@ falta relieve de columnas alrededor, y eso sí costaría.
   en sombra, estrecha. El borde entre tonos va mellado en bloques de tres texels: con ruido de puntos
   sueltos se veía deshilachado. Por encima corren con el viento hilos de arena (rayitas, como los
   brillos del mar).
-- **Mar helado** (nevado), con las mismas franjas melladas: pegada a la tierra, agua abierta con
-  trozos de hielo sueltos (enlaza con el agua del tablero y hace que destaque su borde blanco);
-  luego, témpanos separados por canales de agua; y lejos, la banquisa, placas juntas con grietas
-  finas. Las placas son celdas de Voronoi en texels, cada una entera de un tono (hielo, hielo en
-  sombra o nevada): con un círculo de nieve en el centro de cada una parecían huevos fritos. Al pie
-  de la tierra, un reborde de hielo blanco (quieto, en vez de la espuma) y escarcha que titila. Es
-  el suelo más caro (mira 9 placas por píxel): con el temporizador de la GPU, solo el suelo, unos
-  0,15 ms por fotograma, frente a unos 0,1 del mar y de las dunas.
+- **Mar helado** (nevado): pegada a la tierra, agua abierta con trozos de hielo sueltos y redondos
+  (enlaza con el agua del tablero y hace que destaque su borde blanco); luego, témpanos separados
+  por canales de agua; y lejos, la banquisa, placas grandes juntas con grietas finas. Las placas son
+  celdas de Voronoi en texels, cada una entera de un tono (hielo, hielo en sombra o nevada): con un
+  círculo de nieve en el centro de cada una parecían huevos fritos. **Ninguna placa se corta**: a
+  diferencia del mar y las dunas, las franjas no van por casilla sino por placa (la decide su
+  centro, mellada placa a placa), y todas son de la misma rejilla; la banquisa hace sus placas
+  grandes juntando vecinas, sin grieta entre ellas. Al principio cada franja tenía placas de otro
+  tamaño y se elegía por casilla, y donde cambiaba las placas quedaban cortadas a escalones y
+  rectángulos (22-11-2026, «rara esta zona»). Al pie de la tierra, un reborde de hielo blanco
+  (quieto, en vez de la espuma) y escarcha que titila. Es el suelo más caro (mira 9 placas por píxel
+  dos veces: la suya y las que no se juntan con ella): con el temporizador de la GPU, solo el suelo,
+  unos 0,2 ms por fotograma, frente a unos 0,1 del mar y de las dunas.
 - **Islotes** alrededor (14, siempre los mismos): cada uno es una sierra pequeña con el relieve de
   las montañas del tablero (`massif.ts`, `reliefColors.ts`): playa baja, tierra del tema, roca pelada
   en las laderas empinadas y manchas de color, con su propio bajío y espuma. En el desierto son
