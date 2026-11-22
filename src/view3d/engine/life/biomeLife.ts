@@ -52,7 +52,10 @@ export const tilesByMote = (s: GameState, positions: readonly Pos[]): Map<MoteKi
 export const tilesByTraveller = (s: GameState, positions: readonly Pos[]): Map<TravellerKind, Pos[]> =>
   tilesByKind(s, positions, (piece) => piece.travellers);
 
-/** La casilla de al lado por la que queda `at` desde el centro de `pos` (por donde se aleja mas). */
+/**
+ * La casilla de al lado por la que queda `at` desde el centro de `pos` (por donde se aleja mas). Un sitio
+ * justo en el centro no queda por ningun lado: da `pos`, y el animal del borde no se sienta ahi.
+ */
 function sideToward(pos: Pos, at: THREE.Vector3): Pos {
   const across = at.x - pos.x;
   const along = at.z - pos.y;

@@ -9,7 +9,8 @@ import * as THREE from 'three';
 import type { Range } from '../core/random';
 import { WIND_DIRECTION } from '../core/space';
 import type { CritterKind } from './critters';
-import { lifeFade, vary, type Mote, type MoteKind } from './motes';
+import { lifeFade, vary, type Flier } from './births';
+import type { MoteKind } from './motes';
 import type { TravellerKind } from './travellers';
 
 /** Lo propio de cada mota que sale de su semilla (`vary`): cada cosa, su numero. */
@@ -40,7 +41,7 @@ const DUST_GUST_BIRTHS = DUST_GRAINS * 4;
 const isGusting = (time: number): boolean => Math.sin((time / GUST_PERIOD) * Math.PI * 2) > 1 - GUST_SHARE * 2;
 
 /** Cruza bajo con el viento, subiendo y bajando un poco. */
-function blowWithTheWind(mote: Mote, out: THREE.Vector3): THREE.Vector3 {
+function blowWithTheWind(mote: Flier, out: THREE.Vector3): THREE.Vector3 {
   const phase = vary(mote, PHASE, FULL_TURN);
   const bob = (DUST_BOB / DUST_BOB_SPEED) * (Math.cos(phase) - Math.cos(mote.age * DUST_BOB_SPEED + phase));
   return out
@@ -75,7 +76,7 @@ const BLINK_ON = 0.2;
 const BLINK_EDGE = 1.6;
 
 /** Vuela en lazos lentos alrededor de donde nacio, subiendo y bajando un poco. */
-function hoverInLoops(mote: Mote, out: THREE.Vector3): THREE.Vector3 {
+function hoverInLoops(mote: Flier, out: THREE.Vector3): THREE.Vector3 {
   const phase = vary(mote, PHASE, FULL_TURN);
   const turn = mote.age * vary(mote, PACE, FIREFLY_PACE) + phase;
   return out
@@ -84,7 +85,7 @@ function hoverInLoops(mote: Mote, out: THREE.Vector3): THREE.Vector3 {
 }
 
 /** Se enciende y se apaga a pulsos, y entra y sale despacio de su vida. */
-function blinking(mote: Mote): number {
+function blinking(mote: Flier): number {
   const wave = Math.sin((mote.age / vary(mote, BLINK, BLINK_SECONDS)) * Math.PI * 2 + vary(mote, PHASE, FULL_TURN));
   return THREE.MathUtils.clamp((wave + BLINK_ON) * BLINK_EDGE, 0, 1) * lifeFade(mote);
 }
@@ -130,7 +131,7 @@ const LEAF_EDGE_ON = 0.35;
 const ACROSS_THE_WIND = new THREE.Vector3(-WIND_DIRECTION.z, 0, WIND_DIRECTION.x);
 
 /** Cae despacio desde la copa, meciendose de un lado a otro y llevada un poco por el viento. */
-function fallSwaying(mote: Mote, out: THREE.Vector3): THREE.Vector3 {
+function fallSwaying(mote: Flier, out: THREE.Vector3): THREE.Vector3 {
   const sway = Math.sin(mote.age * vary(mote, PACE, LEAF_SWAY_SPEED) + vary(mote, PHASE, FULL_TURN)) * LEAF_SWAY;
   return out
     .copy(mote.home)
@@ -140,7 +141,7 @@ function fallSwaying(mote: Mote, out: THREE.Vector3): THREE.Vector3 {
 }
 
 /** Gira: de frente se ve entera y de canto, estrecha. */
-const turning = (mote: Mote): number =>
+const turning = (mote: Flier): number =>
   LEAF_EDGE_ON + (1 - LEAF_EDGE_ON) * Math.abs(Math.cos(mote.age * vary(mote, SPIN, LEAF_SPIN) + vary(mote, PHASE, FULL_TURN)));
 
 export const FALLING_LEAVES: MoteKind = {
@@ -174,23 +175,31 @@ export const DEER: CritterKind = {
 };
 
 // --- Los pajaros del bosque: de vez en cuando uno sale de una copa cerca de la camara, vuela bajo sobre
-// el bosque batiendo las alas, en arco, y se mete en otra copa unas casillas mas alla.
+// el bosque batiendo las alas, en arco, y se mete en la copa de otra casilla de bosque unas casillas mas
+// alla (si no hay ninguna a esa distancia, no sale).
 
-/** Lo que sube el arco sobre las copas (casillas), lo deprisa que va (casillas por segundo) y lo que tuerce (radianes por segundo). */
+/** A cuantas casillas de la suya esta la copa en la que acaba. */
+const BIRD_LANDING: Range = [1.5, 3];
+/** Lo que sube el arco sobre las copas y lo que se aparta de la linea recta a mitad de camino (casillas). */
 const BIRD_ARC = 0.35;
-const BIRD_SPEED: Range = [0.6, 0.9];
 const BIRD_CURVE: Range = [-0.4, 0.4];
 /** El vaiven de cada aletazo: lo que sube y baja (casillas) y lo deprisa (radianes por segundo). */
 const BIRD_BOB = 0.015;
 const BIRD_BOB_SPEED = 30;
 
-/** Sale de la copa y vuela hacia su lado, torciendo un poco, en un arco que acaba en otra copa. */
-function hopToAnotherTree(bird: Mote, out: THREE.Vector3): THREE.Vector3 {
-  const heading = vary(bird, PHASE, FULL_TURN) + vary(bird, CURVE, BIRD_CURVE) * bird.age;
-  const away = vary(bird, PACE, BIRD_SPEED) * bird.age;
-  const arc = Math.sin((bird.age / bird.life) * Math.PI) * (BIRD_ARC + Math.sin(bird.age * BIRD_BOB_SPEED) * BIRD_BOB);
+/** Va de su copa a la otra (`goal`) en un arco, apartandose un poco de la linea recta. */
+function hopToAnotherTree(bird: Flier, out: THREE.Vector3): THREE.Vector3 {
   const { home } = bird;
-  return out.set(home.x + Math.cos(heading) * away, home.y + arc, home.z + Math.sin(heading) * away);
+  const goal = bird.goal ?? home;
+  const progress = bird.age / bird.life;
+  const midway = Math.sin(progress * Math.PI);
+  const across = Math.atan2(goal.z - home.z, goal.x - home.x) + Math.PI / 2;
+  const bend = vary(bird, CURVE, BIRD_CURVE) * midway;
+  out.lerpVectors(home, goal, progress);
+  out.x += Math.cos(across) * bend;
+  out.z += Math.sin(across) * bend;
+  out.y += midway * (BIRD_ARC + Math.sin(bird.age * BIRD_BOB_SPEED) * BIRD_BOB);
+  return out;
 }
 
 export const FOREST_BIRDS: TravellerKind = {
@@ -200,6 +209,7 @@ export const FOREST_BIRDS: TravellerKind = {
   life: [2.5, 4],
   height: [0.38, 0.45],
   birthRate: () => 0.6,
+  landing: BIRD_LANDING,
   flight: hopToAnotherTree,
   wings: { beats: 5, narrowest: 0.35 },
 };

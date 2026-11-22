@@ -374,8 +374,9 @@ pardos apagados como el suelo y los troncos.
   cuando da a otro terreno, mirando fuera; de vez en cuando asoman un poco y vuelven (`DEER`; el sitio
   pide el borde con `edge`).
 - **Pájaros** pardos con las alas abiertas que salen de una copa, vuelan bajo en arco batiendo las alas
-  (visto desde arriba, se estrechan y se ensanchan) y se meten en otra copa unas casillas más allá
-  (`FOREST_BIRDS`, un viajero: `travellers.ts`). Se probó que subieran y se fueran lejos: con la cámara
+  (visto desde arriba, se estrechan y se ensanchan) y se meten en la copa de otra casilla de bosque
+  unas casillas más allá; si no hay ninguna a esa distancia, no salen (`FOREST_BIRDS`, un viajero:
+  `travellers.ts`, con su destino: `landing`). Se probó que subieran y se fueran lejos: con la cámara
   cerca se salían por arriba de la pantalla en un momento y no se llegaban a ver.
 
 ## Cielo y fondo

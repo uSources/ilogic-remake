@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { mapGrid } from '@core/mapGrid';
 import type { Pos } from '@core/model';
 import { spotsByCritter, tilesByMote, tilesByTraveller } from '../src/view3d/engine/life/biomeLife';
+import { Births, type Flier } from '../src/view3d/engine/life/births';
 import { forwardAt, liftAt } from '../src/view3d/engine/life/critters';
 import { DEER, FALLING_LEAVES, FIREFLIES, FOREST_BIRDS, FROG, SAND_DUST, SQUIRREL } from '../src/view3d/engine/life/kinds';
-import type { Mote, MoteKind } from '../src/view3d/engine/life/motes';
+import type { MoteKind } from '../src/view3d/engine/life/motes';
 import { WIND_DIRECTION } from '../src/view3d/engine/core/space';
 import { tileNoise } from '../src/view3d/engine/terrain/placed';
 import { blankState } from './helpers';
@@ -15,7 +16,7 @@ import { blankState } from './helpers';
 const KINDS: Record<string, MoteKind> = { SAND_DUST, FIREFLIES, FALLING_LEAVES };
 const SEEDS = [0.1, 1.7, 250, 999];
 
-const moteAt = (seed: number, age: number, life: number): Mote => ({ home: new THREE.Vector3(3, 0.4, 5), age, life, seed });
+const moteAt = (seed: number, age: number, life: number): Flier => ({ home: new THREE.Vector3(3, 0.4, 5), age, life, seed });
 
 /** Lo que va viendose una mota a lo largo de su vida, en pasos. */
 const brightnessOverLife = (kind: MoteKind, seed: number): number[] =>
@@ -107,16 +108,42 @@ describe('donde vive cada cosa en el tablero', () => {
 
 describe('los pajaros del bosque', () => {
   const life = FOREST_BIRDS.life[0];
-  const birdAt = (seed: number, age: number): Mote => moteAt(seed, age, life);
-  const flown = (seed: number, age: number) => FOREST_BIRDS.flight(birdAt(seed, age), new THREE.Vector3()).sub(birdAt(seed, age).home);
+  const goal = new THREE.Vector3(5, 0.4, 6.5);
+  const birdAt = (seed: number, age: number): Flier => ({ ...moteAt(seed, age, life), goal });
+  const flownTo = (seed: number, age: number) => FOREST_BIRDS.flight(birdAt(seed, age), new THREE.Vector3());
 
-  it.each(SEEDS)('salen de su copa, vuelan bajo y acaban en otra copa lejos de la suya (semilla %s)', (seed) => {
-    expect(flown(seed, 0).length()).toBeCloseTo(0);
-    const landed = flown(seed, life);
-    expect(landed.y).toBeCloseTo(0);
-    expect(Math.hypot(landed.x, landed.z)).toBeGreaterThan(1);
-    const heights = Array.from({ length: 41 }, (_, step) => flown(seed, (life * step) / 40).y);
+  it.each(SEEDS)('salen de su copa, vuelan bajo en arco y acaban en la otra (semilla %s)', (seed) => {
+    expect(flownTo(seed, 0).distanceTo(birdAt(seed, 0).home)).toBeCloseTo(0);
+    expect(flownTo(seed, life).distanceTo(goal)).toBeCloseTo(0);
+    const heights = Array.from({ length: 41 }, (_, step) => flownTo(seed, (life * step) / 40).y - goal.y);
+    expect(Math.min(...heights)).toBeGreaterThanOrEqual(-1e-9);
     expect(Math.max(...heights)).toBeLessThan(0.5);
+  });
+
+  /** Lo que nace de unas casillas de bosque, cerca de la primera, hasta que no nace nada mas. */
+  function bornFrom(tiles: readonly Pos[]): Flier[] {
+    const births = new Births({ ...FOREST_BIRDS, count: 50, birthRate: () => 1000 }, tiles, (pos) => new THREE.Vector3(pos.x, 0, pos.y));
+    births.tick(1, new THREE.Vector3(tiles[0]!.x, 0, tiles[0]!.y), 2);
+    return Array.from({ length: 50 }, () => births.next()).filter((bird): bird is Flier => bird !== null);
+  }
+
+  it('cada uno acaba en otra casilla de bosque a la distancia de su clase, a la altura a la que salio', () => {
+    const woods = Array.from({ length: 6 }, (_, x) => ({ x, y: 0 }));
+    const [nearest, farthest] = FOREST_BIRDS.landing!;
+    const birds = bornFrom(woods);
+    expect(birds.length).toBeGreaterThan(0);
+    for (const bird of birds) {
+      const landing = woods.find((pos) => Math.abs(pos.x - bird.goal!.x) <= 0.5 && Math.abs(pos.y - bird.goal!.z) <= 0.5)!;
+      const takeOff = { x: Math.round(bird.home.x), y: Math.round(bird.home.z) };
+      expect(landing).toBeDefined();
+      expect(Math.hypot(landing.x - takeOff.x, landing.y - takeOff.y)).toBeGreaterThanOrEqual(nearest);
+      expect(Math.hypot(landing.x - takeOff.x, landing.y - takeOff.y)).toBeLessThanOrEqual(farthest);
+      expect(bird.goal!.y).toBeCloseTo(bird.home.y);
+    }
+  });
+
+  it('en un bosque de una casilla no sale ninguno: no tienen otra copa a la que ir', () => {
+    expect(bornFrom([{ x: 3, y: 3 }])).toEqual([]);
   });
 });
 

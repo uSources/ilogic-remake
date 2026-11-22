@@ -8,10 +8,8 @@ import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
 import { reducedMotion } from '../../../ui/motion';
 import { PixelPoints } from '../fx/pixelPoints';
-import { pointIn, type Range } from '../core/random';
-import { Births, stepLife, type BirthPlan, type Mote } from './births';
-
-export type { Mote } from './births';
+import type { Range } from '../core/random';
+import { Births, stepLife, vary, type BirthPlan, type Flier } from './births';
 
 /** Un punto de cada mota: el polvo lleva uno; la luciernaga, su halo y su nucleo. */
 export interface MoteLayer {
@@ -28,25 +26,16 @@ export interface MoteKind extends BirthPlan {
   /** Como se dibuja cada una: un punto por capa, la primera debajo. */
   layers: readonly MoteLayer[];
   /** Donde esta a su edad (lo escribe en `out` y lo devuelve): su vuelo desde donde nacio. */
-  flight(mote: Mote, out: THREE.Vector3): THREE.Vector3;
+  flight(mote: Flier, out: THREE.Vector3): THREE.Vector3;
   /** Cuanto se ve a su edad (0 a 1). */
-  brightness(mote: Mote): number;
+  brightness(mote: Flier): number;
   /** Que parte de lo suyo mide a su edad (0 a 1; sin decir, todo): la hoja que gira se estrecha y se ensancha. */
-  scale?(mote: Mote): number;
+  scale?(mote: Flier): number;
 }
 
 /** Las semillas de `vary` desde aqui son del tamaño y del color de cada capa (las de antes, de las clases de kinds.ts). */
 const LAYER_SIZE_SALT = 100;
 const LAYER_COLOR_SALT = 200;
-
-/** Un numero de `range` propio de esa mota: con la misma `salt`, siempre el mismo para ella. */
-export function vary(mote: Mote, salt: number, range: Range): number {
-  const value = Math.sin(mote.seed * 12.9898 + salt * 78.233) * 43758.5453;
-  return pointIn(range, value - Math.floor(value));
-}
-
-/** Entra y sale despacio de su vida: nada de puntos que aparecen o desaparecen de golpe. */
-export const lifeFade = (mote: Mote): number => Math.sin((mote.age / mote.life) * Math.PI);
 
 /** Los puntos de una capa (el color lo pone cada mota). */
 function pointsOf(layer: MoteLayer, count: number): PixelPoints {
@@ -79,7 +68,7 @@ export class MoteSwarm {
   private readonly layers: readonly PixelPoints[];
   /** Los colores de cada capa, ya hechos. */
   private readonly palettes: readonly (readonly THREE.Color[])[];
-  private readonly motes: (Mote | null)[];
+  private readonly motes: (Flier | null)[];
   private readonly births: Births;
   private readonly at = new THREE.Vector3();
 
@@ -101,7 +90,7 @@ export class MoteSwarm {
     if (!this.object.visible) return;
     for (const points of this.layers) points.setScale(viewportHeight, camera);
     this.births.tick(seconds, center, radius);
-    this.motes.forEach((mote, index) => (this.motes[index] = stepLife(mote, seconds, this.births)));
+    for (let index = 0; index < this.motes.length; index++) this.motes[index] = stepLife(this.motes[index] ?? null, seconds, this.births);
     this.draw();
   }
 
@@ -111,7 +100,7 @@ export class MoteSwarm {
     for (const points of this.layers) points.commit();
   }
 
-  private drawMote(index: number, mote: Mote | null): void {
+  private drawMote(index: number, mote: Flier | null): void {
     const at = mote && this.kind.flight(mote, this.at);
     const brightness = mote ? this.kind.brightness(mote) : 0;
     const scale = mote && this.kind.scale ? this.kind.scale(mote) : 1;
@@ -122,11 +111,11 @@ export class MoteSwarm {
     }
   }
 
-  private sizeOf(mote: Mote, layer: number): number {
+  private sizeOf(mote: Flier, layer: number): number {
     return vary(mote, LAYER_SIZE_SALT + layer, this.kind.layers[layer]!.size);
   }
 
-  private colorOf(mote: Mote, layer: number): THREE.Color {
+  private colorOf(mote: Flier, layer: number): THREE.Color {
     const palette = this.palettes[layer]!;
     const pick = Math.min(Math.floor(vary(mote, LAYER_COLOR_SALT + layer, [0, palette.length])), palette.length - 1);
     return palette[pick]!;
