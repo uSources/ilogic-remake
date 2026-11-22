@@ -14,6 +14,7 @@ import { gameTrackOf, playMusic } from '../../audio/music';
 import type { GameAudio } from '../../audio/gameAudio';
 import { AmbiencePlayer } from '../systems/sound/ambiencePlayer';
 import { ambienceZoomLevel, CameraListener, zoomLevel } from '../systems/sound/listener';
+import { helpPanel } from '../../menu/helpPanel';
 import { OptionsPanel } from '../../menu/optionsPanel';
 import { MatchScene } from '../engine/matchScene';
 import type { GlbLibrary } from '../engine/pieces/glbModels';
@@ -180,9 +181,8 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     window.setTimeout(() => showEndIfOver(session, viewer), END_SCREEN_DELAY_MS);
   }
 
-  /** Esc: deshace lo elegido; sin nada elegido, abre o cierra la pausa (y cierra las opciones). */
+  /** Esc: deshace lo elegido; sin nada elegido, abre o cierra la pausa (con las opciones o la ayuda abiertas, Esc es suyo). */
   function escape(): void {
-    if (options.isOpen) return options.close();
     if (pause.isOpen) return pause.close();
     if (!controls.cancel()) pause.open();
   }
@@ -242,6 +242,9 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   installKeys({
     camera,
     onFrame: (listener) => scene.onFrame(listener),
+    // Las opciones y la ayuda se abren encima del mapa (o de la pausa): mientras, las teclas son suyas.
+    panels: [helpPanel, options],
+    sounds: audio.sounds,
     endTurn: () => endGuard.press(),
     nextUnit: nextIdle,
     cancel: escape,
@@ -253,6 +256,8 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     intents: toggleIntents,
     threat: toggleThreat,
     minimap: toggleMinimap,
+    help: () => helpPanel.open(),
+    options: () => options.open(),
   });
   /** El oyente sigue a la camara: el audio solo se toca cuando ella se mueve. */
   const hearing = new CameraListener();

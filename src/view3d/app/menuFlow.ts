@@ -15,6 +15,7 @@ import { menuKeyCommand, type MenuCommand, type MenuContext } from '../../contro
 import { helpRulesForSettingsOnly } from '../../hud/helpText';
 import { ui } from '../../hud/store';
 import { CampaignScreen } from '../../menu/campaignScreen';
+import { helpPanel } from '../../menu/helpPanel';
 import { HomeScreen } from '../../menu/homeScreen';
 import { OptionsPanel } from '../../menu/optionsPanel';
 import { isTypingCode, SetupScreen } from '../../menu/setupScreen';
@@ -105,7 +106,7 @@ export class MenuFlow {
 
   /** El menu que tiene el foco (decide que teclas valen). */
   private context(): MenuContext {
-    if (ui.get().help) return 'help';
+    if (helpPanel.isOpen) return helpPanel.context();
     if (notesOpen()) return 'notes';
     if (this.options.isOpen) return this.options.context();
     if (this.mode === 'setup') return isTypingCode() ? 'typing' : 'setup';
@@ -118,16 +119,12 @@ export class MenuFlow {
     if (this.exit.leaving) return;
     const sound = menuSound(command);
     if (sound) this.sounds.play(sound);
-    if (ui.get().help) return this.helpCommand(command);
+    if (helpPanel.isOpen) return helpPanel.command(command);
     if (notesOpen()) return notesCommand(command);
     if (this.options.isOpen) return this.options.command(command);
     if (this.mode === 'setup') return isTypingCode() ? this.setup.typingCommand(command) : this.setup.command(command);
     if (this.mode === 'campaign') return this.campaign.command(command);
     this.home.command(command);
-  }
-
-  private helpCommand(command: MenuCommand): void {
-    if (command.kind === 'back' || command.kind === 'ok' || command.kind === 'help') ui.set({ help: false });
   }
 
   private onKey(event: KeyboardEvent): void {
