@@ -36,10 +36,6 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
     la mitad de atrás de la casilla, para que la unidad de encima quede delante sin tener que
     encogerlos ni moverlos a una esquina (ahora lo hace `sharedTile.ts`). Para cuando se retoquen los
     modelos; no corre prisa (`docs/ESTETICA.md`, «Tamaños en el tablero»).
-31. **El agua en el borde del mapa:** un río o un lago que llega al borde acaba en una pared de agua
-    frente al suelo de alrededor. Con el mar no se notaba; con las dunas y el hielo, sí. Se podría
-    pintar de tierra ese lateral o hacer que el agua caiga en cascada al suelo de alrededor
-    (`docs/ESTETICA.md`, «Cielo y fondo»).
 
 ## Vida en los biomas
 

@@ -411,6 +411,14 @@ falta relieve de columnas alrededor, y eso sí costaría.
   mesetas de cañón a capas, como las del tablero, y en el nevado, icebergs tabulares: mesetas de
   hielo azul en la línea del agua y blancas arriba. Dicen que el mapa es un trozo de un mundo. Código:
   `engine/terrain/islets.ts`.
+- **El agua en el borde del mapa** (22-11-2026): un río o un lago que llega al borde acababa en una
+  pared azul frente al suelo de alrededor (con el mar no se notaba; con las dunas y el hielo, sí). El
+  lateral del agua que da fuera del mapa es de tierra, la misma que asoma en el lateral de las
+  casillas de tierra del tema: tierra en la llanura y el bosque, barro en el pantano, roca helada en
+  el nevado y la arena del pie de las dunas en el desierto. Así la meseta del tablero se lee entera y
+  el agua queda dentro. Se prefirió a una cascada al suelo de alrededor, que en el desierto (agua
+  cayendo a la arena) no tenía sentido. Código: `engine/terrain/water.ts` (`edgeSides`) y los tonos,
+  `bankOf` en `pieces.ts`.
 - **Niebla del horizonte**: del color de abajo del cielo, empieza pasado el mapa (nunca lo tapa) y
   funde el mar con el cielo.
 - **Con el clima**: cielo, nubes y niebla cambian a la vez que la luz: gris y sin sol con lluvia,
