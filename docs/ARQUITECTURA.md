@@ -1194,7 +1194,7 @@ traduce lo que pulsa el jugador a **ordenes**, y la vista las cumple.
 | Orden | Donde vale | Quien la cumple |
 |---|---|---|
 | `InputCommand` (`inputCommands.ts`): cursor, aceptar, atras, fin de turno, siguiente unidad, zoom... | la partida | `KEY_ACTIONS` de `view3d/systems/input/keyInput.ts` (cursor = desplazar la camara mientras se mantiene) |
-| `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda; en la partida, las opciones y la ayuda abiertas encima del mapa | `MenuFlow` (`view3d/app/menuFlow.ts`, que pasa a `OptionsPanel.command`...); en la partida, `KeyRouter` (`keyInput.ts`) al primer `KeyPanel` abierto (`OptionsPanel`, `helpPanel`), y el mapa no recibe ninguna |
+| `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda; en la partida, la pausa, las opciones y la ayuda abiertas encima del mapa | `MenuFlow` (`view3d/app/menuFlow.ts`, que pasa a `OptionsPanel.command`...); en la partida, `KeyRouter` (`keyInput.ts`) al primer `KeyPanel` abierto (`OptionsPanel`, `helpPanel`, `PauseMenu`), y el mapa no recibe ninguna. Un panel puede hacer suyas algunas ordenes del mapa (`KeyPanel.shortcut`: la pausa, las de sus opciones, con la tecla que tenga el jugador) |
 
 - **Teclado**: `keyCommand(key, settings.keys)` en la partida, con las tablas `FIXED_KEYS` y
   `REBINDABLE_KEYS` (una entrada por `KeyBindingId` con su tecla de serie; el jugador la cambia en
