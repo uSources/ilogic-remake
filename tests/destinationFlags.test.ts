@@ -48,13 +48,33 @@ describe('banderas de destino', () => {
     expect(destinationFlagsOf(s, PLAYER)).toEqual([{ at: FAR, emblems: [unitEmblem('Soldier')] }]);
   });
 
-  it('de tipos distintos al mismo sitio: una imagen de cada tipo, como mucho las que caben', () => {
+  it('de tipos distintos al mismo sitio: una imagen de cada tipo', () => {
+    const { s, mine } = soldiers();
+    const tank = newUnit(s, unitTypeNamed('Tank'), PLAYER, { x: 3, y: 2 });
+    act(s, PLAYER, order([mine.uid, tank.uid], 'defend', FAR));
+    expect(destinationFlagsOf(s, PLAYER)).toEqual([{ at: FAR, emblems: [unitEmblem('Soldier'), unitEmblem('Tank')] }]);
+  });
+
+  it('si no caben todos: los primeros y, en el ultimo hueco, cuantos mas van', () => {
     const { s, mine } = soldiers();
     const types = ['Tank', 'Artillery', 'Car', 'Antiair'];
     const others = types.map((type, index) => newUnit(s, unitTypeNamed(type), PLAYER, { x: 3 + index, y: 2 }));
     act(s, PLAYER, order([mine.uid, ...others.map((unit) => unit.uid)], 'defend', FAR));
-    const expected = ['Soldier', ...types].slice(0, MAX_EMBLEMS).map(unitEmblem);
-    expect(destinationFlagsOf(s, PLAYER)).toEqual([{ at: FAR, emblems: expected }]);
+    const shown = ['Soldier', ...types].slice(0, MAX_EMBLEMS - 1).map(unitEmblem);
+    const more = { kind: 'more', count: types.length + 1 - shown.length };
+    expect(destinationFlagsOf(s, PLAYER)).toEqual([{ at: FAR, emblems: [...shown, more] }]);
+  });
+
+  it('dos escuadras sin tecla con la misma inicial: dos dibujos, aunque se vean igual', () => {
+    const { s, mine } = soldiers();
+    const other = newUnit(s, unitTypeNamed('Soldier'), PLAYER, { x: 3, y: 2 });
+    act(s, PLAYER, { kind: 'formSquad', uids: [mine.uid], name: 'Alfa' });
+    act(s, PLAYER, { kind: 'formSquad', uids: [other.uid], name: 'Atlas' });
+    for (const squad of s.squads ?? []) squad.key = undefined;
+    act(s, PLAYER, order([mine.uid], 'attack', FAR));
+    act(s, PLAYER, order([other.uid], 'attack', FAR));
+    const initial = { kind: 'squad', label: 'A' };
+    expect(destinationFlagsOf(s, PLAYER)).toEqual([{ at: FAR, emblems: [initial, initial] }]);
   });
 
   it('una escuadra con orden: su tecla; la que va por su cuenta, su imagen', () => {

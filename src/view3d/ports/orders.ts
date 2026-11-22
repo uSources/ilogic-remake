@@ -17,8 +17,14 @@ export interface IntentMarks {
   show(intents: readonly IntentLook[]): void;
 }
 
-/** Quien va a una bandera: una unidad por su cuenta (la imagen de su tipo, clave del atlas) o una escuadra (su tecla o su inicial). */
-export type FlagEmblem = { readonly kind: 'unit'; readonly image: string } | { readonly kind: 'squad'; readonly label: string };
+/**
+ * Quien va a una bandera: una unidad por su cuenta (la imagen de su tipo, clave del atlas), una escuadra
+ * (su tecla o su inicial) o, en el ultimo hueco si no caben todos, cuantos mas van.
+ */
+export type FlagEmblem =
+  | { readonly kind: 'unit'; readonly image: string }
+  | { readonly kind: 'squad'; readonly label: string }
+  | { readonly kind: 'more'; readonly count: number };
 
 /** Una bandera: la casilla a la que van y quienes van (uno por escuadra o tipo de unidad). */
 export interface DestinationFlag {

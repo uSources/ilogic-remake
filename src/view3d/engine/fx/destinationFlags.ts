@@ -3,7 +3,7 @@
  * propio, clavada en una esquina de la casilla a la que va cada unidad con orden, con la tela ondeando.
  * En la esquina, para no tapar lo que haya en la casilla (una unidad, un edificio). En la tela, el
  * dibujo de cada uno que va, sin fondo: la imagen de la unidad (con un reborde blanco, que no se pierda
- * en la tela del mismo color) o la tecla de la escuadra (si no caben, la tela se alarga). Es un dibujo
+ * en la tela del mismo color), la tecla de la escuadra o cuantos mas van (si no caben, la tela se alarga). Es un dibujo
  * plano que mira a la camara, como las chapas de las unidades (pieces/badges.ts): pintado en la tela,
  * desde arriba se veria achatado. Pero, como la bandera, lo tapa lo que tenga delante (un edificio, una
  * montaña). La tela gira sobre el mastil hacia la camara, como si el viento la llevara, para que el
@@ -73,8 +73,9 @@ const PICTURE_PIXELS = 64;
 const OUTLINE_PIXELS = 3;
 const OUTLINE_COLOR = '#ffffff';
 const PATCH_PIXELS = PICTURE_PIXELS + OUTLINE_PIXELS * 2;
-/** La tecla de la escuadra: en blanco con tinta, como las chapas (pieces/badges.ts). */
+/** La tecla de la escuadra y cuantos mas van (dos letras, mas pequeñas): en blanco con tinta, como las chapas (pieces/badges.ts). */
 const LABEL_FONT = "bold 52px 'Silkscreen', monospace";
+const MORE_FONT = "bold 36px 'Silkscreen', monospace";
 const LABEL_TEXT = '#ffffff';
 const LABEL_INK = '#2b2240';
 const LABEL_INK_WIDTH = 8;
@@ -94,11 +95,26 @@ const SWAY_SPEED = 0.6;
 const PHASE_PER_TILE = 1.7;
 const UP = new THREE.Vector3(0, 1, 0);
 
-/** Lo que distingue a uno que va (el mismo tipo o la misma escuadra, el mismo dibujo). */
-const emblemKey = (emblem: FlagEmblem): string => (emblem.kind === 'unit' ? emblem.image : `#${emblem.label}`);
+/** Lo que se escribe en un dibujo y con que letra. */
+interface Label {
+  readonly text: string;
+  readonly font: string;
+}
 
-/** Como se ve una bandera: si cambia quien va, se rehace. */
-const lookOf = (flag: DestinationFlag | undefined): string | undefined => flag?.emblems.map(emblemKey).join('|');
+/** Un dibujo que es texto: la tecla de una escuadra o cuantos mas van. */
+type TextEmblem = Exclude<FlagEmblem, { kind: 'unit' }>;
+
+const labelOf = (emblem: TextEmblem): Label =>
+  emblem.kind === 'squad' ? { text: emblem.label, font: LABEL_FONT } : { text: `+${emblem.count}`, font: MORE_FONT };
+
+/**
+ * Como se ve un dibujo: los que se ven igual comparten material. No dice quien va (dos escuadras sin
+ * tecla con la misma inicial se ven igual): eso lo decide el sistema.
+ */
+const emblemLook = (emblem: FlagEmblem): string => (emblem.kind === 'unit' ? emblem.image : `${emblem.kind}:${labelOf(emblem).text}`);
+
+/** Como se ve una bandera: si cambia, se rehace. */
+const lookOf = (flag: DestinationFlag | undefined): string | undefined => flag?.emblems.map(emblemLook).join('|');
 
 /** Un dibujo de la tela y su sitio en ella (antes de adelantarlo hacia la camara). */
 interface Patch {
@@ -180,24 +196,38 @@ export class DestinationFlagsView implements DestinationMarks {
   }
 
   private patchMaterial(emblem: FlagEmblem): THREE.SpriteMaterial {
-    const key = emblemKey(emblem);
-    let material = this.patchMaterials.get(key);
+    const look = emblemLook(emblem);
+    let material = this.patchMaterials.get(look);
     if (!material) {
-      const texture = new THREE.CanvasTexture(this.patchCanvas(emblem));
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.magFilter = THREE.NearestFilter;
-      material = new THREE.SpriteMaterial({ map: texture, alphaTest: PATCH_ALPHA_TEST });
-      this.patchMaterials.set(key, material);
+      material = this.newPatchMaterial(emblem);
+      this.patchMaterials.set(look, material);
     }
     return material;
   }
 
-  /** El dibujo, sin fondo: la imagen de la unidad o la tecla de la escuadra. */
-  private patchCanvas(emblem: FlagEmblem): HTMLCanvasElement {
+  /**
+   * El material de un dibujo. Si es texto y su letra aun no ha cargado, se pinta con la de reserva y se
+   * vuelve a pintar cuando cargue (si no, se quedaria con la de reserva toda la partida).
+   */
+  private newPatchMaterial(emblem: FlagEmblem): THREE.SpriteMaterial {
     const { canvas, draw } = newCanvas(PATCH_PIXELS);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.magFilter = THREE.NearestFilter;
+    const paint = (): void => {
+      this.paintPatch(draw, emblem);
+      texture.needsUpdate = true;
+    };
+    paint();
+    if (emblem.kind !== 'unit') whenFontLoads(labelOf(emblem).font, paint);
+    return new THREE.SpriteMaterial({ map: texture, alphaTest: PATCH_ALPHA_TEST });
+  }
+
+  /** El dibujo, sin fondo (borra lo que hubiera): la imagen de la unidad o su texto. */
+  private paintPatch(draw: CanvasRenderingContext2D, emblem: FlagEmblem): void {
+    draw.clearRect(0, 0, PATCH_PIXELS, PATCH_PIXELS);
     if (emblem.kind === 'unit') drawOutlined(draw, this.pictureOf(emblem.image));
-    else drawLabel(draw, emblem.label);
-    return canvas;
+    else drawLabel(draw, labelOf(emblem));
   }
 
   /** La imagen de la unidad sin suavizar (pixel art: la de 32 sale al doble). */
@@ -223,7 +253,18 @@ function newCanvas(pixels: number): { canvas: HTMLCanvasElement; draw: CanvasRen
   const canvas = document.createElement('canvas');
   canvas.width = pixels;
   canvas.height = pixels;
-  return { canvas, draw: canvas.getContext('2d')! };
+  const draw = canvas.getContext('2d');
+  if (!draw) throw new Error('Sin lienzo 2D para los dibujos de las banderas (¿demasiados lienzos abiertos?)');
+  return { canvas, draw };
+}
+
+/** Llama a `repaint` cuando cargue esa letra, si aun no ha cargado (un lienzo pinta con la de reserva mientras tanto). */
+function whenFontLoads(font: string, repaint: () => void): void {
+  if (document.fonts.check(font)) return;
+  document.fonts
+    .load(font)
+    .then(repaint)
+    .catch((error: unknown) => console.warn('No ha cargado la letra', font, error));
 }
 
 /** La imagen con su reborde: la silueta en blanco corrida alrededor y, encima, la imagen. */
@@ -243,18 +284,18 @@ function silhouetteOf(picture: HTMLCanvasElement, color: string): HTMLCanvasElem
   return canvas;
 }
 
-/** La tecla de la escuadra, grande, en blanco con tinta alrededor (se lee sobre la tela). */
-function drawLabel(draw: CanvasRenderingContext2D, label: string): void {
+/** El texto, en blanco con tinta alrededor (se lee sobre la tela). */
+function drawLabel(draw: CanvasRenderingContext2D, { text, font }: Label): void {
   const middle = PATCH_PIXELS / 2;
-  draw.font = LABEL_FONT;
+  draw.font = font;
   draw.textAlign = 'center';
   draw.textBaseline = 'middle';
   draw.lineJoin = 'round';
   draw.lineWidth = LABEL_INK_WIDTH;
   draw.strokeStyle = LABEL_INK;
-  draw.strokeText(label, middle, middle + 2);
+  draw.strokeText(text, middle, middle + 2);
   draw.fillStyle = LABEL_TEXT;
-  draw.fillText(label, middle, middle + 2);
+  draw.fillText(text, middle, middle + 2);
 }
 
 const isMesh = (part: THREE.Object3D): part is THREE.Mesh => part instanceof THREE.Mesh;
