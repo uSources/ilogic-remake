@@ -15,6 +15,7 @@ import type { GameImages } from '../../../atlas';
 import { posKey } from '../../../core/geom';
 import type { Pos } from '../../../core/model';
 import type { DestinationFlag, DestinationMarks, FlagEmblem } from '../../ports/orders';
+import { newCanvas, whenFontLoads } from '../core/canvasText';
 import { buildModel, type BlockModel } from '../pieces/blocks';
 import { SIDE_PAINT } from '../pieces/sidePaint';
 
@@ -210,7 +211,7 @@ export class DestinationFlagsView implements DestinationMarks {
    * vuelve a pintar cuando cargue (si no, se quedaria con la de reserva toda la partida).
    */
   private newPatchMaterial(emblem: FlagEmblem): THREE.SpriteMaterial {
-    const { canvas, draw } = newCanvas(PATCH_PIXELS);
+    const { canvas, draw } = newCanvas(PATCH_PIXELS, PATCH_PIXELS);
     const texture = new THREE.CanvasTexture(canvas);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.magFilter = THREE.NearestFilter;
@@ -232,7 +233,7 @@ export class DestinationFlagsView implements DestinationMarks {
 
   /** La imagen de la unidad sin suavizar (pixel art: la de 32 sale al doble). */
   private pictureOf(image: string): HTMLCanvasElement {
-    const { canvas, draw } = newCanvas(PICTURE_PIXELS);
+    const { canvas, draw } = newCanvas(PICTURE_PIXELS, PICTURE_PIXELS);
     draw.imageSmoothingEnabled = false;
     this.images.draw(draw, image, 0, 0, PICTURE_PIXELS, PICTURE_PIXELS);
     return canvas;
@@ -248,25 +249,6 @@ export class DestinationFlagsView implements DestinationMarks {
   }
 }
 
-/** Un lienzo cuadrado y su pincel. */
-function newCanvas(pixels: number): { canvas: HTMLCanvasElement; draw: CanvasRenderingContext2D } {
-  const canvas = document.createElement('canvas');
-  canvas.width = pixels;
-  canvas.height = pixels;
-  const draw = canvas.getContext('2d');
-  if (!draw) throw new Error('Sin lienzo 2D para los dibujos de las banderas (¿demasiados lienzos abiertos?)');
-  return { canvas, draw };
-}
-
-/** Llama a `repaint` cuando cargue esa letra, si aun no ha cargado (un lienzo pinta con la de reserva mientras tanto). */
-function whenFontLoads(font: string, repaint: () => void): void {
-  if (document.fonts.check(font)) return;
-  document.fonts
-    .load(font)
-    .then(repaint)
-    .catch((error: unknown) => console.warn('No ha cargado la letra', font, error));
-}
-
 /** La imagen con su reborde: la silueta en blanco corrida alrededor y, encima, la imagen. */
 function drawOutlined(draw: CanvasRenderingContext2D, picture: HTMLCanvasElement): void {
   const silhouette = silhouetteOf(picture, OUTLINE_COLOR);
@@ -276,7 +258,7 @@ function drawOutlined(draw: CanvasRenderingContext2D, picture: HTMLCanvasElement
 
 /** La silueta de un dibujo, toda de un color (lo que no es transparente). */
 function silhouetteOf(picture: HTMLCanvasElement, color: string): HTMLCanvasElement {
-  const { canvas, draw } = newCanvas(picture.width);
+  const { canvas, draw } = newCanvas(picture.width, picture.height);
   draw.drawImage(picture, 0, 0);
   draw.globalCompositeOperation = 'source-in';
   draw.fillStyle = color;

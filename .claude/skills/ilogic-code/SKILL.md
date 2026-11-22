@@ -128,7 +128,7 @@ del porque. Reescribir sin cambiar lo que hace: `npm run huella` tiene que dar l
   con `fireOrigins`, si hace dano con `canDamage`, a distancia con `isRanged` y si se mueve y
   dispara con `firesAfterMove`, un combate hipotetico con `engagement(...)` (nunca copias de
   unidades), el daño con `damageModelOf`, numeros con `fmtNum`; en
-  3D, casillas con `view3d/engine/core/space.ts`, efectos de un momento con `engine/fx/fx.ts`, humo y polvo con
+  3D, casillas con `view3d/engine/core/space.ts`, efectos de un momento con `engine/fx/fx.ts`, texto pintado en un lienzo con `newCanvas` y `whenFontLoads` (`engine/core/canvasText.ts`: si no, sale con la letra de reserva), humo y polvo con
   `ParticleSystem` (una clase mas en `PUFFS`) y un suceso animado con su entrada en `EVENT_STEPS`
   (`view3d/systems/events/eventSteps.ts`: sus pasos como datos; un paso nuevo, en `steps.ts` y `STEP_RUNNERS`).
 - **Extender sin abrir funciones grandes**: accion nueva = su forma en `GameAction` y en
