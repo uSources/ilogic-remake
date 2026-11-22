@@ -124,7 +124,7 @@ const GRASS: TerrainPiece = { tile: 'tile_grass' };
 const WATER: TerrainPiece = { tile: 'tile_water' };
 const WOODS: TerrainPiece = { tile: 'tile_forest', decor: ['trees'] };
 
-const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
+export const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
   Grass: GRASS,
   Flowers: { tile: 'tile_grass', decor: ['flowers_red', 'flowers_yellow', 'flowers_purple', 'flowers_mixed'] },
   Woods: WOODS,
@@ -164,7 +164,7 @@ const SWAMP_PIECES: Readonly<Record<string, TerrainPiece>> = {
 };
 
 /** Lo que cambia cada tema (id de themes.json): en el nevado, las montañas de hierba son nevadas (como en 2D). */
-const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece>>>> = {
+export const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece>>>> = {
   Snowy: { GrassMountain: { tile: 'tile_snow', relief: SNOW_MOUNTAIN } },
   Swamp: SWAMP_PIECES,
 };

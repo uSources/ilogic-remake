@@ -8,6 +8,7 @@ import type { Pos } from '../../../core/model';
 import { reducedMotion } from '../../../ui/motion';
 import type { GlbLibrary } from '../pieces/glbModels';
 import { instanced, moveCopy, type PlacedMesh } from './placed';
+import { randomBetween } from '../core/random';
 
 /** El modelo de Ashfox de la rana (tools/art/ashfox/models/terrain.mjs). */
 export const FROG_MODEL = 'frog';
@@ -49,8 +50,6 @@ interface Frog {
   turn: number;
 }
 
-const between = ([low, high]: readonly [number, number]): number => low + Math.random() * (high - low);
-
 export class Frogs {
   readonly placed: readonly PlacedMesh[];
   private readonly frogs: Frog[];
@@ -59,7 +58,7 @@ export class Frogs {
   private readonly lifted = new THREE.Vector3();
 
   constructor(library: GlbLibrary, spots: readonly FrogSpot[]) {
-    this.frogs = spots.map((spot) => ({ spot, heading: spot.heading, wait: between(HOP_EVERY), hop: null, turn: 0 }));
+    this.frogs = spots.map((spot) => ({ spot, heading: spot.heading, wait: randomBetween(HOP_EVERY), hop: null, turn: 0 }));
     const places = spots.map((spot) => this.placeOf(spot.at, spot.heading, 0).clone());
     this.placed = spots.length
       ? instanced(
@@ -72,8 +71,18 @@ export class Frogs {
   }
 
   update(seconds: number): void {
-    if (reducedMotion()) return;
+    if (reducedMotion()) {
+      this.frogs.forEach((frog, index) => this.settle(frog, index));
+      return;
+    }
     this.frogs.forEach((frog, index) => this.step(frog, index, seconds));
+  }
+
+  /** Con «reducir el movimiento», la que estaba saltando cae ya en su sitio (no se queda en el aire). */
+  private settle(frog: Frog, index: number): void {
+    if (frog.hop === null) return;
+    this.moveFrog(index, this.placeOf(frog.spot.at, frog.heading + frog.turn, 0));
+    this.land(frog);
   }
 
   private step(frog: Frog, index: number, seconds: number): void {
@@ -91,13 +100,13 @@ export class Frogs {
 
   private startHop(frog: Frog): void {
     frog.hop = 0;
-    frog.turn = between(HOP_TURN) * (Math.random() < 0.5 ? -1 : 1);
+    frog.turn = randomBetween(HOP_TURN) * (Math.random() < 0.5 ? -1 : 1);
   }
 
   private land(frog: Frog): void {
     frog.heading += frog.turn;
     frog.hop = null;
-    frog.wait = between(HOP_EVERY);
+    frog.wait = randomBetween(HOP_EVERY);
   }
 
   private moveFrog(index: number, place: THREE.Matrix4): void {

@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
 import { reducedMotion } from '../../../ui/motion';
 import { PixelPoints } from '../fx/pixelPoints';
+import { randomBetween } from '../core/random';
 
 const FIREFLIES = 48;
 const CORE_COLOR = 0xf6ffa8;
@@ -38,8 +39,6 @@ interface Firefly {
   phase: number;
 }
 
-const between = ([low, high]: readonly [number, number]): number => low + Math.random() * (high - low);
-
 /** Cuanto de cada parpadeo esta encendida (algo mas de la mitad) y lo deprisa que se enciende y se apaga. */
 const BLINK_ON = 0.2;
 const BLINK_EDGE = 1.6;
@@ -59,6 +58,9 @@ export class Fireflies {
   /** Las que pueden nacer ya (se van sumando con el tiempo). */
   private births = 0;
   private readonly at = new THREE.Vector3();
+  /** Las casillas cerca de lo que se mira y alrededor de donde (casilla y radio redondeados) se buscaron. */
+  private nearby: readonly Pos[] = [];
+  private readonly nearbyAround = { x: Number.NaN, z: Number.NaN, radius: Number.NaN };
 
   constructor(
     private readonly tiles: readonly Pos[],
@@ -78,9 +80,21 @@ export class Fireflies {
     this.halo.setScale(viewportHeight, camera);
     this.core.setScale(viewportHeight, camera);
     this.births = Math.min(this.births + seconds * BIRTHS_PER_SECOND, FIREFLIES);
-    const nearby = this.tiles.filter((pos) => Math.abs(pos.x - center.x) < radius && Math.abs(pos.y - center.z) < radius);
+    const nearby = this.tilesNear(center, radius);
     this.fireflies.forEach((firefly, index) => (this.fireflies[index] = this.step(firefly, seconds, nearby)));
     this.draw();
+  }
+
+  /** Las casillas con luciernagas cerca de lo que se mira: se buscan otra vez solo si la camara cambia de casilla o de distancia. */
+  private tilesNear(center: THREE.Vector3, radius: number): readonly Pos[] {
+    const around = this.nearbyAround;
+    const x = Math.round(center.x);
+    const z = Math.round(center.z);
+    const reach = Math.round(radius);
+    if (x === around.x && z === around.z && reach === around.radius) return this.nearby;
+    Object.assign(around, { x, z, radius: reach });
+    this.nearby = this.tiles.filter((pos) => Math.abs(pos.x - x) < reach && Math.abs(pos.y - z) < reach);
+    return this.nearby;
   }
 
   private step(firefly: Firefly | null, seconds: number, nearby: readonly Pos[]): Firefly | null {
@@ -92,13 +106,13 @@ export class Fireflies {
   private born(nearby: readonly Pos[]): Firefly {
     this.births -= 1;
     const tile = nearby[Math.floor(Math.random() * nearby.length)]!;
-    const home = this.groundOf(tile).add(new THREE.Vector3(Math.random() - 0.5, between(HEIGHT), Math.random() - 0.5));
+    const home = this.groundOf(tile).add(new THREE.Vector3(Math.random() - 0.5, randomBetween(HEIGHT), Math.random() - 0.5));
     return {
       home,
       age: 0,
-      life: between(LIFE_SECONDS),
-      blink: between(BLINK_SECONDS),
-      speed: between(WANDER_SPEED),
+      life: randomBetween(LIFE_SECONDS),
+      blink: randomBetween(BLINK_SECONDS),
+      speed: randomBetween(WANDER_SPEED),
       phase: Math.random() * Math.PI * 2,
     };
   }
@@ -125,5 +139,8 @@ export class Fireflies {
 function setPoint(points: PixelPoints, index: number, at: THREE.Vector3 | null, size: number, glow: number): void {
   points.alphas[index] = at ? glow : 0;
   points.sizes[index] = at ? size : 0;
-  if (at) points.positions.set(at.toArray(), index * 3);
+  if (!at) return;
+  points.positions[index * 3] = at.x;
+  points.positions[index * 3 + 1] = at.y;
+  points.positions[index * 3 + 2] = at.z;
 }

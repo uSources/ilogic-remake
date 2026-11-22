@@ -9,6 +9,7 @@ import { reducedMotion } from '../../../ui/motion';
 import { PixelPoints } from './pixelPoints';
 import type { PuffKind } from '../../ports/stage';
 import { WIND_DIRECTION } from '../core/space';
+import { randomBetween } from '../core/random';
 
 interface PuffSpec {
   colors: readonly number[];
@@ -76,7 +77,6 @@ interface Particle {
   color: THREE.Color;
 }
 
-const between = ([low, high]: readonly [number, number]): number => low + Math.random() * (high - low);
 const spreadOut = (amount: number): number => (Math.random() * 2 - 1) * amount;
 
 export class ParticleSystem {
@@ -97,7 +97,7 @@ export class ParticleSystem {
       const velocity = new THREE.Vector3(spreadOut(spec.spread), spec.rise * (0.6 + Math.random() * 0.8), spreadOut(spec.spread));
       velocity.addScaledVector(WIND_DIRECTION, spec.drift);
       const color = new THREE.Color(spec.colors[Math.floor(Math.random() * spec.colors.length)]);
-      this.particles.push({ kind, position: at.clone(), velocity, age: 0, life: between(spec.life), color });
+      this.particles.push({ kind, position: at.clone(), velocity, age: 0, life: randomBetween(spec.life), color });
     }
   }
 
