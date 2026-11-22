@@ -6,7 +6,7 @@
  */
 import type * as THREE from 'three';
 import type { Pos } from '../../../core/model';
-import { pointIn, randomBetween, type Range } from '../core/random';
+import { pointIn, type Range } from '../core/random';
 
 /** Lo que nace y vive un rato sobre su casilla: una mota, un pajaro. Lo propio de cada uno sale de su semilla (`vary`). */
 export interface Flier {
@@ -34,7 +34,7 @@ export interface BirthPlan {
   birthRate(time: number): number;
   /**
    * Si acaba en otra de sus casillas (el pajaro que va de una copa a otra): a que distancia de la suya
-   * (casillas, entre las dos). Si no hay ninguna a esa distancia, no nace.
+   * (casillas, entre las dos). De una casilla sin ninguna a esa distancia no sale.
    */
   landing?: Range;
 }
@@ -51,16 +51,8 @@ export function vary(flier: Flier, salt: number, range: Range): number {
 /** Entra y sale despacio de su vida: nada de puntos que aparecen o desaparecen de golpe. */
 export const lifeFade = (flier: Flier): number => Math.sin((flier.age / flier.life) * Math.PI);
 
-/** Uno al azar de una lista (ninguno si esta vacia). */
-const anyOf = <Item>(items: readonly Item[]): Item | undefined => items[Math.floor(Math.random() * items.length)];
-
-/** Un punto de una casilla a la altura `lift` sobre su suelo, algo movido al azar dentro de ella. */
-function pointOver(ground: THREE.Vector3, lift: number): THREE.Vector3 {
-  ground.x += Math.random() - 0.5;
-  ground.y += lift;
-  ground.z += Math.random() - 0.5;
-  return ground;
-}
+/** Un numero entre 0 y 1 al azar (`Math.random`, o uno con semilla en los tests). */
+export type Random = () => number;
 
 export class Births {
   private time = 0;
@@ -69,11 +61,14 @@ export class Births {
   /** Las casillas cerca de lo que se mira y alrededor de donde (casilla y radio redondeados) se buscaron. */
   private nearby: readonly Pos[] = [];
   private readonly nearbyAround = { x: Number.NaN, z: Number.NaN, radius: Number.NaN };
+  /** Con `landing`, a que casillas puede ir el que nace en cada una: se buscan una vez por casilla. */
+  private readonly landings = new Map<Pos, readonly Pos[]>();
 
   constructor(
     private readonly plan: BirthPlan,
     readonly tiles: readonly Pos[],
     private readonly groundOf: (pos: Pos) => THREE.Vector3,
+    private readonly random: Random = Math.random,
   ) {}
 
   /** Pasa el tiempo y mira que casillas quedan cerca de `center` (lo que mira la camara), en un radio `radius`. */
@@ -86,35 +81,59 @@ export class Births {
 
   /** Una nueva sobre una casilla al azar de las de cerca, si le toca nacer y hay alguna; si no, null. */
   next(): Flier | null {
-    const tile = anyOf(this.nearby);
+    const tile = this.anyOf(this.nearby);
     if (this.ready < 1 || !tile) return null;
-    const { landing } = this.plan;
-    const landingTile = landing && this.tileAtDistance(tile, landing);
-    if (landing && !landingTile) return null;
     this.ready -= 1;
     // Los puntos del suelo son vectores nuevos: se mueven ahi mismo y se los queda.
-    const lift = randomBetween(this.plan.height);
+    const lift = pointIn(this.plan.height, this.random());
     const flier: Flier = {
-      home: pointOver(this.groundOf(tile), lift),
+      home: this.pointOver(this.groundOf(tile), lift),
       age: 0,
-      life: randomBetween(this.plan.life),
-      seed: Math.random() * SEED_SPREAD,
+      life: pointIn(this.plan.life, this.random()),
+      seed: this.random() * SEED_SPREAD,
     };
-    if (landingTile) flier.goal = pointOver(this.groundOf(landingTile), lift);
+    const landing = this.anyOf(this.landingsFrom(tile));
+    if (landing) flier.goal = this.pointOver(this.groundOf(landing), lift);
     return flier;
   }
 
-  /** Una de sus casillas al azar a esa distancia de `from` (casillas, entre las dos), si hay alguna. */
-  private tileAtDistance(from: Pos, [nearest, farthest]: Range): Pos | undefined {
-    return anyOf(
-      this.tiles.filter((pos) => {
-        const distance = Math.hypot(pos.x - from.x, pos.y - from.y);
-        return distance >= nearest && distance <= farthest;
-      }),
-    );
+  /** Uno al azar de una lista (ninguno si esta vacia). */
+  private anyOf<Item>(items: readonly Item[]): Item | undefined {
+    return items[Math.floor(this.random() * items.length)];
   }
 
-  /** Las casillas cerca de lo que se mira: se buscan otra vez solo si la camara cambia de casilla o de distancia. */
+  /** Un punto de una casilla a la altura `lift` sobre su suelo, algo movido al azar dentro de ella. */
+  private pointOver(ground: THREE.Vector3, lift: number): THREE.Vector3 {
+    ground.x += this.random() - 0.5;
+    ground.y += lift;
+    ground.z += this.random() - 0.5;
+    return ground;
+  }
+
+  /** Las casillas a las que puede ir el que nace en `from` (`BirthPlan.landing`; sin el, ninguna). */
+  private landingsFrom(from: Pos): readonly Pos[] {
+    const { landing } = this.plan;
+    if (!landing) return [];
+    const known = this.landings.get(from);
+    if (known) return known;
+    const [nearest, farthest] = landing;
+    const found = this.tiles.filter((pos) => {
+      const distance = Math.hypot(pos.x - from.x, pos.y - from.y);
+      return distance >= nearest && distance <= farthest;
+    });
+    this.landings.set(from, found);
+    return found;
+  }
+
+  /** Si de esa casilla puede salir algo: siempre, salvo si tiene que ir a otra y no hay ninguna a su distancia. */
+  private canTakeOff(pos: Pos): boolean {
+    return !this.plan.landing || this.landingsFrom(pos).length > 0;
+  }
+
+  /**
+   * Las casillas cerca de lo que se mira de las que puede salir algo: se buscan otra vez solo si la camara
+   * cambia de casilla o de distancia (no en cada fotograma).
+   */
   private lookAround(center: THREE.Vector3, radius: number): void {
     const around = this.nearbyAround;
     const x = Math.round(center.x);
@@ -122,7 +141,7 @@ export class Births {
     const reach = Math.round(radius);
     if (x === around.x && z === around.z && reach === around.radius) return;
     Object.assign(around, { x, z, radius: reach });
-    this.nearby = this.tiles.filter((pos) => Math.abs(pos.x - x) < reach && Math.abs(pos.y - z) < reach);
+    this.nearby = this.tiles.filter((pos) => Math.abs(pos.x - x) < reach && Math.abs(pos.y - z) < reach && this.canTakeOff(pos));
   }
 }
 

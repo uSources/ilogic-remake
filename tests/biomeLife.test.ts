@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { mapGrid } from '@core/mapGrid';
 import type { Pos } from '@core/model';
+import { seededRng } from '@core/util/random';
 import { spotsByCritter, tilesByMote, tilesByTraveller } from '../src/view3d/engine/life/biomeLife';
 import { Births, type Flier } from '../src/view3d/engine/life/births';
 import { forwardAt, liftAt } from '../src/view3d/engine/life/critters';
@@ -120,12 +121,14 @@ describe('los pajaros del bosque', () => {
     expect(Math.max(...heights)).toBeLessThan(0.5);
   });
 
-  /** Lo que nace de unas casillas de bosque, cerca de la primera, hasta que no nace nada mas. */
-  function bornFrom(tiles: readonly Pos[]): Flier[] {
-    const births = new Births({ ...FOREST_BIRDS, count: 50, birthRate: () => 1000 }, tiles, (pos) => new THREE.Vector3(pos.x, 0, pos.y));
-    births.tick(1, new THREE.Vector3(tiles[0]!.x, 0, tiles[0]!.y), 2);
+  /** Lo que nace de unas casillas de bosque, cerca de la primera (a menos de `radius`), hasta que no nace nada mas. */
+  function bornFrom(tiles: readonly Pos[], radius = 2): Flier[] {
+    const plan = { ...FOREST_BIRDS, count: 50, birthRate: () => 1000 };
+    const births = new Births(plan, tiles, (pos) => new THREE.Vector3(pos.x, 0, pos.y), seededRng(2013));
+    births.tick(1, new THREE.Vector3(tiles[0]!.x, 0, tiles[0]!.y), radius);
     return Array.from({ length: 50 }, () => births.next()).filter((bird): bird is Flier => bird !== null);
   }
+  const takeOffOf = (bird: Flier): Pos => ({ x: Math.round(bird.home.x), y: Math.round(bird.home.z) });
 
   it('cada uno acaba en otra casilla de bosque a la distancia de su clase, a la altura a la que salio', () => {
     const woods = Array.from({ length: 6 }, (_, x) => ({ x, y: 0 }));
@@ -134,7 +137,7 @@ describe('los pajaros del bosque', () => {
     expect(birds.length).toBeGreaterThan(0);
     for (const bird of birds) {
       const landing = woods.find((pos) => Math.abs(pos.x - bird.goal!.x) <= 0.5 && Math.abs(pos.y - bird.goal!.z) <= 0.5)!;
-      const takeOff = { x: Math.round(bird.home.x), y: Math.round(bird.home.z) };
+      const takeOff = takeOffOf(bird);
       expect(landing).toBeDefined();
       expect(Math.hypot(landing.x - takeOff.x, landing.y - takeOff.y)).toBeGreaterThanOrEqual(nearest);
       expect(Math.hypot(landing.x - takeOff.x, landing.y - takeOff.y)).toBeLessThanOrEqual(farthest);
@@ -144,6 +147,17 @@ describe('los pajaros del bosque', () => {
 
   it('en un bosque de una casilla no sale ninguno: no tienen otra copa a la que ir', () => {
     expect(bornFrom([{ x: 3, y: 3 }])).toEqual([]);
+  });
+
+  it('de un arbol suelto no salen, aunque cerca haya bosque mas lejos de lo que vuelan', () => {
+    const lone = { x: 0, y: 0 };
+    const grove = [
+      { x: 6, y: 0 },
+      { x: 8, y: 0 },
+    ];
+    const birds = bornFrom([lone, ...grove], 10);
+    expect(birds.length).toBeGreaterThan(0);
+    expect(birds.filter((bird) => takeOffOf(bird).x === lone.x)).toEqual([]);
   });
 });
 
