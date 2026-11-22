@@ -13,7 +13,7 @@ Ya no hay 2D: de aquel juego solo quedan las imagenes (iconos del HUD y referenc
 - Estetica del juego (como se ven los modelos 3D, decidida con el usuario): `docs/ESTETICA.md` y skill
   `estetica`; obligatoria al hacer o revisar un modelo, y lo nuevo que se decida se apunta ahi.
 - Comprobar el trabajo sin ayuda (`npm run play`, `window.ilogic3d`, playground `units3d.html`): `docs/AGENTES.md`.
-- Tareas: skills `estetica`, `arte-retro-diffusion`, `nueva-unidad`, `nueva-mision`, `sacar-version`, `equilibrar`, `ashfox` (modelos 3D).
+- Tareas: skills `estetica`, `arte-retro-diffusion`, `nueva-unidad`, `nueva-mision`, `sacar-version`, `equilibrar`, `ashfox` (modelos 3D), `sonidos` (efectos, ambientes y musica con IA local).
 - Otras IAs: `AGENTS.md` (mismo contenido).
 - Graficos: `npm run assets` (README, "Graficos"). Versiones y notas: README, "Notas de parche".
 - Antes de terminar: `npm run check`, y si cambia algo que se ve, mirarlo en el navegador. Web: se publica sola con cada push a `main`.

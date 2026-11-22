@@ -52,7 +52,8 @@ En la partida, `window.ilogic3d` da `session` (la partida: `session.state`), `bo
 `controls` (la entrada del turno: `tap(pos)`, `endTurn()`, `focusUnit(uid)`), `camera` (la camara de
 estrategia como logica: `lookAt({ x, y, z })`, `pose`), `world` (escena, `setWeather(id)`), `weather`, `stages` (los puertos con los que se
 anima un suceso: `stages.pieces.walk(uid, de, a)`, `stages.effects.sparks(sitio, 1)`...; los pasos de cada
-suceso los decide `src/view3d/systems/events/eventSteps.ts`), `wrecks`, `pause` (el menu de pausa) y `ui` (el estado de la
+suceso los decide `src/view3d/systems/events/eventSteps.ts`), `wrecks`, `recentSounds()` (los ultimos efectos pedidos: nombre, el que sono de verdad y desde
+donde; para comprobar el sonido sin oirlo), `ambience` (los emisores de ambiente y cuales suenan), `pause` (el menu de pausa) y `ui` (el estado de la
 interfaz: `ui.get()`, y sus botones: `ui.actions`). Usar estos y no `import()` desde la consola: tras una
 recarga en caliente, `import()` puede dar otra copia del modulo.
 

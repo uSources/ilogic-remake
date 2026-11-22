@@ -11,7 +11,7 @@
  * (`session.act`) y se animan sus sucesos. Tambien lleva los turnos de los demas (la IA), animando
  * cada cosa que hacen.
  */
-import type { SoundPort } from '../../../audio/sounds';
+import type { SoundStage } from '../../ports/stage';
 import { availableActions, groupMoveOrder, groupMoveStep } from '../../../core/actions';
 import { boxSelect, clickSelect, type ClickMods, type Selection } from '../../../controls/selection';
 import { samePos } from '../../../core/geom';
@@ -42,7 +42,8 @@ import { fmtNum, nameOf, settings, t } from '../../../settings';
 import { buyBlockedText } from '../../../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
 import { teamState } from '../../../core/teams';
-import { endSound } from '../sound/soundCues';
+import { ackVoice, endSound } from '../sound/soundCues';
+import { feet } from '../events/steps';
 import { attackPlan, type AttackPlan } from './attackPlan';
 import type { EventPlayer, MovePreview, ScreenView, TileMarks } from '../../ports/turn';
 import { arcShotOf, pathFor, previewAt } from './movePreview';
@@ -101,7 +102,7 @@ export interface TurnHost {
   /** Enseña los sucesos de cada accion (las propias y las de los demas). */
   events: EventPlayer;
   /** Elegir unidad, comprar, tu turno y el final. */
-  sounds: SoundPort;
+  sounds: SoundStage;
   /** Que casillas se ven ahora (doble clic: todas las de ese tipo que se ven). */
   screen: ScreenView;
   /** Se juega con el dedo: la rueda ofrece ademas «Elegir varias» (con raton hay recuadro y Mayusculas). */
@@ -246,7 +247,7 @@ export class TurnControls {
     const picked = pickedFrom(this.s, this.host.viewer, uids);
     if (picked.kind === 'none') return this.setMode({ kind: 'idle' });
     if (picked.kind === 'one') return this.chooseOwnUnit(picked.unit);
-    this.host.sounds.play('unit_select');
+    this.host.sounds.play('group_select');
     this.setMode({ kind: 'group', units: picked.units, radial: null, selected: 0 });
   }
 
@@ -384,8 +385,10 @@ export class TurnControls {
     this.setMode({ kind: 'idle' });
   }
 
+  /** Elegir una unidad propia suena en su casilla, con su «¡sí!» de juguete. */
   private chooseOwnUnit(unit: Unit): void {
-    this.host.sounds.play('unit_select');
+    this.host.sounds.play('unit_select', feet(unit.uid));
+    this.host.sounds.play(ackVoice(unitTypeOf(this.s, unit).motion), feet(unit.uid));
     this.select(unit);
   }
 
@@ -492,6 +495,7 @@ export class TurnControls {
     const result = this.host.session.act(this.host.viewer, action);
     if (!result.ok) {
       showToast(result.reason);
+      this.host.sounds.play('ui_error');
       return false;
     }
     this.isBusy = true;
@@ -527,6 +531,7 @@ export class TurnControls {
     this.setMode({ kind: 'idle' });
     if (!(await this.perform(travelOrder(unit, goal)))) return;
     showToast(t('travelSet'));
+    this.host.sounds.play('travel_order', feet(unit.uid));
     await this.perform({ kind: 'gotoStep', uid: unit.uid });
   }
 
@@ -645,10 +650,13 @@ export class TurnControls {
 
   private async pickBuy(building: Building, option: BuyOption | undefined): Promise<void> {
     if (!option) return this.setMode({ kind: 'idle' });
-    if (option.blocked) return showToast(buyBlockedText(this.s, option.blocked));
+    if (option.blocked) {
+      this.host.sounds.play('buy_denied');
+      return showToast(buyBlockedText(this.s, option.blocked));
+    }
     this.setMode({ kind: 'idle' });
-    const bought = await this.perform({ kind: 'buy', at: { x: building.x, y: building.y }, unitType: option.unitType.id });
-    if (bought) this.host.sounds.play('spawn');
+    // Suena con su suceso (`spawn`, eventSteps.ts), como las compras de la IA.
+    await this.perform({ kind: 'buy', at: { x: building.x, y: building.y }, unitType: option.unitType.id });
   }
 
   /**
@@ -689,18 +697,23 @@ export class TurnControls {
     if (mode.kind !== 'unit' || mode.unit !== own) return;
     const touchOnly: UnitOption[] = this.host.touch ? ['pickSeveral'] : [];
     const radial = [...radialOptions(this.s, this.host.viewer, own), ...touchOnly];
-    if (radial.length) this.setMode({ ...mode, radial, selected: 0 });
+    if (!radial.length) return;
+    this.host.sounds.play('ui_open');
+    this.setMode({ ...mode, radial, selected: 0 });
   }
 
   private openGroupRadial(units: readonly Unit[]): void {
     const radial = groupRadialOptions(this.s, this.host.viewer, units);
-    if (radial.length) this.setMode({ kind: 'group', units: [...units], radial, selected: 0 });
+    if (!radial.length) return;
+    this.host.sounds.play('ui_open');
+    this.setMode({ kind: 'group', units: [...units], radial, selected: 0 });
   }
 
   /** Cierra la rueda si estaba abierta (lo elegido sigue elegido). true si lo estaba. */
   private closeRadial(): boolean {
     const mode = this.mode;
     if ((mode.kind !== 'unit' && mode.kind !== 'group') || !mode.radial) return false;
+    this.host.sounds.play('ui_close');
     this.setMode({ ...mode, radial: null, selected: 0 });
     return true;
   }

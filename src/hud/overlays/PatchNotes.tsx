@@ -171,7 +171,7 @@ export function PatchNotes({ notes }: { notes: NotesVM }) {
       <div class="px notes" role="dialog" aria-label={t('news')}>
         <div class="help-head">
           <span class="htitle">{t('news')}</span>
-          <Button class="px-btn plain" onClick={closeNotes}>
+          <Button class="px-btn plain" data-sound="ui_close" onClick={closeNotes}>
             {t('close')} <span class="key">Esc</span>
           </Button>
         </div>

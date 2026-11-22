@@ -1,12 +1,31 @@
 /**
  * La musica: una sola pista sonando a la vez (como el Clip unico del original), "menu" en los menus y
- * "game" en la partida, en bucle. Con <audio> del navegador (sin motor de juego). Los navegadores no
+ * en la partida la de su tema (generadas con `npm run sonidos`; si aun no esta, la "game" de siempre), en bucle. Con <audio> del navegador (sin motor de juego). Los navegadores no
  * dejan sonar nada hasta la primera tecla o clic: si aun no se puede, empieza con ella.
  */
 import { asset, assetsAvailable } from '../assets';
 import { settings } from '../settings';
 
-export type MusicTrack = 'menu' | 'game';
+export type MusicTrack = 'menu' | 'game' | 'game_plains' | 'game_desert' | 'game_forest' | 'game_swamp' | 'game_snowy';
+
+/** La pista de batalla de cada tema (id de themes.json). */
+const THEME_TRACKS: Readonly<Record<string, MusicTrack>> = {
+  Plains: 'game_plains',
+  Desert: 'game_desert',
+  Forest: 'game_forest',
+  Swamp: 'game_swamp',
+  Snowy: 'game_snowy',
+};
+/** Si una pista no esta (aun no se ha elegido), suena esta. */
+const FALLBACK_TRACKS: Readonly<Partial<Record<MusicTrack, MusicTrack>>> = {
+  game_plains: 'game',
+  game_desert: 'game',
+  game_forest: 'game',
+  game_swamp: 'game',
+  game_snowy: 'game',
+};
+
+export const gameTrackOf = (themeId: string): MusicTrack => THEME_TRACKS[themeId] ?? 'game';
 
 const MUSIC_VOLUME = 0.6;
 /** Formatos, del preferido al de reserva (el navegador usa el primero que sepa tocar). */
@@ -26,7 +45,14 @@ export function playMusic(track: MusicTrack, restart = false): void {
   const audio = audioFor(track);
   if (!audio) return;
   current = { track, audio };
+  audio.addEventListener('error', () => playFallback(track, audio), { once: true });
   void audio.play().catch(() => startOnFirstGesture(audio));
+}
+
+/** La pista no se ha podido bajar: si tiene sustituta y sigue tocandole, la sustituta. */
+function playFallback(track: MusicTrack, audio: HTMLAudioElement): void {
+  const fallback = FALLBACK_TRACKS[track];
+  if (fallback && current?.audio === audio) playMusic(fallback, true);
 }
 
 export function stopMusic(): void {

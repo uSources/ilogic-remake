@@ -15,6 +15,7 @@ import { ui } from '../../hud/store';
 import { registerServiceWorker } from '../../pwa';
 import { applySettings } from '../../settings';
 import { installSounds, webAudioSounds } from '../../audio/sfx';
+import { webAudio } from '../../audio/gameAudio';
 import { pendingStart, sessionFor } from './gameStart';
 import { GlbLibrary } from '../engine/pieces/glbModels';
 import { playMatch } from './match3d';
@@ -40,7 +41,7 @@ const MODEL_TYPES = {
 const start = pendingStart();
 const started = start ? sessionFor(start) : null;
 const images = await loadGameImages(asset);
-if (started) playMatch(started, images, await GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES), webAudioSounds);
+if (started) playMatch(started, images, await GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES), webAudio);
 else new MenuFlow(webAudioSounds).open();
 
 // Instalar como app y jugar sin conexion (solo en la web publicada).

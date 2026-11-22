@@ -1140,6 +1140,20 @@ abierto a ampliar con datos (un suceso nuevo, una entrada en una tabla; un efect
 en `PUFFS`), interfaces pequeñas por quien las usa (`...Host`, `...Port`, `ports/`) y depender de
 ellas, no de las clases concretas. Cada sistema, en su subcarpeta.
 
+**Sonido 3D.** Cada efecto del tablero sale de su sitio: el paso `sound` lleva un `Spot` (los pies o
+la boca de una pieza, una casilla), el puerto `SoundStage` (`ports/stage.ts`) lo pide y el motor
+(`engine/fx/soundStage.ts`) lo pasa a un punto del mundo con `worldOf`, que da a un anfitrion; `app/`
+lo junta con `src/audio` (`gameAudio.ts`). El audio no es three.js y el motor no lo importa:
+`src/audio/spatial.ts` pone el efecto a un lado y mas flojo lejos (`PannerNode`, sin HRTF), y el oyente
+lo calcula un sistema puro con la pose de la camara (`systems/sound/listener.ts`) y solo se toca cuando
+ella se mueve (sin crear nada por fotograma). Lo
+de la interfaz suena sin sitio (`SoundPort`). El ambiente tambien decide puro: que suena en cada sitio
+del mapa (`systems/sound/ambience.ts`: costa, bosque, cumbres, cienaga, fabricas...) y cuales quedan
+cerca del oyente; `ambiencePlayer.ts` los enciende y apaga con un `LoopPort` (`src/audio/loops.ts`) y
+les baja el volumen al alejar la camara (`ambienceZoomLevel`, `listener.ts`).
+Los efectos se piden por nombre aunque aun no haya WAV (`src/audio/soundNames.ts`): mientras, suena
+su sustituto.
+
 **Lo vigila ESLint**: solo `ENGINE_FILES` (`src/view3d/engine/**` y el playground) importa `three`, y
 `systems/` y `ports/` no importan `engine/` (`SYSTEMS_ASK_BY_PORTS`). Un fichero nuevo que dibuje va
 al motor; uno que decida, a su sistema; lo que se piden, a un puerto.

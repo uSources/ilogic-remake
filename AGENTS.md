@@ -56,5 +56,5 @@ npm run huella              # huella del comportamiento: igual antes y despues d
   obligatoria al hacer o revisar un modelo; lo nuevo que se decida se apunta ahi.
 - `docs/AGENTES.md`: como comprobar el trabajo (partida por texto, `window.ilogic3d`, playground de modelos).
 - `.claude/skills/*/SKILL.md`: guias por tarea (codigo, estetica, graficos con Retro Diffusion,
-  modelos 3D con Ashfox, nueva unidad, nueva mision, sacar version, equilibrar). Sirven para
+  modelos 3D con Ashfox, sonidos con IA local, nueva unidad, nueva mision, sacar version, equilibrar). Sirven para
   cualquier agente, no solo Claude.

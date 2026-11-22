@@ -19,6 +19,10 @@ export interface Settings {
   music: boolean;
   /** Efectos de sonido (disparos, pasos, menus). */
   sfx: boolean;
+  /** Ambiente del tablero: el mar en la costa, pajaros en el bosque, la lluvia... */
+  ambience: boolean;
+  /** Voces de juguete de las unidades al elegirlas y darles ordenes. */
+  voices: boolean;
   /** Al soltar una unidad donde no tiene nada mas que hacer, espera sola. */
   autoWait: boolean;
   /** Tras terminar con una unidad, el cursor salta a la siguiente sin mover. */
@@ -47,6 +51,8 @@ const DEFAULTS: Settings = {
   autosave: false,
   music: false,
   sfx: true,
+  ambience: true,
+  voices: true,
   autoWait: true,
   autoNext: false,
   speedOwn: 'normal',
@@ -76,6 +82,8 @@ export function parseSaved(saved: Partial<Settings>): Settings {
     autosave: !!saved.autosave,
     music: !!saved.music,
     sfx: saved.sfx !== false,
+    ambience: saved.ambience !== false,
+    voices: saved.voices !== false,
     autoWait: saved.autoWait !== false,
     autoNext: !!saved.autoNext,
     speedOwn: oneOf(saved.speedOwn, SPEEDS, DEFAULTS.speedOwn),

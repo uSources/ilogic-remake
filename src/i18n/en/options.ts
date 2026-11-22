@@ -4,6 +4,8 @@ import type { Translation } from '../translation';
 export const options: Translation<typeof es> = {
   music: 'Music',
   sfx: 'Sound effects',
+  ambience: 'Ambience',
+  voices: 'Unit voices',
   autosave: 'Autosave',
   language: 'Language',
   on: 'ON',

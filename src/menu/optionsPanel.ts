@@ -1,5 +1,6 @@
 import { ui, type OptionsRowVM, type OptionsTabVM } from '../hud/store';
 import { keyLabelOf } from '../hud/keyLabels';
+import { setChannelLevel } from '../audio/audioContext';
 import { playMusic, stopMusic, type MusicTrack } from '../audio/music';
 import { saveSettings, settings, t, UI_SCALES, type Settings, type TextKey } from '../settings';
 import type { MenuCommand, MenuContext } from '../controls/menu';
@@ -23,6 +24,8 @@ const SPEEDS = ['normal', 'fast', 'instant'] as const;
 const ROWS: Row[] = [
   { key: 'music', group: 'optGroupSound', label: 'music', values: BOOL, show: onOff },
   { key: 'sfx', group: 'optGroupSound', label: 'sfx', values: BOOL, show: onOff },
+  { key: 'ambience', group: 'optGroupSound', label: 'ambience', values: BOOL, show: onOff },
+  { key: 'voices', group: 'optGroupSound', label: 'voices', values: BOOL, show: onOff },
   { key: 'autosave', group: 'optGroupGame', label: 'autosave', values: BOOL, show: onOff },
   { key: 'autoWait', group: 'optGroupGame', label: 'optAutoWait', values: BOOL, show: onOff },
   { key: 'autoNext', group: 'optGroupGame', label: 'optAutoNext', values: BOOL, show: onOff },
@@ -286,6 +289,7 @@ export class OptionsPanel {
       if (settings.music) playMusic(this.track, true);
       else stopMusic();
     }
+    if (key === 'ambience') setChannelLevel('ambience', settings.ambience ? 1 : 0);
     this.onChange(key);
     this.publish();
   }
