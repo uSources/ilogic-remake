@@ -1,13 +1,13 @@
 /**
- * Un cliente de prueba por WebSocket contra el Worker de verdad (`exports.default`): abre la conexion de una
- * sala, manda mensajes y guarda los que llegan en una bandeja (`take` coge el primero de un tipo, o
- * espera a que llegue). Lleva dentro el cliente simulado del nucleo (`NetClient`, tests/sim), que
- * comprueba cada mensaje que llega (que nunca trae nada que su equipo no deba saber, que llegan
- * seguidos) y juega su turno con la IA del juego.
+ * Un cliente de prueba por WebSocket contra un servidor de verdad (`TestServer`: el Worker o el de
+ * Node): abre la conexion de una sala, manda mensajes y guarda los que llegan en una bandeja (`take`
+ * coge el primero de un tipo, o espera a que llegue). Lleva dentro el cliente simulado del nucleo
+ * (`NetClient`, tests/sim), que comprueba cada mensaje que llega (que nunca trae nada que su equipo
+ * no deba saber, que llegan seguidos) y juega su turno con la IA del juego.
  */
-import { exports } from 'cloudflare:workers';
 import type { ClientMessage, ServerMessage } from '@core/net';
 import { NetClient } from '../../../tests/sim/netClient';
+import { GAME_ORIGIN, type TestServer } from './testServer';
 
 type Kind = ServerMessage['kind'];
 
@@ -21,14 +21,6 @@ export interface Closing {
 interface Waiter {
   kinds: readonly Kind[];
   resolve: (message: ServerMessage) => void;
-}
-
-/** La conexion de una sala, abierta (el saludo va aparte: `hello`). */
-export async function openSocket(code: string, origin = 'https://usources.github.io'): Promise<WebSocket> {
-  const response = await exports.default.fetch(`https://servidor/rooms/${code}/ws`, { headers: { Upgrade: 'websocket', Origin: origin } });
-  if (!response.webSocket) throw new Error(`Sin WebSocket: ${response.status} ${await response.text()}`);
-  response.webSocket.accept();
-  return response.webSocket;
 }
 
 /** Espera a que la conexion se cierre y dice como. */
@@ -53,8 +45,8 @@ export class SocketClient {
   }
 
   /** La conexion de la sala `code` con la ficha `token`, ya saludada (y con su bienvenida y su vista recibidas). */
-  static async join(code: string, token: string): Promise<SocketClient> {
-    const client = new SocketClient(await openSocket(code), token);
+  static async join(server: TestServer, code: string, token: string): Promise<SocketClient> {
+    const client = new SocketClient(await server.openSocket(code, GAME_ORIGIN), token);
     client.send(client.net.hello());
     await client.take(['welcome']);
     await client.take(['view']);

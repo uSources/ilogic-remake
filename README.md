@@ -43,11 +43,14 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
 ## Jugar en línea
 
 Contra amigos por internet, cada uno en su navegador, por turnos y sin prisa (se puede cerrar y
-volver: la partida vive en el servidor). Hace falta un servidor de partidas (`server/`, un Worker
-de Cloudflare: como publicarlo, en `server/README.md`) y que el juego sepa donde esta:
+volver: la partida vive en el servidor). Hace falta un servidor de partidas (`server/`: un Worker
+de Cloudflare o, para alojarlo uno mismo, un servidor de Node; como se pone cada uno, en
+`server/README.md`) y que el juego sepa donde esta:
 `VITE_SERVER_URL` al compilar (en GitHub, la variable del repositorio; en local, `.env` a partir de
 `.env.example`) o, por encima, la clave `ilogic.server` en el localStorage del navegador (para
 jugar con un servidor propio sin recompilar). Sin servidor, Inicio no ofrece «Jugar en línea».
+Para tenerlo todo en casa: `npm run selfhost` compila el juego y arranca el servidor de Node, que
+sirve el juego y las salas en la misma direccion (`http://<tu-equipo>:8787`).
 
 - **Crear sala**: Inicio → «Jugar en línea» → «Crear sala». Las opciones de una partida nueva, de 2 a
   4 equipos y quien juega cada asiento (una persona o la IA), y si se quiere un

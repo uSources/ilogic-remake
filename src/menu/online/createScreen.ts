@@ -254,7 +254,8 @@ export class CreateScreen {
     });
     screens.busy = false;
     if (!created.ok) {
-      screens.error = t('onlineFailed');
+      // El servidor de Node, si alguien lo aloja, tiene un tope de salas (server/README.md).
+      screens.error = t(created.error === 'serverFull' ? 'onlineServerFull' : 'onlineFailed');
       return screens.publish();
     }
     const mine = created.value.seats[0];
