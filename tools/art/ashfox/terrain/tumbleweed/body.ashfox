@@ -1,0 +1,26 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube core { origin = (-2.5u, -2.5u, -2.5u); size = (5u, 5u, 5u); surface = skin.core; }
+        cube across { origin = (-3.5u, -1.5u, -1.5u); size = (7u, 3u, 3u); surface = skin.across; }
+        cube up { origin = (-1.5u, -3.5u, -1.5u); size = (3u, 7u, 3u); surface = skin.up; }
+        cube along { origin = (-1.5u, -1.5u, -3.5u); size = (3u, 3u, 7u); surface = skin.along; }
+        cube twig_a { origin = (2.5u, 2.5u, 1.5u); size = (1u, 1u, 1u); surface = skin.twig_a; }
+        cube twig_b { origin = (-3.5u, 1.5u, -3.5u); size = (1u, 1u, 1u); surface = skin.twig_b; }
+        cube twig_c { origin = (1.5u, -3.5u, -3.5u); size = (1u, 1u, 1u); surface = skin.twig_c; }
+        cube twig_d { origin = (-3.5u, -3.5u, 1.5u); size = (1u, 1u, 1u); surface = skin.twig_d; }
+        cube twig_e { origin = (-0.5u, 3.5u, 2.5u); size = (1u, 1u, 1u); surface = skin.twig_e; }
+        cube twig_f { origin = (3.5u, -0.5u, -3.5u); size = (1u, 1u, 1u); surface = skin.twig_f; }
+        cube twig_g { origin = (-4.5u, 0.5u, 0.5u); size = (1u, 1u, 1u); surface = skin.twig_g; }
+        cube twig_h { origin = (0.5u, -4.5u, -0.5u); size = (1u, 1u, 1u); surface = skin.twig_h; }
+      }
+    }
+  }
+}

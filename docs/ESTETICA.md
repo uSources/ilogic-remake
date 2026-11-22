@@ -379,6 +379,31 @@ pardos apagados como el suelo y los troncos.
   `travellers.ts`, con su destino: `landing`). Se probó que subieran y se fueran lejos: con la cámara
   cerca se salían por arriba de la pantalla en un momento y no se llegaban a ver.
 
+### Desierto
+
+Decidido con el usuario (22-11-2026). Lo suyo va en la arena (`Sand`, `Cactus` y, los buitres,
+también `SandMountain`), que solo sale en el tema Desierto. Los animales, a 32 por casilla como los del
+bosque, en colores apagados de la arena y la roca.
+
+- **Remolinos de polvo**: de vez en cuando, cerca de la cámara, un embudo pequeño de granos de arena
+  claros que suben girando, más abierto arriba, que se mueve un poco con el viento y se deshace
+  (`DUST_DEVILS`: cada remolino es una tanda de motas que nacen juntas, `together`). El polvo de las
+  ráfagas sigue como estaba (`SAND_DUST`).
+- **Lagartijas** pardas con manchas, planas y de cola larga, tomando el sol encima de una **losa de
+  arenisca** (en algunas casillas de arena, en una esquina, medio enterrada para que no flote en la
+  ladera de una duna; en el centro va la unidad) o en la arena al pie del cactus. De vez en cuando hacen
+  sus flexiones (suben y bajan dos veces) y se giran (`LIZARD`).
+- **Bolas rodadoras**: de ramas secas, redondas con ramitas que asoman. Cruzan unas casillas de arena
+  con el viento, rodando y dando botes, y suben y bajan las dunas (van por el suelo: `onTheGround`). No
+  atraviesan una meseta: solo salen si hay arena todo el camino (`TUMBLEWEEDS`, con `Landing.toward` y
+  `overland`).
+- **Buitres** casi negros, con golilla clara, cabeza pelada rosada y las plumas de la punta de las
+  alas separadas, como dedos. Planean sin batir las alas dando vueltas en lo alto, con su sombra en la
+  arena (la del sol, como todo), y llegan y se van de lejos en espiral (`VULTURES`).
+- Lo raro y que se tiene que ver (remolinos, bolas, buitres) nace cerca del centro de lo que se mira
+  (`reach`): del cuadrado alrededor de la cámara solo sale en pantalla la parte del medio y, de las
+  primeras pruebas, casi todo nacía fuera.
+
 ## Cielo y fondo
 
 Decidido con el usuario (16-11-2026): el tablero es **una isla de juguete en un mar que llega al

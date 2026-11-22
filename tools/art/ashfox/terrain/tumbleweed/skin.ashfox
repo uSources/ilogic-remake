@@ -1,0 +1,19 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 32px; }
+    chart core box { width = 20px; height = 10px; coverage = opaque; }
+    chart across box { width = 20px; height = 6px; coverage = opaque; }
+    chart up box { width = 12px; height = 10px; coverage = opaque; }
+    chart along box { width = 20px; height = 10px; coverage = opaque; }
+    chart twig_a box { width = 4px; height = 2px; coverage = opaque; }
+    chart twig_b box { width = 4px; height = 2px; coverage = opaque; }
+    chart twig_c box { width = 4px; height = 2px; coverage = opaque; }
+    chart twig_d box { width = 4px; height = 2px; coverage = opaque; }
+    chart twig_e box { width = 4px; height = 2px; coverage = opaque; }
+    chart twig_f box { width = 4px; height = 2px; coverage = opaque; }
+    chart twig_g box { width = 4px; height = 2px; coverage = opaque; }
+    chart twig_h box { width = 4px; height = 2px; coverage = opaque; }
+    material = opaque;
+  }
+}

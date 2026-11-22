@@ -1,0 +1,29 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = tumbleweed; background-alpha = 255;
+      palette {
+        tumbleweed = (#8c6c3e, #a6824c, #bc985e);
+        tumbleweed_spots = (#5a4226, #6a5030, #7a5e3a);
+      }
+
+      chart core box { origin = (0px, 0px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart across box { origin = (0px, 11px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart up box { origin = (21px, 0px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart along box { origin = (34px, 0px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart twig_a box { origin = (21px, 11px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart twig_b box { origin = (26px, 11px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart twig_c box { origin = (31px, 11px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart twig_d box { origin = (36px, 11px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart twig_e box { origin = (41px, 11px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart twig_f box { origin = (46px, 11px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart twig_g box { origin = (51px, 11px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      chart twig_h box { origin = (56px, 11px); fill = tumbleweed; pattern blotch { paint = tumbleweed_spots; scale = (1px, 1px, 1px); density = 0.45ratio; phase = 7; } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

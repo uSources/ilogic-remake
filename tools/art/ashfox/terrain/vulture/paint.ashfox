@@ -1,0 +1,33 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = vulture; background-alpha = 255;
+      palette {
+        vulture = (#2a2420, #38302a, #463c34);
+        vulture_ruff = (#a89a84, #bcae96, #d0c2aa);
+        vulture_head = (#94584e, #a86a5e, #bc7e70);
+        side_eye_k = #141824;
+        vulture_wing = (#221e1a, #2e2824, #3c342e);
+      }
+      stamp side_eye { pixels = "k"; k = side_eye_k; }
+      chart body box { origin = (0px, 0px); fill = vulture; }
+      chart ruff box { origin = (49px, 9px); fill = vulture_ruff; }
+      chart head box { origin = (25px, 9px); fill = vulture_head; face east { stamp side_eye { at = (0px, 0px); } } face west { stamp side_eye { at = (1px, 0px); } } }
+      chart beak box { origin = (58px, 9px); fill = vulture_ruff; }
+      chart wing_left box { origin = (19px, 0px); fill = vulture_wing; }
+      chart wing_right box { origin = (0px, 9px); fill = vulture_wing; }
+      chart wing_left_finger0 box { origin = (0px, 16px); fill = vulture_wing; }
+      chart wing_left_finger1 box { origin = (7px, 16px); fill = vulture_wing; }
+      chart wing_left_finger2 box { origin = (14px, 16px); fill = vulture_wing; }
+      chart wing_right_finger0 box { origin = (21px, 16px); fill = vulture_wing; }
+      chart wing_right_finger1 box { origin = (28px, 16px); fill = vulture_wing; }
+      chart wing_right_finger2 box { origin = (35px, 16px); fill = vulture_wing; }
+      chart tail box { origin = (34px, 9px); fill = vulture_wing; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

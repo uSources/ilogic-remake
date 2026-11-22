@@ -1,0 +1,23 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 8px); background = sandstone; background-alpha = 255;
+      palette {
+        sandstone = (#a8683a, #bc7c48, #cc8e58);
+        sandstone_spots = (#985c32, #a8683c, #b87646);
+        sandstone_top = (#c8945e, #d6a46c, #e2b47c);
+        sandstone_top_spots = (#b88454, #c69460, #d4a26c);
+      }
+
+      chart base box { origin = (0px, 0px); fill = sandstone; pattern blotch { paint = sandstone_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 7; } }
+      chart top box { origin = (23px, 0px); fill = sandstone_top; pattern blotch { paint = sandstone_top_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 7; } }
+      chart stone box { origin = (38px, 0px); fill = sandstone; pattern blotch { paint = sandstone_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 7; } }
+      chart pebble box { origin = (47px, 0px); fill = sandstone_top; pattern blotch { paint = sandstone_top_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 7; } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

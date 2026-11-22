@@ -85,6 +85,25 @@ export const PAINTS = {
   bird: { ramp: ['#3a3430', '#4c4640', '#605850'] },
   bird_wing: { ramp: ['#2e2a26', '#403a34', '#544c44'] },
   beak: { ramp: ['#6e5430', '#86663a', '#9c7846'] },
+  // Lo del desierto: piedra arenisca como las mesetas, la lagartija parda con manchas, la bola de ramas
+  // secas y el buitre casi negro con su golilla clara y la cabeza pelada (apagados, nunca de un equipo).
+  sandstone: {
+    ramp: ['#a8683a', '#bc7c48', '#cc8e58'],
+    blotch: { ramp: ['#985c32', '#a8683c', '#b87646'], scale: [2, 1, 2], density: 0.2 },
+  },
+  sandstone_top: {
+    ramp: ['#c8945e', '#d6a46c', '#e2b47c'],
+    blotch: { ramp: ['#b88454', '#c69460', '#d4a26c'], scale: [2, 1, 2], density: 0.2 },
+  },
+  lizard: { ramp: ['#6a5c32', '#7e7040', '#94854e'], blotch: { ramp: ['#4e4426', '#5c5030', '#6a5e38'], scale: [1, 1, 1], density: 0.3 } },
+  tumbleweed: {
+    ramp: ['#8c6c3e', '#a6824c', '#bc985e'],
+    blotch: { ramp: ['#5a4226', '#6a5030', '#7a5e3a'], scale: [1, 1, 1], density: 0.45 },
+  },
+  vulture: { ramp: ['#2a2420', '#38302a', '#463c34'] },
+  vulture_wing: { ramp: ['#221e1a', '#2e2824', '#3c342e'] },
+  vulture_ruff: { ramp: ['#a89a84', '#bcae96', '#d0c2aa'] },
+  vulture_head: { ramp: ['#94584e', '#a86a5e', '#bc7e70'] },
 };
 
 /**
@@ -447,6 +466,77 @@ const bird = {
   ],
 };
 
+/**
+ * Los animales del desierto, a 32 por casilla como los del bosque: la lagartija plana de cola larga, la
+ * bola rodadora (centrada en su origen, no apoyada: el juego la hace rodar sobre su centro) y el buitre
+ * con las alas abiertas y sus plumas de la punta separadas, como dedos.
+ */
+const SIDE_EYE = { name: 'side_eye', face: 'east', pixels: 'k', colors: { k: '#141824' }, at: [[0, 0]] };
+const SIDE_EYE_LEFT = { ...SIDE_EYE, face: 'west', at: [[1, 0]] };
+
+/** Una pata de la lagartija, abierta hacia su lado (`side`: -1 a la izquierda, 1 a la derecha). */
+const lizardLeg = (id, side, z) => ({ name: `leg_${id}`, origin: [side < 0 ? -2 : 1, 0, z], size: [1, 1, 1], paint: 'lizard' });
+
+const lizard = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'body', origin: [-1, 0, -3], size: [2, 1, 5], paint: 'lizard' },
+    { name: 'head', origin: [-1, 0, -5], size: [2, 1, 2], paint: 'lizard', stamps: [SIDE_EYE, SIDE_EYE_LEFT] },
+    { name: 'snout', origin: [-0.5, 0, -6], size: [1, 1, 1], paint: 'lizard' },
+    { name: 'tail', origin: [-0.5, 0, 2], size: [1, 1, 4], paint: 'lizard' },
+    { name: 'tail_tip', origin: [0.5, 0, 5], size: [1, 1, 3], paint: 'lizard' },
+    lizardLeg('front_left', -1, -3),
+    lizardLeg('front_right', 1, -3),
+    lizardLeg('back_left', -1, 1),
+    lizardLeg('back_right', 1, 1),
+  ],
+};
+
+/** Una ramita que asoma de la bola, en una esquina entre sus tres brazos. */
+const twig = (id, [x, y, z]) => ({ name: `twig_${id}`, origin: [x, y, z], size: [1, 1, 1], paint: 'tumbleweed' });
+
+const tumbleweed = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'core', origin: [-2.5, -2.5, -2.5], size: [5, 5, 5], paint: 'tumbleweed' },
+    { name: 'across', origin: [-3.5, -1.5, -1.5], size: [7, 3, 3], paint: 'tumbleweed' },
+    { name: 'up', origin: [-1.5, -3.5, -1.5], size: [3, 7, 3], paint: 'tumbleweed' },
+    { name: 'along', origin: [-1.5, -1.5, -3.5], size: [3, 3, 7], paint: 'tumbleweed' },
+    twig('a', [2.5, 2.5, 1.5]),
+    twig('b', [-3.5, 1.5, -3.5]),
+    twig('c', [1.5, -3.5, -3.5]),
+    twig('d', [-3.5, -3.5, 1.5]),
+    twig('e', [-0.5, 3.5, 2.5]),
+    twig('f', [3.5, -0.5, -3.5]),
+    twig('g', [-4.5, 0.5, 0.5]),
+    twig('h', [0.5, -4.5, -0.5]),
+  ],
+};
+
+/** Las plumas de la punta de un ala, separadas (`side`: -1 a la izquierda, 1 a la derecha). */
+const wingFingers = (id, side) =>
+  [-2, 0, 2].map((z, index) => ({
+    name: `${id}_finger${index}`,
+    origin: [side < 0 ? -10.5 : 8.5, 1, z - 0.5],
+    size: [2, 1, 1],
+    paint: 'vulture_wing',
+  }));
+
+const vulture = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'body', origin: [-1.5, 0, -3], size: [3, 2, 6], paint: 'vulture' },
+    { name: 'ruff', origin: [-1.5, 0.5, -4], size: [3, 2, 1], paint: 'vulture_ruff' },
+    { name: 'head', origin: [-1, 1, -6], size: [2, 2, 2], paint: 'vulture_head', stamps: [SIDE_EYE, SIDE_EYE_LEFT] },
+    { name: 'beak', origin: [-0.5, 1, -7], size: [1, 1, 1], paint: 'vulture_ruff' },
+    { name: 'wing_left', origin: [-8.5, 1, -2.5], size: [7, 1, 5], paint: 'vulture_wing' },
+    { name: 'wing_right', origin: [1.5, 1, -2.5], size: [7, 1, 5], paint: 'vulture_wing' },
+    ...wingFingers('wing_left', -1),
+    ...wingFingers('wing_right', 1),
+    { name: 'tail', origin: [-2, 1, 3], size: [4, 1, 3], paint: 'vulture_wing' },
+  ],
+};
+
 export const MODELS = {
   ...groundVariants('grass', 'grass', 'earth', 4),
   ...groundVariants('forest', 'forest_floor', 'earth', 3),
@@ -523,6 +613,16 @@ export const MODELS = {
       { name: 'arm_right_up', origin: [-1, 7, -2], size: [2, 2, 2], paint: 'cactus' },
       { name: 'round', origin: [2, 0, 1], size: [4, 3, 4], paint: 'cactus' },
       { name: 'bloom', origin: [3, 3, 2], size: [2, 1, 2], paint: 'petal_red' },
+    ],
+  },
+  // Una losa de arenisca con dos piedras sueltas, en una esquina (en el centro se pone la unidad): ahi
+  // toma el sol la lagartija, encima de la losa. Medio enterrada, asi no flota en la ladera de una duna.
+  desert_rocks: {
+    cubes: [
+      { name: 'base', origin: [1, -2, 0], size: [6, 3, 5], paint: 'sandstone' },
+      { name: 'top', origin: [2, 1, 1], size: [4, 1, 3], paint: 'sandstone_top' },
+      { name: 'stone', origin: [3, -1, -3], size: [2, 2, 2], paint: 'sandstone' },
+      { name: 'pebble', origin: [-1, -1, 6], size: [1, 2, 1], paint: 'sandstone_top' },
     ],
   },
   flowers_red: flowerPatch(['petal_red', 'petal_red', 'petal_white'], 11),
@@ -702,6 +802,9 @@ export const MODELS = {
   squirrel,
   deer,
   bird,
+  lizard,
+  tumbleweed,
+  vulture,
   snowman: {
     cubes: [
       { name: 'body', origin: [-3, 0, -3], size: [6, 5, 6], paint: 'snowcap' },

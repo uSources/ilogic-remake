@@ -4,9 +4,21 @@ import { mapGrid } from '@core/mapGrid';
 import type { Pos } from '@core/model';
 import { seededRng } from '@core/util/random';
 import { spotsByCritter, tilesByMote, tilesByTraveller } from '../src/view3d/engine/life/biomeLife';
-import { Births, type Flier } from '../src/view3d/engine/life/births';
+import { Births, type BirthPlan, type Flier } from '../src/view3d/engine/life/births';
 import { forwardAt, liftAt } from '../src/view3d/engine/life/critters';
-import { DEER, FALLING_LEAVES, FIREFLIES, FOREST_BIRDS, FROG, SAND_DUST, SQUIRREL } from '../src/view3d/engine/life/kinds';
+import {
+  DEER,
+  DUST_DEVILS,
+  FALLING_LEAVES,
+  FIREFLIES,
+  FOREST_BIRDS,
+  FROG,
+  LIZARD,
+  SAND_DUST,
+  SQUIRREL,
+  TUMBLEWEEDS,
+  VULTURES,
+} from '../src/view3d/engine/life/kinds';
 import type { MoteKind } from '../src/view3d/engine/life/motes';
 import { WIND_DIRECTION } from '../src/view3d/engine/core/space';
 import { tileNoise } from '../src/view3d/engine/terrain/placed';
@@ -14,7 +26,7 @@ import { blankState } from './helpers';
 
 /** Lo que vive en los biomas (engine/life/kinds.ts): que las motas se vean bien, sean de la clase que sean. */
 
-const KINDS: Record<string, MoteKind> = { SAND_DUST, FIREFLIES, FALLING_LEAVES };
+const KINDS: Record<string, MoteKind> = { SAND_DUST, FIREFLIES, FALLING_LEAVES, DUST_DEVILS };
 const SEEDS = [0.1, 1.7, 250, 999];
 
 const moteAt = (seed: number, age: number, life: number): Flier => ({ home: new THREE.Vector3(3, 0.4, 5), age, life, seed });
@@ -79,6 +91,7 @@ function swampOfWater() {
   const ground = {
     positions,
     groundOf: (pos: Pos) => new THREE.Vector3(pos.x, 0, pos.y),
+    heightAt: () => 0,
     decorPlaceOf: (pos: Pos) => (hasDecor(pos) ? new THREE.Matrix4().makeTranslation(pos.x, 0.1, pos.y) : null),
   };
   return { s, positions, ground, hasDecor };
@@ -90,7 +103,12 @@ describe('donde vive cada cosa en el tablero', () => {
     expect(tilesByMote(s, positions)).toEqual(new Map([[FIREFLIES, positions]]));
     s.theme = 'Desert';
     for (const pos of positions) s.map[pos.x]![pos.y] = 'Sand';
-    expect(tilesByMote(s, positions)).toEqual(new Map([[SAND_DUST, positions]]));
+    expect(tilesByMote(s, positions)).toEqual(
+      new Map([
+        [SAND_DUST, positions],
+        [DUST_DEVILS, positions],
+      ]),
+    );
   });
 
   it('las ranas se sientan en el nenufar de las casillas con decorado que les tocan, siempre en el mismo sitio', () => {
@@ -132,7 +150,7 @@ describe('los pajaros del bosque', () => {
 
   it('cada uno acaba en otra casilla de bosque a la distancia de su clase, a la altura a la que salio', () => {
     const woods = Array.from({ length: 6 }, (_, x) => ({ x, y: 0 }));
-    const [nearest, farthest] = FOREST_BIRDS.landing!;
+    const [nearest, farthest] = FOREST_BIRDS.landing!.distance;
     const birds = bornFrom(woods);
     expect(birds.length).toBeGreaterThan(0);
     for (const bird of birds) {
@@ -191,6 +209,7 @@ function forestWithMeadow(meadowFrom: number) {
   const ground = {
     positions,
     groundOf: (pos: Pos) => new THREE.Vector3(pos.x, 0, pos.y),
+    heightAt: () => 0,
     decorPlaceOf: (pos: Pos) => (pos.x < meadowFrom ? new THREE.Matrix4().makeTranslation(pos.x, 0, pos.y) : null),
   };
   return { s, positions, ground };
@@ -225,5 +244,127 @@ describe('lo que vive en el bosque', () => {
     expect(squirrels.length).toBeLessThan(positions.filter((pos) => pos.x < 8).length / 2);
     expect(squirrels.every((spot) => spot.at.y > 0.3)).toBe(true);
     expect(new Set(squirrels.map((spot) => spot.heading)).size).toBeGreaterThan(1);
+  });
+});
+
+/** Lo que nace de unas casillas cerca de la primera (a menos de `radius`) con un plan, hasta que no nace nada mas. */
+function bornWith(plan: BirthPlan, tiles: readonly Pos[], radius: number): Flier[] {
+  const births = new Births({ ...plan, birthRate: () => 1000 }, tiles, (pos) => new THREE.Vector3(pos.x, 0, pos.y), seededRng(2013));
+  births.tick(1, new THREE.Vector3(tiles[0]!.x, 0, tiles[0]!.y), radius);
+  return Array.from({ length: plan.count }, () => births.next()).filter((flier): flier is Flier => flier !== null);
+}
+const tileUnder = (point: THREE.Vector3): Pos => ({ x: Math.round(point.x), y: Math.round(point.z) });
+
+describe('lo que vive en el desierto', () => {
+  it('los granos de un remolino nacen juntos: en el mismo sitio y con la misma vida, cada uno con su semilla', () => {
+    const grains = bornWith(
+      { ...DUST_DEVILS, count: 20, together: 10 },
+      [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+      ],
+      3,
+    );
+    expect(grains).toHaveLength(20);
+    for (const devil of [grains.slice(0, 10), grains.slice(10)]) {
+      expect(devil.every((grain) => grain.home.equals(devil[0]!.home) && grain.life === devil[0]!.life)).toBe(true);
+      expect(new Set(devil.map((grain) => grain.seed)).size).toBe(10);
+    }
+  });
+
+  it.each(SEEDS)('el remolino sube girando en embudo, sin irse lejos de su eje (semilla %s)', (seed) => {
+    const lifetime = Array.from({ length: 50 }, (_, step) => moteAt(seed, step / 10, 5));
+    for (const grain of lifetime) {
+      const at = DUST_DEVILS.flight(grain, new THREE.Vector3());
+      const axis = grain.home.clone().addScaledVector(WIND_DIRECTION, grain.age * 0.12);
+      expect(Math.hypot(at.x - axis.x, at.z - axis.z)).toBeLessThan(0.35);
+      expect(at.y - grain.home.y).toBeGreaterThanOrEqual(0);
+      expect(at.y - grain.home.y).toBeLessThan(1);
+    }
+  });
+
+  it.each(SEEDS)('la bola rueda de donde nace a donde va, por encima del suelo y a botes (semilla %s)', (seed) => {
+    const life = TUMBLEWEEDS.life[0];
+    const ballAt = (age: number) =>
+      TUMBLEWEEDS.flight({ ...moteAt(seed, age, life), goal: new THREE.Vector3(6, 0.4, 4.5) }, new THREE.Vector3());
+    expect(ballAt(0).x).toBeCloseTo(3);
+    expect(ballAt(life).x).toBeCloseTo(6);
+    expect(ballAt(life).z).toBeCloseTo(4.5);
+    // Va por el suelo: su altura es sobre el, desde su radio (no lo atraviesa) y dando botes.
+    const heights = Array.from({ length: 41 }, (_, step) => ballAt((life * step) / 40).y);
+    expect(Math.min(...heights)).toBeGreaterThan(0.05);
+    expect(Math.max(...heights) - Math.min(...heights)).toBeGreaterThan(0.02);
+  });
+
+  it('las bolas van con el viento y no cruzan lo que no es arena (una meseta)', () => {
+    const mesa = 5;
+    const sand = Array.from({ length: 13 * 3 }, (_, index) => ({ x: index % 13, y: Math.floor(index / 13) })).filter(
+      (pos) => pos.x !== mesa,
+    );
+    const balls = bornWith({ ...TUMBLEWEEDS, count: 200 }, sand, 20);
+    expect(balls.length).toBeGreaterThan(0);
+    const [nearest, farthest] = TUMBLEWEEDS.landing!.distance;
+    for (const ball of balls) {
+      const from = tileUnder(ball.home);
+      const to = tileUnder(ball.goal!);
+      const distance = Math.hypot(to.x - from.x, to.y - from.y);
+      expect(distance).toBeGreaterThanOrEqual(nearest);
+      expect(distance).toBeLessThanOrEqual(farthest);
+      expect(((to.x - from.x) * WIND_DIRECTION.x + (to.y - from.y) * WIND_DIRECTION.z) / distance).toBeGreaterThan(Math.cos(0.35) - 1e-9);
+      expect(from.x < mesa).toBe(to.x < mesa);
+    }
+  });
+
+  it.each(SEEDS)('el buitre llega de lejos, da vueltas en lo alto sobre donde nacio y se va (semilla %s)', (seed) => {
+    const life = 20;
+    const vultureAt = (age: number) => VULTURES.flight(moteAt(seed, age, life), new THREE.Vector3());
+    const home = moteAt(seed, 0, life).home;
+    const awayFromHome = (age: number) => Math.hypot(vultureAt(age).x - home.x, vultureAt(age).z - home.z);
+    expect(awayFromHome(0)).toBeGreaterThan(5);
+    expect(awayFromHome(life)).toBeGreaterThan(5);
+    for (const age of [6, 8, 10, 12, 14]) {
+      expect(awayFromHome(age)).toBeGreaterThanOrEqual(0.9);
+      expect(awayFromHome(age)).toBeLessThanOrEqual(1.4);
+      expect(Math.abs(vultureAt(age).y - home.y)).toBeLessThan(0.1);
+    }
+  });
+});
+
+/** Un desierto: arena con algunas losas (las casillas pares en y), una columna de meseta y otra de cactus. */
+function desertWithMesa() {
+  const s = blankState();
+  s.theme = 'Desert';
+  const positions = [...mapGrid(s).cells()].map((cell) => cell.pos);
+  const terrainOf = (pos: Pos) => (pos.x === 3 ? 'SandMountain' : pos.x === 6 ? 'Cactus' : 'Sand');
+  for (const pos of positions) s.map[pos.x]![pos.y] = terrainOf(pos);
+  const hasDecor = (pos: Pos) => terrainOf(pos) === 'Cactus' || (terrainOf(pos) === 'Sand' && pos.y % 2 === 0);
+  const ground = {
+    positions,
+    groundOf: (pos: Pos) => new THREE.Vector3(pos.x, 0, pos.y),
+    heightAt: () => 0,
+    decorPlaceOf: (pos: Pos) => (hasDecor(pos) ? new THREE.Matrix4().makeTranslation(pos.x, 0, pos.y) : null),
+  };
+  return { s, positions, ground, terrainOf, hasDecor };
+}
+
+describe('donde vive cada cosa en el desierto', () => {
+  it('las bolas ruedan solo por la arena; los buitres vuelan sobre todo el desierto', () => {
+    const { s, positions, terrainOf } = desertWithMesa();
+    expect(tilesByTraveller(s, positions)).toEqual(
+      new Map([
+        [TUMBLEWEEDS, positions.filter((pos) => terrainOf(pos) === 'Sand')],
+        [VULTURES, positions],
+      ]),
+    );
+  });
+
+  it('las lagartijas toman el sol en las losas de la arena y al pie de los cactus, y no en la meseta', () => {
+    const { s, ground, terrainOf, hasDecor } = desertWithMesa();
+    const lizards = spotsByCritter(s, ground).get(LIZARD) ?? [];
+    expect(lizards.every((spot) => hasDecor(spot.pos))).toBe(true);
+    expect(lizards.some((spot) => terrainOf(spot.pos) === 'Sand')).toBe(true);
+    expect(lizards.some((spot) => terrainOf(spot.pos) === 'Cactus')).toBe(true);
+    // En la losa, encima; junto al cactus, en la arena.
+    expect(lizards.every((spot) => spot.at.y === (terrainOf(spot.pos) === 'Sand' ? 2 / 16 : 0))).toBe(true);
   });
 });

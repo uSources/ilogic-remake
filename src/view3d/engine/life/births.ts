@@ -1,10 +1,11 @@
 /**
  * Donde y cuando nace lo que vuela cerca de lo que se mira (las motas y los viajeros): cada clase dice
- * cuantas puede haber, lo que viven, a que altura nacen, cuantas nacen por segundo y, si van a otra de
- * sus casillas, a que distancia; aqui se lleva la cuenta y se eligen las casillas, de las suyas cerca de
- * la camara.
+ * cuantas puede haber, lo que viven, a que altura nacen, cuantas nacen por segundo (y si juntas) y, si
+ * van a otra de sus casillas, cual; aqui se lleva la cuenta y se eligen las casillas, de las suyas cerca
+ * de la camara.
  */
 import type * as THREE from 'three';
+import { posKey } from '../../../core/geom';
 import type { Pos } from '../../../core/model';
 import { pointIn, type Range } from '../core/random';
 
@@ -17,6 +18,16 @@ export interface Flier {
   age: number;
   life: number;
   seed: number;
+}
+
+/** A que otra de sus casillas va el que nace (el pajaro que cambia de copa, la bola que rueda con el viento). */
+export interface Landing {
+  /** A que distancia de la suya (casillas, entre las dos). */
+  distance: Range;
+  /** Hacia donde (en el suelo), y lo que se puede apartar de ahi (radianes); sin decir, a cualquier lado. */
+  toward?: { direction: Readonly<THREE.Vector3>; spread: number };
+  /** Si va por el suelo: el camino recto hasta alli pasa solo por sus casillas (la bola no cruza una meseta). */
+  overland?: boolean;
 }
 
 /** Lo que una clase dice de sus nacimientos. */
@@ -32,15 +43,26 @@ export interface BirthPlan {
    * sumando para despues, pero si deja de nacer (0) se pierden: asi el polvo sale solo en las rafagas.
    */
   birthRate(time: number): number;
+  /** Si acaba en otra de sus casillas: cual puede ser. De una casilla sin ninguna asi no sale. */
+  landing?: Landing;
+  /** Cuantas nacen juntas, en el mismo sitio y con la misma vida (los granos de un remolino); sin decir, una. */
+  together?: number;
   /**
-   * Si acaba en otra de sus casillas (el pajaro que va de una copa a otra): a que distancia de la suya
-   * (casillas, entre las dos). De una casilla sin ninguna a esa distancia no sale.
+   * Que parte del radio alrededor de lo que se mira usa para nacer (sin decir, todo). Del cuadrado de ese
+   * radio solo sale en pantalla la parte del medio: lo que es raro y se tiene que ver (el buitre, el
+   * remolino) nace mas cerca.
    */
-  landing?: Range;
+  reach?: number;
 }
 
 /** Hasta donde llegan las semillas: lo bastante para que dos no salgan parecidas. */
 const SEED_SPREAD = 1000;
+/**
+ * Por el camino de lo que va por el suelo: cada cuanto se mira que casilla pisa (casillas) y a cuanto
+ * de la linea recta a cada lado (lo que se mueven al azar donde nace y donde acaba, `pointOver`).
+ */
+const PATH_STEP = 0.25;
+const PATH_WIDTH = [-0.5, 0, 0.5];
 
 /** Un numero de `range` propio de cada uno: con la misma `salt`, siempre el mismo para el. */
 export function vary(flier: Flier, salt: number, range: Range): number {
@@ -66,27 +88,44 @@ export class Births {
    * claves son los mismos objetos de `tiles` (de ahi salen las de `nearby`), que no cambian en la partida.
    */
   private readonly landings = new Map<Pos, readonly Pos[]>();
+  /** Las suyas, para saber pronto si una casilla lo es (`Landing.overland`). */
+  private readonly own: ReadonlySet<string>;
+  /** La tanda que esta naciendo (`together`): la primera, de la que copian sitio y vida, y las que faltan. */
+  private batch: { first: Flier; left: number } | null = null;
 
   constructor(
     private readonly plan: BirthPlan,
     readonly tiles: readonly Pos[],
     private readonly groundOf: (pos: Pos) => THREE.Vector3,
     private readonly random: Random = Math.random,
-  ) {}
+  ) {
+    this.own = new Set(tiles.map(posKey));
+  }
 
   /** Pasa el tiempo y mira que casillas quedan cerca de `center` (lo que mira la camara), en un radio `radius`. */
   tick(seconds: number, center: THREE.Vector3, radius: number): void {
     this.time += seconds;
     const rate = this.plan.birthRate(this.time);
     this.ready = rate > 0 ? Math.min(this.ready + rate * seconds, this.plan.count) : 0;
-    this.lookAround(center, radius);
+    this.lookAround(center, radius * (this.plan.reach ?? 1));
   }
 
-  /** Una nueva sobre una casilla al azar de las de cerca, si le toca nacer y hay alguna; si no, null. */
+  /**
+   * Una nueva sobre una casilla al azar de las de cerca, si le toca nacer y hay alguna (o la siguiente de
+   * su tanda); si no, null.
+   */
   next(): Flier | null {
+    if (this.batch) return this.nextOfBatch(this.batch);
     const tile = this.anyOf(this.nearby);
     if (this.ready < 1 || !tile) return null;
     this.ready -= 1;
+    const flier = this.bornOn(tile);
+    const together = this.plan.together ?? 1;
+    if (together > 1) this.batch = { first: flier, left: together - 1 };
+    return flier;
+  }
+
+  private bornOn(tile: Pos): Flier {
     // Los puntos del suelo son vectores nuevos: se mueven ahi mismo y se los queda.
     const lift = pointIn(this.plan.height, this.random());
     const flier: Flier = {
@@ -97,6 +136,16 @@ export class Births {
     };
     const landing = this.anyOf(this.landingsFrom(tile));
     if (landing) flier.goal = this.pointOver(this.groundOf(landing), lift);
+    return flier;
+  }
+
+  /** Otra de la tanda: en el mismo sitio y con la misma vida que la primera, pero con su semilla. */
+  private nextOfBatch(batch: { first: Flier; left: number }): Flier {
+    batch.left -= 1;
+    if (batch.left <= 0) this.batch = null;
+    const { first } = batch;
+    const flier: Flier = { home: first.home.clone(), age: 0, life: first.life, seed: this.random() * SEED_SPREAD };
+    if (first.goal) flier.goal = first.goal.clone();
     return flier;
   }
 
@@ -119,13 +168,32 @@ export class Births {
     if (!landing) return [];
     const known = this.landings.get(from);
     if (known) return known;
-    const [nearest, farthest] = landing;
-    const found = this.tiles.filter((pos) => {
-      const distance = Math.hypot(pos.x - from.x, pos.y - from.y);
-      return distance >= nearest && distance <= farthest;
-    });
+    const found = this.tiles.filter((to) => this.canLand(landing, from, to));
     this.landings.set(from, found);
     return found;
+  }
+
+  /** Si el que nace en `from` puede ir a `to`: a su distancia y, si lo pide, hacia su lado y por sus casillas. */
+  private canLand(landing: Landing, from: Pos, to: Pos): boolean {
+    const [nearest, farthest] = landing.distance;
+    const distance = Math.hypot(to.x - from.x, to.y - from.y);
+    if (distance < nearest || distance > farthest) return false;
+    if (landing.toward && !isToward(landing.toward, from, to, distance)) return false;
+    return !landing.overland || this.isOverOwnTiles(from, to, distance);
+  }
+
+  /** Si todo el camino recto de `from` a `to` (con lo que se aparta a los lados) va por sus casillas. */
+  private isOverOwnTiles(from: Pos, to: Pos, distance: number): boolean {
+    const steps = Math.ceil(distance / PATH_STEP);
+    const sideX = -(to.y - from.y) / distance;
+    const sideY = (to.x - from.x) / distance;
+    return Array.from({ length: steps + 1 }, (_, step) => step / steps).every((share) =>
+      PATH_WIDTH.every((aside) => {
+        const x = Math.round(from.x + (to.x - from.x) * share + sideX * aside);
+        const y = Math.round(from.y + (to.y - from.y) * share + sideY * aside);
+        return this.own.has(posKey({ x, y }));
+      }),
+    );
   }
 
   /** Si de esa casilla puede salir algo: siempre, salvo si tiene que ir a otra y no hay ninguna a su distancia. */
@@ -147,6 +215,12 @@ export class Births {
     const isNear = (pos: Pos) => Math.abs(pos.x - x) < reach && Math.abs(pos.y - z) < reach;
     this.nearby = this.tiles.filter((pos) => isNear(pos) && this.canTakeOff(pos));
   }
+}
+
+/** Si `to` queda hacia `toward.direction` desde `from` (apartandose como mucho `spread` radianes). */
+function isToward(toward: NonNullable<Landing['toward']>, from: Pos, to: Pos, distance: number): boolean {
+  const along = ((to.x - from.x) * toward.direction.x + (to.y - from.y) * toward.direction.z) / distance;
+  return along >= Math.cos(toward.spread);
 }
 
 /** Avanza uno que vive (null si se le acaba la vida) o, en un hueco, hace nacer otro si toca. */
