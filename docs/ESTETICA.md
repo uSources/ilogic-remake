@@ -339,11 +339,24 @@ modelos que el bosque y el agua azul, y «parecía un tipo de bosque». Ahora to
   flores blancas o rosas, o capullos. Juncos con espadañas y lirios morados en las flores del tema y,
   sueltos, en algo de la hierba y del agua poco honda.
 - **Ranitas** verde lima con manchas, sentadas en el nenúfar del centro o entre los juncos; de vez en
-  cuando una da un saltito y se gira (`frogs.ts`).
+  cuando una da un saltito y se gira (`FROG` en `src/view3d/engine/ambience/life.ts`).
 - **Luciérnagas** sobre los árboles, los juncos y el agua cerca de la cámara: un punto amarillo
   verdoso con un halo redondo en anillos (no un cuadrado: se probó y parecía un bloque) que se
-  enciende y se apaga a su ritmo y suma su luz, así brillan también de día (`fireflies.ts`).
+  enciende y se apaga a su ritmo y suma su luz, así brillan también de día (`FIREFLIES`, mismo fichero).
 - Con «reducir el movimiento», ni luciérnagas ni saltos.
+
+## Lo que vive en cada bioma
+
+Decidido con el usuario (22-11-2026), tras el pantano: cada bioma tiene su vida, que no es de la
+partida (`src/view3d/engine/ambience/`: motas que vuelan y animalitos sentados en el decorado, todos
+como datos en `life.ts`).
+
+- **Pequeños**: un animal es más pequeño que un soldado, y una mota, un punto.
+- **Del bioma, no de un equipo**: colores apagados del terreno donde viven; nunca los de un lado, que
+  nadie los confunda con una unidad.
+- **No estorban**: no tapan unidades ni casillas, y no se tocan (el clic va a lo que hay debajo).
+- **Poco y cerca**: solo alrededor de lo que se mira, unos cuantos.
+- Con «reducir el movimiento», las motas no salen y los animales se quedan quietos.
 
 ## Cielo y fondo
 

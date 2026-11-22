@@ -37,6 +37,27 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
     encogerlos ni moverlos a una esquina (ahora lo hace `sharedTile.ts`). Para cuando se retoquen los
     modelos; no corre prisa (`docs/ESTETICA.md`, «Tamaños en el tablero»).
 
+## Vida en los biomas
+
+El pantano ya tiene la suya (luciérnagas, ranas) y el sistema común está hecho
+(`src/view3d/engine/ambience/`; cómo se ve, `docs/ESTETICA.md`, «Lo que vive en cada bioma»).
+Falta, cada bioma en su PR:
+
+25. **Bosque:** hojas que caen girando (verdes y ocres), ardillas en los troncos, algún ciervo que
+    asoma en el borde del bosque y pájaros que salen de las copas.
+26. **Desierto:** bolas rodadoras que cruzan con el viento, remolinos de polvo pequeños, lagartijas
+    en las rocas y los cactus, y buitres en círculo con su sombra en el suelo. Las bolas y los
+    pájaros son una clase nueva: lo que cruza el mapa.
+27. **Nieve:** pingüinos que andan como patos y se tiran de barriga al agua, alguna foca junto al
+    hielo y copos que brillan al sol.
+28. **Llanura:** mariposas sobre las flores, conejos que asoman en la hierba, peces que saltan y
+    bandadas de pájaros en V.
+29. **Pantano:** libélulas y burbujas en el agua turbia.
+30. **Que reaccionen a la partida:** los pájaros salen volando cuando una unidad entra en el bosque,
+    las ranas se tiran al agua si pasa un tanque y los pingüinos se deslizan al acercarse alguien.
+    Los sucesos (`systems/events/`) avisan al motor por un puerto (algo como
+    `ambience.disturb(casilla)`), sin que el motor sepa de reglas.
+
 ## Jugabilidad
 
 1. **Romper el atasco IA contra IA.** Con la IA en grupo (#51) sigue ~88 % sin ganador al día 60
