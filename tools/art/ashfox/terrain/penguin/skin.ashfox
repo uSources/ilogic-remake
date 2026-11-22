@@ -1,0 +1,15 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 16px; }
+    chart foot_left box { width = 6px; height = 3px; coverage = opaque; }
+    chart foot_right box { width = 6px; height = 3px; coverage = opaque; }
+    chart body box { width = 14px; height = 9px; coverage = opaque; }
+    chart belly box { width = 8px; height = 6px; coverage = opaque; }
+    chart head box { width = 12px; height = 6px; coverage = opaque; }
+    chart beak box { width = 4px; height = 2px; coverage = opaque; }
+    chart flipper_left box { width = 6px; height = 6px; coverage = opaque; }
+    chart flipper_right box { width = 6px; height = 6px; coverage = opaque; }
+    material = opaque;
+  }
+}

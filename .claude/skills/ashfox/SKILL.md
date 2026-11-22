@@ -113,8 +113,9 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
   encima de lo mas alto del modelo.
 - **Terreno**: que casilla y que decorado lleva cada terreno, `TERRAIN_PIECES` en
   `src/view3d/engine/terrain/pieces.ts` (y lo que cambia cada tema, `THEME_PIECES`: el pantano tiene
-  sus propios modelos). Los animalitos que se sientan en el decorado (la rana, la ardilla, el ciervo,
-  la lagartija) y los que se van (el pajaro, el buitre, la bola rodadora) son modelos de Ashfox como el
+  sus propios modelos). Los animalitos que se sientan en el decorado o en el suelo (la rana, la ardilla,
+  el ciervo, la lagartija, el pingüino, la foca) y los que se van (el pajaro, el buitre, la bola
+  rodadora) son modelos de Ashfox como el
   decorado, a `detail: 2`: su clase en `src/view3d/engine/life/kinds.ts` y su sitio en la pieza
   (`critters` o `travellers`). Lo que rueda va centrado en su origen (la bola), no apoyado en y = 0:
   el juego lo gira sobre ese punto. Las

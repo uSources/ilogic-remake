@@ -1,6 +1,6 @@
 /**
  * Lo que vive en cada bioma, como datos: las motas que vuelan (motes.ts), los animalitos que se
- * sientan en el decorado (critters.ts) y los que se van volando (travellers.ts). Que terreno lleva que
+ * sientan en el decorado o en el suelo (critters.ts) y los que se van (travellers.ts). Que terreno lleva que
  * lo dicen sus piezas (`motes`, `critters` y `travellers` en terrain/pieces.ts). Algo nuevo para un
  * bioma es una entrada aqui y su sitio en las piezas; si es un animal, ademas su modelo de Ashfox. Como
  * se ven, docs/ESTETICA.md.
@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import type { Range } from '../core/random';
 import { WIND_DIRECTION } from '../core/space';
-import type { CritterKind } from './critters';
+import { hopping, peeking, type CritterKind, type CritterPose } from './critters';
 import { lifeFade, vary, type Flier } from './births';
 import type { MoteKind } from './motes';
 import type { TravellerKind } from './travellers';
@@ -114,7 +114,7 @@ export const FROG: CritterKind = {
   model: 'frog',
   size: 0.55,
   every: [5, 14],
-  move: { seconds: 0.35, height: 0.08, turn: [0.6, 1.8] },
+  move: { seconds: 0.35, turn: [0.6, 1.8], pose: hopping(0.08) },
 };
 
 // --- Las hojas del bosque: caen de las copas cerca de la camara, verdes y ocres, despacio, meciendose
@@ -165,7 +165,7 @@ export const SQUIRREL: CritterKind = {
   model: 'squirrel',
   size: 0.6,
   every: [3, 9],
-  move: { seconds: 0.6, height: 0.035, turn: [0.8, 2.2], hops: 3 },
+  move: { seconds: 0.6, turn: [0.8, 2.2], pose: hopping(0.035, 3) },
 };
 
 // --- El ciervo del bosque: en el borde, mirando fuera; de vez en cuando asoma un poco y vuelve.
@@ -174,7 +174,7 @@ export const DEER: CritterKind = {
   model: 'deer',
   size: 0.5,
   every: [8, 18],
-  move: { seconds: 4, height: 0, turn: [0, 0], reach: 0.08 },
+  move: { seconds: 4, turn: [0, 0], pose: peeking(0.08) },
 };
 
 // --- Los pajaros del bosque: de vez en cuando uno sale de una copa cerca de la camara, vuela bajo sobre
@@ -224,7 +224,7 @@ export const LIZARD: CritterKind = {
   model: 'lizard',
   size: 0.5,
   every: [2, 7],
-  move: { seconds: 0.5, height: 0.015, turn: [0.6, 2.4], hops: 2 },
+  move: { seconds: 0.5, turn: [0.6, 2.4], pose: hopping(0.015, 2) },
 };
 
 // --- Las bolas rodadoras: de vez en cuando una cruza unas casillas de arena cerca de la camara, rodando
@@ -347,4 +347,179 @@ export const VULTURES: TravellerKind = {
   birthRate: () => 0.06,
   reach: 0.4,
   flight: circleOverhead,
+};
+
+// --- Los copos de la nieve: puntitos blancos que bajan muy despacio sobre la nieve y el hielo,
+// meciendose con el viento, y de vez en cuando brillan al sol (un destello corto). Suman su luz, como
+// las luciernagas: asi destacan sobre la nieve.
+
+/** Lo que bajan (casillas por segundo): en lo que viven no llegan al suelo. */
+const FLAKE_FALL = 0.04;
+const FLAKE_DRIFT = WIND_DIRECTION.clone().multiplyScalar(0.06);
+/** Lo que se mecen a los lados (casillas) y lo deprisa (radianes por segundo). */
+const FLAKE_SWAY = 0.06;
+const FLAKE_SWAY_SPEED: Range = [1, 1.8];
+/** Lo que tarda cada uno en dar la vuelta y volver a brillar (segundos). */
+const SPARKLE_SECONDS: Range = [1.2, 2.4];
+/** Lo corto que es el destello (cuanto mas, mas corto), lo que se ve sin brillar y lo que mide entonces. */
+const SPARKLE_SHARPNESS = 10;
+const FLAKE_DIM = 0.35;
+const FLAKE_SMALL = 0.45;
+
+/** Baja despacio meciendose y con el viento. */
+function floatDown(flake: Flier, out: THREE.Vector3): THREE.Vector3 {
+  const sway = Math.sin(flake.age * vary(flake, PACE, FLAKE_SWAY_SPEED) + vary(flake, PHASE, FULL_TURN)) * FLAKE_SWAY;
+  out.copy(flake.home).addScaledVector(FLAKE_DRIFT, flake.age).addScaledVector(ACROSS_THE_WIND, sway);
+  out.y -= flake.age * FLAKE_FALL;
+  return out;
+}
+
+/** Lo que le da el sol al copo a su edad (0 a 1): casi nunca y, al dar la vuelta, un destello corto. */
+function flashOf(flake: Flier): number {
+  const turn = Math.sin((flake.age / vary(flake, BLINK, SPARKLE_SECONDS)) * Math.PI * 2 + vary(flake, PHASE, FULL_TURN));
+  return Math.max(0, turn) ** SPARKLE_SHARPNESS;
+}
+
+export const SNOW_GLITTER: MoteKind = {
+  count: 90,
+  layers: [{ colors: [0xffffff, 0xeef6ff, 0xfff6dc], opacity: 1, size: [0.045, 0.065], glow: true }],
+  life: [4, 7],
+  height: [0.3, 0.7],
+  birthRate: () => 16,
+  reach: 0.5,
+  flight: floatDown,
+  /** Se ve poco y, cuando le da el sol, brilla un momento y se agranda. */
+  brightness: (flake) => (FLAKE_DIM + (1 - FLAKE_DIM) * flashOf(flake)) * lifeFade(flake),
+  scale: (flake) => FLAKE_SMALL + (1 - FLAKE_SMALL) * flashOf(flake),
+};
+
+// --- El pingüino de la nieve: en el hielo de la orilla, mirando al agua. De vez en cuando da unos
+// pasitos de pato (se balancea de un lado a otro); alguna vez se tumba de barriga, se desliza hasta el
+// agua y se hunde, y al rato salta del agua a su sitio y se da la vuelta para volver a mirarla.
+
+const PENGUIN_SIZE = 0.5;
+/** Los pasitos de pato: cuantos, lo que se ladea y se tuerce en cada uno, lo que sube y lo que avanza y vuelve (casillas). */
+const WADDLE_STEPS = 4;
+const WADDLE_SWAY = 0.3;
+const WADDLE_TWIST = 0.15;
+const WADDLE_STEP_UP = 0.006;
+const WADDLE_REACH = 0.04;
+
+/** Se balancea de un pie al otro, cada paso: se ladea, se tuerce y sube un poco. */
+function stepLikeADuck(progress: number, steps: number, pose: CritterPose): CritterPose {
+  const step = Math.sin(progress * Math.PI * steps);
+  pose.roll = step * WADDLE_SWAY;
+  pose.yaw += step * WADDLE_TWIST;
+  pose.lift = Math.abs(step) * WADDLE_STEP_UP;
+  return pose;
+}
+
+/** Unos pasitos de pato hacia el agua y otros de vuelta. */
+function waddle(progress: number, pose: CritterPose): CritterPose {
+  pose.forward = Math.sin(progress * Math.PI) * WADDLE_REACH;
+  return stepLikeADuck(progress, WADDLE_STEPS, pose);
+}
+
+/** Las partes de la zambullida, en lo que va de ella (de 0 a 1): cuando acaba cada una. */
+const DIVE_FLOPPED = 0.08;
+const DIVE_AT_THE_EDGE = 0.26;
+const DIVE_IN = 0.34;
+const DIVE_SURFACING = 0.72;
+const DIVE_LANDED = 0.86;
+/** Donde se acaba su casilla (casillas por delante de su sitio), hasta donde se desliza y hasta donde cae. */
+const SHORE = 0.2;
+const SLIDE_REACH = SHORE + 0.08;
+const FALL_REACH = 0.45;
+/** Lo que se le va la cabeza hacia abajo al caer (radianes). */
+const FALL_TILT = 0.4;
+/** Lo hondo que nada bajo el agua, de donde salta (por delante y bajo el agua) y lo que sube por encima del hielo al saltar. */
+const SWIM_DEPTH = 0.25;
+const LEAP_FROM = 0.4;
+const LEAP_DEPTH = 0.12;
+const LEAP_ABOVE = 0.08;
+/** Lo que va inclinado hacia delante al salir del agua (de cabeza) y lo que sube tumbado: su tripa (casillas). */
+const LEAP_TILT = 1.1;
+const BELLY = (2 / 32) * PENGUIN_SIZE;
+const TURN_BACK_STEPS = 3;
+
+/** Lo que va de una parte del movimiento (0 antes de empezarla, 1 acabada). */
+const partOf = (progress: number, from: number, to: number): number => THREE.MathUtils.clamp((progress - from) / (to - from), 0, 1);
+
+/** Se tumba de barriga y se desliza, cada vez mas deprisa, hasta el borde del hielo. */
+function slideToTheEdge(progress: number, pose: CritterPose): CritterPose {
+  const flopped = partOf(progress, 0, DIVE_FLOPPED);
+  pose.pitch = (flopped * Math.PI) / 2;
+  pose.forward = partOf(progress, DIVE_FLOPPED, DIVE_AT_THE_EDGE) ** 2 * SLIDE_REACH;
+  pose.lift = flopped * BELLY;
+  return pose;
+}
+
+/** Se cae del borde al agua (lo que baje), de cabeza, cada vez mas deprisa, y se hunde. */
+function fallIn(part: number, pose: CritterPose, drop: number): CritterPose {
+  pose.pitch = Math.PI / 2 + part * FALL_TILT;
+  pose.forward = THREE.MathUtils.lerp(SLIDE_REACH, FALL_REACH, part);
+  pose.lift = BELLY - part ** 2 * (drop + SWIM_DEPTH + BELLY);
+  return pose;
+}
+
+/** Bajo el agua (no se ve): se da la vuelta para salir hacia su sitio. */
+function swim(pose: CritterPose, drop: number): CritterPose {
+  pose.pitch = Math.PI / 2;
+  pose.forward = FALL_REACH;
+  pose.lift = -(drop + SWIM_DEPTH);
+  pose.yaw = Math.PI;
+  return pose;
+}
+
+/** Salta del agua de cabeza, en arco por encima del borde del hielo, y cae de pie en su sitio (mirando al hielo). */
+function leapOut(part: number, pose: CritterPose, drop: number): CritterPose {
+  pose.yaw = Math.PI;
+  pose.pitch = (1 - part) * LEAP_TILT;
+  pose.forward = (1 - part) * LEAP_FROM;
+  pose.lift = -(1 - part) * (drop + LEAP_DEPTH) + Math.sin(part * Math.PI) * (drop + LEAP_ABOVE);
+  return pose;
+}
+
+/** Se tira al agua y vuelve: acaba como empezo (una vuelta entera, mirando al agua). */
+function bellyDive(progress: number, pose: CritterPose, drop: number): CritterPose {
+  if (progress < DIVE_AT_THE_EDGE) return slideToTheEdge(progress, pose);
+  if (progress < DIVE_IN) return fallIn(partOf(progress, DIVE_AT_THE_EDGE, DIVE_IN), pose, drop);
+  if (progress < DIVE_SURFACING) return swim(pose, drop);
+  if (progress < DIVE_LANDED) return leapOut(partOf(progress, DIVE_SURFACING, DIVE_LANDED), pose, drop);
+  const turned = partOf(progress, DIVE_LANDED, 1);
+  pose.yaw = Math.PI * (1 + turned);
+  return stepLikeADuck(turned, TURN_BACK_STEPS, pose);
+}
+
+export const PENGUIN: CritterKind = {
+  model: 'penguin',
+  size: PENGUIN_SIZE,
+  every: [2, 6],
+  move: { seconds: 1.2, turn: [0, 0], pose: waddle },
+  sometimes: { move: { seconds: 7, turn: [0, 0], pose: bellyDive }, share: 0.25 },
+};
+
+// --- La foca de la nieve: tumbada en el hielo de la orilla, mirando al agua; de vez en cuando levanta
+// la cabeza (apoyada en la cola) y mira a un lado y a otro.
+
+const SEAL_SIZE = 0.55;
+/** Lo que levanta la cabeza (radianes), lo que mira a los lados y lo que hay de sus pies (el origen) a la punta de la cola. */
+const SEAL_RAISE = 0.3;
+const SEAL_LOOK = 0.5;
+const SEAL_TAIL = (7 / 32) * SEAL_SIZE;
+
+/** Levanta la cabeza, mira a un lado y al otro y la vuelve a bajar; la cola no se mete en el hielo. */
+function lookAround(progress: number, pose: CritterPose): CritterPose {
+  const raised = Math.sqrt(Math.sin(progress * Math.PI));
+  pose.pitch = -raised * SEAL_RAISE;
+  pose.lift = Math.sin(raised * SEAL_RAISE) * SEAL_TAIL;
+  pose.yaw = Math.sin(progress * Math.PI * 2) * SEAL_LOOK * raised;
+  return pose;
+}
+
+export const SEAL: CritterKind = {
+  model: 'seal',
+  size: SEAL_SIZE,
+  every: [6, 14],
+  move: { seconds: 3.5, turn: [0, 0], pose: lookAround },
 };

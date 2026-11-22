@@ -1,0 +1,26 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = seal; background-alpha = 255;
+      palette {
+        seal = (#5e636b, #727880, #878d95);
+        seal_spots = (#4a4e55, #565a62, #62666e);
+        animal_eyes_k = #141824;
+        seal_snout = (#868b93, #989da5, #aab0b8);
+      }
+      stamp animal_eyes { pixels = "k.k"; k = animal_eyes_k; }
+      chart body box { origin = (0px, 0px); fill = seal; pattern blotch { paint = seal_spots; scale = (1px, 1px, 1px); density = 0.25ratio; phase = 7; } }
+      chart head box { origin = (27px, 0px); fill = seal; pattern blotch { paint = seal_spots; scale = (1px, 1px, 1px); density = 0.25ratio; phase = 7; } face north { stamp animal_eyes { at = (0px, 1px); } } }
+      chart snout box { origin = (40px, 0px); fill = seal_snout; }
+      chart flipper_left box { origin = (47px, 0px); fill = seal; pattern blotch { paint = seal_spots; scale = (1px, 1px, 1px); density = 0.25ratio; phase = 7; } }
+      chart flipper_right box { origin = (54px, 0px); fill = seal; pattern blotch { paint = seal_spots; scale = (1px, 1px, 1px); density = 0.25ratio; phase = 7; } }
+      chart tail_left box { origin = (0px, 13px); fill = seal; pattern blotch { paint = seal_spots; scale = (1px, 1px, 1px); density = 0.25ratio; phase = 7; } }
+      chart tail_right box { origin = (9px, 13px); fill = seal; pattern blotch { paint = seal_spots; scale = (1px, 1px, 1px); density = 0.25ratio; phase = 7; } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

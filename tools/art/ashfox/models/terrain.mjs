@@ -104,6 +104,13 @@ export const PAINTS = {
   vulture_wing: { ramp: ['#221e1a', '#2e2824', '#3c342e'] },
   vulture_ruff: { ramp: ['#a89a84', '#bcae96', '#d0c2aa'] },
   vulture_head: { ramp: ['#94584e', '#a86a5e', '#bc7e70'] },
+  // Lo de la nieve: el pingüino negro azulado con la tripa blanca y el pico naranja apagado, y la foca
+  // gris con manchas (apagados, nunca de un equipo).
+  penguin: { ramp: ['#1e2228', '#2a2f36', '#363c44'] },
+  penguin_belly: { ramp: ['#d8dee6', '#e8eef4', '#f6f9fc'] },
+  penguin_beak: { ramp: ['#b8662a', '#cc7a34', '#dc8e40'] },
+  seal: { ramp: ['#5e636b', '#727880', '#878d95'], blotch: { ramp: ['#4a4e55', '#565a62', '#62666e'], scale: [1, 1, 1], density: 0.25 } },
+  seal_snout: { ramp: ['#868b93', '#989da5', '#aab0b8'] },
 };
 
 /**
@@ -537,6 +544,39 @@ const vulture = {
   ],
 };
 
+/**
+ * Los animales de la nieve, a 32 por casilla: el pingüino de pie (el juego lo ladea al andar y lo tumba
+ * de barriga para tirarse al agua) y la foca tumbada (el juego le levanta la cabeza).
+ */
+const PENGUIN_EYES = { name: 'penguin_eyes', face: 'north', pixels: 'w.w', colors: { w: '#e8eef4' }, at: [[0, 1]] };
+
+const penguin = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'foot_left', origin: [-1.5, 0, -2], size: [1, 1, 2], paint: 'penguin_beak' },
+    { name: 'foot_right', origin: [0.5, 0, -2], size: [1, 1, 2], paint: 'penguin_beak' },
+    { name: 'body', origin: [-2, 1, -1.5], size: [4, 6, 3], paint: 'penguin' },
+    { name: 'belly', origin: [-1.5, 1, -2], size: [3, 5, 1], paint: 'penguin_belly' },
+    { name: 'head', origin: [-1.5, 7, -1.5], size: [3, 3, 3], paint: 'penguin', stamps: [PENGUIN_EYES] },
+    { name: 'beak', origin: [-0.5, 8, -2.5], size: [1, 1, 1], paint: 'penguin_beak' },
+    { name: 'flipper_left', origin: [-3, 3, -1], size: [1, 4, 2], paint: 'penguin' },
+    { name: 'flipper_right', origin: [2, 3, -1], size: [1, 4, 2], paint: 'penguin' },
+  ],
+};
+
+const seal = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'body', origin: [-2, 0, -4], size: [4, 3, 9], paint: 'seal' },
+    { name: 'head', origin: [-1.5, 1, -7], size: [3, 3, 3], paint: 'seal', stamps: [ANIMAL_EYES] },
+    { name: 'snout', origin: [-1, 1, -8], size: [2, 2, 1], paint: 'seal_snout' },
+    { name: 'flipper_left', origin: [-3, 0, -2], size: [1, 1, 2], paint: 'seal' },
+    { name: 'flipper_right', origin: [2, 0, -2], size: [1, 1, 2], paint: 'seal' },
+    { name: 'tail_left', origin: [-2.5, 0, 5], size: [2, 1, 2], paint: 'seal' },
+    { name: 'tail_right', origin: [0.5, 0, 5], size: [2, 1, 2], paint: 'seal' },
+  ],
+};
+
 export const MODELS = {
   ...groundVariants('grass', 'grass', 'earth', 4),
   ...groundVariants('forest', 'forest_floor', 'earth', 3),
@@ -805,6 +845,8 @@ export const MODELS = {
   lizard,
   tumbleweed,
   vulture,
+  penguin,
+  seal,
   snowman: {
     cubes: [
       { name: 'body', origin: [-3, 0, -3], size: [6, 5, 6], paint: 'snowcap' },

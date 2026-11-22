@@ -1,10 +1,11 @@
 /**
  * Que lleva cada terreno en 3D (por id de terrain.json): el bloque de su casilla, el decorado de encima,
  * si es relieve y lo que vive en ella (las motas que vuelan, los animalitos del decorado y los que se van
- * volando, engine/life/). Cada tema puede cambiar los suyos (`THEME_PIECES`): el nevado tiene sus
- * montañas; el bosque, su vida (hojas, ardillas, ciervos y pajaros), y el pantano, todo lo suyo (suelo
- * oliva con charcos, agua turbia con nenufares, cipreses con musgo, juncos y ranas). Un terreno sin
- * entrada se ve segun lo que es (agua, esconde, llano), asi cualquier contenido se puede mirar.
+ * volando, engine/life/; el desierto y la nieve, en sus terrenos). Cada tema puede cambiar los suyos
+ * (`THEME_PIECES`): el nevado tiene sus montañas; el bosque, su vida (hojas, ardillas, ciervos y
+ * pajaros), y el pantano, todo lo suyo (suelo oliva con charcos, agua turbia con nenufares, cipreses
+ * con musgo, juncos y ranas). Un terreno sin entrada se ve segun lo que es (agua, esconde, llano), asi
+ * cualquier contenido se puede mirar.
  */
 import type { TerrainType } from '../../../core/content';
 import { terrainAt, themeOf } from '../../../core/gameContent';
@@ -18,7 +19,10 @@ import {
   FOREST_BIRDS,
   FROG,
   LIZARD,
+  PENGUIN,
   SAND_DUST,
+  SEAL,
+  SNOW_GLITTER,
   SQUIRREL,
   TUMBLEWEEDS,
   VULTURES,
@@ -150,6 +154,22 @@ const DESERT_DUST = [SAND_DUST, DUST_DEVILS];
 const ON_THE_ROCK: CritterSeat = { kind: LIZARD, share: 0.6, at: [4 / 16, 2 / 16, 2.5 / 16] };
 const BY_THE_CACTUS: CritterSeat = { kind: LIZARD, share: 0.3, at: [-4 / 16, 0, 4 / 16] };
 
+/**
+ * Lo que vive en la nieve: los copos que brillan sobre la nieve y el hielo y, en el hielo de la orilla
+ * (en el suelo: no lleva decorado), mirando al agua, unos pingüinos juntos y alguna foca, a un lado del
+ * centro (en el centro va la unidad).
+ */
+const SNOW_SPARKLE = [SNOW_GLITTER];
+const PENGUIN_SPOTS = [
+  { share: 0.35, at: [-0.3, 0, -0.3] },
+  { share: 0.2, at: [-0.12, 0, -0.36] },
+  { share: 0.2, at: [0.05, 0, -0.28] },
+] as const;
+const ON_THE_SHORE: readonly CritterSeat[] = [
+  ...PENGUIN_SPOTS.map(({ share, at }) => ({ kind: PENGUIN, share, at, onTheGround: true, edge: 'water' as const })),
+  { kind: SEAL, share: 0.15, at: [0.28, 0, -0.22], onTheGround: true, edge: 'water' },
+];
+
 const GRASS: TerrainPiece = { tile: 'tile_grass' };
 const WATER: TerrainPiece = { tile: 'tile_water' };
 const WOODS: TerrainPiece = { tile: 'tile_forest', decor: ['trees'] };
@@ -173,11 +193,11 @@ export const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
   },
   Cactus: { tile: 'tile_sand', relief: DUNES, decor: ['cactus'], motes: DESERT_DUST, critters: [BY_THE_CACTUS], travellers: [VULTURES] },
   SandMountain: { tile: 'tile_sand', relief: MESA, motes: [SAND_DUST], travellers: [VULTURES] },
-  Snow: { tile: 'tile_snow' },
-  Frosty: { tile: 'tile_snow', decor: ['snowman'] },
+  Snow: { tile: 'tile_snow', motes: SNOW_SPARKLE },
+  Frosty: { tile: 'tile_snow', decor: ['snowman'], motes: SNOW_SPARKLE },
   SnowMountain: { tile: 'tile_snow', relief: SNOW_MOUNTAIN },
-  SnowWood: { tile: 'tile_snow', decor: ['pines'] },
-  Ice: { tile: 'tile_ice' },
+  SnowWood: { tile: 'tile_snow', decor: ['pines'], motes: SNOW_SPARKLE },
+  Ice: { tile: 'tile_ice', motes: SNOW_SPARKLE, critters: ON_THE_SHORE },
 };
 
 /**
@@ -186,7 +206,7 @@ export const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
  * el ciervo, en la esquina sin copas, y solo si esa esquina da fuera del bosque.
  */
 const IN_THE_TREETOP: CritterSeat = { kind: SQUIRREL, share: 0.2, at: [3.25 / 16, 7 / 16, 4 / 16] };
-const AT_THE_EDGE: CritterSeat = { kind: DEER, share: 0.2, at: [6 / 16, 0, 4.5 / 16], edge: true };
+const AT_THE_EDGE: CritterSeat = { kind: DEER, share: 0.2, at: [6 / 16, 0, 4.5 / 16], edge: 'otherTerrain' };
 
 /** El bosque: sus arboles con lo que vive en ellos (las hojas que caen, las ardillas, los ciervos y los pajaros). */
 const FOREST_PIECES: Readonly<Record<string, TerrainPiece>> = {
