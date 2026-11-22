@@ -16,7 +16,7 @@ ella desde lo que hay, en pasos pequeños: cada uno en su PR, con el juego igual
   `hudBridge.ts`, `matchMenus.ts`, `menuFlow.ts`, `gameStart.ts`, `keyInput.ts`, `pointerInput.ts`,
   `weatherStyles.ts` (datos), `models/` (bloques descritos como datos).
 - **Son motor** (three.js, sin decidir nada): `world.ts`, `space.ts`, `toon.ts`, `blocks.ts`,
-  `badges.ts`, `glbModels.ts`, `terrain.ts`, `relief.ts`, `water.ts`, `sandDust.ts`, `pixelPoints.ts`,
+  `badges.ts`, `glbModels.ts`, `terrain.ts`, `relief.ts`, `water.ts`, `life/`, `pixelPoints.ts`,
   `particles.ts`, `fx.ts`, `groundMarks.ts`, `wrecks.ts`, `highlights.ts`, `weather3d.ts`.
 - **Mezclan** decidir y dibujar:
   - `animations.ts`: decide que se hace con cada suceso (orden, esperas, textos, tintes) y lo hace
@@ -46,7 +46,8 @@ src/view3d/
     weather/    como se ve cada clima (datos: weatherStyles)
   engine/       representa; el unico con three.js; no decide nada
     core/       lienzo, escena, luz, bucle (world), casilla ↔ mundo (space), materiales (toon)
-    terrain/    casillas, relieve, agua, polvo de la arena
+    terrain/    casillas, relieve, agua
+    life/       lo que vive en cada bioma: motas (polvo, luciernagas) y animalitos (ranas)
     pieces/     dibujar las piezas que dice systems/board: modelos GLB y de bloques, marcas de
                 vida, restos, rodadas
     fx/         efectos de un momento, particulas, clima, marcas del tablero (highlights)

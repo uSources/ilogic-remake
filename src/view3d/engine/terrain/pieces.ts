@@ -1,14 +1,16 @@
 /**
  * Que lleva cada terreno en 3D (por id de terrain.json): el bloque de su casilla, el decorado de encima,
- * si es relieve, si se sientan ranas y si revolotean luciernagas. Cada tema puede cambiar los suyos
- * (`THEME_PIECES`): el nevado tiene sus montañas y el pantano, todo lo suyo (suelo oliva con charcos,
- * agua turbia con nenufares, cipreses con musgo, juncos y ranas). Un terreno sin entrada se ve segun lo
- * que es (agua, esconde, llano), asi cualquier contenido se puede mirar.
+ * si es relieve y lo que vive en ella (las motas que vuelan y los animalitos del decorado, engine/life/).
+ * Cada tema puede cambiar los suyos (`THEME_PIECES`): el nevado tiene sus montañas y el pantano, todo lo
+ * suyo (suelo oliva con charcos, agua turbia con nenufares, cipreses con musgo, juncos y ranas). Un
+ * terreno sin entrada se ve segun lo que es (agua, esconde, llano), asi cualquier contenido se puede mirar.
  */
 import type { TerrainType } from '../../../core/content';
 import { terrainAt, themeOf } from '../../../core/gameContent';
 import type { GameState, Pos } from '../../../core/model';
-import { FROG_MODEL, type FrogSeat } from './frogs';
+import type { CritterSeat } from '../life/critters';
+import { FIREFLIES, FROG, SAND_DUST } from '../life/kinds';
+import type { MoteKind } from '../life/motes';
 import type { ReliefStyle } from './relief';
 import { CLEAR_WATER, MURKY_WATER, type WaterLook } from './water';
 
@@ -54,10 +56,10 @@ export interface TerrainPiece {
    * (`tile` sigue diciendo de que suelo es), y lo que hay encima se pone en lo alto, como en 2D.
    */
   relief?: ReliefStyle;
-  /** Las ranas que se sientan en su decorado (frogs.ts). */
-  frogs?: FrogSeat;
-  /** Si revolotean luciernagas por encima (fireflies.ts). */
-  fireflies?: boolean;
+  /** Las motas que vuelan por encima (life/kinds.ts: el polvo, las luciernagas). */
+  motes?: readonly MoteKind[];
+  /** Los animalitos que se sientan en su decorado, y donde (life/kinds.ts: las ranas). */
+  critters?: readonly CritterSeat[];
 }
 
 /**
@@ -132,9 +134,9 @@ export const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
   Water: WATER,
   SWater: { tile: 'tile_shallow' },
   DWater: { tile: 'tile_deep' },
-  Sand: { tile: 'tile_sand', relief: DUNES },
-  Cactus: { tile: 'tile_sand', relief: DUNES, decor: ['cactus'] },
-  SandMountain: { tile: 'tile_sand', relief: MESA },
+  Sand: { tile: 'tile_sand', relief: DUNES, motes: [SAND_DUST] },
+  Cactus: { tile: 'tile_sand', relief: DUNES, decor: ['cactus'], motes: [SAND_DUST] },
+  SandMountain: { tile: 'tile_sand', relief: MESA, motes: [SAND_DUST] },
   Snow: { tile: 'tile_snow' },
   Frosty: { tile: 'tile_snow', decor: ['snowman'] },
   SnowMountain: { tile: 'tile_snow', relief: SNOW_MOUNTAIN },
@@ -143,21 +145,21 @@ export const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
 };
 
 /** Donde se sientan las ranas: en el nenufar grande del centro o en el hueco de la esquina de los juncos (modelos a 32 por casilla). */
-const ON_THE_LILY_PAD: FrogSeat = { share: 0.3, at: [0, 1 / 32, 0] };
-const IN_THE_REEDS: FrogSeat = { share: 0.3, at: [0.25, 0, 0.25] };
+const ON_THE_LILY_PAD: CritterSeat = { kind: FROG, share: 0.3, at: [0, 1 / 32, 0] };
+const IN_THE_REEDS: CritterSeat = { kind: FROG, share: 0.3, at: [0.25, 0, 0.25] };
 
 /** El pantano: nada se parece al bosque. Los arboles, el agua, los juncos y lo que vive ahi son suyos. */
 const SWAMP_PIECES: Readonly<Record<string, TerrainPiece>> = {
-  Grass: { tile: 'tile_marsh', decor: ['reeds'], decorShare: 0.18, frogs: IN_THE_REEDS },
-  Flowers: { tile: 'tile_marsh', decor: ['cattails'], frogs: IN_THE_REEDS, fireflies: true },
-  Woods: { tile: 'tile_bog', decor: ['swamp_trees_0', 'swamp_trees_1'], fireflies: true },
+  Grass: { tile: 'tile_marsh', decor: ['reeds'], decorShare: 0.18, critters: [IN_THE_REEDS] },
+  Flowers: { tile: 'tile_marsh', decor: ['cattails'], critters: [IN_THE_REEDS], motes: [FIREFLIES] },
+  Woods: { tile: 'tile_bog', decor: ['swamp_trees_0', 'swamp_trees_1'], motes: [FIREFLIES] },
   GrassMountain: { tile: 'tile_marsh', relief: SWAMP_MOUNTAIN },
   Water: {
     tile: 'tile_swamp_water',
     decor: ['lilies_0', 'lilies_1', 'lilies_2'],
     decorShare: 0.5,
-    frogs: ON_THE_LILY_PAD,
-    fireflies: true,
+    critters: [ON_THE_LILY_PAD],
+    motes: [FIREFLIES],
   },
   SWater: { tile: 'tile_swamp_shallow', decor: ['reeds'], decorShare: 0.4 },
   DWater: { tile: 'tile_swamp_deep' },
@@ -188,10 +190,15 @@ export const variantFiles = (tile: TileModel): string[] => {
 
 const ALL_PIECES = [...Object.values(TERRAIN_PIECES), ...Object.values(THEME_PIECES).flatMap((pieces) => Object.values(pieces))];
 
-/** Los modelos que hay que cargar (rutas dentro de assets/models): las casillas que no son relieve, los decorados y la rana. */
-export const TERRAIN_MODEL_FILES: readonly string[] = [
-  ...new Set([...ALL_PIECES.flatMap((piece) => [...(piece.relief ? [] : variantFiles(piece.tile)), ...(piece.decor ?? [])]), FROG_MODEL]),
-].map((model) => `terrain/${model}`);
+/** Los modelos de una pieza: su casilla (si no es relieve), sus decorados y sus animales. */
+const modelsOf = (piece: TerrainPiece): string[] => [
+  ...(piece.relief ? [] : variantFiles(piece.tile)),
+  ...(piece.decor ?? []),
+  ...(piece.critters ?? []).map((seat) => seat.kind.model),
+];
+
+/** Los modelos que hay que cargar (rutas dentro de assets/models). */
+export const TERRAIN_MODEL_FILES: readonly string[] = [...new Set(ALL_PIECES.flatMap(modelsOf))].map((model) => `terrain/${model}`);
 
 /** Lo que no tiene pieza propia se ve como lo que es. */
 function fallbackPiece(terrain: TerrainType): TerrainPiece {

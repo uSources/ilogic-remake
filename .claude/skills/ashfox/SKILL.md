@@ -113,7 +113,9 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
   encima de lo mas alto del modelo.
 - **Terreno**: que casilla y que decorado lleva cada terreno, `TERRAIN_PIECES` en
   `src/view3d/engine/terrain/pieces.ts` (y lo que cambia cada tema, `THEME_PIECES`: el pantano tiene
-  sus propios modelos). Las montañas, las mesetas y la arena **no son modelos de Ashfox**: son
+  sus propios modelos). Los animalitos que se sientan en el decorado (la rana) son modelos de Ashfox
+  como el decorado: su clase en `src/view3d/engine/life/kinds.ts` y su sitio en la pieza
+  (`critters`). Las montañas, las mesetas y la arena **no son modelos de Ashfox**: son
   relieve que dibuja el juego (`relief.ts`, su `ReliefStyle` en `TERRAIN_PIECES`); el agua se mueve
   con un shader (`water.ts`).
 
