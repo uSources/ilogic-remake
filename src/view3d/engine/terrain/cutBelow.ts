@@ -24,7 +24,7 @@ function triangleMates(geometry: THREE.BufferGeometry): Map<number, Set<number>>
   for (const corners of triangles(geometry))
     for (const vertex of corners) {
       const known = mates.get(vertex) ?? new Set<number>();
-      for (const other of corners) if (other !== vertex) known.add(other);
+      corners.filter((other) => other !== vertex).forEach((other) => known.add(other));
       mates.set(vertex, known);
     }
   return mates;
