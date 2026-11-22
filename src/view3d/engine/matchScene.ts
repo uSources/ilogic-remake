@@ -36,8 +36,7 @@ import { GroundMarks } from './pieces/groundMarks';
 import { Wrecks } from './pieces/wrecks';
 import type { BiomeLife } from './life/biomeLife';
 import { buildTerrain, type TerrainView } from './terrain/terrain';
-import { buildIslets, planIslets } from './terrain/islets';
-import { Sea } from './terrain/sea';
+import { Surroundings } from './terrain/surroundings';
 
 /** Cuanto alrededor de lo que se mira hay clima y ambiente (motas, animalitos): un poco mas que lo que se ve. */
 const WEATHER_REACH = 0.9;
@@ -70,7 +69,7 @@ export class MatchScene implements ScreenView {
   /** El centro del mapa, en el suelo. */
   readonly center: Point3;
   private readonly terrain: TerrainView;
-  private readonly sea: Sea;
+  private readonly surroundings: Surroundings;
   private readonly highlights: Highlights;
   /** El contorno de la unidad elegida y de la señalada (las casillas: la unidad se busca en cada fotograma). */
   private readonly outline = new UnitOutline();
@@ -121,9 +120,8 @@ export class MatchScene implements ScreenView {
     const center = new THREE.Vector3((grid.width - 1) / 2, 0, (grid.height - 1) / 2);
     this.world.lightArea(center, Math.max(grid.width, grid.height) * LIGHT_REACH);
     const half = new THREE.Vector2(grid.width / 2, grid.height / 2);
-    const islets = planIslets(center, half);
-    this.sea = new Sea(center, half, islets, state.theme);
-    this.world.scene.add(this.sea.object, buildIslets(islets, state.theme));
+    this.surroundings = new Surroundings(center, half, state.theme);
+    this.world.scene.add(this.surroundings.object);
     this.center = center;
     this.stages = this.buildStages();
   }
@@ -248,7 +246,7 @@ export class MatchScene implements ScreenView {
     this.preview.update(seconds, this.world.camera, this.canvas.clientHeight);
     this.board.update(seconds, this.world.camera.getWorldDirection(this.cameraForward));
     this.terrain.update(seconds);
-    this.sea.update(seconds);
+    this.surroundings.update(seconds);
     const { target } = this.cameraView;
     const reach = pose.distance * WEATHER_REACH;
     const viewportHeight = this.canvas.clientHeight;

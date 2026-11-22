@@ -101,8 +101,8 @@ const SNOW_MOUNTAIN: ReliefStyle = {
   ],
   cliff: 0x667590,
 };
-/** La meseta, a capas de roca de colores (como los estratos de un cañon). */
-const MESA: ReliefStyle = {
+/** La meseta, a capas de roca de colores (como los estratos de un cañon). Tambien la de los cerros del desierto (surroundings.ts). */
+export const MESA: ReliefStyle = {
   shape: 'mesa',
   bands: [
     { from: 0, color: 0xe3ac55 },
