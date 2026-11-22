@@ -172,8 +172,8 @@ Se probó antes con la infantería a 0,6 y los tanques a 0,9 (un tanque tapaba l
 y luego a 0,5 y 0,75 (aún descompensadas al lado de los edificios). Referencia: en Advance Wars
 (también en Re-Boot Camp) y Wargroove las unidades quedan claramente por debajo de los edificios.
 
-**El decorado** (árboles, flores, cactus, muñecos de nieve) va al 0,82 de su modelo (`DECOR_SIZE` en
-`src/view3d/engine/terrain/terrain.ts`): a tamaño completo los bosques tapaban las unidades de dentro
+**El decorado** (árboles, flores, cactus, muñecos de nieve, nenúfares) va al 0,82 de su modelo (`DECOR_SIZE` en
+`src/view3d/engine/terrain/terrain.ts`), y las ranas del pantano al 0,55 (más pequeñas que un soldado): a tamaño completo los bosques tapaban las unidades de dentro
 y las casillas de alrededor. Se probó también agrandar las casillas, que en 3D es encoger todo lo de
 encima y acercar la cámara: las unidades quedaban demasiado pequeñas o cabía mucho menos mapa, y el
 relieve no cambia. Por eso, en su lugar, la cámara empieza más cerca (distancia 13; la rueda deja
@@ -317,8 +317,33 @@ son **sierras de verdad**, lo alto del mapa, y se ven como macizos que siguen la
   más oscuras por el macizo. Nunca una montaña de un solo color.
 - **Por tema**: verdes con nieve arriba (llanura, bosque, pantano), gris azulado y nieve (nevado) y
   **mesetas** en terrazas planas a capas de colores, como un cañón (desierto).
-- Datos de cada estilo en `TERRAIN_PIECES` (`terrain.ts`); forma en `massif.ts`; color en
+- Datos de cada estilo en `TERRAIN_PIECES` (`pieces.ts`); forma en `massif.ts`; color en
   `reliefColors.ts`.
+
+## Pantano
+
+Decidido con el usuario (22-11-2026): el pantano no puede parecer un bosque. Antes usaba los mismos
+modelos que el bosque y el agua azul, y «parecía un tipo de bosque». Ahora todo lo suyo es propio
+(`THEME_PIECES.Swamp` en `src/view3d/engine/terrain/pieces.ts`; los modelos al final de
+`tools/art/ashfox/models/terrain.mjs`, a 32 por casilla):
+
+- **Colores**: verde oliva y apagado en el suelo (con charcos de agua turbia, juncos y barro pintados),
+  barro oscuro en los lados, y el **agua turbia**: verde azulado oscuro con lentejas de agua, brillos
+  verdosos y verdín en la orilla en vez de espuma blanca (`MURKY_WATER` en `water.ts`). El mar de
+  alrededor, los islotes y las montañas, con la misma paleta (verde de agua estancada, oliva y roca
+  gris verdosa).
+- **Árboles**: cipreses de base ensanchada con sus «rodillas» (raíces que asoman), copas anchas y
+  planas y un **fleco de musgo** colgando alrededor, casi junto, como una cortina rota; y algún
+  tronco seco gris. Se probó con unas pocas barbas sueltas y desde arriba parecían patas de mesa.
+- **Nenúfares** en la mitad del agua (no en la honda): hojas redondas a escalones con su muesca y
+  flores blancas o rosas, o capullos. Juncos con espadañas y lirios morados en las flores del tema y,
+  sueltos, en algo de la hierba y del agua poco honda.
+- **Ranitas** verde lima con manchas, sentadas en el nenúfar del centro o entre los juncos; de vez en
+  cuando una da un saltito y se gira (`frogs.ts`).
+- **Luciérnagas** sobre los árboles, los juncos y el agua cerca de la cámara: un punto amarillo
+  verdoso con un halo redondo en anillos (no un cuadrado: se probó y parecía un bloque) que se
+  enciende y se apaga a su ritmo y suma su luz, así brillan también de día (`fireflies.ts`).
+- Con «reducir el movimiento», ni luciérnagas ni saltos.
 
 ## Cielo y fondo
 
@@ -339,7 +364,7 @@ tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
   casilla con el borde mellado: **bajío** claro pegado a la tierra, agua media y **hondo** del azul
   del agua del tablero. Al pie de la tierra late una franja de **espuma** de píxel, y los brillos
   son rayitas de tres píxeles que titilan (no líneas largas), solo cerca de la tierra. Los tonos van
-  por tema: templado, turquesa en el desierto, verdoso en el pantano y frío con nieve.
+  por tema: templado, turquesa en el desierto, verde de agua estancada en el pantano y frío con nieve.
 - **Islotes** alrededor (14, siempre los mismos): cada uno es una sierra pequeña con el relieve de
   las montañas del tablero (`massif.ts`, `reliefColors.ts`): playa baja, tierra del tema, roca pelada
   en las laderas empinadas y manchas de color, con su propio bajío y espuma. Dicen que el mapa es un

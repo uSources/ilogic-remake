@@ -1,0 +1,12 @@
+ashfox-model 1
+asset cattails {
+  import "./cattails/rig.ashfox" as rig;
+  import "./cattails/paint.ashfox" as paint;
+  import "./cattails/body.ashfox" as body;
+  export asset cattails {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

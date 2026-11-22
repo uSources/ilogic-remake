@@ -31,7 +31,7 @@ interface IsletColors {
 const GREEN_ISLET: IsletColors = { beach: 0xf2d38a, land: 0x6fae3c, peak: 0x8c8676 };
 const ISLET_BY_THEME: Readonly<Record<string, IsletColors>> = {
   Forest: { beach: 0xe8c880, land: 0x4f8f34, peak: 0x8c8676 },
-  Swamp: { beach: 0xc8b47a, land: 0x5e8a3c, peak: 0x7d7a62 },
+  Swamp: { beach: 0x8a7650, land: 0x58702e, peak: 0x6e6a58 },
   Desert: { beach: 0xffe2a0, land: 0xf2c66e, peak: 0xd0712c },
   Snowy: { beach: 0xc6d4e6, land: 0xf4f8ff, peak: 0x9eacc2 },
 };

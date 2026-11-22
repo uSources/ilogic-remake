@@ -1,0 +1,31 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = mud; background-alpha = 255;
+      palette {
+        mud = (#3e2e20, #54402c, #6a5238);
+        mud_spots = (#33261a, #463424, #5a4430);
+        marsh = (#55702e, #68863a, #7c9a46);
+        marsh_spots = (#465e26, #587630, #6c8c3a);
+        puddle_p = #2c5a48;
+        duckweed_p = #2c5a48;
+        duckweed_g = #8ab858;
+        sedge_r = #8eaa48;
+        mud_m = #54402c;
+        bogflower_w = #e8ecd8;
+      }
+      stamp puddle { pixels = ".pp./pppp/.pp."; p = puddle_p; }
+      stamp duckweed { pixels = "pg/gp"; p = duckweed_p; g = duckweed_g; }
+      stamp sedge { pixels = "r.r/.r."; r = sedge_r; }
+      stamp mud { pixels = "mm/m."; m = mud_m; }
+      stamp bogflower { pixels = "w"; w = bogflower_w; }
+      chart base box { origin = (0px, 0px); fill = mud; pattern blotch { paint = mud_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 20; } }
+      chart top box { origin = (0px, 27px); fill = marsh; pattern blotch { paint = marsh_spots; scale = (2px, 2px, 2px); density = 0.2ratio; phase = 20; } face up { stamp puddle { at = (10px, 11px); } stamp puddle { at = (1px, 9px); } stamp duckweed { at = (1px, 11px); } stamp duckweed { at = (8px, 1px); } stamp sedge { at = (13px, 10px); } stamp sedge { at = (4px, 11px); } stamp mud { at = (3px, 1px); } stamp bogflower { at = (7px, 5px); } stamp bogflower { at = (8px, 2px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

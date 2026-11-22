@@ -18,7 +18,7 @@ cada cubo, que Ashfox no coloca solo.
 
 El juego busca el modelo de cada tipo del contenido por su id en minusculas (`units/tank_blue`,
 `buildings/city_neutral`); un tipo sin modelo sigue con su modelo de bloques. Que terreno usa que
-casilla y decorado, `TERRAIN_PIECES` en `src/view3d/terrain.ts`.
+casilla y decorado (y lo que cambia cada tema, `THEME_PIECES`), `src/view3d/engine/terrain/pieces.ts`.
 
 ## Generar y exportar
 

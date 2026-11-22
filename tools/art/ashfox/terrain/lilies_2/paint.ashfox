@@ -1,0 +1,55 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = lily_pad; background-alpha = 255;
+      palette {
+        lily_pad = (#24663a, #2e7a44, #3a8e50);
+        notch_8_n = #1c4436;
+        notch_6_n = #1c4436;
+        notch_4_n = #1c4436;
+        flower_center = (#c89a10, #f2c81e, #ffe866);
+        petal_pink = (#b8487a, #ee6aa0, #ffa0c8);
+        petal_white = (#c8ccd8, #eef2fa, #ffffff);
+      }
+      stamp notch_8 { pixels = "n/n/n/n"; n = notch_8_n; }
+      stamp notch_6 { pixels = "n/n/n"; n = notch_6_n; }
+      stamp notch_4 { pixels = "n/n"; n = notch_4_n; }
+      chart center_pad box { origin = (0px, 0px); fill = lily_pad; face up { stamp notch_8 { at = (4px, 0px); } } }
+      chart center_north box { origin = (0px, 28px); fill = lily_pad; }
+      chart center_south box { origin = (15px, 28px); fill = lily_pad; }
+      chart center_west box { origin = (33px, 0px); fill = lily_pad; }
+      chart center_east box { origin = (48px, 0px); fill = lily_pad; }
+      chart a_pad box { origin = (0px, 10px); fill = lily_pad; face up { stamp notch_6 { at = (3px, 0px); } } }
+      chart a_north box { origin = (30px, 28px); fill = lily_pad; }
+      chart a_south box { origin = (41px, 28px); fill = lily_pad; }
+      chart a_west box { origin = (25px, 10px); fill = lily_pad; }
+      chart a_east box { origin = (36px, 10px); fill = lily_pad; }
+      chart b_pad box { origin = (47px, 10px); fill = lily_pad; face up { stamp notch_4 { at = (2px, 0px); } } }
+      chart b_north box { origin = (52px, 28px); fill = lily_pad; }
+      chart b_south box { origin = (0px, 31px); fill = lily_pad; }
+      chart b_west box { origin = (57px, 18px); fill = lily_pad; }
+      chart b_east box { origin = (0px, 24px); fill = lily_pad; }
+      chart c_pad box { origin = (0px, 18px); fill = lily_pad; face up { stamp notch_4 { at = (2px, 0px); } } }
+      chart c_north box { origin = (7px, 31px); fill = lily_pad; }
+      chart c_south box { origin = (14px, 31px); fill = lily_pad; }
+      chart c_west box { origin = (7px, 24px); fill = lily_pad; }
+      chart c_east box { origin = (14px, 24px); fill = lily_pad; }
+      chart d_pad box { origin = (17px, 18px); fill = lily_pad; face up { stamp notch_4 { at = (2px, 0px); } } }
+      chart d_north box { origin = (21px, 31px); fill = lily_pad; }
+      chart d_south box { origin = (28px, 31px); fill = lily_pad; }
+      chart d_west box { origin = (21px, 24px); fill = lily_pad; }
+      chart d_east box { origin = (28px, 24px); fill = lily_pad; }
+      chart fa_heart box { origin = (35px, 24px); fill = flower_center; }
+      chart fa_petal_n box { origin = (44px, 24px); fill = petal_pink; }
+      chart fa_petal_s box { origin = (51px, 24px); fill = petal_pink; }
+      chart fa_petal_w box { origin = (43px, 18px); fill = petal_pink; }
+      chart fa_petal_e box { origin = (50px, 18px); fill = petal_pink; }
+      chart ba_bud box { origin = (34px, 18px); fill = petal_white; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

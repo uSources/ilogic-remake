@@ -1,0 +1,23 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = reed; background-alpha = 255;
+      palette {
+        reed = (#5a7a2a, #6e9034, #86a842);
+        cattail = (#4a2c16, #5e3a1e, #744a28);
+      }
+
+      chart a_stem0 box { origin = (5px, 0px); fill = reed; }
+      chart a_stem1 box { origin = (15px, 0px); fill = reed; }
+      chart a_stem2 box { origin = (0px, 0px); fill = reed; }
+      chart a_head2 box { origin = (25px, 0px); fill = cattail; }
+      chart b_stem0 box { origin = (20px, 0px); fill = reed; }
+      chart b_stem1 box { origin = (10px, 0px); fill = reed; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

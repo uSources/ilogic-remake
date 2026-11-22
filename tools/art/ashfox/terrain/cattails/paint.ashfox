@@ -1,0 +1,39 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = reed; background-alpha = 255;
+      palette {
+        reed = (#5a7a2a, #6e9034, #86a842);
+        cattail = (#4a2c16, #5e3a1e, #744a28);
+        petal_purple = (#6a2a9a, #9a46d0, #c48af0);
+      }
+
+      chart a_stem0 box { origin = (0px, 0px); fill = reed; }
+      chart a_head0 box { origin = (0px, 14px); fill = cattail; }
+      chart a_stem1 box { origin = (25px, 0px); fill = reed; }
+      chart a_stem2 box { origin = (15px, 0px); fill = reed; }
+      chart a_head2 box { origin = (9px, 14px); fill = cattail; }
+      chart a_stem3 box { origin = (45px, 0px); fill = reed; }
+      chart b_stem0 box { origin = (20px, 0px); fill = reed; }
+      chart b_head0 box { origin = (18px, 14px); fill = cattail; }
+      chart b_stem1 box { origin = (35px, 0px); fill = reed; }
+      chart b_stem2 box { origin = (5px, 0px); fill = reed; }
+      chart b_head2 box { origin = (27px, 14px); fill = cattail; }
+      chart c_stem0 box { origin = (30px, 0px); fill = reed; }
+      chart c_stem1 box { origin = (10px, 0px); fill = reed; }
+      chart c_head1 box { origin = (36px, 14px); fill = cattail; }
+      chart c_stem2 box { origin = (50px, 0px); fill = reed; }
+      chart i1_stem box { origin = (40px, 0px); fill = reed; }
+      chart i1_bloom box { origin = (45px, 14px); fill = petal_purple; }
+      chart i2_stem box { origin = (55px, 0px); fill = reed; }
+      chart i2_bloom box { origin = (54px, 14px); fill = petal_purple; }
+      chart i3_stem box { origin = (60px, 0px); fill = reed; }
+      chart i3_bloom box { origin = (0px, 20px); fill = petal_purple; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

@@ -1,0 +1,26 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 64px); background = mud; background-alpha = 255;
+      palette {
+        mud = (#3e2e20, #54402c, #6a5238);
+        mud_spots = (#33261a, #463424, #5a4430);
+        bog_floor = (#3e5626, #4c6a2e, #5c7c36);
+        bog_floor_spots = (#324a20, #3e5a26, #4c6a2e);
+        pool_p = #244e3e;
+        roots_r = #50443a;
+        bogmoss_m = #6c9046;
+      }
+      stamp pool { pixels = "pp/pp"; p = pool_p; }
+      stamp roots { pixels = "rr../.rrr"; r = roots_r; }
+      stamp bogmoss { pixels = "mm/m."; m = bogmoss_m; }
+      chart base box { origin = (0px, 0px); fill = mud; pattern blotch { paint = mud_spots; scale = (2px, 1px, 2px); density = 0.2ratio; phase = 37; } }
+      chart top box { origin = (0px, 27px); fill = bog_floor; pattern blotch { paint = bog_floor_spots; scale = (2px, 2px, 2px); density = 0.25ratio; phase = 37; } face up { stamp pool { at = (0px, 3px); } stamp pool { at = (12px, 10px); } stamp roots { at = (0px, 8px); } stamp roots { at = (9px, 8px); } stamp roots { at = (0px, 12px); } stamp bogmoss { at = (14px, 5px); } stamp bogmoss { at = (7px, 13px); } stamp bogmoss { at = (4px, 5px); } } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

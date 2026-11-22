@@ -1,0 +1,12 @@
+ashfox-model 1
+asset tile_swamp_water {
+  import "./tile_swamp_water/rig.ashfox" as rig;
+  import "./tile_swamp_water/paint.ashfox" as paint;
+  import "./tile_swamp_water/body.ashfox" as body;
+  export asset tile_swamp_water {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

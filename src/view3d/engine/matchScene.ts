@@ -32,6 +32,7 @@ import { BoardView } from './pieces/boardView';
 import type { GlbLibrary } from './pieces/glbModels';
 import { GroundMarks } from './pieces/groundMarks';
 import { Wrecks } from './pieces/wrecks';
+import { Fireflies } from './terrain/fireflies';
 import { SandDust } from './terrain/sandDust';
 import { buildTerrain, type TerrainView } from './terrain/terrain';
 import { buildIslets, planIslets } from './terrain/islets';
@@ -62,6 +63,7 @@ export class MatchScene implements ScreenView {
   readonly board: BoardView;
   readonly weather: WeatherView;
   readonly sandDust: SandDust;
+  private readonly fireflies: Fireflies;
   readonly wrecks = new Wrecks();
   /** Hacia donde mira la camara en este fotograma (se reutiliza). */
   private readonly cameraForward = new THREE.Vector3();
@@ -101,6 +103,7 @@ export class MatchScene implements ScreenView {
     this.flags = new DestinationFlagsView((pos) => this.board.groundOf(pos));
     this.weather = new WeatherView(container);
     this.sandDust = new SandDust(this.terrain.sandTiles, (pos) => this.board.groundOf(pos));
+    this.fireflies = new Fireflies(this.terrain.fireflyTiles, (pos) => this.board.groundOf(pos));
     this.cameraView = new ThreeCameraView(this.world.camera);
     this.selectionBox = new ScreenBoxView(container);
     this.world.scene.add(
@@ -114,6 +117,7 @@ export class MatchScene implements ScreenView {
       this.effects,
       this.weather.object,
       this.sandDust.object,
+      this.fireflies.object,
     );
     this.world.scene.add(this.particles.object, this.marks.mesh, this.wrecks.object);
     this.world.addOverlay((renderer, scene, camera) => this.outline.draw(renderer, scene, camera, this.outlinedUnits()));
@@ -244,6 +248,7 @@ export class MatchScene implements ScreenView {
     const viewportHeight = this.canvas.clientHeight;
     this.weather.update(seconds, target, reach, this.world.camera, viewportHeight);
     this.sandDust.update(seconds, target, reach, this.world.camera, viewportHeight);
+    this.fireflies.update(seconds, target, reach, this.world.camera, viewportHeight);
     this.wrecks.update(seconds);
     this.particles.keepEmitting([...this.board.smokeSources(), ...this.wrecks.smokeSources()], seconds);
     this.particles.update(seconds, this.world.camera, viewportHeight);

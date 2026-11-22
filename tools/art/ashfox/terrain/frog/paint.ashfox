@@ -1,0 +1,30 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = frog; background-alpha = 255;
+      palette {
+        frog = (#5a9a1e, #74b42a, #92cc3c);
+        spots_d = #3e6e16;
+        throat_l = #dce48c;
+        frog_eye = (#141824, #1e2232, #2a2e40);
+      }
+      stamp spots { pixels = "d..d/..../.d../...d/d..."; d = spots_d; }
+      stamp throat { pixels = "llll"; l = throat_l; }
+      chart body box { origin = (0px, 0px); fill = frog; face up { stamp spots { at = (0px, 0px); } } }
+      chart head box { origin = (37px, 0px); fill = frog; face north { stamp throat { at = (0px, 1px); } } }
+      chart eye_left box { origin = (0px, 9px); fill = frog_eye; }
+      chart eye_right box { origin = (5px, 9px); fill = frog_eye; }
+      chart thigh_left box { origin = (19px, 0px); fill = frog; }
+      chart thigh_right box { origin = (28px, 0px); fill = frog; }
+      chart foot_left box { origin = (50px, 0px); fill = frog; }
+      chart foot_right box { origin = (57px, 0px); fill = frog; }
+      chart hand_left box { origin = (10px, 9px); fill = frog; }
+      chart hand_right box { origin = (15px, 9px); fill = frog; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

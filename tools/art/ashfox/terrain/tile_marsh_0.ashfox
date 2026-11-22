@@ -1,0 +1,12 @@
+ashfox-model 1
+asset tile_marsh_0 {
+  import "./tile_marsh_0/rig.ashfox" as rig;
+  import "./tile_marsh_0/paint.ashfox" as paint;
+  import "./tile_marsh_0/body.ashfox" as body;
+  export asset tile_marsh_0 {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}
