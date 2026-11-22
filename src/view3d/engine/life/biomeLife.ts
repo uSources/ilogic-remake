@@ -19,7 +19,7 @@ import { MoteSwarm, type MoteKind } from './motes';
 export interface LifeGround {
   /** Las casillas del mapa. */
   positions: readonly Pos[];
-  /** El punto del suelo de una casilla (de ahi salen las motas). */
+  /** El punto del suelo de una casilla, nuevo cada vez: de ahi salen las motas y cada una se queda el suyo. */
   groundOf: (pos: Pos) => THREE.Vector3;
   /** Donde va el decorado de una casilla, o null si no lleva (ahi se sientan los animales). */
   decorPlaceOf: (pos: Pos) => THREE.Matrix4 | null;
@@ -30,13 +30,16 @@ const SEAT_SALT = 8;
 const SALTS_PER_SEAT = 2;
 
 /** Las casillas de cada clase de mota (las que la llevan en su pieza). */
-function tilesByMote(s: GameState, positions: readonly Pos[]): Map<MoteKind, Pos[]> {
+export function tilesByMote(s: GameState, positions: readonly Pos[]): Map<MoteKind, Pos[]> {
   const pairs = positions.flatMap((pos) => (pieceAt(s, pos).motes ?? []).map((kind) => ({ kind, pos })));
   const byKind = groupBy(pairs, (pair) => pair.kind);
   return new Map([...byKind].map(([kind, tiles]) => [kind, tiles.map((pair) => pair.pos)]));
 }
 
-/** Los animales de una casilla con decorado: en cada sitio donde se sientan y les toca (siempre igual), mirando a cualquier lado. */
+/**
+ * Los animales de una casilla con decorado: en cada sitio donde se sientan y les toca (siempre igual),
+ * mirando a cualquier lado.
+ */
 function seatedAt(s: GameState, pos: Pos, decorPlace: THREE.Matrix4 | null): { kind: CritterKind; spot: CritterSpot }[] {
   if (!decorPlace) return [];
   return (pieceAt(s, pos).critters ?? []).flatMap((seat, index) => {
@@ -48,7 +51,7 @@ function seatedAt(s: GameState, pos: Pos, decorPlace: THREE.Matrix4 | null): { k
 }
 
 /** Los sitios de los animales de cada clase. */
-function spotsByCritter(s: GameState, ground: LifeGround): Map<CritterKind, CritterSpot[]> {
+export function spotsByCritter(s: GameState, ground: LifeGround): Map<CritterKind, CritterSpot[]> {
   const seated = ground.positions.flatMap((pos) => seatedAt(s, pos, ground.decorPlaceOf(pos)));
   const byKind = groupBy(seated, (critter) => critter.kind);
   return new Map([...byKind].map(([kind, critters]) => [kind, critters.map((critter) => critter.spot)]));

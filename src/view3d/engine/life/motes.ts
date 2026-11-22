@@ -130,15 +130,21 @@ export class MoteSwarm {
   }
 
   private step(mote: Mote | null, seconds: number, nearby: readonly Pos[]): Mote | null {
-    if (!mote) return this.births >= 1 && nearby.length ? this.born(nearby) : null;
+    if (!mote) return this.births >= 1 ? this.born(nearby) : null;
     mote.age += seconds;
     return mote.age < mote.life ? mote : null;
   }
 
-  private born(nearby: readonly Pos[]): Mote {
+  /** Una mota nueva sobre una casilla al azar de `nearby` (ninguna si no hay casillas cerca). */
+  private born(nearby: readonly Pos[]): Mote | null {
+    const tile = nearby[Math.floor(Math.random() * nearby.length)];
+    if (!tile) return null;
     this.births -= 1;
-    const tile = nearby[Math.floor(Math.random() * nearby.length)]!;
-    const home = this.groundOf(tile).add(new THREE.Vector3(Math.random() - 0.5, randomBetween(this.kind.height), Math.random() - 0.5));
+    // El punto del suelo es un vector nuevo: se mueve ahi mismo a donde nace y la mota se lo queda.
+    const home = this.groundOf(tile);
+    home.x += Math.random() - 0.5;
+    home.y += randomBetween(this.kind.height);
+    home.z += Math.random() - 0.5;
     return { home, age: 0, life: randomBetween(this.kind.life), seed: Math.random() * SEED_SPREAD };
   }
 

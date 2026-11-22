@@ -1,8 +1,13 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { FIREFLIES, SAND_DUST } from '../src/view3d/engine/life/kinds';
+import { mapGrid } from '@core/mapGrid';
+import type { Pos } from '@core/model';
+import { spotsByCritter, tilesByMote } from '../src/view3d/engine/life/biomeLife';
+import { FIREFLIES, FROG, SAND_DUST } from '../src/view3d/engine/life/kinds';
 import type { Mote, MoteKind } from '../src/view3d/engine/life/motes';
 import { WIND_DIRECTION } from '../src/view3d/engine/core/space';
+import { tileNoise } from '../src/view3d/engine/terrain/placed';
+import { blankState } from './helpers';
 
 /** Lo que vive en los biomas (engine/life/kinds.ts): que las motas se vean bien, sean de la clase que sean. */
 
@@ -44,5 +49,43 @@ describe('las motas del ambiente', () => {
     const rates = Array.from({ length: 70 }, (_, tenth) => SAND_DUST.birthRate(tenth / 10));
     expect(rates.some((rate) => rate > 0)).toBe(true);
     expect(rates.some((rate) => rate === 0)).toBe(true);
+  });
+});
+
+/** Un pantano todo de agua (sin decorado en la mitad de las casillas, alternas) y sus casillas. */
+function swampOfWater() {
+  const s = blankState();
+  s.theme = 'Swamp';
+  const positions = [...mapGrid(s).cells()].map((cell) => cell.pos);
+  for (const pos of positions) s.map[pos.x]![pos.y] = 'Water';
+  const hasDecor = (pos: Pos) => (pos.x + pos.y) % 2 === 0;
+  const ground = {
+    positions,
+    groundOf: (pos: Pos) => new THREE.Vector3(pos.x, 0, pos.y),
+    decorPlaceOf: (pos: Pos) => (hasDecor(pos) ? new THREE.Matrix4().makeTranslation(pos.x, 0.1, pos.y) : null),
+  };
+  return { s, positions, ground, hasDecor };
+}
+
+describe('donde vive cada cosa en el tablero', () => {
+  it('cada mota sale de las casillas cuya pieza la lleva', () => {
+    const { s, positions } = swampOfWater();
+    expect(tilesByMote(s, positions)).toEqual(new Map([[FIREFLIES, positions]]));
+    s.theme = 'Desert';
+    for (const pos of positions) s.map[pos.x]![pos.y] = 'Sand';
+    expect(tilesByMote(s, positions)).toEqual(new Map([[SAND_DUST, positions]]));
+  });
+
+  it('las ranas se sientan en el nenufar de las casillas con decorado que les tocan, siempre en el mismo sitio', () => {
+    const { s, positions, ground, hasDecor } = swampOfWater();
+    // Las de siempre: la primera clase de sitio de una pieza decide con las sales 8 (si lleva) y 9 (hacia donde mira).
+    const expected = positions
+      .filter((pos) => hasDecor(pos) && tileNoise(pos, 8) < 0.3)
+      .map((pos) => ({ pos, at: new THREE.Vector3(pos.x, 0.1 + 1 / 32, pos.y), heading: tileNoise(pos, 9) * Math.PI * 2 }));
+    const spots = spotsByCritter(s, ground);
+    expect([...spots.keys()]).toEqual([FROG]);
+    expect(spots.get(FROG)).toEqual(expected);
+    expect(expected.length).toBeGreaterThan(0);
+    expect(expected.length).toBeLessThan(positions.filter(hasDecor).length);
   });
 });

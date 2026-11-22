@@ -1,9 +1,10 @@
 /**
  * El terreno en 3D, con los modelos de Ashfox (tools/art/ashfox/models/terrain.mjs, a semejanza del
  * terreno 2D): cada casilla es el bloque de su clase (hierba, agua...) y, si lleva, su decorado encima
- * (arboles, cactus, flores, muñeco de nieve, nenufares), y lo que vive en ella (engine/life/: las motas que
- * vuelan y los animalitos del decorado, que se oscurecen con la niebla como el). Las montañas y la arena
- * no son casillas sino relieve (relief.ts): sierras, mesetas y dunas que siguen de una casilla a otra.
+ * (arboles, cactus, flores, muñeco de nieve, nenufares), y lo que vive en ella (engine/life/: las motas
+ * que vuelan y los animalitos del decorado, que se oscurecen con la niebla igual que el decorado). Las
+ * montañas y la arena no son casillas sino relieve (relief.ts): sierras, mesetas y dunas que siguen de
+ * una casilla a otra.
  * Que lleva cada terreno lo dice pieces.ts. Cada clase de casilla y de decorado es una malla
  * instanciada (placed.ts), y todo el relieve otra: el coste no crece con el tamaño del mapa.
  */
