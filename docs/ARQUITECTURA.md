@@ -1155,6 +1155,17 @@ les baja el volumen al alejar la camara (`ambienceZoomLevel`, `listener.ts`).
 Los efectos se piden por nombre aunque aun no haya WAV (`src/audio/soundNames.ts`): mientras, suena
 su sustituto.
 
+**Volumenes.** El jugador elige en Opciones un volumen general y uno por canal (musica, efectos del
+tablero, ambiente, voces, interfaz), cada uno de 0 a 100 y con su silencio aparte: `settings.volumes`,
+con sus tipos y su lectura en `src/audio/volumes.ts` (puro, con test; va al cuadrado para que la mitad
+del deslizador suene a la mitad). El mezclador (`audioContext.ts`) tiene un nodo general y uno por
+canal, que suena a su volumen de serie (`CHANNEL_VOLUMES`, el de antes de haber volumenes) por el de
+Opciones y por lo que pida la vista (`setChannelLevel`: el tablero baja al alejar la camara). La musica
+va con `<audio>` aparte y sigue los mismos numeros (`music.ts`); `volumeControl.ts` aplica los dos
+(`applyVolumes`) al cambiar Opciones y al esconder la pestaña (`muteInBackground`). Un canal callado no
+pide sus efectos ni baja la musica; los bucles de ambiente siguen corriendo para oirse en cuanto se sube.
+Un canal nuevo: su nombre en `MIXER_CHANNELS`, su volumen de serie, su texto y su muestra (`PREVIEW_SOUNDS`, `sfx.ts`).
+
 **Lo vigila ESLint**: solo `ENGINE_FILES` (`src/view3d/engine/**` y el playground) importa `three`, y
 `systems/` y `ports/` no importan `engine/` (`SYSTEMS_ASK_BY_PORTS`). Un fichero nuevo que dibuje va
 al motor; uno que decida, a su sistema; lo que se piden, a un puerto.

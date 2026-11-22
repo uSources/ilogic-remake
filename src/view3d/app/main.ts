@@ -15,6 +15,7 @@ import { ui } from '../../hud/store';
 import { registerServiceWorker } from '../../pwa';
 import { applySettings } from '../../settings';
 import { installSounds, webAudioSounds } from '../../audio/sfx';
+import { followPageVisibility } from '../../audio/volumeControl';
 import { webAudio } from '../../audio/gameAudio';
 import { pendingStart, sessionFor } from './gameStart';
 import { GlbLibrary } from '../engine/pieces/glbModels';
@@ -29,6 +30,7 @@ applySettings();
 hudRoot.addEventListener('contextmenu', (event) => event.preventDefault());
 installTabGuard(window);
 installSounds();
+followPageVisibility();
 ui.set({ screen: 'loading' });
 
 /** Los tipos de unidad y de edificio del juego: de cada uno se busca su modelo de Ashfox. */

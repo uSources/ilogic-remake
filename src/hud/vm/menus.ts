@@ -75,8 +75,23 @@ export interface ActionRowVM {
   text: string;
 }
 
-/** Las filas de la pantalla de opciones: botones de segmento, una tecla o un boton. */
-export type OptionsRowVM = ({ kind: 'choices' } & OptionRowVM) | KeyRowVM | ActionRowVM;
+/** Fila de Opciones con el volumen de un canal: su boton de silencio y un deslizador. */
+export interface VolumeRowVM {
+  kind: 'volume';
+  id: string;
+  group: string;
+  label: string;
+  /** De 0 a `max`. */
+  level: number;
+  max: number;
+  /** Callado (sin perder `level`). */
+  muted: boolean;
+  /** Como se lee: «80 %», o que esta callado. */
+  text: string;
+}
+
+/** Las filas de la pantalla de opciones: botones de segmento, una tecla, un boton o un volumen. */
+export type OptionsRowVM = ({ kind: 'choices' } & OptionRowVM) | KeyRowVM | ActionRowVM | VolumeRowVM;
 
 /** Una pestaña de la pantalla de opciones: su titulo y sus filas (cada una con su `group`). */
 export interface OptionsTabVM {

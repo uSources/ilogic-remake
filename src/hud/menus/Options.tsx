@@ -3,7 +3,7 @@ import { Btn, Button, scrollRef } from '../common/buttons';
 import { Seg } from '../common/Seg';
 import { Veil } from '../common/Veil';
 import { ui } from '../store';
-import type { ActionRowVM, KeyRowVM, OptionsRowVM, OptionsTabVM, OptionsVM } from '../vm/menus';
+import type { ActionRowVM, KeyRowVM, OptionsRowVM, OptionsTabVM, OptionsVM, VolumeRowVM } from '../vm/menus';
 
 /** Una fila con su posicion en la lista entera (la que entienden optionsHover, optionsSet y optionsPick). */
 interface IndexedRow {
@@ -53,6 +53,89 @@ function ActionRow({ row, sel, onHover, onPick }: { row: ActionRowVM; sel: boole
   );
 }
 
+/** Rectangulos `[x, y, ancho, alto]` del altavoz: la caja y el cono; luego las ondas o la cruz. */
+const SPEAKER = [
+  [0, 2, 2, 4],
+  [2, 1, 1, 6],
+  [3, 0, 1, 8],
+] as const;
+const SPEAKER_ON = [
+  [5, 2, 1, 1],
+  [6, 3, 1, 2],
+  [5, 5, 1, 1],
+  [7, 1, 1, 1],
+  [8, 2, 1, 4],
+  [7, 6, 1, 1],
+] as const;
+const SPEAKER_MUTED = [
+  [5, 2, 1, 1],
+  [8, 2, 1, 1],
+  [6, 3, 2, 2],
+  [5, 5, 1, 1],
+  [8, 5, 1, 1],
+] as const;
+
+/** Un altavoz de pixeles (9 x 8): con ondas, o con una cruz si esta callado. */
+function Speaker({ muted }: { muted: boolean }) {
+  const pixels = muted ? SPEAKER_MUTED : SPEAKER_ON;
+  return (
+    <svg class="speaker" viewBox="0 0 9 8" aria-hidden="true" shape-rendering="crispEdges">
+      {[...SPEAKER, ...pixels].map(([x, y, width, height]) => (
+        <rect x={x} y={y} width={width} height={height} fill="currentColor" />
+      ))}
+    </svg>
+  );
+}
+
+interface VolumeRowProps {
+  row: VolumeRowVM;
+  sel: boolean;
+  onHover: () => void;
+  onPick: () => void;
+  onSlide: (level: number) => void;
+  onSlideEnd: () => void;
+}
+
+/**
+ * El volumen de un canal: el altavoz lo calla (o lo vuelve a poner), el deslizador lo sube y lo baja y al
+ * soltarlo suena una muestra. El deslizador no se queda con el foco: las flechas son de la pantalla.
+ */
+function VolumeRow({ row, sel, onHover, onPick, onSlide, onSlideEnd }: VolumeRowProps) {
+  const fill = `${(row.level / row.max) * 100}%`;
+  return (
+    <div class={`seg-row volume-row ${sel ? 'sel' : ''} ${row.muted ? 'silenced' : ''}`} onMouseEnter={onHover} ref={scrollRef(sel)}>
+      <span class="seg-label">{row.label}</span>
+      <span class="volume-control">
+        <Button
+          class="px-btn plain small volume-mute"
+          aria-pressed={row.muted}
+          aria-label={`${t('volumeMute')}: ${row.label}`}
+          onClick={onPick}
+        >
+          <Speaker muted={row.muted} />
+        </Button>
+        <input
+          type="range"
+          class="volume-slider"
+          tabIndex={-1}
+          min={0}
+          max={row.max}
+          value={row.level}
+          aria-label={row.label}
+          aria-valuetext={row.text}
+          style={{ '--fill': fill }}
+          onInput={(event) => onSlide(event.currentTarget.valueAsNumber)}
+          onChange={(event) => {
+            event.currentTarget.blur();
+            onSlideEnd();
+          }}
+        />
+        <span class="volume-value">{row.text}</span>
+      </span>
+    </div>
+  );
+}
+
 /** Cada clase de fila con su componente. */
 function OptionsRow({ row, index, focus }: IndexedRow & { focus: number }) {
   const actions = ui.actions;
@@ -64,13 +147,23 @@ function OptionsRow({ row, index, focus }: IndexedRow & { focus: number }) {
       return <KeyRow row={row} {...common} onPick={() => actions.optionsPick(index)} />;
     case 'action':
       return <ActionRow row={row} {...common} onPick={() => actions.optionsPick(index)} />;
+    case 'volume':
+      return (
+        <VolumeRow
+          row={row}
+          {...common}
+          onPick={() => actions.optionsPick(index)}
+          onSlide={(level) => actions.optionsSlide(index, level)}
+          onSlideEnd={() => actions.optionsSlideEnd(index)}
+        />
+      );
     default:
       return row satisfies never;
   }
 }
 
-/** Un grupo sin botones de segmento (las teclas) ocupa todo el ancho, con sus filas en columnas. */
-const isKeysGroup = (rows: IndexedRow[]) => rows.every(({ row }) => row.kind !== 'choices');
+/** Un grupo sin botones de segmento (las teclas, los volumenes) ocupa todo el ancho, con sus filas en columnas. */
+const isWideGroup = (rows: IndexedRow[]) => rows.every(({ row }) => row.kind !== 'choices');
 
 /** La barra de pestañas: Q y E con el teclado, o pulsarlas. */
 function TabBar({ tabs, current }: { tabs: OptionsTabVM[]; current: number }) {
@@ -101,7 +194,7 @@ function TabContent({ tab, focus }: { tab: OptionsTabVM; focus: number }) {
   return (
     <div class="opt-groups">
       {groups.map((group) => (
-        <div class={`opt-card ${isKeysGroup(group.rows) ? 'keys' : ''}`} key={group.title}>
+        <div class={`opt-card ${isWideGroup(group.rows) ? 'wide' : ''}`} key={group.title}>
           {groups.length > 1 && <span class="label">{group.title}</span>}
           {group.rows.map(({ row, index }) => (
             <OptionsRow key={row.id} row={row} index={index} focus={focus} />

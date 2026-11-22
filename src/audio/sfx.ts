@@ -13,6 +13,7 @@ import { SOUND_NAMES, resolveSound, type SoundId, type SoundName } from './sound
 import { SOUND_IDS, type SoundPort } from './sounds';
 import { SOUND_VARIANTS } from './soundList';
 import { pannerAt, type Point3 } from './spatial';
+import { isAudible, type VolumeChannel } from './volumes';
 
 /** Un mismo sonido no se repite antes de esto (segundos): dos a la vez solo suenan mas fuerte. */
 const MIN_GAP = 0.04;
@@ -30,6 +31,21 @@ const VOICE_GAP = 1.5;
 const PENDING_MAX_AGE_MS = 2000;
 /** Cuantos se recuerdan para `recentSounds` (comprobar sin oir, docs/AGENTES.md). */
 const RECENT_LIMIT = 40;
+/** Entre dos muestras de volumen, al menos esto (segundos): mantener la flecha no hace una rafaga. */
+const PREVIEW_GAP = 0.15;
+/**
+ * Lo que suena al mover el volumen de cada canal en Opciones, para oir como queda, y por donde. La del
+ * general va directa al general: asi se oye aunque la interfaz este callada. La musica y el ambiente no
+ * llevan: ya suenan solos.
+ */
+const PREVIEW_SOUNDS: Readonly<Record<VolumeChannel, { name: SoundName; channel: Output } | null>> = {
+  master: { name: 'ui_select', channel: 'master' },
+  music: null,
+  effects: { name: 'shot_rifle', channel: 'effects' },
+  ambience: null,
+  voices: { name: 'voice_ack_infantry', channel: 'voices' },
+  interface: { name: 'ui_select', channel: 'interface' },
+};
 
 /** Un efecto pedido: que nombre, que sono de verdad (null: nada) y desde donde. */
 export interface HeardSound {
@@ -42,7 +58,13 @@ const buffers = new Map<string, Promise<AudioBuffer | null>>();
 const lastPlayed = new Map<SoundId, number>();
 const recent: HeardSound[] = [];
 let lastVoiceAt = -Infinity;
+let lastPreviewAt = -Infinity;
 let pending: { name: SoundName; at: Point3 | null; askedAt: number } | null = null;
+
+/** Por donde sale un sonido: un canal, o directo al general (la muestra de su volumen). */
+type Output = Channel | 'master';
+
+const outputOf = (mixer: Mixer, output: Output): GainNode => (output === 'master' ? mixer.master : mixer.channels[output]);
 
 const pathOf = (sound: SoundId, variant: number): string => `assets/sfx/${sound}_${variant}.wav`;
 
@@ -60,14 +82,12 @@ function bufferOf(audio: AudioContext, path: string): Promise<AudioBuffer | null
 
 const randomVariant = (sound: SoundId): number => 1 + Math.floor(Math.random() * SOUND_VARIANTS[sound]);
 
-/** Las voces van por su canal (se pueden quitar en ajustes); lo que tiene sitio es del tablero. */
+/** Las voces van por su canal; lo que tiene sitio es del tablero, y lo que no, de la interfaz. */
 const channelOf = (name: SoundName, at: Point3 | null): Channel => (name.startsWith('voice_') ? 'voices' : at ? 'effects' : 'interface');
 
-const isAllowed = (name: SoundName): boolean => settings.sfx && (!name.startsWith('voice_') || settings.voices);
-
-/** Que suene `name` (una de sus variantes) en `at`, o sin sitio con null. Sin efectos en ajustes, nada. */
+/** Que suene `name` (una de sus variantes) en `at`, o sin sitio con null. Con su canal callado en Opciones, nada. */
 export function playSoundAt(name: SoundName, at: Point3 | null): void {
-  if (!isAllowed(name)) return;
+  if (!isAudible(settings.volumes, channelOf(name, at))) return;
   const played = resolveSound(name);
   remember({ name, played, at });
   const mixer = runningMixer();
@@ -78,9 +98,26 @@ export function playSoundAt(name: SoundName, at: Point3 | null): void {
 /** Suena ya `played` (lo que sale de `name`), salvo que acabe de sonar. */
 function playNow(mixer: Mixer, name: SoundName, played: SoundId | null, at: Point3 | null): void {
   if (!played || tooSoon(name, played, mixer.context.currentTime)) return;
-  const [path] = assetsAvailable([pathOf(played, randomVariant(played))]);
+  playVariant(mixer, played, channelOf(name, at), at);
+}
+
+/** Una variante de `sound` al azar, por `channel` (en cuanto este bajada). */
+function playVariant(mixer: Mixer, sound: SoundId, channel: Output, at: Point3 | null): void {
+  const [path] = assetsAvailable([pathOf(sound, randomVariant(sound))]);
   if (!path) return;
-  void bufferOf(mixer.context, path).then((buffer) => buffer && start(mixer, buffer, channelOf(name, at), at));
+  void bufferOf(mixer.context, path).then((buffer) => buffer && start(mixer, buffer, channel, at));
+}
+
+/** Una muestra de `volume` (Opciones), para oir como queda; si se acaba de oir otra, no. */
+export function previewVolume(volume: VolumeChannel): void {
+  const preview = PREVIEW_SOUNDS[volume];
+  const mixer = runningMixer();
+  if (!preview || !mixer || !isAudible(settings.volumes, preview.channel)) return;
+  const played = resolveSound(preview.name);
+  const now = mixer.context.currentTime;
+  if (!played || now - lastPreviewAt < PREVIEW_GAP) return;
+  lastPreviewAt = now;
+  playVariant(mixer, played, preview.channel, null);
 }
 
 /** Si `name` acaba de sonar (o, si es una voz, otra voz); si no, apunta que suena ahora. */
@@ -94,10 +131,10 @@ function tooSoon(name: SoundName, sound: SoundId, now: number): boolean {
   return false;
 }
 
-function start(mixer: Mixer, buffer: AudioBuffer, channel: Channel, at: Point3 | null): void {
+function start(mixer: Mixer, buffer: AudioBuffer, channel: Output, at: Point3 | null): void {
   const source = mixer.context.createBufferSource();
   source.buffer = buffer;
-  const output = mixer.channels[channel];
+  const output = outputOf(mixer, channel);
   if (at) source.connect(pannerAt(mixer.context, at)).connect(output);
   else source.connect(output);
   source.start();
