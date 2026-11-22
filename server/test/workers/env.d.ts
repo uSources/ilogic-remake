@@ -1,9 +1,9 @@
 /**
  * Lo que dan `env` y `exports` de `cloudflare:workers` en los tests: el `env` es `Cloudflare.Env` (aqui
- * se le dice que es el del Worker, wrangler.toml) y `exports.default` es el Worker de src/index.ts.
+ * se le dice que es el del Worker, wrangler.toml) y `exports.default` es el Worker de src/cloudflare/index.ts.
  */
-import type * as WorkerModule from '../../src/index';
-import type { Env as WorkerEnv } from '../../src/roomObject';
+import type * as WorkerModule from '../../src/cloudflare/index';
+import type { Env as WorkerEnv } from '../../src/cloudflare/roomObject';
 
 declare global {
   namespace Cloudflare {

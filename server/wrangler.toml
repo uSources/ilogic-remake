@@ -1,7 +1,7 @@
 # El servidor de las partidas por la red: un Worker con las rutas y un Durable Object por sala
-# (`RoomObject`, src/roomObject.ts). Ver README.md y docs/ARQUITECTURA.md, "Red" → "Servidor".
+# (`RoomObject`, src/cloudflare/roomObject.ts). Ver README.md y docs/ARQUITECTURA.md, "Red" → "Servidor".
 name = "ilogic-servidor"
-main = "src/index.ts"
+main = "src/cloudflare/index.ts"
 compatibility_date = "2026-08-01"
 # La URL publica es https://ilogic-servidor.<cuenta>.workers.dev (el cliente la lee de VITE_SERVER_URL).
 workers_dev = true

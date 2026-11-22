@@ -1,24 +1,40 @@
 /**
- * El Worker: las rutas publicas del servidor de partidas. Crear una sala (`POST /rooms`: devuelve su
- * codigo y la ficha de cada asiento de persona, para los enlaces de invitacion), lo que puede saber
- * cualquiera de una sala (`GET /rooms/:code`) y la conexion de una partida (`GET /rooms/:code/ws`,
- * una subida a WebSocket; el saludo con la ficha va como primer mensaje). Cada sala es un Durable
- * Object (`RoomObject`, roomObject.ts), buscado por su codigo. Las rutas son una lista (`ROUTES`);
- * una ruta nueva es una entrada mas.
+ * Las rutas publicas del servidor de partidas, las mismas en Cloudflare y en Node: crear una sala
+ * (`POST /rooms`: devuelve su codigo y la ficha de cada asiento de persona, para los enlaces de
+ * invitacion), lo que puede saber cualquiera de una sala (`GET /rooms/:code`), dar a la IA un asiento
+ * vacio (`POST /rooms/:code/ai`) y la conexion de una partida (`GET /rooms/:code/ws`, una subida a
+ * WebSocket; el saludo con la ficha va como primer mensaje). Las salas las busca por su codigo quien
+ * aloja el servidor (`RoomDirectory`): en Cloudflare, un Durable Object por codigo; en Node, las salas
+ * del proceso. Las rutas son una lista (`ROUTES`); una ruta nueva es una entrada mas.
  */
 import { defaultContent } from '@core/content/default';
-import { isToken } from '@core/net';
+import { isToken, type SeatId } from '@core/net';
 import { isInt, isObject } from '@core/util/validation';
 import { isRoomCode, newRoomCode } from './codes';
 import { corsHeaders, isOriginAllowed } from './cors';
+import type { CreateResult, HandToAiResult } from './hostedRoom';
 import { MAX_CODE_TRIES, MAX_MESSAGE_BYTES, MAX_ROOM_TEAMS } from './limits';
+import type { LobbyInfo } from './roomAdapter';
+import { isRoomRequest, type RoomRequest } from './roomRequest';
+
+/** Las salas, por su codigo, de quien aloja el servidor. */
+export interface RoomDirectory {
+  /** Crea la sala con ese codigo (si ya hay una, `exists`: se prueba otro). */
+  create(code: string, request: RoomRequest): Promise<CreateResult>;
+  info(code: string): Promise<LobbyInfo | null>;
+  handToAi(code: string, token: string, seat: SeatId): Promise<HandToAiResult>;
+  /** La subida a WebSocket de la conexion de una sala. */
+  connect(code: string, request: Request): Promise<Response>;
+}
+
+/** Lo que necesitan las rutas: las salas y desde que otras webs se puede hablar con el servidor (cors.ts). */
+export interface ServerSetup {
+  rooms: RoomDirectory;
+  allowedOrigins: string;
+}
 
 /** Un asiento es como mucho uno por equipo. */
 const MAX_SEATS = MAX_ROOM_TEAMS;
-import type { Env, RoomObject } from './roomObject';
-import { isRoomRequest } from './roomRequest';
-
-export { RoomObject } from './roomObject';
 
 type Method = 'GET' | 'POST';
 
@@ -26,7 +42,7 @@ interface Route {
   method: Method;
   /** Con la ruta entera; el primer grupo, el codigo de la sala si lo lleva. */
   pattern: RegExp;
-  run: (request: Request, env: Env, code: string) => Promise<Response>;
+  run: (request: Request, rooms: RoomDirectory, code: string) => Promise<Response>;
 }
 
 /** Por que no se atiende una peticion (el cuerpo de la respuesta: `{ error }`). */
@@ -57,6 +73,18 @@ const STATUS_OF_ERROR: Record<RequestError, number> = {
   seatTaken: 409,
 };
 
+/** Las rutas de las salas: lo que no empieza asi no es del servidor de partidas (en Node puede ser el juego). */
+export const isRoomsPath = (path: string): boolean => path === '/rooms' || path.startsWith('/rooms/');
+
+/** La ruta de la conexion de una sala. */
+const SOCKET_PATTERN = /^\/rooms\/([^/]+)\/ws$/;
+
+/** El codigo de la sala si la ruta es la de su conexion y el codigo esta bien escrito; si no, null. */
+export function socketRoomCode(path: string): string | null {
+  const code = SOCKET_PATTERN.exec(path)?.[1];
+  return isRoomCode(code) ? code : null;
+}
+
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
 
@@ -75,8 +103,6 @@ async function bodyOf(request: Request): Promise<{ ok: true; body: unknown } | {
   }
 }
 
-const roomOf = (env: Env, code: string): DurableObjectStub<RoomObject> => env.ROOMS.get(env.ROOMS.idFromName(code));
-
 /** El enlace de invitacion de un asiento, tal como lo entiende la pantalla (su parte tras el #). */
 const inviteOf = (code: string, token: string): string => `#/sala/${code}/${token}`;
 
@@ -85,13 +111,13 @@ const inviteOf = (code: string, token: string): string => `#/sala/${code}/${toke
  * respuesta lleva el codigo y, por cada asiento de persona, su ficha y su enlace (quien crea se
  * queda con el primero y reparte los demas).
  */
-async function createRoom(request: Request, env: Env): Promise<Response> {
+async function createRoom(request: Request, rooms: RoomDirectory): Promise<Response> {
   const read = await bodyOf(request);
   if (!read.ok) return refuse(read.error);
   if (!isRoomRequest(read.body, defaultContent())) return refuse('badRequest');
   for (let attempt = 0; attempt < MAX_CODE_TRIES; attempt++) {
     const code = newRoomCode();
-    const created = await roomOf(env, code).create(read.body);
+    const created = await rooms.create(code, read.body);
     if (!created.ok) continue;
     const seats = created.seats.map((seat) => ({ ...seat, invite: inviteOf(code, seat.token) }));
     return json({ code, seats }, 201);
@@ -99,8 +125,8 @@ async function createRoom(request: Request, env: Env): Promise<Response> {
   return refuse('noFreeCode');
 }
 
-async function lobbyOf(_request: Request, env: Env, code: string): Promise<Response> {
-  const info = await roomOf(env, code).info();
+async function lobbyOf(_request: Request, rooms: RoomDirectory, code: string): Promise<Response> {
+  const info = await rooms.info(code);
   return info ? json(info) : refuse('noSuchRoom');
 }
 
@@ -109,35 +135,35 @@ const isHandToAiRequest = (value: unknown): value is { token: string; seat: numb
   isObject(value) && isToken(value.token) && isInt(value.seat, 0, MAX_SEATS);
 
 /** Quien creo la sala da un asiento vacio a la IA (`POST /rooms/:code/ai`, cuerpo `{ token, seat }`). */
-async function handToAi(request: Request, env: Env, code: string): Promise<Response> {
+async function handToAi(request: Request, rooms: RoomDirectory, code: string): Promise<Response> {
   const read = await bodyOf(request);
   if (!read.ok) return refuse(read.error);
   if (!isHandToAiRequest(read.body)) return refuse('badRequest');
-  const handed = await roomOf(env, code).handToAi(read.body.token, read.body.seat);
+  const handed = await rooms.handToAi(code, read.body.token, read.body.seat);
   return handed.ok ? json({ ok: true }) : refuse(handed.error);
 }
 
-/** La subida a WebSocket la hace el objeto de la sala (es quien tiene las conexiones). */
-async function connect(request: Request, env: Env, code: string): Promise<Response> {
+/** La subida a WebSocket la hace quien tiene las conexiones de la sala. */
+async function connect(request: Request, rooms: RoomDirectory, code: string): Promise<Response> {
   if (request.headers.get('Upgrade') !== 'websocket') return refuse('badRequest');
-  return roomOf(env, code).fetch(request);
+  return rooms.connect(code, request);
 }
 
 const ROUTES: readonly Route[] = [
   { method: 'POST', pattern: /^\/rooms$/, run: createRoom },
   { method: 'GET', pattern: /^\/rooms\/([^/]+)$/, run: lobbyOf },
   { method: 'POST', pattern: /^\/rooms\/([^/]+)\/ai$/, run: handToAi },
-  { method: 'GET', pattern: /^\/rooms\/([^/]+)\/ws$/, run: connect },
+  { method: 'GET', pattern: SOCKET_PATTERN, run: connect },
 ];
 
-async function route(request: Request, env: Env): Promise<Response> {
+async function route(request: Request, rooms: RoomDirectory): Promise<Response> {
   const path = new URL(request.url).pathname;
   for (const candidate of ROUTES) {
     const match = candidate.pattern.exec(path);
     if (!match || candidate.method !== request.method) continue;
     const code = match[1] ?? '';
     if (code && !isRoomCode(code)) return refuse('badCode');
-    return candidate.run(request, env, code);
+    return candidate.run(request, rooms, code);
   }
   return refuse('notFound');
 }
@@ -150,11 +176,10 @@ function withCors(response: Response, origin: string | null): Response {
   return new Response(response.body, { status: response.status, headers });
 }
 
-export default {
-  async fetch(request, env): Promise<Response> {
-    const origin = request.headers.get('Origin');
-    if (!isOriginAllowed(origin, env.ALLOWED_ORIGINS)) return refuse('badOrigin');
-    if (request.method === 'OPTIONS') return withCors(new Response(null, { status: 204 }), origin);
-    return withCors(await route(request, env), origin);
-  },
-} satisfies ExportedHandler<Env>;
+/** La respuesta del servidor a una peticion: el origen primero, luego la pregunta previa de CORS y luego su ruta. */
+export async function respond(request: Request, setup: ServerSetup): Promise<Response> {
+  const origin = request.headers.get('Origin');
+  if (!isOriginAllowed(origin, setup.allowedOrigins)) return refuse('badOrigin');
+  if (request.method === 'OPTIONS') return withCors(new Response(null, { status: 204 }), origin);
+  return withCors(await route(request, setup.rooms), origin);
+}
