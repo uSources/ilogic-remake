@@ -34,12 +34,11 @@ import { BoardView } from './pieces/boardView';
 import type { GlbLibrary } from './pieces/glbModels';
 import { GroundMarks } from './pieces/groundMarks';
 import { Wrecks } from './pieces/wrecks';
-import { Fireflies } from './terrain/fireflies';
-import { SandDust } from './terrain/sandDust';
+import type { BiomeLife } from './life/biomeLife';
 import { buildTerrain, type TerrainView } from './terrain/terrain';
 import { Surroundings } from './terrain/surroundings';
 
-/** Cuanto alrededor de lo que se mira hay clima y polvo: un poco mas que lo que se ve. */
+/** Cuanto alrededor de lo que se mira hay clima y ambiente (motas, animalitos): un poco mas que lo que se ve. */
 const WEATHER_REACH = 0.9;
 /** Lo que alumbra la luz del sol alrededor del centro del mapa (por su lado mas largo). */
 const LIGHT_REACH = 0.75;
@@ -63,8 +62,6 @@ export class MatchScene implements ScreenView {
   readonly world: World;
   readonly board: BoardView;
   readonly weather: WeatherView;
-  readonly sandDust: SandDust;
-  private readonly fireflies: Fireflies;
   readonly wrecks = new Wrecks();
   /** Hacia donde mira la camara en este fotograma (se reutiliza). */
   private readonly cameraForward = new THREE.Vector3();
@@ -104,8 +101,6 @@ export class MatchScene implements ScreenView {
     this.intents = new IntentArrowsView((pos) => this.board.groundOf(pos));
     this.flags = new DestinationFlagsView((pos) => this.board.groundOf(pos), images);
     this.weather = new WeatherView(container);
-    this.sandDust = new SandDust(this.terrain.sandTiles, (pos) => this.board.groundOf(pos));
-    this.fireflies = new Fireflies(this.terrain.fireflyTiles, (pos) => this.board.groundOf(pos));
     this.cameraView = new ThreeCameraView(this.world.camera);
     this.selectionBox = new ScreenBoxView(container);
     this.world.scene.add(
@@ -118,8 +113,6 @@ export class MatchScene implements ScreenView {
       this.flags.object,
       this.effects,
       this.weather.object,
-      this.sandDust.object,
-      this.fireflies.object,
     );
     this.world.scene.add(this.particles.object, this.marks.mesh, this.wrecks.object);
     this.world.addOverlay((renderer, scene, camera) => this.outline.draw(renderer, scene, camera, this.outlinedUnits()));
@@ -231,6 +224,11 @@ export class MatchScene implements ScreenView {
     this.world.setWeather(weather);
   }
 
+  /** Lo que vive en el tablero sin ser de la partida (las motas, los animalitos). */
+  get life(): BiomeLife {
+    return this.terrain.life;
+  }
+
   onFrame(listener: FrameListener): void {
     this.world.onFrame(listener);
   }
@@ -253,8 +251,7 @@ export class MatchScene implements ScreenView {
     const reach = pose.distance * WEATHER_REACH;
     const viewportHeight = this.canvas.clientHeight;
     this.weather.update(seconds, target, reach, this.world.camera, viewportHeight);
-    this.sandDust.update(seconds, target, reach, this.world.camera, viewportHeight);
-    this.fireflies.update(seconds, target, reach, this.world.camera, viewportHeight);
+    this.life.update(seconds, target, reach, this.world.camera, viewportHeight);
     this.wrecks.update(seconds);
     this.particles.keepEmitting([...this.board.smokeSources(), ...this.wrecks.smokeSources()], seconds);
     this.particles.update(seconds, this.world.camera, viewportHeight);

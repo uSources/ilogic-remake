@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { defaultContent } from '@core/content/default';
 import { describe, expect, it } from 'vitest';
+import { FIREFLIES, FROG } from '../src/view3d/engine/life/kinds';
 import { pieceAt, TERRAIN_MODEL_FILES, TERRAIN_PIECES, THEME_PIECES } from '../src/view3d/engine/terrain/pieces';
 import { blankState } from './helpers';
 
@@ -26,7 +27,7 @@ describe('las piezas del terreno 3D', () => {
     s.map[water.x]![water.y] = 'Water';
     expect(pieceAt(s, water).tile).toBe('tile_water');
     s.theme = 'Swamp';
-    expect(pieceAt(s, water)).toMatchObject({ tile: 'tile_swamp_water', decor: ['lilies_0', 'lilies_1', 'lilies_2'], fireflies: true });
-    expect(pieceAt(s, water).frogs?.share).toBeGreaterThan(0);
+    expect(pieceAt(s, water)).toMatchObject({ tile: 'tile_swamp_water', decor: ['lilies_0', 'lilies_1', 'lilies_2'], motes: [FIREFLIES] });
+    expect(pieceAt(s, water).critters).toEqual([expect.objectContaining({ kind: FROG, share: expect.any(Number) })]);
   });
 });
