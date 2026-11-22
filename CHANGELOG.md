@@ -7,6 +7,28 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.15.0] - 2026-11-22 — Cada sonido a su volumen
+
+### Novedades
+- **Volumen de cada sonido**: en Opciones, «General», «Música», «Efectos del tablero», «Ambiente», «Voces de las unidades» e «Interfaz y menús» tienen cada uno un deslizador de 0 a 100 y un altavoz que lo silencia sin perder el volumen. Al moverlo suena una muestra. Con «Silenciar en segundo plano», todo se calla mientras la pestaña está escondida. Al máximo suena como hasta ahora.
+
+### Arreglos
+- El agua que llega al borde del mapa acaba en la tierra del tema (tierra, barro, roca helada o arena), y no en una pared azul delante del mar, las dunas o el hielo.
+- En la partida, Opciones y la Ayuda se quedan con el teclado mientras están abiertas: la E ya no acaba el turno al cambiar de pestaña, las flechas recorren las filas en vez de mover la cámara y en Controles se puede elegir otra tecla. Además, O y H abren Opciones y la Ayuda.
+- Con la pausa abierta solo valen sus teclas: ya no se mueve la cámara ni se dan órdenes por detrás, las flechas recorren sus opciones y sus atajos son las teclas que tengas en Controles.
+- El juego en un solo fichero (`ilogic.html`) tiene música en la partida aunque la pista de su tema no vaya dentro.
+
+<!-- en -->
+
+### New
+- **A volume for each sound**: in Options, “Master”, “Music”, “Battlefield effects”, “Ambience”, “Unit voices” and “Interface and menus” each have a 0–100 slider and a speaker that mutes it without losing the volume. Moving a slider plays a sample. With “Mute in background”, everything goes quiet while the tab is hidden. At maximum it sounds as before.
+
+### Fixes
+- Water that reaches the map edge now ends in the theme's ground (earth, mud, icy rock or sand) instead of a blue wall in front of the sea, dunes or ice.
+- In a match, Options and Help keep the keyboard while they're open: E no longer ends the turn when switching tabs, the arrows move through the rows instead of the camera, and in Controls you can pick a new key. Also, O and H open Options and Help.
+- With the pause menu open, only its keys work: the camera no longer moves and no orders go through behind it, the arrows move through its options, and its shortcuts are the keys you set in Controls.
+- The single-file game (`ilogic.html`) plays music in a match even when its theme's track isn't bundled in.
+
 ## [0.14.0] - 2026-11-22 — Banderas, minimapa y un mundo que suena
 
 ### Novedades

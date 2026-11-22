@@ -170,20 +170,13 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     refresh: () => publish(),
   });
 
-  /** Una opcion de la pausa; rendirse acaba la partida sin pasar por los turnos: si se ha acabado, su final. */
-  function pickPause(index?: number): void {
-    pause.pick(index);
-    showEndIfOver(session, viewer);
-  }
-
   /** Tras el cartel de victoria o derrota, la pantalla del final. */
   function showEndSoon(): void {
     window.setTimeout(() => showEndIfOver(session, viewer), END_SCREEN_DELAY_MS);
   }
 
-  /** Esc: deshace lo elegido; sin nada elegido, abre o cierra la pausa (con las opciones o la ayuda abiertas, Esc es suyo). */
+  /** Esc en el mapa: deshace lo elegido; sin nada elegido, abre la pausa (abierta, como las opciones o la ayuda, Esc es suyo). */
   function escape(): void {
-    if (pause.isOpen) return pause.close();
     if (!controls.cancel()) pause.open();
   }
 
@@ -197,7 +190,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
 
   installHudActions({
     endTurn: () => endGuard.press(),
-    menuPick: (index) => (pause.isOpen ? pickPause(index) : controls.pickMenu(index)),
+    menuPick: (index) => (pause.isOpen ? pause.pick(index) : controls.pickMenu(index)),
     menuHover: (index) => (pause.isOpen ? pause.hover(index) : controls.hoverMenu(index)),
     menuClose: () => (pause.isOpen ? pause.close() : void controls.cancel()),
     openGameMenu: () => pause.open(),
@@ -242,13 +235,14 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   installKeys({
     camera,
     onFrame: (listener) => scene.onFrame(listener),
-    // Las opciones y la ayuda se abren encima del mapa (o de la pausa): mientras, las teclas son suyas.
-    panels: [helpPanel, options],
+    // La pausa, las opciones y la ayuda se abren encima del mapa (las opciones, tambien encima de la
+    // pausa: van antes): mientras, las teclas son suyas.
+    panels: [helpPanel, options, pause],
     sounds: audio.sounds,
     endTurn: () => endGuard.press(),
     nextUnit: nextIdle,
     cancel: escape,
-    accept: () => (pause.isOpen ? pickPause() : controls.acceptMenu()),
+    accept: () => controls.acceptMenu(),
     group: (n, mode) => void groupKey(n, mode),
     order: (order) => controls.orderKey(order),
     orderHere: () => cursor && controls.context(cursor),
