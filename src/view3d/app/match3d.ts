@@ -2,7 +2,9 @@
  * Una partida en 3D: la raiz de composicion. Junta cada sistema (el turno, la entrada, la camara de
  * estrategia, los sucesos animados, la interfaz, la pausa) con el motor que dibuja la partida
  * (engine/matchScene.ts) y con la misma sesion, reglas e interfaz HTML de siempre. Aqui no se dibuja
- * ni se decide: solo se conecta. La pausa y el final, en systems/hud/matchMenus.ts.
+ * ni se decide: solo se conecta. La pausa y el final, en systems/hud/matchMenus.ts. Quien lleva la
+ * partida es su sesion (`localRunner`) o, por la red, la sala del servidor (`OnlinePlay`): su sesion
+ * espejo cambia con cada vista, asi que los sistemas la piden siempre a `runner`.
  */
 import { mapGrid } from '../../core/mapGrid';
 import type { Pos, TeamId, Unit } from '../../core/model';
@@ -32,7 +34,10 @@ import { TurnControls } from '../systems/turn/turnControls';
 import { showDestinations } from '../systems/orders/destinationFlags';
 import { anyStandingOrder, OrderIntents } from '../systems/orders/orderIntents';
 import { ThreatZone } from '../systems/threat/threatZone';
-import type { StartedGame } from './gameStart';
+import { localRunner, type MatchRunner } from '../systems/turn/matchRunner';
+import { OnlinePlay } from '../systems/net/onlinePlay';
+import { notifyTurn } from '../systems/net/turnNotice';
+import { backToMenu, type StartedGame } from './gameStart';
 import type { GroupMode } from '../../controls/inputCommands';
 
 /** De partida, lo bastante cerca para leer las unidades (la rueda deja alejarse para ver mas mapa). */
@@ -50,8 +55,18 @@ const END_SCREEN_DELAY_MS = 2200;
 const MS_PER_SECOND = 1000;
 
 /** Juega esa partida en la pagina (hasta que se sale al menu, que recarga). */
-export function playMatch({ session, viewer }: StartedGame, images: GameImages, glbModels: GlbLibrary, audio: GameAudio): void {
+export function playMatch({ session, viewer, room }: StartedGame, images: GameImages, glbModels: GlbLibrary, audio: GameAudio): void {
+  /** La partida que se ve: el mismo objeto toda la partida (por la red, cada vista se mete en el). */
   const state = session.state;
+  const online = room
+    ? new OnlinePlay(room, session, viewer, {
+        viewReplaced: () => controls.viewReplaced(),
+        othersGoOn: () => controls.othersGoOn(),
+        ownTurn: notifyTurn,
+        quit: backToMenu,
+      })
+    : null;
+  const runner: MatchRunner = online ?? localRunner(session, viewer);
   const scene = new MatchScene(document.getElementById('game')!, state, viewer, glbModels, images);
   const { board } = scene;
   const grid = mapGrid(state);
@@ -124,19 +139,31 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   const sounds = scene.soundStage(audio);
   const stages = { ...scene.stages, sounds, day, board: boardLookupOf(state, viewer) };
   /** Lo que haran las ordenes al terminar el turno (al señalar una unidad con orden, o todas con «Ver órdenes»). */
-  const intents = new OrderIntents({ session, viewer, marks: scene.intentMarks });
+  const intents = new OrderIntents({
+    get session() {
+      return runner.session;
+    },
+    viewer,
+    marks: scene.intentMarks,
+  });
   function toggleIntents(): void {
     intents.toggleAll();
     publish();
   }
   /** A donde llegan los enemigos que se ven (T o el icono de la bandeja). */
-  const threat = new ThreatZone({ session, viewer, marks: scene.threatMarks });
+  const threat = new ThreatZone({
+    get session() {
+      return runner.session;
+    },
+    viewer,
+    marks: scene.threatMarks,
+  });
   function toggleThreat(): void {
     threat.toggle();
     publish();
   }
   const controls = new TurnControls({
-    session,
+    runner,
     viewer,
     marks: scene.tileMarks,
     preview: scene.movePreview,
@@ -158,9 +185,13 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     () => publish(),
   );
   const pause = new PauseMenu({
-    session,
+    get session() {
+      return runner.session;
+    },
     viewer,
+    savesHere: !online,
     endTurn: () => endGuard.press(),
+    surrender: () => void surrender(),
     openOptions: () => options.open(),
     toggleThreat,
     toggleIntents,
@@ -172,7 +203,18 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
 
   /** Tras el cartel de victoria o derrota, la pantalla del final. */
   function showEndSoon(): void {
-    window.setTimeout(() => showEndIfOver(session, viewer), END_SCREEN_DELAY_MS);
+    window.setTimeout(showEnd, END_SCREEN_DELAY_MS);
+  }
+
+  /** La pantalla del final, si la partida se ha acabado para quien mira (por la red, ya no se sigue la sala). */
+  function showEnd(): void {
+    if (showEndIfOver(runner.session, viewer, !!online)) online?.close();
+  }
+
+  /** Rendirse acaba la partida sin pasar por los turnos: su final, ya. */
+  async function surrender(): Promise<void> {
+    await runner.act({ kind: 'surrender' });
+    showEnd();
   }
 
   /** Esc en el mapa: deshace lo elegido; sin nada elegido, abre la pausa (abierta, como las opciones o la ayuda, Esc es suyo). */
@@ -271,13 +313,18 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
   scene.start();
   ui.set({ screen: 'game' });
   playMusic(gameTrackOf(state.theme));
-  // Se guarda al salir de la pagina (cerrar, recargar): «Continuar» la retoma.
-  window.addEventListener('pagehide', () => void (screenEnd(session, viewer) ?? saveGame(session.state)));
+  // Se guarda al salir de la pagina (cerrar, recargar): «Continuar» la retoma. Por la red se sigue desde el servidor.
+  if (!online) window.addEventListener('pagehide', () => void (screenEnd(session, viewer) ?? saveGame(session.state)));
+  online?.listen();
   void controls.runUntilInput();
 
-  // Para mirar y probar desde la consola (y los agentes): la sesion y las piezas.
+  // Para mirar y probar desde la consola (y los agentes): la sesion y las piezas (y la sala, por la red).
   (window as unknown as { ilogic3d: object }).ilogic3d = {
-    session,
+    get session() {
+      return runner.session;
+    },
+    viewer,
+    online,
     board,
     controls,
     camera,

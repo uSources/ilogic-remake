@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
 import { skirmishConfig, type MatchTeam } from '@core/match';
-import type { GameEvent, TeamId } from '@core/model';
 import { CURRENT_PROTOCOL, Room, viewChangeOf, viewSnapshotOf, type Outgoing, type RoomContext, type ServerMessage } from '@core/net';
 import { unitById } from '@core/rules';
-import { RoomClient, animationView, splitByTurn, type RoomPlay, type RoomReply } from '../src/net/roomClient';
+import { RoomClient, animationView, type RoomPlay, type RoomReply } from '../src/net/roomClient';
 import { RECONNECT_MS, ServerLink, seqStorageKey, type LinkDeps, type LinkStatus, type SocketLike } from '../src/net/serverLink';
 import { parseInvite, withRoom, withoutRoom, type OnlineRoomEntry } from '../src/net/onlineRooms';
 import { tokenCounter } from './sim/netClient';
@@ -353,18 +352,44 @@ describe('RoomClient', () => {
     expect((await client.next()).kind).toBe('turn');
   });
 
-  it('un lote con varios turnos se parte por turnos para anunciar cada uno', () => {
-    const events: GameEvent[] = [
-      { kind: 'turnEnd', actor: 0 as TeamId, day: 1 },
-      { kind: 'turnStart', actor: 1 as TeamId, day: 1 },
-      { kind: 'wait', actor: 1 as TeamId, uid: 9 },
-      { kind: 'turnStart', actor: 2 as TeamId, day: 1 },
-    ] as GameEvent[];
-    expect(splitByTurn(events).map((chunk) => [chunk.team, chunk.events.length])).toEqual([
-      [null, 1],
-      [1, 2],
-      [2, 1],
-    ]);
+  it('una respuesta perdida en un corte: al volver, el saludo la da por contestada y la vista entera hace de eco', async () => {
+    const room = Room.create(
+      { match: skirmishConfig({ seed: 21, size: 16, teams: [{ controller: 'human' }, { controller: 'ai' }] }) },
+      context(),
+    );
+    const token = room.personSeats()[0]!.token;
+    let seq = 0;
+    let isCut = false;
+    const client = new RoomClient(
+      {
+        send: (message) => {
+          seq += 1;
+          const outgoing = room.handle(0, { ...message, seq });
+          if (!isCut) deliver(outgoing);
+          return seq;
+        },
+        resync: () => undefined,
+      },
+      defaultContent(),
+    );
+    const deliver = (outgoing: Outgoing[]) => {
+      for (const { seat, message } of outgoing) if (seat === 0) client.receive(message);
+    };
+    const hello = () => {
+      const joined = room.join({ kind: 'hello', token, ...CURRENT_PROTOCOL });
+      if (!joined.ok) throw new Error(joined.error);
+      deliver(joined.messages);
+    };
+    hello();
+    const unit = client.state!.units.find((candidate) => candidate.team === 0)!;
+    // El servidor la atiende, pero su respuesta y su eco se pierden en el corte.
+    isCut = true;
+    const echo = client.nextEcho();
+    const reply = client.act({ kind: 'wait', uid: unit.uid });
+    isCut = false;
+    hello();
+    expect(await reply).toEqual({ ok: true, events: [] });
+    expect(unitById(await echo, unit.uid)?.turnState).toBe('done');
   });
 
   it('la vista con la que se anima lleva las unidades que ya no estan en la de despues', () => {

@@ -21,8 +21,8 @@ export async function startDevServer() {
   throw new Error(`El servidor de desarrollo no contesta en ${url}`);
 }
 
-/** Un puerto que el sistema da por libre ahora mismo. */
-function freePort() {
+/** Un puerto que el sistema da por libre ahora mismo (tambien para otros servidores de las herramientas). */
+export function freePort() {
   return new Promise((done, fail) => {
     const probe = createServer();
     probe.on('error', fail);

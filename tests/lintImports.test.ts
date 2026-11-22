@@ -188,6 +188,8 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     'core/defaultGames.ts#createMatch': 'crea una partida nueva',
     'core/defaultGames.ts#loadGame': 'carga una partida nueva',
     'core/net/clientState.ts#loadView': 'carga la partida de un cliente (su vista, con readSave)',
+    'core/net/clientState.ts#fillWith':
+      'mete la vista que llega en la partida del cliente (como cargarla); nada de debajo de la red la importa: NO_NET',
     'core/match.ts#buildMatch': 'crea una partida nueva',
     'core/missions/build.ts#buildMission': 'crea una partida nueva',
     'core/mapgen/buildings.ts#placeStartingUnits': 'el generador de mapas, en la partida que crea',

@@ -60,15 +60,14 @@ sirve el juego y las salas en la misma direccion (`http://<tu-equipo>:8787`).
   entrado todos; mientras, quien creo la sala puede dar a la IA un asiento que sigue vacio.
 - **Entrar**: con el enlace (abre el juego directamente en la sala) o pegandolo en «Entrar con
   enlace». «Mis partidas en línea» recuerda las salas de este navegador para volver a entrar.
-- **En la partida**: tu turno se juega como siempre; en los demas sale «Esperando al equipo N…» y
-  lo que hacen llega animado cuando acaban. Si cambias de pestaña, el titulo (y un toque, con la
-  musica activada) avisan de que te toca. La linea de arriba dice como va la conexion: si se
-  corta, el juego vuelve a conectar solo. Guardar y repetir el turno enemigo no estan: la partida
-  sigue desde el servidor. Rendirse o salir, desde el menu de pausa (al salir, tu asiento sigue
-  siendo tuyo: vuelve con el enlace).
+- **En la partida**: tu turno se juega como siempre (cada accion la confirma el servidor); en los
+  demas sale «Esperando al equipo N…» y lo que hacen llega animado cuando acaban. Si cambias de
+  pestaña, el titulo avisa de que te toca. La pastilla bajo la del dia dice como va la conexion: si
+  se corta, el juego vuelve a conectar solo. Guardar no esta: la partida sigue desde el servidor
+  (recargar la pagina vuelve a ella). Rendirse o salir, desde el menu de pausa (al salir, tu asiento
+  sigue siendo tuyo: vuelve con el enlace o desde «Mis partidas en línea»).
 
-`npm run online` lo prueba de punta a punta con un servidor local (`wrangler dev`) y dos
-navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada, los mensajes):
+`npm run online` lo prueba de punta a punta con el servidor de Node en local y dos navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada, los mensajes):
 [docs/RED.md](docs/RED.md).
 
 ## Como se juega
@@ -196,7 +195,8 @@ src/
   audio/       Musica (music.ts, con <audio>), efectos de sonido (sfx.ts, con Web Audio; WAV de Ashfox o de IA)
                y los volumenes de Opciones (volumes.ts) que pone el mezclador (audioContext.ts)
   net/         Partidas por la red desde el navegador: la conexion con la sala (serverLink), lo que llega
-               como partida y jugadas (roomClient), las rutas (roomApi) y «Mis partidas en línea»
+               como partida y jugadas (roomClient), la sesion de la pantalla (mirrorSession), las rutas
+               (roomApi) y «Mis partidas en línea»; la partida 3D por la red, en view3d/systems/net/
   patchNotes/  Novedades: notas de parche de GitHub y del CHANGELOG
   atlas.ts     Atlas de imagenes de la interfaz (GameImages, loadGameImages), sin motor de juego
   hud/         Interfaz en HTML con Preact encima del lienzo: Hud.tsx (raiz), game/ menus/ overlays/

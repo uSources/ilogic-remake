@@ -62,26 +62,33 @@
   word-break: break-all;
 }
 
-/* En la partida: la conexion y a quien se espera */
+/* En la partida: la conexion y a quien se espera; una pastilla pequeña bajo la del dia (topbar.css). */
 .netline {
   position: absolute;
-  top: 44px;
+  top: 76px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 10px;
-  background: rgba(0, 0, 0, 0.55);
-  border: 2px solid var(--ink);
+  padding: 4px 14px 4px 10px;
+  background: var(--panel);
+  border: var(--outline) solid var(--ink);
+  border-radius: 999px;
+  box-shadow: var(--lift);
+  color: var(--text);
+  font-family: var(--body);
+  font-weight: 700;
   font-size: 14px;
+  white-space: nowrap;
   pointer-events: none;
   z-index: 5;
 }
 .netline i {
-  width: 8px;
-  height: 8px;
-  background: var(--green, #5fd36b);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
 }
 .netline.reconnecting i {
   background: var(--gold);

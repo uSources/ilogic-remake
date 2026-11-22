@@ -135,6 +135,8 @@ export class Room {
   private announced: { team: TeamId; day: number } | null = null;
   /** Lo que vio quien acaba de actuar de su propia accion (lo deja `carry`, lo lleva su resultado). */
   private seenByActor: GameEvent[] | null = null;
+  /** El asiento cuya accion se esta haciendo: su paso le llega siempre, aunque no cambie nada (es el eco de su `result`). */
+  private echoTo: SeatId | null = null;
   /** Cuantos mensajes se le han rechazado a cada asiento (de una ficha, o de la partida): para que el servidor frene a quien insiste. */
   private readonly rejections = new Map<SeatId, number>();
   private readonly sameToken: TokenCompare;
@@ -335,7 +337,10 @@ export class Room {
     return null;
   }
 
-  /** Una accion de una persona, por la sesion: su resultado para ella (antes que lo que ha cambiado) y, si cambia algo, lo que ven todos. */
+  /**
+   * Una accion de una persona, por la sesion: su resultado para ella, antes que lo que ha cambiado;
+   * si vale, detras siempre su eco (su vista al dia, aunque no cambie nada) y lo que ven los demas.
+   */
   private act(person: PersonSeat, seq: number, action: GameAction): Outgoing[] {
     const problem = this.mayAct(person, action);
     if (problem) return this.refuse(person.id, problem, seq);
@@ -357,7 +362,9 @@ export class Room {
     const foreseen = actionProblem(known, person.team, action);
     if (foreseen) return { ok: false, reason: foreseen };
     this.seenByActor = null;
+    this.echoTo = person.id;
     const result = this.session.act(person.team, action);
+    this.echoTo = null;
     if (!result.ok) return result;
     return { ok: true, events: this.seenByActor ?? [] };
   }
@@ -455,7 +462,7 @@ export class Room {
 
   /** Un paso de la sesion: a cada persona, lo que ve (el correo lo lleva); lo de quien actuo, para su resultado. */
   private carry(step: ActedStep): void {
-    const seenBy = this.courier.carry(step, this.joinedPeople());
+    const seenBy = this.courier.carry(step, this.joinedPeople(), this.echoTo);
     const actor = this.personSeats().find((seat) => seat.team === step.team);
     if (actor) this.seenByActor = seenBy.get(actor.id) ?? null;
   }

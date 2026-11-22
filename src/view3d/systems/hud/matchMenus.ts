@@ -2,7 +2,9 @@
  * Los menus de la partida 3D que no son del tablero: el de pausa (seguir, terminar turno, guardar,
  * opciones, ayuda, rendirse, salir) y la pantalla del final (resumen y botones: revancha, nueva,
  * siguiente mision...). Rendirse y salir piden pulsar dos veces. Con la pausa abierta, el teclado es
- * suyo (es un KeyPanel, systems/input/keyInput.ts): sus opciones y sus atajos, nada del mapa.
+ * suyo (es un KeyPanel, systems/input/keyInput.ts): sus opciones y sus atajos, nada del mapa. Por
+ * la red no se guarda aqui (la partida se sigue desde el servidor) y el final solo vuelve al menu
+ * (la revancha seria otra sala).
  */
 import { missionById, type Mission } from '../../../core/missions';
 import { canBeLost, gameModeOf } from '../../../core/modes';
@@ -51,7 +53,11 @@ const CONFIRM_MS = 2500;
 export interface PauseHost {
   readonly session: GameSession;
   readonly viewer: TeamId;
+  /** La partida se puede guardar en esta pantalla (por la red, no). */
+  readonly savesHere: boolean;
   endTurn(): void;
+  /** Rendirse (lo hace quien lleva la partida) y enseñar el final. */
+  surrender(): void;
   openOptions(): void;
   /** Ver amenaza y ver ordenes (sin sitio fijo en pantalla: la pausa, T y V). */
   toggleThreat(): void;
@@ -125,7 +131,7 @@ export class PauseMenu {
   private choices(): PauseChoice[] {
     const mode = gameModeOf(this.host.session.state);
     const isOffered: Partial<Record<PauseChoice, boolean>> = {
-      save: mode.saves,
+      save: mode.saves && this.host.savesHere,
       surrender: canBeLost(mode),
       intents: this.host.hasOrders(),
     };
@@ -158,8 +164,7 @@ export class PauseMenu {
         // Acaba la partida sin pasar por los turnos: su final, ya.
         return this.confirmTwice('surrender', 'confirmSurrender', () => {
           this.close();
-          host.session.act(host.viewer, { kind: 'surrender' });
-          showEndIfOver(host.session, host.viewer);
+          host.surrender();
         });
       case 'quit':
         return this.confirmTwice('quit', 'confirmQuit', backToMenu);
@@ -281,7 +286,8 @@ const nextMission = (mission: Mission): Mission | undefined => {
   return missions[missions.findIndex((candidate) => candidate.id === mission.id) + 1];
 };
 
-function endButtonsFor(mission: Mission | undefined, outcome: EndOutcome): EndButton[] {
+function endButtonsFor(mission: Mission | undefined, outcome: EndOutcome, isOnline: boolean): EndButton[] {
+  if (isOnline) return ['menu'];
   if (!mission) return ['rematch', 'new', 'menu'];
   if (outcome !== 'won') return ['retry', 'menu'];
   return nextMission(mission) ? ['next', 'retry', 'menu'] : ['retry', 'menu'];
@@ -294,9 +300,10 @@ const missionStart = (mission: Mission): GameStart => ({
 
 /**
  * La pantalla del final para quien mira, si la partida se ha acabado para el (true si se ha
- * enseñado). Apunta la mision ganada y borra el guardado de esta partida.
+ * enseñado). Apunta la mision ganada y borra el guardado de esta partida (por la red, `isOnline`,
+ * el guardado de esta pantalla es de otra partida: no se toca).
  */
-export function showEndIfOver(session: GameSession, viewer: TeamId): boolean {
+export function showEndIfOver(session: GameSession, viewer: TeamId, isOnline = false): boolean {
   const end = screenEnd(session, viewer);
   if (!end) return false;
   const s = session.state;
@@ -305,8 +312,8 @@ export function showEndIfOver(session: GameSession, viewer: TeamId): boolean {
   const won = shown.outcome === 'won';
   const bestBefore = mission ? bestDays(mission.id) : null;
   if (mission && won) markCompleted(mission.id, s.day);
-  deleteSave();
-  const buttons = endButtonsFor(mission, shown.outcome);
+  if (!isOnline) deleteSave();
+  const buttons = endButtonsFor(mission, shown.outcome, isOnline);
   ui.set({
     screen: 'end',
     menu: null,

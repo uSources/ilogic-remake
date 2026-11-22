@@ -1019,47 +1019,67 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
   `runDurableObjectAlarm`) y `server/node/test` (el servidor de Node en un puerto; ademas sus alarmas
   con la hora adelantada a mano, arrancar otra vez con las salas en disco y servir el juego).
 
-### Cliente (`src/net/`, el menu y la escena)
+### Cliente (`src/net/`, el menu y la partida 3D)
 
 La pantalla de una partida por la red. Lo de fuera del nucleo que habla con el servidor esta en
-`src/net/` (sin Phaser: se prueba con un socket falso, `tests/onlineClient.test.ts`); el menu y la
-escena solo lo enchufan. Que hay en cada archivo y por donde pasa cada cosa, en `docs/RED.md`. Las
-decisiones:
+`src/net/` (sin navegador: se prueba con un socket falso, `tests/onlineClient.test.ts`); el menu y la
+partida 3D solo lo enchufan: lo que la partida hace distinto por la red es un sistema,
+`view3d/systems/net/onlinePlay.ts` (`OnlinePlay`, `tests/onlinePlay.test.ts`). Que hay en cada
+archivo y por donde pasa cada cosa, en `docs/RED.md`. Las decisiones:
 
 - **La partida de la pantalla es la vista del servidor**, en una sesion espejo (`mirrorSession`,
-  matchSetup.ts): la persona juega su equipo (`humanController`) y los demas son remotos
-  (`remoteController`: la sesion los espera y no juega nada por ellos). Asi todo lo de la escena
-  funciona igual que en una partida de esta pantalla.
-- **El turno propio se juega como en la hotseat**: cada accion pasa por la sesion espejo (`act`,
-  que la comprueba con lo que el equipo sabe, igual que la sala antes de preguntar a la partida de
-  verdad) y, si vale, se manda a la sala. Si la sala la rechaza (algo escondido lo impedia), se avisa
-  y se pide la vista (`resync`), que vuelve a ser la partida. Lo que se anima (atacar, capturar,
-  comprar, unirse, subir) lo decide el servidor —los dados y lo escondido estan alli—: se
-  espera su `result` y su eco (la vista al dia), la vista pasa a ser la partida (`adoptView`: sesion
-  espejo nueva) y sus sucesos, tal como los ve el equipo, se animan como siempre.
-- **Los demas llegan por lotes** y cada lote se anima por turnos contra `animationView(antes,
-  despues)`: la vista de despues mas las unidades que solo estan en la de antes (cayeron o se
-  metieron en la niebla por el camino: sin ellas no habria dibujo que animar). Al acabar el lote,
-  la de despues es la partida. Un `ended` deja la ultima vista y el final lo decide la pantalla como
-  siempre (`checkEnd`).
+  `src/net/mirrorSession.ts`): la persona juega su equipo (`humanController`) y los demas son
+  remotos (`remoteController`: la sesion los espera y no juega nada por ellos). Asi la pantalla
+  pregunta a la partida lo mismo que en una de esta pantalla (a quien se espera, que se puede hacer).
+- **El turno no sabe si es por la red**: `TurnControls` habla con quien lleva la partida por
+  `MatchRunner` (`systems/turn/matchRunner.ts`: hacer una accion, acabar el turno, esperar a que
+  vuelva a tocar enseñando lo de los demas). En una partida de esta pantalla es `localRunner` (la
+  sesion, paso a paso); por la red, `OnlinePlay`. `app/match3d.ts` elige uno y lo da al turno, a la
+  pausa y al final.
+- **Toda accion propia la decide el servidor.** `OnlinePlay.act` la comprueba antes con lo que sabe
+  el equipo (`actionProblem`, como la sala antes de preguntar a la partida de verdad: lo que no vale
+  se contesta sin preguntar), la manda y espera su `result` y su eco (la vista al dia, que la sala
+  manda siempre tras una accion que vale). La vista pasa a ser la partida y sus sucesos, tal como los
+  ve el equipo, se animan como siempre. Nada se hace antes en la sesion espejo: asi un rechazo (algo
+  escondido lo impedia) no deja nada que deshacer (aviso y `resync`), y la espera es una ida y vuelta.
+- **La vista que llega se mete en la misma partida** (`fillWith`, `core/net/clientState.ts`): el
+  tablero, el turno y la interfaz leen siempre `session.state`, y asi no hay que avisar a cada uno de
+  que la partida es otra. La partida que se ve es una copia aparte de la del cliente (`cloneState`):
+  la del cliente es el "antes" del siguiente lote. Como las unidades son objetos nuevos, el turno
+  busca lo elegido por su uid (`TurnControls.onBoardNow`).
+- **Lo que llega se atiende en orden, uno a uno** (`OnlinePlay.pump`, que espera a la accion en
+  curso): mientras no es el turno propio, a la cola de quien mira (`untilInput`); en el turno propio,
+  la vista al dia, salvo lo que lo acaba (un `turn` de otro equipo, o un lote que pasa de turno: se
+  acabo el tiempo), que suelta lo elegido y se pone a animar a los demas (`TurnControls.othersGoOn`).
+- **Los demas llegan por lotes** y cada lote se anima contra `animationView(antes, despues)`: la
+  vista de despues mas las unidades que solo estan en la de antes (cayeron o se metieron en la niebla
+  por el camino: sin ellas no habria pieza que animar). Al acabar el lote, la de despues es la
+  partida. Un `ended` deja la ultima vista y el final lo decide la pantalla como siempre
+  (`showEndIfOver`).
+- **Cada partida por la red es su carga de pagina, como todas**: el vestibulo cierra su conexion y
+  apunta el arranque 'online' (codigo y ficha); la partida vuelve a entrar al cargar (`joinMatch`,
+  `app/gameStart.ts`: `OnlineMatch.inPlay`). Ese arranque no se borra al cargar, asi que recargar
+  vuelve a la sala; salir al menu lo quita.
 - **El enlace aguanta los cortes solo** (`ServerLink`): vuelve con esperas crecientes, saluda otra
   vez y reenvia lo que mando sin contestar; el `seq` se guarda en localStorage por sala y asiento,
-  asi otra pestaña o una recarga siguen contando. Un cierre sin arreglo (ficha mala, otra version,
-  otra pestaña con la misma ficha, la sala ya no existe) no se reintenta: se avisa y se sale al menu.
+  asi otra pestaña o una recarga siguen contando. Lo atendido cuya respuesta se perdio se da por
+  bueno (`RoomClient.answerLost`). Un cierre sin arreglo (ficha mala, otra version, otra pestaña con
+  la misma ficha, la sala ya no existe) no se reintenta: se avisa y se sale al menu.
 - **Donde esta el servidor** (`serverUrl.ts`): `VITE_SERVER_URL` al compilar o, por encima,
   `ilogic.server` en localStorage (el propio servidor de quien juega, o uno local en los tests); sin
   ninguna, el juego no ofrece «Jugar en línea».
-- **Lo que no vale por la red**: guardar y repetir el turno enemigo no estan en el menu de pausa
-  (`gameMenuOf(s, isOnline)`; la partida sigue desde el servidor: «Mis partidas en línea» o el
-  enlace), el final solo ofrece volver al menu (la revancha seria otra sala) y no hay autoguardado.
-- **Limites de hoy**: los enemigos que se
-  rinden en el turno propio no se anuncian hasta que llega su lote; el reloj por turno corre en el
-  servidor sin cuenta atras en la pantalla.
+- **Lo que no vale por la red**: guardar no esta en el menu de pausa (`PauseHost.savesHere`; la
+  partida sigue desde el servidor: «Mis partidas en línea», el enlace o recargar), rendirse lo decide
+  la sala, el final solo ofrece volver al menu (la revancha seria otra sala) y no hay autoguardado.
+- **Limites de hoy**: lo que hacen los demas durante el turno propio (rendirse) no se anima, solo se
+  ve; el reloj por turno corre en el servidor sin cuenta atras en la pantalla; el final no sabe las
+  cuentas de los demas (no estan en la vista: `docs/IDEAS.md`).
 
-`tests/visual/online.mjs` (`npm run online`) lo prueba de punta a punta: arranca `wrangler dev` en
-un puerto libre, dos navegadores por `file://` con el servidor en `ilogic.server`, A crea la sala, B
-entra por el enlace, juegan dos turnos cada uno, B pierde la conexion y vuelve sola, recarga por el
-enlace, y los dos ven lo mismo. Esta en el workflow de capturas (informativo).
+`tests/visual/online.mjs` (`npm run online`) lo prueba de punta a punta: arranca el servidor de Node
+(salas en una carpeta temporal) y vite en puertos libres, y dos navegadores con el servidor en
+`ilogic.server`: A crea la sala, B entra por el enlace, juegan dos rondas (los dos ven lo mismo), B
+recarga y vuelve a la partida, y A se rinde (los dos ven el final). Deja capturas en
+`tests/visual/out/online-*.png`.
 
 ## Graficos
 
@@ -1094,14 +1114,14 @@ src/view3d/
 
 | Carpeta | Que hace |
 |---|---|
-| `app/main.ts`, `menuFlow.ts`, `gameStart.ts` | arranque, menu principal y empezar o cargar una partida |
-| `app/match3d.ts` | la partida: crea el motor (`MatchScene`) y los sistemas y los conecta; no dibuja ni decide |
+| `app/main.ts`, `menuFlow.ts`, `gameStart.ts` | arranque, menu principal y empezar o cargar una partida (o volver a entrar en una sala: `joinMatch`) |
+| `app/match3d.ts` | la partida: crea el motor (`MatchScene`) y los sistemas y los conecta (por la red, con `OnlinePlay` como quien lleva la partida); no dibuja ni decide |
 | `ports/threat.ts` | para la amenaza: `ThreatMarks` (`showThreat`, las casillas; `showThreatLines`, una linea por cada enemigo que podria atacar a la unidad que se mira) |
 | `ports/turn.ts` | para el turno: `TileMarks` (alcance, hasta donde ataca con `showAttackReach`, objetivos, lo elegido y los aros de un grupo), `MovePreview` (flecha y fantasma; `aim`, el visor de un disparo en arco), `EventPlayer` (enseñar sucesos) y `ScreenView` (si una casilla se ve) |
 | `ports/orders.ts`, `ports/pointer.ts` | `IntentMarks` (lo que haran las ordenes); `SelectionBoxView` (el recuadro de seleccion) |
 | `ports/stage.ts` | `PieceStage`, `EffectStage`, `PieceLookup` y los sitios (`Spot`), para los sucesos animados |
 | `ports/camera.ts`, `ports/frame.ts` | `CameraView` (situar la camara), `CameraPose`, `Point3`; el reloj (`FrameListener`) |
-| `systems/turn/` | el turno de la persona y los de los demas paso a paso (`turnControls.ts`); «Fin del turno» con unidades sin mover, que las hace saltar y pide otra pulsacion (`endTurnGuard.ts`); que hace un clic con una unidad elegida (`clickIntent.ts`: ir, atacar, capturar al llegar, subir, unirse); que sale junto a lo elegido (`unitOptions.ts`: las fichas, solo lo que no es tocar el tablero; la rueda del clic derecho, lo poco frecuente; la orden que tiene sentido en una casilla, `orderForTile`); el camino trazado, el fantasma y si el disparo va en arco (`movePreview.ts`: `arcShotOf`); hasta donde ataca, el borde rojo (`attackReach.ts`, con `attackZone` del nucleo); que se puede elegir (`selection.ts`); desde donde atacaria (`attackPlan.ts`); textos e iconos de las fichas, la rueda y la compra (`menuItems.ts`; los pinta el HUD: `ActionChips.tsx`, `RadialMenu.tsx` y `BuyFan.tsx`, el abanico de la compra; donde va cada ficha, `fanAround` en `hud/common/placement.ts`). Esperar es implicito: la que se mueve y ya no puede hacer nada espera sola, y dejar una que se movio tambien (`leavingMovedUnit`). `MenuView.kind`: `chips`, `radial`, `prompt` (elegir casilla), `buy` o `game` (pausa) |
+| `systems/turn/` | el turno de la persona y los de los demas paso a paso (`turnControls.ts`), con quien lleva la partida por `MatchRunner` (`matchRunner.ts`: `localRunner` en una partida de esta pantalla); «Fin del turno» con unidades sin mover, que las hace saltar y pide otra pulsacion (`endTurnGuard.ts`); que hace un clic con una unidad elegida (`clickIntent.ts`: ir, atacar, capturar al llegar, subir, unirse); que sale junto a lo elegido (`unitOptions.ts`: las fichas, solo lo que no es tocar el tablero; la rueda del clic derecho, lo poco frecuente; la orden que tiene sentido en una casilla, `orderForTile`); el camino trazado, el fantasma y si el disparo va en arco (`movePreview.ts`: `arcShotOf`); hasta donde ataca, el borde rojo (`attackReach.ts`, con `attackZone` del nucleo); que se puede elegir (`selection.ts`); desde donde atacaria (`attackPlan.ts`); textos e iconos de las fichas, la rueda y la compra (`menuItems.ts`; los pinta el HUD: `ActionChips.tsx`, `RadialMenu.tsx` y `BuyFan.tsx`, el abanico de la compra; donde va cada ficha, `fanAround` en `hud/common/placement.ts`). Esperar es implicito: la que se mueve y ya no puede hacer nada espera sola, y dejar una que se movio tambien (`leavingMovedUnit`). `MenuView.kind`: `chips`, `radial`, `prompt` (elegir casilla), `buy` o `game` (pausa) |
 | `systems/orders/` | lo que haran las ordenes al terminar el turno: cuales enseñar (`orderIntents.ts`, con `previewStandingOrders` del nucleo) |
 | `systems/threat/` | «Ver amenaza» (T o el menú de la partida): las casillas a las que puede disparar algun enemigo que se ve (`threatZone.ts`, con `threatMap` del nucleo, que no delata a los de la niebla; se ven con un velo y un borde rojos); y al señalar o elegir una unidad propia, quien podria atacarla en su turno (`threatLinesTo`: enemigos que se ven, que llegan y que le hacen daño; lo que podria pasar, no lo que hara la IA). Lo pinta el motor por `ThreatMarks` (`ports/threat.ts`: las casillas en `engine/fx/highlights.ts`, las lineas en arco en `engine/fx/threatLines.ts`) |
 | `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`; los del dia, como lo que cobra cada edificio propio, con `DayLookup`), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
@@ -1109,6 +1129,7 @@ src/view3d/
 | `systems/camera/` | la camara de estrategia como logica (`StrategyCamera`): desplazar, acercar, girar, limites y suavizado; da su pose como datos |
 | `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`: grupos con numero, ordenes, «Ver órdenes») y raton o dedo sobre el mundo (`pointerInput.ts`: tocar, recuadro, doble clic, borde), a ordenes de la camara y del turno |
 | `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien el numero de «Fin del turno» y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`), el minimapa (`minimapBridge.ts`: lo publica solo si cambia algo que se ve en el, y el recuadro de lo que esta en pantalla, que da `MatchScene.viewedArea`) |
+| `systems/net/` | la partida por la red (`onlinePlay.ts`: `OnlinePlay`, el `MatchRunner` de una sala; las acciones las decide el servidor y lo que llega se atiende en orden) y el aviso de «Tu turno» con la pestaña escondida (`turnNotice.ts`) |
 | `systems/sound/`, `systems/weather/` | que suena con cada cosa (`soundCues.ts`); como se ve cada clima (datos: `weatherStyles.ts`) |
 | `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
 | `engine/core/` | lienzo, escena, luz cartoon (y por clima), cielo de bandas con nubes de bloques y niebla del horizonte (`sky.ts`) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`); texto en lienzos para texturas (`canvasText.ts`: `whenFontLoads` vuelve a pintar lo pintado antes de que cargue la letra pixelada) |

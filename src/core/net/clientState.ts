@@ -6,7 +6,7 @@
  *
  * Es una partida guardada mas (`SavedGameState`), asi que se comprueba con lo mismo que un fichero
  * guardado (`readSave`): lo roto se rechaza igual. Solo cambia que las caidas no se contrastan con lo
- * que se ve (`SaveOrigin` 'view').
+ * que se ve (`SaveOrigin` 'view'). Cada vista nueva se mete en la misma partida (`fillWith`).
  */
 import type { GameContent } from '../content';
 import { savedPart } from '../gameContent';
@@ -27,6 +27,17 @@ export const viewSnapshotOf = (s: GameState, team: TeamId): ViewSnapshot => save
 export function loadView(snapshot: unknown, content: GameContent, modes: GameModeRegistry = GAME_MODES): ReadSaveResult {
   // Sobre una copia: leer limpia en sitio, y la partida del cliente no comparte nada con la vista que llego.
   return readSaved(copyOf(snapshot), content, { modes, origin: 'view' });
+}
+
+/**
+ * La partida `state` pasa a ser `view` sin cambiar de objeto: quien la tiene (la pantalla que la
+ * dibuja, la vista de un equipo que la mira) sigue con ella, ya al dia. Lo que habia en `state` y no
+ * esta en `view` se quita. Las listas y unidades son las de `view` (las de antes ya no valen).
+ */
+export function fillWith(state: GameState, view: GameState): void {
+  const target = state as unknown as Record<string, unknown>;
+  for (const key of Object.keys(target)) delete target[key];
+  Object.assign(state, view);
 }
 
 /** Una copia de lo que llego (lo que no se puede copiar, como una funcion, no es una vista: null). */

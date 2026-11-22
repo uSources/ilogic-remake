@@ -11,13 +11,13 @@ import { loadGameImages } from '../../atlas';
 import { defaultContent } from '../../core/content/default';
 import { installTabGuard } from '../../controls/browserKeys';
 import { Hud } from '../../hud/Hud';
-import { ui } from '../../hud/store';
+import { showToast, ui } from '../../hud/store';
 import { registerServiceWorker } from '../../pwa';
 import { applySettings } from '../../settings';
 import { installSounds, webAudioSounds } from '../../audio/sfx';
 import { followPageVisibility } from '../../audio/volumeControl';
 import { webAudio } from '../../audio/gameAudio';
-import { pendingStart, sessionFor } from './gameStart';
+import { openGame, pendingStart } from './gameStart';
 import { GlbLibrary } from '../engine/pieces/glbModels';
 import { playMatch } from './match3d';
 import { MenuFlow } from './menuFlow';
@@ -41,10 +41,16 @@ const MODEL_TYPES = {
 };
 
 const start = pendingStart();
-const started = start ? sessionFor(start) : null;
-const images = await loadGameImages(asset);
-if (started) playMatch(started, images, await GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES), webAudio);
-else new MenuFlow(webAudioSounds).open();
+// Una partida por la red tarda lo que tarde la sala en mandarla: mientras, se cargan las imagenes.
+const [opened, images] = await Promise.all([start ? openGame(start) : null, loadGameImages(asset)]);
+if (opened?.ok) playMatch(opened.game, images, await GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES), webAudio);
+else openMenu(opened?.notice ?? null);
+
+/** El menu principal, con el aviso de por que no ha empezado la partida apuntada (si lo hay). */
+function openMenu(notice: string | null): void {
+  new MenuFlow(webAudioSounds).open();
+  if (notice) showToast(notice);
+}
 
 // Instalar como app y jugar sin conexion (solo en la web publicada).
 registerServiceWorker();

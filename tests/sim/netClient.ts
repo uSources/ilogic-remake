@@ -5,6 +5,7 @@ import { cloneState } from '@core/gameContent';
 import type { ActionResult, GameEvent, GameState, MatchResult, TeamId } from '@core/model';
 import {
   CURRENT_PROTOCOL,
+  fillWith,
   loadView,
   mergeView,
   type ClientMessage,
@@ -40,6 +41,8 @@ export class NetClient {
   lastResult: ActionResult | null = null;
   /** Los sucesos del ultimo resultado, por comprobar contra la vista que viene detras. */
   private resultEvents: GameEvent[] = [];
+  /** Tras un resultado que vale, lo siguiente tiene que ser su eco (un `events`), aunque no cambie nada. */
+  private echoDue = false;
   /** Su numero de orden: uno mas por cada mensaje con efecto. */
   seq = 0;
   /** El ultimo `step` que le llego (los siguientes tienen que ser el siguiente). */
@@ -70,6 +73,8 @@ export class NetClient {
     if ('step' in message && message.kind !== 'view')
       expect(message.step, `falta un mensaje antes del ${message.kind}`).toBe(this.step + 1);
     if ('step' in message) this.step = message.step;
+    if (this.echoDue) expect(message.kind, 'una accion que vale sin su eco detras').toBe('events');
+    this.echoDue = message.kind === 'result' && message.result.ok;
     switch (message.kind) {
       case 'welcome':
         this.seat = message.seat;
@@ -167,8 +172,7 @@ export class NetClient {
       return;
     }
     // El mismo objeto, para que la vista (y el plan de la IA que la mira) sigan valiendo.
-    for (const key of Object.keys(this.state)) delete (this.state as unknown as Record<string, unknown>)[key];
-    Object.assign(this.state, read.state);
+    fillWith(this.state, read.state);
     this.view?.refresh();
   }
 }
