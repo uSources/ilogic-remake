@@ -112,9 +112,16 @@ Variables de entorno (todas opcionales):
 | `ILOGIC_WEB_DIR`  | la carpeta del juego compilado; vacia, no se sirve el juego (solo las salas)                | `dist/`, si se ha compilado    |
 | `ALLOWED_ORIGINS` | otras webs que pueden usar este servidor, separadas por comas (como en `wrangler.toml`)     | `https://usources.github.io,null` |
 
+Abierto por su IP (`http://192.168.1.20:8787`), el juego que sirve ya puede hablar con el servidor.
+Con un nombre (`https://ilogic.mi-dominio.net`) no: ese nombre va en `ALLOWED_ORIGINS`, porque si
+bastara con ser del mismo sitio, cualquiera podria hacer que su dominio apuntase a la IP del servidor
+(DNS rebinding) y su web pareceria la del juego. La variable sustituye a la de por defecto, asi que
+se ponen todas: `ALLOWED_ORIGINS=https://ilogic.mi-dominio.net,https://usources.github.io,null`.
+
 Para jugar desde fuera de casa hace falta abrir el puerto en el router o, mejor, ponerlo detras de
-un proxy con HTTPS (Caddy lo hace solo: `ilogic.mi-dominio.net { reverse_proxy localhost:8787 }`);
-con HTTPS, la web publica tambien puede usarlo (`ilogic.server` en el localStorage del navegador).
+un proxy con HTTPS (Caddy lo hace solo: `ilogic.mi-dominio.net { reverse_proxy localhost:8787 }`,
+con ese nombre en `ALLOWED_ORIGINS`); con HTTPS, la web publica tambien puede usarlo (`ilogic.server`
+en el localStorage del navegador).
 
 ## Piezas
 

@@ -975,7 +975,8 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
   se cargan las guardadas y se ponen sus alarmas. Sirve tambien el juego compilado en la misma
   direccion: un navegador no deja que una pagina https (la web publica) hable con un servidor sin
   cifrar, que es lo normal en casa; asi el juego se compila con `VITE_SERVER_URL=/`
-  (`npm run build:selfhost`, `.env.selfhost`) y no hace falta CORS ni certificado. Como en Node los
+  (`npm run build:selfhost`, `.env.selfhost`) y, abierto por su IP, no hace falta configurar CORS ni
+  certificado (con un nombre, ese nombre va en `ALLOWED_ORIGINS`: ver CORS, abajo). Como en Node los
   mensajes de una conexion se atienden a la vez (en Cloudflare, uno tras otro), lo que depende del
   orden se hace al llegar cada uno, antes de esperar a guardar (contar los rechazos), y una sala que
   caduca sale de memoria antes de borrarse.
@@ -997,9 +998,10 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
   sala le rechaza mas de `MAX_REJECTIONS_PER_WINDOW` mensajes en un minuto (`rateLimit.ts`) se le
   corta; lo que no entra se despide con un codigo de cierre propio (`CLOSE_CODES`).
 - **CORS** (`cors.ts`): la web del juego y lo que diga `ALLOWED_ORIGINS` (wrangler.toml, o la
-  variable de entorno en Node), mas `localhost`, `127.0.0.1`, la propia direccion del servidor (el de
-  Node sirve el juego) y `null` (el HTML abierto desde un fichero). Sin origen (otro servidor) pasa:
-  no es un navegador.
+  variable de entorno en Node), mas `localhost`, `127.0.0.1`, la propia direccion del servidor si es
+  una IP (el de Node sirve el juego; un nombre va en `ALLOWED_ORIGINS`, o cualquier dominio que apunte
+  a esa IP pasaria por el mismo sitio: DNS rebinding) y `null` (el HTML abierto desde un fichero). Sin
+  origen (otro servidor) pasa: no es un navegador.
 - **Lo que hay que configurar en Cloudflare** (una vez, `server/README.md`): una cuenta de Cloudflare (vale el plan
   gratuito: las salas son Durable Objects con SQLite, `new_sqlite_classes`; los clasicos piden el de
   pago), los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` en GitHub (con ellos,

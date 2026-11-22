@@ -1,8 +1,8 @@
 /**
  * Desde que paginas puede hablar un navegador con el servidor (CORS): la web del juego (GitHub Pages)
  * y las que diga `ALLOWED_ORIGINS` (wrangler.toml, o la variable de entorno en Node), mas localhost y
- * 127.0.0.1 en cualquier puerto (desarrollo) y la propia direccion del servidor (el de Node sirve
- * tambien el juego). "null" en la lista deja entrar al juego abierto desde un fichero (file://: es lo
+ * 127.0.0.1 en cualquier puerto (desarrollo) y la propia direccion del servidor si es una IP (el de Node
+ * sirve tambien el juego; con un nombre, va en la lista). "null" en la lista deja entrar al juego abierto desde un fichero (file://: es lo
  * que manda el navegador como origen). Una peticion sin origen (otro servidor, curl) no es de un
  * navegador: no hace falta CORS y pasa. La subida a WebSocket mira el origen igual.
  */
@@ -25,13 +25,21 @@ function hostOf(origin: string): string | null {
   }
 }
 
-/** La pagina es del mismo sitio que el servidor (`host`: a quien se ha hecho la peticion). */
-const isSameHost = (origin: string, host: string | undefined): boolean => host !== undefined && hostOf(origin) === host;
+/** Una IP (v4, o v6 entre corchetes), con su puerto o sin el. */
+const IP_HOST = /^(\d{1,3}(\.\d{1,3}){3}|\[[\da-f:.]+\])(:\d+)?$/i;
+
+/**
+ * La pagina es del mismo sitio que el servidor (`host`: a quien se ha hecho la peticion) y ese sitio es
+ * una IP. Con un nombre no vale: cualquiera puede hacer que su dominio apunte a la IP del servidor (DNS
+ * rebinding) y su pagina pareceria del mismo sitio. El nombre propio del servidor va en ALLOWED_ORIGINS.
+ */
+const isSameIpHost = (origin: string, host: string | undefined): boolean =>
+  host !== undefined && IP_HOST.test(host) && hostOf(origin) === host;
 
 /** El origen de la peticion puede hablar con el servidor (sin origen, tambien). */
 export function isOriginAllowed(origin: string | null, configured: string, host?: string): boolean {
   if (origin === null) return true;
-  return LOCAL_ORIGIN.test(origin) || isSameHost(origin, host) || allowedOrigins(configured).includes(origin);
+  return LOCAL_ORIGIN.test(origin) || isSameIpHost(origin, host) || allowedOrigins(configured).includes(origin);
 }
 
 const ALLOWED_METHODS = 'GET, POST, OPTIONS';
