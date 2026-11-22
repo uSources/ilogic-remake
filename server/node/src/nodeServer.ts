@@ -26,6 +26,10 @@ export interface NodeServerOptions {
   webDir: string | null;
   /** Desde que otras webs se puede hablar con el servidor (cors.ts). */
   allowedOrigins: string;
+  /** Cuantas salas puede haber a la vez (las de mas no se crean: `serverFull`). */
+  maxRooms: number;
+  /** Cuantas conexiones a la vez (peticiones y WebSockets); las de mas, Node las corta nada mas llegar. */
+  maxConnections: number;
   /** La hora (en los tests, una que se adelanta a mano). */
   now?: () => number;
 }
@@ -97,11 +101,12 @@ async function stop(server: Server, rooms: NodeRooms): Promise<void> {
 
 /** Arranca el servidor con las salas guardadas en `dataDir` (ya con sus alarmas puestas). */
 export async function startServer(options: NodeServerOptions): Promise<RunningServer> {
-  const rooms = await NodeRooms.open(await RoomFiles.open(options.dataDir), options.now);
+  const rooms = await NodeRooms.open(await RoomFiles.open(options.dataDir), options.maxRooms, options.now);
   const setup: ServerSetup = { rooms, allowedOrigins: options.allowedOrigins };
   const server = createServer((incoming, outgoing) => {
     answer(incoming, outgoing, setup, options.webDir).catch((error: unknown) => failRequest(outgoing, error));
   });
+  server.maxConnections = options.maxConnections;
   server.on('upgrade', upgrader(rooms, options.allowedOrigins));
   await listen(server, options.port, options.hostname);
   const { port } = server.address() as AddressInfo;

@@ -41,6 +41,7 @@ export const online = {
   onlineStatusEnded: 'Acabada',
   onlineLeave: 'Salir',
   onlineFailed: 'No se ha podido hablar con el servidor',
+  onlineServerFull: 'El servidor ya tiene todas las salas que admite: prueba más tarde',
   onlineNoSuchRoom: 'Esa sala ya no existe',
   onlineBadToken: 'La invitación no vale para esta sala',
   onlineReplaced: 'Has entrado desde otra pestaña: esta se cierra',

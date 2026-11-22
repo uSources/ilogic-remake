@@ -104,13 +104,19 @@ se borra sola). Se para con Ctrl+C (o `SIGTERM`): cierra las conexiones y acaba 
 
 Variables de entorno (todas opcionales):
 
-| Variable          | Que es                                                                                      | Sin ella                       |
-| ----------------- | ------------------------------------------------------------------------------------------- | ------------------------------ |
-| `PORT`            | el puerto                                                                                   | `8787`                         |
-| `HOST`            | la direccion donde escucha                                                                  | todas las del equipo           |
-| `ILOGIC_DATA_DIR` | la carpeta de las salas                                                                     | `server/data`                  |
-| `ILOGIC_WEB_DIR`  | la carpeta del juego compilado; vacia, no se sirve el juego (solo las salas)                | `dist/`, si se ha compilado    |
-| `ALLOWED_ORIGINS` | otras webs que pueden usar este servidor, separadas por comas (como en `wrangler.toml`)     | `https://usources.github.io,null` |
+| Variable                 | Que es                                                                                  | Sin ella                          |
+| ------------------------ | --------------------------------------------------------------------------------------- | --------------------------------- |
+| `PORT`                   | el puerto                                                                               | `8787`                            |
+| `HOST`                   | la direccion donde escucha                                                              | todas las del equipo              |
+| `ILOGIC_DATA_DIR`        | la carpeta de las salas                                                                 | `server/data`                     |
+| `ILOGIC_WEB_DIR`         | la carpeta del juego compilado; vacia, no se sirve el juego (solo las salas)            | `dist/`, si se ha compilado       |
+| `ALLOWED_ORIGINS`        | otras webs que pueden usar este servidor, separadas por comas (como en `wrangler.toml`) | `https://usources.github.io,null` |
+| `ILOGIC_MAX_ROOMS`       | cuantas salas puede haber a la vez (con todas, crear otra da `serverFull`)              | `200`                             |
+| `ILOGIC_MAX_CONNECTIONS` | cuantas conexiones a la vez, peticiones y WebSockets (las de mas se cortan al llegar)   | `1000`                            |
+
+Los dos topes estan para que nadie llene el disco ni la memoria creando salas o abriendo conexiones
+sin parar (todas las salas viven en memoria). No miran de donde viene cada uno: abierto a internet,
+mejor detras de un proxy que limite las peticiones por IP (como `limit_req` de nginx).
 
 Abierto por su IP (`http://192.168.1.20:8787`), el juego que sirve ya puede hablar con el servidor.
 Con un nombre (`https://ilogic.mi-dominio.net`) no: ese nombre va en `ALLOWED_ORIGINS`, porque si

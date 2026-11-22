@@ -43,6 +43,7 @@ export const online: Translation<typeof ES> = {
   onlineStatusEnded: 'Finished',
   onlineLeave: 'Leave',
   onlineFailed: "Couldn't reach the server",
+  onlineServerFull: 'The server already has all the rooms it allows: try again later',
   onlineNoSuchRoom: 'That room no longer exists',
   onlineBadToken: "The invite isn't valid for this room",
   onlineReplaced: 'You joined from another tab: this one closes',

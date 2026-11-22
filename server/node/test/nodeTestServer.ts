@@ -8,7 +8,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll } from 'vitest';
 import type { TestServer } from '../../test/shared/testServer';
-import { startServer, type RunningServer } from '../src/nodeServer';
+import { DEFAULT_MAX_CONNECTIONS, DEFAULT_MAX_ROOMS } from '../src/config';
+import { startServer, type NodeServerOptions, type RunningServer } from '../src/nodeServer';
 import { RoomFiles } from '../src/roomFiles';
 
 export interface NodeTestServer {
@@ -31,8 +32,11 @@ function openSocket(url: string, origin: string): Promise<WebSocket> {
   });
 }
 
-/** El servidor de Node de las pruebas de este `describe`; `webDir`, la carpeta del juego si se sirve. */
-export function useNodeServer(webDir: string | null = null): NodeTestServer {
+/** Lo que puede cambiar cada tanda: la carpeta del juego (si se sirve) y los topes. */
+export type NodeTestOptions = Partial<Pick<NodeServerOptions, 'webDir' | 'maxRooms' | 'maxConnections'>>;
+
+/** El servidor de Node de las pruebas de este `describe`. */
+export function useNodeServer(options: NodeTestOptions = {}): NodeTestServer {
   let now = Date.now();
   let dataDir = '';
   let running: RunningServer | null = null;
@@ -42,7 +46,16 @@ export function useNodeServer(webDir: string | null = null): NodeTestServer {
     return running;
   };
   const start = async (): Promise<void> => {
-    running = await startServer({ port: 0, dataDir, webDir, allowedOrigins: 'https://usources.github.io,null', now: () => now });
+    running = await startServer({
+      port: 0,
+      dataDir,
+      webDir: null,
+      allowedOrigins: 'https://usources.github.io,null',
+      maxRooms: DEFAULT_MAX_ROOMS,
+      maxConnections: DEFAULT_MAX_CONNECTIONS,
+      ...options,
+      now: () => now,
+    });
   };
 
   beforeAll(async () => {

@@ -17,10 +17,16 @@ import { MAX_CODE_TRIES, MAX_MESSAGE_BYTES, MAX_ROOM_TEAMS } from './limits';
 import type { LobbyInfo } from './roomAdapter';
 import { isRoomRequest, type RoomRequest } from './roomRequest';
 
+/** Quien aloja el servidor no admite mas salas (el de Node tiene un tope; Cloudflare, no). */
+export interface RoomsFull {
+  ok: false;
+  error: 'full';
+}
+
 /** Las salas, por su codigo, de quien aloja el servidor. */
 export interface RoomDirectory {
-  /** Crea la sala con ese codigo (si ya hay una, `exists`: se prueba otro). */
-  create(code: string, request: RoomRequest): Promise<CreateResult>;
+  /** Crea la sala con ese codigo (si ya hay una, `exists`: se prueba otro; si no caben mas, `full`). */
+  create(code: string, request: RoomRequest): Promise<CreateResult | RoomsFull>;
   info(code: string): Promise<LobbyInfo | null>;
   handToAi(code: string, token: string, seat: SeatId): Promise<HandToAiResult>;
   /** La subida a WebSocket de la conexion de una sala. */
@@ -54,6 +60,7 @@ type RequestError =
   | 'notFound'
   | 'tooBig'
   | 'noFreeCode'
+  | 'serverFull'
   | 'badToken'
   | 'notWaiting'
   | 'noSeat'
@@ -67,6 +74,7 @@ const STATUS_OF_ERROR: Record<RequestError, number> = {
   notFound: 404,
   tooBig: 413,
   noFreeCode: 503,
+  serverFull: 503,
   badToken: 403,
   notWaiting: 409,
   noSeat: 404,
@@ -109,7 +117,7 @@ const inviteOf = (code: string, token: string): string => `#/sala/${code}/${toke
 /**
  * Crea una sala con un codigo nuevo. Un codigo ya ocupado (raro: hay casi 900 millones) se cambia por otro; la
  * respuesta lleva el codigo y, por cada asiento de persona, su ficha y su enlace (quien crea se
- * queda con el primero y reparte los demas).
+ * queda con el primero y reparte los demas). Si quien aloja el servidor no admite mas, `serverFull`.
  */
 async function createRoom(request: Request, rooms: RoomDirectory): Promise<Response> {
   const read = await bodyOf(request);
@@ -118,9 +126,8 @@ async function createRoom(request: Request, rooms: RoomDirectory): Promise<Respo
   for (let attempt = 0; attempt < MAX_CODE_TRIES; attempt++) {
     const code = newRoomCode();
     const created = await rooms.create(code, read.body);
-    if (!created.ok) continue;
-    const seats = created.seats.map((seat) => ({ ...seat, invite: inviteOf(code, seat.token) }));
-    return json({ code, seats }, 201);
+    if (created.ok) return json({ code, seats: created.seats.map((seat) => ({ ...seat, invite: inviteOf(code, seat.token) })) }, 201);
+    if (created.error === 'full') return refuse('serverFull');
   }
   return refuse('noFreeCode');
 }

@@ -4,7 +4,7 @@
  */
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ALLOWED_ORIGINS, DEFAULT_PORT, serverConfig } from '../src/config';
+import { DEFAULT_ALLOWED_ORIGINS, DEFAULT_MAX_CONNECTIONS, DEFAULT_MAX_ROOMS, DEFAULT_PORT, serverConfig } from '../src/config';
 import { fileFor } from '../src/staticFiles';
 
 const DEFAULTS = { dataDir: '/srv/ilogic/data', webDir: '/srv/ilogic/dist' };
@@ -19,23 +19,45 @@ describe('la configuracion del servidor de Node', () => {
         dataDir: DEFAULTS.dataDir,
         webDir: DEFAULTS.webDir,
         allowedOrigins: DEFAULT_ALLOWED_ORIGINS,
+        maxRooms: DEFAULT_MAX_ROOMS,
+        maxConnections: DEFAULT_MAX_CONNECTIONS,
       },
     });
   });
 
   it('con variables: lo que digan; ILOGIC_WEB_DIR vacia es no servir el juego', () => {
     const read = serverConfig(
-      { PORT: '3000', HOST: '127.0.0.1', ILOGIC_DATA_DIR: '/datos', ILOGIC_WEB_DIR: '', ALLOWED_ORIGINS: 'https://mi.web' },
+      {
+        PORT: '3000',
+        HOST: '127.0.0.1',
+        ILOGIC_DATA_DIR: '/datos',
+        ILOGIC_WEB_DIR: '',
+        ALLOWED_ORIGINS: 'https://mi.web',
+        ILOGIC_MAX_ROOMS: '10',
+        ILOGIC_MAX_CONNECTIONS: '50',
+      },
       DEFAULTS,
     );
     expect(read).toEqual({
       ok: true,
-      options: { port: 3000, hostname: '127.0.0.1', dataDir: '/datos', webDir: null, allowedOrigins: 'https://mi.web' },
+      options: {
+        port: 3000,
+        hostname: '127.0.0.1',
+        dataDir: '/datos',
+        webDir: null,
+        allowedOrigins: 'https://mi.web',
+        maxRooms: 10,
+        maxConnections: 50,
+      },
     });
   });
 
-  it('un puerto que no es un puerto se dice', () => {
+  it('un puerto que no es un puerto, o un tope que no es un entero de 1 en adelante, se dice', () => {
     for (const port of ['ochenta', '70000', '80.5', '-1']) expect(serverConfig({ PORT: port }, DEFAULTS)).toMatchObject({ ok: false });
+    for (const limit of ['muchas', '0', '2.5', '-3']) {
+      expect(serverConfig({ ILOGIC_MAX_ROOMS: limit }, DEFAULTS)).toMatchObject({ ok: false });
+      expect(serverConfig({ ILOGIC_MAX_CONNECTIONS: limit }, DEFAULTS)).toMatchObject({ ok: false });
+    }
   });
 });
 

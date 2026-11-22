@@ -11,7 +11,7 @@ import { CLOSE_CODES, HostedRoom, type CreateResult, type HandToAiResult, type R
 import type { LobbyInfo } from '../../src/roomAdapter';
 import type { RoomHost, StoredRoom } from '../../src/roomHost';
 import type { RoomRequest } from '../../src/roomRequest';
-import type { RoomDirectory } from '../../src/routes';
+import type { RoomDirectory, RoomsFull } from '../../src/routes';
 import { NodeSocket } from './nodeSocket';
 import type { RoomFile, RoomFiles } from './roomFiles';
 
@@ -113,18 +113,24 @@ export class NodeRooms implements RoomDirectory {
 
   private constructor(
     private readonly files: RoomFiles,
+    private readonly maxRooms: number,
     private readonly now: () => number,
   ) {}
 
-  /** Las salas de esa carpeta, en memoria y con sus alarmas puestas (la que no se puede recuperar se borra). */
-  static async open(files: RoomFiles, now: () => number = Date.now): Promise<NodeRooms> {
-    const rooms = new NodeRooms(files, now);
+  /**
+   * Las salas de esa carpeta, en memoria y con sus alarmas puestas (la que no se puede recuperar se
+   * borra). Las guardadas se cargan todas aunque pasen de `maxRooms`: el tope es para crear mas.
+   */
+  static async open(files: RoomFiles, maxRooms: number, now: () => number = Date.now): Promise<NodeRooms> {
+    const rooms = new NodeRooms(files, maxRooms, now);
     for (const code of await files.codes()) await rooms.wake(code);
     return rooms;
   }
 
-  create(code: string, request: RoomRequest): Promise<CreateResult> {
+  /** La sala se apunta antes de esperar a guardarla: dos que se crean a la vez no pasan las dos del tope. */
+  create(code: string, request: RoomRequest): Promise<CreateResult | RoomsFull> {
     if (this.rooms.has(code)) return Promise.resolve({ ok: false, error: 'exists' });
+    if (this.rooms.size >= this.maxRooms) return Promise.resolve({ ok: false, error: 'full' });
     return this.add(code).room.create(request);
   }
 

@@ -979,7 +979,9 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
   certificado (con un nombre, ese nombre va en `ALLOWED_ORIGINS`: ver CORS, abajo). Como en Node los
   mensajes de una conexion se atienden a la vez (en Cloudflare, uno tras otro), lo que depende del
   orden se hace al llegar cada uno, antes de esperar a guardar (contar los rechazos), y una sala que
-  caduca sale de memoria antes de borrarse.
+  caduca sale de memoria antes de borrarse. Tiene topes de salas y de conexiones (`ILOGIC_MAX_ROOMS`,
+  `ILOGIC_MAX_CONNECTIONS`): en Cloudflare cada sala es un Durable Object y el disco no es de nadie;
+  aqui son el disco y la memoria de quien lo aloja.
 - **La ficha no viaja en la URL.** El saludo (`hello`) va como primer mensaje del WebSocket, asi la
   ficha no queda en registros de acceso ni en el historial. Lo que una conexion necesita saber
   (asiento, conexion, ficha) va pegado al socket (`Attachment`, WebSocket Hibernation API) y

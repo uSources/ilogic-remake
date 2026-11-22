@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CLOSE_CODES } from '../../src/hostedRoom';
 import { MAX_MESSAGE_BYTES, ROOM_EXPIRY_MS } from '../../src/limits';
-import { createRoom, describeServer, joinedRoom, lobbyOf } from '../../test/shared/serverSuite';
+import { bodyOf, createRoom, describeServer, joinedRoom, lobbyOf, post, roomRequest } from '../../test/shared/serverSuite';
 import { closingOf, SocketClient } from '../../test/shared/socketClient';
 import { GAME_ORIGIN } from '../../test/shared/testServer';
 import { useNodeServer } from './nodeTestServer';
@@ -36,6 +36,45 @@ describe('lo que no tumba el servidor', () => {
     expect(await closingOf(socket)).toMatchObject({ code: MESSAGE_TOO_BIG });
     expect((await lobbyOf(node.server, code)).info?.status).toBe('playing');
     await Promise.all(clients.map((client) => client.take(['turn'])));
+  });
+});
+
+describe('el tope de salas', () => {
+  const node = useNodeServer({ maxRooms: 1 });
+
+  it('con todas las salas que admite, otra no se crea (serverFull); al caducar una, cabe otra', async () => {
+    const { code } = await createRoom(node.server);
+    const refused = await post(node.server, roomRequest());
+    expect(refused.status).toBe(503);
+    expect(await bodyOf(refused)).toEqual({ error: 'serverFull' });
+    node.advance(ROOM_EXPIRY_MS + SECOND);
+    await node.ring(code);
+    await createRoom(node.server);
+  });
+});
+
+describe('el tope de conexiones', () => {
+  const MAX_CONNECTIONS = 3;
+  const node = useNodeServer({ maxConnections: MAX_CONNECTIONS });
+
+  /** Una conexion a la sala, o null si el servidor la corta nada mas llegar. */
+  const tryOpen = (code: string): Promise<WebSocket | null> => node.server.openSocket(code, GAME_ORIGIN).catch(() => null);
+
+  /** Si una conexion nueva entra (y se cierra enseguida). */
+  async function canConnect(code: string): Promise<boolean> {
+    const socket = await tryOpen(code);
+    socket?.close();
+    return socket !== null;
+  }
+
+  it('las de mas no entran (sin tumbar nada); al cerrarse las demas, entra otra', async () => {
+    const { code } = await createRoom(node.server);
+    const opened = await Promise.all(Array.from({ length: MAX_CONNECTIONS + 1 }, () => tryOpen(code)));
+    const sockets = opened.filter((socket): socket is WebSocket => socket !== null);
+    expect(sockets.length).toBeLessThanOrEqual(MAX_CONNECTIONS);
+    expect(sockets.length).toBeGreaterThan(0);
+    for (const socket of sockets) socket.close();
+    await expect.poll(() => canConnect(code)).toBe(true);
   });
 });
 
@@ -114,7 +153,7 @@ function gameFiles(): string {
 }
 
 describe('el juego en la misma direccion', () => {
-  const node = useNodeServer(gameFiles());
+  const node = useNodeServer({ webDir: gameFiles() });
 
   it('sirve la pagina y sus ficheros con su tipo, y las rutas de las salas siguen siendo las salas', async () => {
     const page = await node.server.fetch('/');
