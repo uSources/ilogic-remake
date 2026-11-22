@@ -1,0 +1,27 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = penguin_beak; background-alpha = 255;
+      palette {
+        penguin_beak = (#b8662a, #cc7a34, #dc8e40);
+        penguin = (#1e2228, #2a2f36, #363c44);
+        penguin_belly = (#d8dee6, #e8eef4, #f6f9fc);
+        penguin_eyes_w = #e8eef4;
+      }
+      stamp penguin_eyes { pixels = "w.w"; w = penguin_eyes_w; }
+      chart foot_left box { origin = (51px, 0px); fill = penguin_beak; }
+      chart foot_right box { origin = (58px, 0px); fill = penguin_beak; }
+      chart body box { origin = (0px, 0px); fill = penguin; }
+      chart belly box { origin = (15px, 0px); fill = penguin_belly; }
+      chart head box { origin = (24px, 0px); fill = penguin; face north { stamp penguin_eyes { at = (0px, 1px); } } }
+      chart beak box { origin = (0px, 10px); fill = penguin_beak; }
+      chart flipper_left box { origin = (37px, 0px); fill = penguin; }
+      chart flipper_right box { origin = (44px, 0px); fill = penguin; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

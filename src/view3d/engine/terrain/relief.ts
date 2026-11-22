@@ -141,9 +141,10 @@ export function buildRelief(map: ReliefMap): ReliefView {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   const tileOfColumn = columns.map(({ sub }) => tileOfSubcell(sub));
+  const probe = { x: 0, y: 0 };
   const surfaceAt = (x: number, z: number): number | null => {
-    const sub = subcellAt(x, z);
-    return tops.contains(sub) ? tops.at(sub) : null;
+    const sub = subcellAt(x, z, probe);
+    return tops.contains(sub) ? (tops.at(sub) ?? null) : null;
   };
   return { mesh, tileOfColumn, topAt: (pos) => centerTop(tops, pos), surfaceAt, baseColors };
 }

@@ -66,6 +66,10 @@ export function noise(x: number, y: number, salt: number): number {
 export const tileOfSubcell = (sub: Pos): Pos => ({ x: Math.floor(sub.x / SUBCELLS), y: Math.floor(sub.y / SUBCELLS) });
 /** El centro de una subcasilla, en casillas (el de la casilla (x, y) es (x, y)). */
 export const subcellCenter = (sub: Pos): Pos => ({ x: (sub.x + 0.5) / SUBCELLS - 0.5, y: (sub.y + 0.5) / SUBCELLS - 0.5 });
-/** La subcasilla en la que cae un punto del suelo (en casillas, como `subcellCenter`). */
-export const subcellAt = (x: number, z: number): Pos => ({ x: Math.floor((x + 0.5) * SUBCELLS), y: Math.floor((z + 0.5) * SUBCELLS) });
+/** La subcasilla en la que cae un punto del suelo (en casillas, como `subcellCenter`). La escribe en `out`: se pide en cada fotograma. */
+export function subcellAt(x: number, z: number, out: Pos): Pos {
+  out.x = Math.floor((x + 0.5) * SUBCELLS);
+  out.y = Math.floor((z + 0.5) * SUBCELLS);
+  return out;
+}
 export const tileKey = (pos: Pos): string => `${pos.x},${pos.y}`;

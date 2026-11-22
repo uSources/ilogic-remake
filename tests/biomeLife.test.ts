@@ -5,7 +5,7 @@ import type { Pos } from '@core/model';
 import { seededRng } from '@core/util/random';
 import { spotsByCritter, tilesByMote, tilesByTraveller } from '../src/view3d/engine/life/biomeLife';
 import { Births, type BirthPlan, type Flier } from '../src/view3d/engine/life/births';
-import { forwardAt, liftAt } from '../src/view3d/engine/life/critters';
+import { poseAt, type CritterMove, type CritterPose } from '../src/view3d/engine/life/critters';
 import {
   DEER,
   DUST_DEVILS,
@@ -14,19 +14,23 @@ import {
   FOREST_BIRDS,
   FROG,
   LIZARD,
+  PENGUIN,
   SAND_DUST,
+  SEAL,
+  SNOW_GLITTER,
   SQUIRREL,
   TUMBLEWEEDS,
   VULTURES,
 } from '../src/view3d/engine/life/kinds';
 import type { MoteKind } from '../src/view3d/engine/life/motes';
 import { WIND_DIRECTION } from '../src/view3d/engine/core/space';
+import { groupBy } from '../src/view3d/engine/core/groupBy';
 import { tileNoise } from '../src/view3d/engine/terrain/placed';
 import { blankState } from './helpers';
 
 /** Lo que vive en los biomas (engine/life/kinds.ts): que las motas se vean bien, sean de la clase que sean. */
 
-const KINDS: Record<string, MoteKind> = { SAND_DUST, FIREFLIES, FALLING_LEAVES, DUST_DEVILS };
+const KINDS: Record<string, MoteKind> = { SAND_DUST, FIREFLIES, FALLING_LEAVES, DUST_DEVILS, SNOW_GLITTER };
 const SEEDS = [0.1, 1.7, 250, 999];
 
 const moteAt = (seed: number, age: number, life: number): Flier => ({ home: new THREE.Vector3(3, 0.4, 5), age, life, seed });
@@ -116,7 +120,7 @@ describe('donde vive cada cosa en el tablero', () => {
     // Las de siempre: la primera clase de sitio de una pieza decide con las sales 8 (si lleva) y 9 (hacia donde mira).
     const expected = positions
       .filter((pos) => hasDecor(pos) && tileNoise(pos, 8) < 0.3)
-      .map((pos) => ({ pos, at: new THREE.Vector3(pos.x, 0.1 + 1 / 32, pos.y), heading: tileNoise(pos, 9) * Math.PI * 2 }));
+      .map((pos) => ({ pos, at: new THREE.Vector3(pos.x, 0.1 + 1 / 32, pos.y), heading: tileNoise(pos, 9) * Math.PI * 2, drop: 0 }));
     const spots = spotsByCritter(s, ground);
     expect([...spots.keys()]).toEqual([FROG]);
     expect(spots.get(FROG)).toEqual(expected);
@@ -180,23 +184,65 @@ describe('los pajaros del bosque', () => {
 });
 
 describe('como se mueven los animales en su sitio', () => {
-  const along = (value: (progress: number) => number) => Array.from({ length: 121 }, (_, step) => value(step / 120));
+  /** Sus posturas a lo largo del movimiento (copias: `poseAt` escribe siempre en la misma). */
+  const posesOf = (move: CritterMove, drop = 0): CritterPose[] =>
+    Array.from({ length: 241 }, (_, step) => ({ ...poseAt(move, step / 240, drop) }));
   /** Cuantas veces sube y vuelve a bajar. */
   const bumps = (values: number[]) =>
     values.filter((value, step) => step > 0 && value > values[step - 1]! && value >= (values[step + 1] ?? 0)).length;
+  /** Acaba como empezo: en su sitio, derecho y mirando a donde miraba (una vuelta entera cuenta como ninguna). */
+  const expectBackHome = (pose: CritterPose) => {
+    expect(pose.lift).toBeCloseTo(0);
+    expect(pose.forward).toBeCloseTo(0);
+    expect(pose.pitch).toBeCloseTo(0);
+    expect(pose.roll).toBeCloseTo(0);
+    expect(Math.cos(pose.yaw)).toBeCloseTo(1);
+  };
 
   it('la ardilla da sus saltitos seguidos y acaba en el suelo', () => {
-    const lifts = along((progress) => liftAt(SQUIRREL.move, progress));
-    expect(bumps(lifts)).toBe(SQUIRREL.move.hops);
-    expect(lifts.at(-1)).toBeCloseTo(0);
-    expect(Math.max(...lifts)).toBeCloseTo(SQUIRREL.move.height);
+    const lifts = posesOf(SQUIRREL.move).map((pose) => pose.lift);
+    expect(bumps(lifts)).toBe(3);
+    expect(Math.min(...lifts)).toBeGreaterThanOrEqual(0);
+    expectBackHome(posesOf(SQUIRREL.move).at(-1)!);
   });
 
   it('el ciervo asoma sin saltar y vuelve a su sitio', () => {
-    const forward = along((progress) => forwardAt(DEER.move, progress));
-    expect(Math.max(...forward)).toBeCloseTo(DEER.move.reach!);
-    expect(forward.at(-1)).toBeCloseTo(0);
-    expect(along((progress) => liftAt(DEER.move, progress)).every((lift) => lift === 0)).toBe(true);
+    const poses = posesOf(DEER.move);
+    expect(Math.max(...poses.map((pose) => pose.forward))).toBeGreaterThan(0.05);
+    expect(poses.every((pose) => pose.lift === 0)).toBe(true);
+    expectBackHome(poses.at(-1)!);
+  });
+
+  it('el pingüino anda como un pato: se balancea de un lado a otro y vuelve a su sitio', () => {
+    const poses = posesOf(PENGUIN.move);
+    const rolls = poses.map((pose) => pose.roll);
+    expect(Math.min(...rolls)).toBeLessThan(-0.2);
+    expect(Math.max(...rolls)).toBeGreaterThan(0.2);
+    expect(poses.every((pose) => pose.lift >= 0 && Math.abs(pose.forward) < 0.1)).toBe(true);
+    expectBackHome(poses.at(-1)!);
+  });
+
+  // El agua de la orilla, un dieciseisavo por debajo del hielo o, ademas, un escalon (0.3).
+  it.each([1 / 16, 0.3 + 1 / 16])(
+    'el pingüino se tira de barriga al agua (%s mas abajo) y vuelve a su sitio mirando otra vez al agua',
+    (drop) => {
+      const poses = posesOf(PENGUIN.sometimes!.move, drop);
+      // Tumbado de barriga (la cabeza por delante), mas alla del borde de su casilla (a 0.2 de su sitio).
+      expect(poses.some((pose) => pose.pitch > 1.5 && pose.forward > 0.2)).toBe(true);
+      // Se hunde bajo el agua, y solo donde hay agua: en su casilla, nunca por debajo del hielo.
+      expect(Math.min(...poses.map((pose) => pose.lift))).toBeLessThan(-drop - 0.2);
+      expect(poses.every((pose) => pose.lift >= -1e-9 || pose.forward > 0.2)).toBe(true);
+      expectBackHome(poses.at(-1)!);
+      expect(PENGUIN.sometimes!.share).toBeLessThan(0.5);
+    },
+  );
+
+  it('la foca levanta la cabeza y mira a los lados sin meter la cola en el hielo, y la vuelve a bajar', () => {
+    const poses = posesOf(SEAL.move);
+    expect(Math.min(...poses.map((pose) => pose.pitch))).toBeLessThan(-0.2);
+    expect(poses.every((pose) => pose.pitch <= 0 && pose.lift >= 0)).toBe(true);
+    expect(new Set(poses.map((pose) => Math.sign(Math.round(pose.yaw * 100))))).toEqual(new Set([-1, 0, 1]));
+    expectBackHome(poses.at(-1)!);
   });
 });
 
@@ -366,5 +412,61 @@ describe('donde vive cada cosa en el desierto', () => {
     expect(lizards.some((spot) => terrainOf(spot.pos) === 'Cactus')).toBe(true);
     // En la losa, encima; junto al cactus, en la arena.
     expect(lizards.every((spot) => spot.at.y === (terrainOf(spot.pos) === 'Sand' ? 2 / 16 : 0))).toBe(true);
+  });
+});
+
+/**
+ * Un mapa nevado: nieve a la izquierda, una columna de hielo en la orilla (`shore`) y el agua a la
+ * derecha; ademas, un poco de hielo suelto en la nieve (en `x = 0`), sin agua al lado.
+ */
+function snowyShore() {
+  const s = blankState();
+  s.theme = 'Snowy';
+  const shore = 3;
+  const positions = [...mapGrid(s).cells()].map((cell) => cell.pos);
+  const terrainOf = (pos: Pos) => (pos.x > shore ? 'Water' : pos.x === shore || (pos.x === 0 && pos.y % 2 === 0) ? 'Ice' : 'Snow');
+  for (const pos of positions) s.map[pos.x]![pos.y] = terrainOf(pos);
+  const ground = {
+    positions,
+    groundOf: (pos: Pos) => new THREE.Vector3(pos.x, terrainOf(pos) === 'Water' ? 0.0625 : 0.125, pos.y),
+    heightAt: () => 0,
+    decorPlaceOf: () => null,
+  };
+  return { s, positions, ground, terrainOf, shore };
+}
+
+describe('lo que vive en la nieve', () => {
+  it('los copos brillan sobre la nieve y el hielo, y no sobre el agua', () => {
+    const { s, positions, terrainOf } = snowyShore();
+    expect(tilesByMote(s, positions)).toEqual(new Map([[SNOW_GLITTER, positions.filter((pos) => terrainOf(pos) !== 'Water')]]));
+  });
+
+  it('los pingüinos y las focas estan en el suelo del hielo que da al agua, a un lado del centro y mirando al agua', () => {
+    const { s, ground, shore } = snowyShore();
+    const spots = spotsByCritter(s, ground);
+    const penguins = spots.get(PENGUIN) ?? [];
+    expect(penguins.length).toBeGreaterThan(0);
+    for (const spot of [...penguins, ...(spots.get(SEAL) ?? [])]) {
+      expect(spot.pos.x).toBe(shore);
+      // Mirar hacia +x: el modelo, que mira a -z, girado un cuarto de vuelta hacia la derecha.
+      expect(spot.heading).toBe(-Math.PI / 2);
+      // Del lado del agua, lejos del centro (donde va la unidad), y en el hielo.
+      expect(spot.at.x - spot.pos.x).toBeGreaterThan(0.2);
+      expect(spot.at.y).toBeCloseTo(0.125);
+      // Al agua de delante, para tirarse: lo que esta mas abajo.
+      expect(spot.drop).toBeCloseTo(0.0625);
+    }
+  });
+
+  it('los de una casilla van juntos, del mismo lado, sin pisarse', () => {
+    const { s, ground } = snowyShore();
+    const spots = [...spotsByCritter(s, ground).values()].flat();
+    const byTile = groupBy(spots, (spot) => `${spot.pos.x},${spot.pos.y}`);
+    const crowded = [...byTile.values()].filter((tile) => tile.length > 1);
+    expect(crowded.length).toBeGreaterThan(0);
+    for (const tile of crowded) {
+      const gaps = tile.flatMap((spot, index) => tile.slice(index + 1).map((other) => spot.at.distanceTo(other.at)));
+      expect(Math.min(...gaps)).toBeGreaterThan(0.1);
+    }
   });
 });

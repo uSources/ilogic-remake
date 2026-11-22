@@ -404,6 +404,30 @@ bosque, en colores apagados de la arena y la roca.
   (`reach`): del cuadrado alrededor de la cámara solo sale en pantalla la parte del medio y, de las
   primeras pruebas, casi todo nacía fuera.
 
+### Nieve
+
+Decidido con el usuario (22-11-2026). Lo suyo va en la nieve y el hielo (`Snow`, `Frosty`,
+`SnowWood` e `Ice`), que solo salen en el tema Nevado. Los animales, a 32 por casilla como los del
+bosque, en colores apagados.
+
+- **Copos que brillan al sol**: puntitos blancos que bajan muy despacio sobre la nieve y el hielo,
+  meciéndose con el viento; casi no se ven y, de vez en cuando, uno da un destello corto y se agranda
+  (suman su luz, como las luciérnagas: así destacan sobre lo blanco). Cerca del centro de lo que se
+  mira (`SNOW_GLITTER`). Primero llevaban un halo y, de cerca, parecían bolas de luz.
+- **Pingüinos** negro azulado con la tripa blanca y el pico y las patas naranja apagado, en grupitos
+  de uno a tres en el **hielo de la orilla** (la casilla de hielo que da al agua), a un lado del centro
+  (en el centro va la unidad) y mirando al agua. Van en el suelo de la casilla: el hielo no lleva
+  decorado (`onTheGround`, y el borde que piden es el agua: `edge: 'water'`). De vez en cuando dan unos
+  pasitos de pato (se balancean de un pie a otro) y, alguna vez, se tumban de barriga, se deslizan
+  hasta el borde, caen al agua y se hunden; al rato saltan del agua de cabeza, en arco, caen de pie en
+  su sitio y se dan la vuelta para volver a mirar al agua (`PENGUIN`). El agua puede estar un escalón
+  por debajo del hielo: se tiran y saltan lo que haga falta (`drop` del sitio).
+- **Focas** grises con manchas, tumbadas en el hielo de la orilla junto a los pingüinos, mirando al
+  agua; de vez en cuando levantan la cabeza, apoyadas en la cola, y miran a un lado y a otro (`SEAL`).
+- Los movimientos de los animales son posturas a lo largo del tiempo (`CritterMove.pose`: subir,
+  adelantarse, girarse, inclinarse y ladearse), y pueden tener otro que hacen alguna vez
+  (`sometimes`): la zambullida.
+
 ## Cielo y fondo
 
 Decidido con el usuario (16-11-2026): el tablero es **una isla de juguete en un mar que llega al
