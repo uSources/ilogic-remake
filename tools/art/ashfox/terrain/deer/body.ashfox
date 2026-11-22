@@ -1,0 +1,30 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube leg_front_left { origin = (-2u, 0u, -4u); size = (1u, 5u, 1u); surface = skin.leg_front_left; }
+        cube leg_front_right { origin = (1u, 0u, -4u); size = (1u, 5u, 1u); surface = skin.leg_front_right; }
+        cube leg_back_left { origin = (-2u, 0u, 3u); size = (1u, 5u, 1u); surface = skin.leg_back_left; }
+        cube leg_back_right { origin = (1u, 0u, 3u); size = (1u, 5u, 1u); surface = skin.leg_back_right; }
+        cube body { origin = (-2u, 5u, -5u); size = (4u, 4u, 10u); surface = skin.body; }
+        cube neck { origin = (-1u, 9u, -6u); size = (2u, 3u, 2u); surface = skin.neck; }
+        cube head { origin = (-1.5u, 11u, -9u); size = (3u, 3u, 4u); surface = skin.head; }
+        cube ear_left { origin = (-2.5u, 13u, -6u); size = (1u, 1u, 1u); surface = skin.ear_left; }
+        cube ear_right { origin = (1.5u, 13u, -6u); size = (1u, 1u, 1u); surface = skin.ear_right; }
+        cube antler_left { origin = (-1.5u, 14u, -6u); size = (1u, 3u, 1u); surface = skin.antler_left; }
+        cube antler_left_tip { origin = (-2.5u, 16u, -6u); size = (1u, 2u, 1u); surface = skin.antler_left_tip; }
+        cube antler_left_prong { origin = (-1.5u, 17u, -7u); size = (1u, 1u, 1u); surface = skin.antler_left_prong; }
+        cube antler_right { origin = (0.5u, 14u, -6u); size = (1u, 3u, 1u); surface = skin.antler_right; }
+        cube antler_right_tip { origin = (1.5u, 16u, -6u); size = (1u, 2u, 1u); surface = skin.antler_right_tip; }
+        cube antler_right_prong { origin = (0.5u, 17u, -7u); size = (1u, 1u, 1u); surface = skin.antler_right_prong; }
+        cube tail { origin = (-1u, 7u, 5u); size = (2u, 2u, 1u); surface = skin.tail; }
+      }
+    }
+  }
+}

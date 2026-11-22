@@ -1,8 +1,9 @@
 /**
  * Los animalitos del ambiente: pequeños, sentados en su sitio del decorado (la rana en el nenufar o
- * entre los juncos) y de vez en cuando hacen algo sin irse de ahi (un saltito y se giran). Cada clase
- * es un dato (`CritterKind`, en kinds.ts: su modelo de Ashfox, lo que mide, cada cuanto se mueve y
- * como); aqui solo se mueven sus copias. Con «reducir el movimiento» se quedan quietos.
+ * entre los juncos, la ardilla en el arbol, el ciervo en el borde del bosque) y de vez en cuando hacen
+ * algo sin irse de ahi (unos saltitos y se giran, o asoman y vuelven). Cada clase es un dato
+ * (`CritterKind`, en kinds.ts: su modelo de Ashfox, lo que mide, cada cuanto se mueve y como); aqui
+ * solo se mueven sus copias. Con «reducir el movimiento» se quedan quietos.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
@@ -11,11 +12,17 @@ import type { GlbLibrary } from '../pieces/glbModels';
 import { instanced, moveCopy, type PlacedMesh } from '../terrain/placed';
 import { randomBetween, type Range } from '../core/random';
 
-/** Lo que hace cada vez: dura `seconds`, sube `height` a mitad (casillas) y se gira `turn` (radianes) a un lado o al otro. */
+/**
+ * Lo que hace cada vez: dura `seconds`, da `hops` saltitos (sin decir, uno) que suben `height` (casillas)
+ * y se gira `turn` (radianes) a un lado o al otro. Con `reach`, ademas, sale hacia delante esas casillas
+ * y vuelve (el ciervo que asoma).
+ */
 export interface CritterMove {
   seconds: number;
   height: number;
   turn: Range;
+  hops?: number;
+  reach?: number;
 }
 
 export interface CritterKind {
@@ -35,6 +42,11 @@ export interface CritterSeat {
   share: number;
   /** El sitio en el modelo del decorado, en casillas (antes de encogerlo): un nenufar, un hueco entre los juncos. */
   at: readonly [x: number, y: number, z: number];
+  /**
+   * Solo en el borde: el sitio vale si la casilla de ese lado es de otro terreno, y el animal mira hacia
+   * alla (el ciervo que asoma del bosque). Sin decir, en cualquier casilla y mirando a cualquier lado.
+   */
+  edge?: boolean;
 }
 
 /** Un animal ya puesto: su casilla, donde esta y hacia donde mira (radianes). */
@@ -57,6 +69,13 @@ interface Critter {
 
 const UP = new THREE.Vector3(0, 1, 0);
 
+/** Lo que esta subido a esa altura (`progress`, de 0 a 1) de su movimiento: sus saltitos, uno tras otro. */
+export const liftAt = (move: CritterMove, progress: number): number =>
+  Math.abs(Math.sin(progress * Math.PI * (move.hops ?? 1))) * move.height;
+
+/** Lo que esta adelantado a esa altura de su movimiento: sale despacio y vuelve a su sitio. */
+export const forwardAt = (move: CritterMove, progress: number): number => Math.sin(progress * Math.PI) * (move.reach ?? 0);
+
 /** Los animales de una clase, en sus sitios. */
 export class Critters {
   readonly placed: readonly PlacedMesh[];
@@ -65,6 +84,7 @@ export class Critters {
   private readonly place = new THREE.Matrix4();
   private readonly turnAround = new THREE.Quaternion();
   private readonly lifted = new THREE.Vector3();
+  private readonly ahead = new THREE.Vector3();
 
   constructor(
     library: GlbLibrary,
@@ -104,9 +124,10 @@ export class Critters {
       return;
     }
     critter.moving += seconds;
-    const progress = Math.min(critter.moving / this.kind.move.seconds, 1);
-    const lift = Math.sin(progress * Math.PI) * this.kind.move.height;
-    this.moveCopies(index, this.placeOf(critter.spot.at, critter.heading + critter.turn * progress, lift));
+    const { move } = this.kind;
+    const progress = Math.min(critter.moving / move.seconds, 1);
+    const heading = critter.heading + critter.turn * progress;
+    this.moveCopies(index, this.placeOf(critter.spot.at, heading, liftAt(move, progress), forwardAt(move, progress)));
     if (progress === 1) this.stop(critter);
   }
 
@@ -125,10 +146,14 @@ export class Critters {
     for (const part of this.placed) moveCopy(part, index, place);
   }
 
-  /** Donde va un animal: en su sitio, subido `lift` y mirando a `heading` (se reutiliza la matriz). */
-  private placeOf(at: THREE.Vector3, heading: number, lift: number): THREE.Matrix4 {
+  /**
+   * Donde va un animal: en su sitio, subido `lift`, adelantado `forward` y mirando a `heading` (se
+   * reutiliza la matriz). Los modelos de Ashfox miran al norte (-z): delante es -z girado.
+   */
+  private placeOf(at: THREE.Vector3, heading: number, lift: number, forward = 0): THREE.Matrix4 {
     this.turnAround.setFromAxisAngle(UP, heading);
-    this.lifted.copy(at).addScaledVector(UP, lift);
+    this.ahead.set(0, 0, -forward).applyQuaternion(this.turnAround);
+    this.lifted.copy(at).add(this.ahead).addScaledVector(UP, lift);
     return this.place.compose(this.lifted, this.turnAround, this.size);
   }
 }

@@ -1,18 +1,22 @@
 /**
  * Las motas del ambiente: puntitos que salen de las casillas de su terreno cerca de lo que se mira,
- * viven un rato y se van (el polvo de la arena, las luciernagas). Cada clase es un dato (`MoteKind`,
- * en kinds.ts: cuantas, de que color, como vuelan y como brillan); aqui todas se mueven y se dibujan
- * igual, una bandada por clase. Con «reducir el movimiento» no salen.
+ * viven un rato y se van (el polvo de la arena, las luciernagas, las hojas que caen). Cada clase es un
+ * dato (`MoteKind`, en kinds.ts: cuantas, de que color, como vuelan y como brillan); aqui todas se
+ * mueven y se dibujan igual, una bandada por clase. Con «reducir el movimiento» no salen.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
 import { reducedMotion } from '../../../ui/motion';
 import { PixelPoints } from '../fx/pixelPoints';
-import { pointIn, randomBetween, type Range } from '../core/random';
+import { pointIn, type Range } from '../core/random';
+import { Births, stepLife, type BirthPlan, type Mote } from './births';
+
+export type { Mote } from './births';
 
 /** Un punto de cada mota: el polvo lleva uno; la luciernaga, su halo y su nucleo. */
 export interface MoteLayer {
-  color: THREE.ColorRepresentation;
+  /** Sus colores: cada mota, uno de ellos (siempre el mismo). */
+  colors: readonly THREE.ColorRepresentation[];
   opacity: number;
   /** Lo que mide (casillas): cada mota, lo suyo entre los dos. */
   size: Range;
@@ -20,39 +24,20 @@ export interface MoteLayer {
   glow?: boolean;
 }
 
-/** Una mota viva. Lo propio de cada una (su ritmo, su desfase, su tamaño) sale de su semilla: `vary`. */
-export interface Mote {
-  /** Donde nacio: de ahi sale su vuelo. */
-  home: THREE.Vector3;
-  age: number;
-  life: number;
-  seed: number;
-}
-
-export interface MoteKind {
-  /** Cuantas puede haber a la vez. */
-  count: number;
+export interface MoteKind extends BirthPlan {
   /** Como se dibuja cada una: un punto por capa, la primera debajo. */
   layers: readonly MoteLayer[];
-  /** Lo que vive cada una (segundos). */
-  life: Range;
-  /** A que altura de su casilla nace (casillas). */
-  height: Range;
-  /**
-   * Cuantas pueden nacer por segundo cuando la bandada lleva `time` segundos. Las que no nacen se van
-   * sumando para despues, pero si deja de nacer (0) se pierden: asi el polvo sale solo en las rafagas.
-   */
-  birthRate(time: number): number;
   /** Donde esta a su edad (lo escribe en `out` y lo devuelve): su vuelo desde donde nacio. */
   flight(mote: Mote, out: THREE.Vector3): THREE.Vector3;
   /** Cuanto se ve a su edad (0 a 1). */
   brightness(mote: Mote): number;
+  /** Que parte de lo suyo mide a su edad (0 a 1; sin decir, todo): la hoja que gira se estrecha y se ensancha. */
+  scale?(mote: Mote): number;
 }
 
-/** Hasta donde llegan las semillas: lo bastante para que dos motas no salgan parecidas. */
-const SEED_SPREAD = 1000;
-/** Las semillas de `vary` desde aqui son del tamaño de cada capa (las de antes, de las clases de kinds.ts). */
+/** Las semillas de `vary` desde aqui son del tamaño y del color de cada capa (las de antes, de las clases de kinds.ts). */
 const LAYER_SIZE_SALT = 100;
+const LAYER_COLOR_SALT = 200;
 
 /** Un numero de `range` propio de esa mota: con la misma `salt`, siempre el mismo para ella. */
 export function vary(mote: Mote, salt: number, range: Range): number {
@@ -63,10 +48,10 @@ export function vary(mote: Mote, salt: number, range: Range): number {
 /** Entra y sale despacio de su vida: nada de puntos que aparecen o desaparecen de golpe. */
 export const lifeFade = (mote: Mote): number => Math.sin((mote.age / mote.life) * Math.PI);
 
-/** Los puntos de una capa, con su color y, si brilla, su brillo. */
+/** Los puntos de una capa (el color lo pone cada mota). */
 function pointsOf(layer: MoteLayer, count: number): PixelPoints {
   const points = new PixelPoints(count);
-  points.setLook(layer.color, layer.opacity);
+  points.setLook(0xffffff, layer.opacity);
   if (layer.glow) points.glow();
   return points;
 }
@@ -81,71 +66,43 @@ function setPoint(points: PixelPoints, index: number, at: THREE.Vector3 | null, 
   points.positions[index * 3 + 2] = at.z;
 }
 
+/** Pinta el punto `index` de un color. */
+function setColor(points: PixelPoints, index: number, color: THREE.Color): void {
+  points.colors[index * 3] = color.r;
+  points.colors[index * 3 + 1] = color.g;
+  points.colors[index * 3 + 2] = color.b;
+}
+
 /** Las motas de una clase sobre sus casillas. */
 export class MoteSwarm {
   readonly object = new THREE.Group();
   private readonly layers: readonly PixelPoints[];
+  /** Los colores de cada capa, ya hechos. */
+  private readonly palettes: readonly (readonly THREE.Color[])[];
   private readonly motes: (Mote | null)[];
-  private time = 0;
-  /** Las que pueden nacer ya (`MoteKind.birthRate`). */
-  private births = 0;
+  private readonly births: Births;
   private readonly at = new THREE.Vector3();
-  /** Las casillas cerca de lo que se mira y alrededor de donde (casilla y radio redondeados) se buscaron. */
-  private nearby: readonly Pos[] = [];
-  private readonly nearbyAround = { x: Number.NaN, z: Number.NaN, radius: Number.NaN };
 
   constructor(
     private readonly kind: MoteKind,
-    private readonly tiles: readonly Pos[],
-    private readonly groundOf: (pos: Pos) => THREE.Vector3,
+    tiles: readonly Pos[],
+    groundOf: (pos: Pos) => THREE.Vector3,
   ) {
     this.layers = kind.layers.map((layer) => pointsOf(layer, kind.count));
+    this.palettes = kind.layers.map((layer) => layer.colors.map((color) => new THREE.Color(color)));
     this.motes = Array.from({ length: kind.count }, () => null);
+    this.births = new Births(kind, tiles, groundOf);
     this.object.add(...this.layers.map((points) => points.object));
   }
 
   /** Avanza las motas cerca de `center` (lo que mira la camara), en un radio `radius`. */
   update(seconds: number, center: THREE.Vector3, radius: number, camera: THREE.PerspectiveCamera, viewportHeight: number): void {
-    this.object.visible = this.tiles.length > 0 && !reducedMotion();
+    this.object.visible = this.births.tiles.length > 0 && !reducedMotion();
     if (!this.object.visible) return;
-    this.time += seconds;
     for (const points of this.layers) points.setScale(viewportHeight, camera);
-    const rate = this.kind.birthRate(this.time);
-    this.births = rate > 0 ? Math.min(this.births + rate * seconds, this.kind.count) : 0;
-    const nearby = this.tilesNear(center, radius);
-    this.motes.forEach((mote, index) => (this.motes[index] = this.step(mote, seconds, nearby)));
+    this.births.tick(seconds, center, radius);
+    this.motes.forEach((mote, index) => (this.motes[index] = stepLife(mote, seconds, this.births)));
     this.draw();
-  }
-
-  /** Las casillas cerca de lo que se mira: se buscan otra vez solo si la camara cambia de casilla o de distancia. */
-  private tilesNear(center: THREE.Vector3, radius: number): readonly Pos[] {
-    const around = this.nearbyAround;
-    const x = Math.round(center.x);
-    const z = Math.round(center.z);
-    const reach = Math.round(radius);
-    if (x === around.x && z === around.z && reach === around.radius) return this.nearby;
-    Object.assign(around, { x, z, radius: reach });
-    this.nearby = this.tiles.filter((pos) => Math.abs(pos.x - x) < reach && Math.abs(pos.y - z) < reach);
-    return this.nearby;
-  }
-
-  private step(mote: Mote | null, seconds: number, nearby: readonly Pos[]): Mote | null {
-    if (!mote) return this.births >= 1 ? this.born(nearby) : null;
-    mote.age += seconds;
-    return mote.age < mote.life ? mote : null;
-  }
-
-  /** Una mota nueva sobre una casilla al azar de `nearby` (ninguna si no hay casillas cerca). */
-  private born(nearby: readonly Pos[]): Mote | null {
-    const tile = nearby[Math.floor(Math.random() * nearby.length)];
-    if (!tile) return null;
-    this.births -= 1;
-    // El punto del suelo es un vector nuevo: se mueve ahi mismo a donde nace y la mota se lo queda.
-    const home = this.groundOf(tile);
-    home.x += Math.random() - 0.5;
-    home.y += randomBetween(this.kind.height);
-    home.z += Math.random() - 0.5;
-    return { home, age: 0, life: randomBetween(this.kind.life), seed: Math.random() * SEED_SPREAD };
   }
 
   /** Va en cada fotograma por cada mota y cada capa: con bucles sencillos, sin crear nada (ni funciones). */
@@ -157,12 +114,21 @@ export class MoteSwarm {
   private drawMote(index: number, mote: Mote | null): void {
     const at = mote && this.kind.flight(mote, this.at);
     const brightness = mote ? this.kind.brightness(mote) : 0;
+    const scale = mote && this.kind.scale ? this.kind.scale(mote) : 1;
     for (let layer = 0; layer < this.layers.length; layer++) {
-      setPoint(this.layers[layer]!, index, at, mote ? this.sizeOf(mote, layer) : 0, brightness);
+      const points = this.layers[layer]!;
+      setPoint(points, index, at, mote ? this.sizeOf(mote, layer) * scale : 0, brightness);
+      if (mote) setColor(points, index, this.colorOf(mote, layer));
     }
   }
 
   private sizeOf(mote: Mote, layer: number): number {
     return vary(mote, LAYER_SIZE_SALT + layer, this.kind.layers[layer]!.size);
+  }
+
+  private colorOf(mote: Mote, layer: number): THREE.Color {
+    const palette = this.palettes[layer]!;
+    const pick = Math.min(Math.floor(vary(mote, LAYER_COLOR_SALT + layer, [0, palette.length])), palette.length - 1);
+    return palette[pick]!;
   }
 }

@@ -1,0 +1,12 @@
+ashfox-model 1
+asset squirrel {
+  import "./squirrel/rig.ashfox" as rig;
+  import "./squirrel/paint.ashfox" as paint;
+  import "./squirrel/body.ashfox" as body;
+  export asset squirrel {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

@@ -348,8 +348,8 @@ modelos que el bosque y el agua azul, y «parecía un tipo de bosque». Ahora to
 ## Lo que vive en cada bioma
 
 Decidido con el usuario (22-11-2026), tras el pantano: cada bioma tiene su vida, que no es de la
-partida (`src/view3d/engine/life/`: motas que vuelan y animalitos sentados en el decorado, todos
-como datos en `kinds.ts`).
+partida (`src/view3d/engine/life/`: motas que vuelan, animalitos sentados en el decorado y los que se
+van volando, todos como datos en `kinds.ts`).
 
 - **Pequeños**: un animal es más pequeño que un soldado, y una mota, un punto.
 - **Del bioma, no de un equipo**: colores apagados del terreno donde viven; nunca los de un lado, que
@@ -357,6 +357,26 @@ como datos en `kinds.ts`).
 - **No estorban**: no tapan unidades ni casillas, y no se tocan (el clic va a lo que hay debajo).
 - **Poco y cerca**: solo alrededor de lo que se mira, unos cuantos.
 - Con «reducir el movimiento», las motas no salen y los animales se quedan quietos.
+
+### Bosque
+
+Decidido con el usuario (22-11-2026). Lo suyo va solo en el tema Bosque (`THEME_PIECES.Forest`): los árboles de la llanura no lo llevan.
+Los animales, modelos de Ashfox a 32 por casilla (al final de `tools/art/ashfox/models/terrain.mjs`), en
+pardos apagados como el suelo y los troncos.
+
+- **Hojas que caen** de las copas cerca de la cámara: puntos verdes y ocres que bajan despacio
+  meciéndose y girando (se estrechan y se ensanchan), sin llegar más abajo del suelo. Pocas: es
+  ambiente, no otoño (`FALLING_LEAVES`).
+- **Ardillas** castañas de cola grande, en el escalón de la copa de abajo del árbol grande (los
+  troncos de los árboles casi no se ven desde la cámara); de vez en cuando dan tres saltitos rápidos y
+  se giran (`SQUIRREL`). En una de cada cinco casillas de bosque, más o menos.
+- **Ciervos** con cuernas, solo en el **borde del bosque**: en la esquina sin copas de la casilla
+  cuando da a otro terreno, mirando fuera; de vez en cuando asoman un poco y vuelven (`DEER`; el sitio
+  pide el borde con `edge`).
+- **Pájaros** pardos con las alas abiertas que salen de una copa, vuelan bajo en arco batiendo las alas
+  (visto desde arriba, se estrechan y se ensanchan) y se meten en otra copa unas casillas más allá
+  (`FOREST_BIRDS`, un viajero: `travellers.ts`). Se probó que subieran y se fueran lejos: con la cámara
+  cerca se salían por arriba de la pantalla en un momento y no se llegaban a ver.
 
 ## Cielo y fondo
 

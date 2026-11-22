@@ -1,0 +1,37 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 32px); background = deer; background-alpha = 255;
+      palette {
+        deer = (#7a5232, #94683e, #ac7e4c);
+        deer_eye_k = #141824;
+        deer_nose_n = #2a2220;
+        antler = (#6a5a44, #807058, #988670);
+        deer_white = (#d4c8b0, #e8decc, #f6f0e2);
+      }
+      stamp deer_eye { pixels = "k"; k = deer_eye_k; }
+      stamp deer_nose { pixels = ".n."; n = deer_nose_n; }
+      chart leg_front_left box { origin = (44px, 0px); fill = deer; }
+      chart leg_front_right box { origin = (49px, 0px); fill = deer; }
+      chart leg_back_left box { origin = (54px, 0px); fill = deer; }
+      chart leg_back_right box { origin = (59px, 0px); fill = deer; }
+      chart body box { origin = (0px, 0px); fill = deer; }
+      chart neck box { origin = (0px, 15px); fill = deer; }
+      chart head box { origin = (29px, 0px); fill = deer; face east { stamp deer_eye { at = (1px, 1px); } } face west { stamp deer_eye { at = (2px, 1px); } } face north { stamp deer_nose { at = (0px, 2px); } } }
+      chart ear_left box { origin = (36px, 15px); fill = deer; }
+      chart ear_right box { origin = (41px, 15px); fill = deer; }
+      chart antler_left box { origin = (9px, 15px); fill = antler; }
+      chart antler_left_tip box { origin = (19px, 15px); fill = antler; }
+      chart antler_left_prong box { origin = (46px, 15px); fill = antler; }
+      chart antler_right box { origin = (14px, 15px); fill = antler; }
+      chart antler_right_tip box { origin = (24px, 15px); fill = antler; }
+      chart antler_right_prong box { origin = (51px, 15px); fill = antler; }
+      chart tail box { origin = (29px, 15px); fill = deer_white; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

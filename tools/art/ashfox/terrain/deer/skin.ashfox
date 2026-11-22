@@ -1,0 +1,23 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 32px; }
+    chart leg_front_left box { width = 4px; height = 6px; coverage = opaque; }
+    chart leg_front_right box { width = 4px; height = 6px; coverage = opaque; }
+    chart leg_back_left box { width = 4px; height = 6px; coverage = opaque; }
+    chart leg_back_right box { width = 4px; height = 6px; coverage = opaque; }
+    chart body box { width = 28px; height = 14px; coverage = opaque; }
+    chart neck box { width = 8px; height = 5px; coverage = opaque; }
+    chart head box { width = 14px; height = 7px; coverage = opaque; }
+    chart ear_left box { width = 4px; height = 2px; coverage = opaque; }
+    chart ear_right box { width = 4px; height = 2px; coverage = opaque; }
+    chart antler_left box { width = 4px; height = 4px; coverage = opaque; }
+    chart antler_left_tip box { width = 4px; height = 3px; coverage = opaque; }
+    chart antler_left_prong box { width = 4px; height = 2px; coverage = opaque; }
+    chart antler_right box { width = 4px; height = 4px; coverage = opaque; }
+    chart antler_right_tip box { width = 4px; height = 3px; coverage = opaque; }
+    chart antler_right_prong box { width = 4px; height = 2px; coverage = opaque; }
+    chart tail box { width = 6px; height = 3px; coverage = opaque; }
+    material = opaque;
+  }
+}
