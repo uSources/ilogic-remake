@@ -7,6 +7,22 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.16.0] - 2026-11-22 — El bosque cobra vida
+
+### Novedades
+- **El bosque cobra vida**: en los mapas de bosque caen de las copas hojas verdes y ocres, meciéndose y girando; en lo alto de los árboles hay ardillas que de vez en cuando dan unos saltitos y se giran; algún ciervo asoma en el borde del bosque, mirando al prado; y cada poco un pájaro sale de una copa y vuela batiendo las alas hasta otro árbol. Con «Reducir el movimiento» no caen hojas ni vuelan pájaros, y las ardillas y los ciervos se quedan quietos.
+
+### Arreglos
+- El mar helado que rodea los mapas nevados ya no sale con rectángulos ni escalones donde pasa del agua con trozos de hielo a los témpanos o a la banquisa: las placas salen enteras.
+
+<!-- en -->
+
+### New
+- **The forest comes alive**: on forest maps, green and ochre leaves fall from the treetops, swaying and spinning; squirrels sit high in the trees and now and then hop about and turn; the odd deer peeks out at the edge of the woods, looking out over the meadow; and every so often a bird leaves a treetop and flies, flapping its wings, to another tree. With “Reduce motion”, no leaves fall and no birds fly, and squirrels and deer stay still.
+
+### Fixes
+- The frozen sea around snowy maps no longer shows rectangles or steps where it changes from water with ice chunks to floes or pack ice: the plates come out whole.
+
 ## [0.15.0] - 2026-11-22 — Cada sonido a su volumen
 
 ### Novedades
