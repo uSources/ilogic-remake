@@ -1,17 +1,23 @@
 /**
  * Los menus de la partida 3D que no son del tablero: el de pausa (seguir, terminar turno, guardar,
  * opciones, ayuda, rendirse, salir) y la pantalla del final (resumen y botones: revancha, nueva,
- * siguiente mision...). Rendirse y salir piden pulsar dos veces.
+ * siguiente mision...). Rendirse y salir piden pulsar dos veces. Con la pausa abierta, el teclado es
+ * suyo (es un KeyPanel, systems/input/keyInput.ts): sus opciones y sus atajos, nada del mapa.
  */
 import { missionById, type Mission } from '../../../core/missions';
 import { canBeLost, gameModeOf } from '../../../core/modes';
 import { rematchOf } from '../../../core/match';
 import { decidingFall, isDefeatReason, outcomeFor } from '../../../core/rules';
 import type { EndReason, GameState, Pos, TeamId } from '../../../core/model';
+import type { InputCommand } from '../../../controls/inputCommands';
+import { REBINDABLE_KEYS, type KeyBindingId } from '../../../controls/keyboard';
+import type { MenuCommand, MenuContext } from '../../../controls/menu';
 import { screenEnd, type GameSession, type PersonEnd } from '../../../core/session';
 import { serialize } from '../../../core/save';
 import { bestDays, campaignMissions, markCompleted, objectiveText } from '../../../campaign';
+import { keyLabelOf } from '../../../hud/keyLabels';
 import { showToast, ui, type EndOutcome, type MenuItemVM } from '../../../hud/store';
+import { navGrid } from '../../../menu/nav';
 import { settings, t, type TextKey } from '../../../settings';
 import { randomSeed, seedToCode } from '../../../setup';
 import { deleteSave, writeSave } from '../../../storage';
@@ -22,8 +28,22 @@ import type { MenuView } from '../turn/turnControls';
 
 type PauseChoice = 'resume' | 'endTurn' | 'threat' | 'intents' | 'save' | 'options' | 'help' | 'surrender' | 'quit';
 const PAUSE_CHOICES: readonly PauseChoice[] = ['resume', 'endTurn', 'threat', 'intents', 'save', 'options', 'help', 'surrender', 'quit'];
-/** Atajo de teclado que se enseña junto a la opcion. */
-const PAUSE_KEY_HINT: Partial<Record<PauseChoice, string>> = { endTurn: 'E', resume: 'Esc', help: 'H', threat: 'T', intents: 'V' };
+/**
+ * La orden del mapa que hace lo mismo que la opcion: con la pausa abierta, su tecla (la que tenga el
+ * jugador) la elige, y se enseña a su lado.
+ */
+const PAUSE_SHORTCUTS: Partial<Record<PauseChoice, KeyBindingId>> = {
+  resume: 'cancel',
+  endTurn: 'endTurn',
+  threat: 'threat',
+  intents: 'intents',
+  options: 'options',
+  help: 'help',
+};
+/** Las que se apartan abajo, en su fila (Pause.tsx). */
+const DANGEROUS_CHOICES: readonly PauseChoice[] = ['surrender', 'quit'];
+/** Columnas de la rejilla de las demas (pause.css, `.pause-grid`); la primera va a todo lo ancho. */
+const PAUSE_COLUMNS = 2;
 /** Lo que hay para pulsar otra vez y confirmar (milisegundos). */
 const CONFIRM_MS = 2500;
 
@@ -76,6 +96,31 @@ export class PauseMenu {
     if (choice) this.choose(choice);
   }
 
+  /** Que teclas valen con la pausa abierta (MENU_BINDINGS.pause); sus atajos, en `shortcut`. */
+  context(): MenuContext {
+    return 'pause';
+  }
+
+  /** Las flechas recorren las opciones como se ven, Enter elige la señalada y Esc cierra. */
+  command(command: MenuCommand): void {
+    if (command.kind === 'move') return this.move(command.dx, command.dy);
+    if (command.kind === 'ok' && !command.repeat) return this.pick();
+    if (command.kind === 'back') this.close();
+  }
+
+  /** Una orden del mapa que es el atajo de una opcion (E, T, V, H... o las que tenga el jugador) la elige. */
+  shortcut(command: InputCommand): boolean {
+    const choice = this.choices().find((candidate) => isShortcutFor(candidate, command));
+    if (choice) this.choose(choice);
+    return choice !== undefined;
+  }
+
+  private move(dx: number, dy: number): void {
+    const choices = this.choices();
+    const next = navGrid(pauseRows(choices), choices[this.selected] ?? 'resume', dx, dy);
+    this.hover(choices.findIndex((choice) => choice === next));
+  }
+
   /** Las opciones en esta partida: guardar si su modo se guarda, rendirse si se puede perder. */
   private choices(): PauseChoice[] {
     const mode = gameModeOf(this.host.session.state);
@@ -110,9 +155,11 @@ export class PauseMenu {
         this.close();
         return ui.set({ help: true });
       case 'surrender':
+        // Acaba la partida sin pasar por los turnos: su final, ya.
         return this.confirmTwice('surrender', 'confirmSurrender', () => {
           this.close();
-          void host.session.act(host.viewer, { kind: 'surrender' });
+          host.session.act(host.viewer, { kind: 'surrender' });
+          showEndIfOver(host.session, host.viewer);
         });
       case 'quit':
         return this.confirmTwice('quit', 'confirmQuit', backToMenu);
@@ -143,11 +190,33 @@ export class PauseMenu {
     const items: MenuItemVM[] = this.choices().map((choice) => ({
       id: choice,
       label: this.labelOf(choice),
-      hint: PAUSE_KEY_HINT[choice],
-      danger: choice === 'quit' || choice === 'surrender',
+      hint: shortcutLabel(choice),
+      danger: DANGEROUS_CHOICES.includes(choice),
     }));
     return { kind: 'game', title: dayTitle(s), info: pauseInfo(s, this.host.viewer), items, selected: this.selected, at };
   }
+}
+
+/** La tecla que se enseña junto a una opcion, si tiene atajo. */
+function shortcutLabel(choice: PauseChoice): string | undefined {
+  const binding = PAUSE_SHORTCUTS[choice];
+  return binding && keyLabelOf(binding);
+}
+
+function isShortcutFor(choice: PauseChoice, command: InputCommand): boolean {
+  const binding = PAUSE_SHORTCUTS[choice];
+  return binding !== undefined && REBINDABLE_KEYS[binding].command.kind === command.kind;
+}
+
+/** Las opciones en filas, como las pinta Pause.tsx: la primera a todo lo ancho, el resto de dos en dos y las peligrosas aparte. */
+function pauseRows(choices: readonly PauseChoice[]): PauseChoice[][] {
+  const [first, ...rest] = choices.filter((choice) => !DANGEROUS_CHOICES.includes(choice));
+  const wide: PauseChoice[][] = first ? [Array.from({ length: PAUSE_COLUMNS }, () => first)] : [];
+  const grid = Array.from({ length: Math.ceil(rest.length / PAUSE_COLUMNS) }, (_row, row) =>
+    rest.slice(row * PAUSE_COLUMNS, (row + 1) * PAUSE_COLUMNS),
+  );
+  const dangerous = choices.filter((choice) => DANGEROUS_CHOICES.includes(choice));
+  return [...wide, ...grid, dangerous].filter((row) => row.length > 0);
 }
 
 function dayTitle(s: GameState): string {

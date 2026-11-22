@@ -2,14 +2,14 @@
  * El teclado en el 3D, con las mismas teclas que el juego: la tabla de controls/keyboard.ts con los
  * cambios del jugador (`settings.keys`). Las flechas y WASD, que en 2D mueven el cursor, aqui
  * desplazan la camara mientras se mantienen; el resto de ordenes que la partida 3D sabe hacer van a
- * KEY_ACTIONS (una nueva es una entrada mas). Con un panel abierto encima del mapa (opciones, ayuda),
- * las teclas son suyas, como en el menu principal: ordenes de menu (controls/menu.ts), y el mapa no
- * recibe ninguna.
+ * KEY_ACTIONS (una nueva es una entrada mas). Con un panel abierto encima del mapa (pausa, opciones,
+ * ayuda), las teclas son suyas, como en el menu principal: ordenes de menu (controls/menu.ts), mas los
+ * atajos que enseñe con las teclas del mapa (`KeyPanel.shortcut`), y el mapa no recibe ninguna.
  */
 import type { GroupMode, InputCommand, InputCommandKind } from '../../../controls/inputCommands';
 import { keyCommand, type KeyInput } from '../../../controls/keyboard';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../../../controls/menu';
-import type { SoundPort } from '../../../audio/sounds';
+import type { SoundName, SoundPort } from '../../../audio/sounds';
 import { settings } from '../../../settings';
 import type { CameraControls } from '../camera/strategyCamera';
 import type { FrameListener } from '../../ports/frame';
@@ -18,12 +18,20 @@ import { menuSound } from '../sound/soundCues';
 /** Lo que hace la rueda por cada pulsacion de las teclas de acercar y alejar. */
 const KEY_ZOOM_STEP = 250;
 
-/** Un panel que se abre encima del mapa (opciones, ayuda): mientras esta abierto, el teclado es suyo. */
+/** Un atajo elige una opcion del panel: suena como pulsarla. */
+const SHORTCUT_SOUND: SoundName = 'ui_select';
+
+/** Un panel que se abre encima del mapa (pausa, opciones, ayuda): mientras esta abierto, el teclado es suyo. */
 export interface KeyPanel {
   readonly isOpen: boolean;
   /** Que teclas valen en el ahora (MENU_BINDINGS de controls/menu.ts). */
   context(): MenuContext;
   command(command: MenuCommand): void;
+  /**
+   * Una orden del mapa que el panel cumple a su manera, con la tecla que tenga el jugador (la pausa: E
+   * acaba el turno, T enseña la amenaza...); true si era suya. Las que no quiere no llegan al mapa.
+   */
+  shortcut?(command: InputCommand): boolean;
 }
 
 export interface KeyHost {
@@ -128,12 +136,25 @@ export class KeyRouter {
 
   private pressInPanel(key: KeyPress, panel: KeyPanel): void {
     const command = menuKeyCommand(key, panel.context());
-    if (!command) return;
+    if (command) return this.commandPanel(key, panel, command);
+    this.shortcutInPanel(key, panel);
+  }
+
+  /** Una orden de menu para el panel, con su sonido. */
+  private commandPanel(key: KeyPress, panel: KeyPanel, command: MenuCommand): void {
     // La tecla es del panel: tampoco para el navegador (Tab, F5... al elegir la tecla nueva de una orden).
     key.preventDefault();
     const sound = menuSound(command);
     if (sound) this.host.sounds.play(sound);
     panel.command(command);
+  }
+
+  /** Una tecla del mapa con el panel delante: solo vale si es uno de sus atajos (y una vez, sin repetir). */
+  private shortcutInPanel(key: KeyPress, panel: KeyPanel): void {
+    const command = keyCommand(key, settings.keys);
+    if (!command || key.repeat || !panel.shortcut?.(command)) return;
+    key.preventDefault();
+    this.host.sounds.play(SHORTCUT_SOUND);
   }
 
   private pressOnMap(key: KeyPress): void {
