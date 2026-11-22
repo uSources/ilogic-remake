@@ -38,9 +38,9 @@ export const MURKY_WATER: WaterLook = { glint: new THREE.Color(0.6, 0.76, 0.52),
 
 /** Los tonos de la tierra que sujeta el agua en el borde del mapa: el de sombra, el medio y el de luz. */
 export interface BankColors {
-  shade: THREE.ColorRepresentation;
-  middle: THREE.ColorRepresentation;
-  light: THREE.ColorRepresentation;
+  shade: number;
+  middle: number;
+  light: number;
 }
 
 /** Los lados de una casilla, en el orden del atributo: norte (-z), este (+x), sur (+z), oeste (-x). */
@@ -70,6 +70,7 @@ uniform float uTime;
 attribute vec4 aShore;
 attribute vec4 aEdge;
 varying vec3 vWaterWorld;
+varying float vRestHeight;
 varying vec4 vShore;
 varying float vUp;
 varying float vBank;
@@ -81,8 +82,10 @@ const VERTEX_WAVE = /* glsl */ `
   float isSurface = step(${SURFACE_FROM.toFixed(2)}, restWorld.y);
   transformed.y += isSurface * sin(uTime * 1.6 + tileOrigin.x * 0.9 + tileOrigin.z * 0.7) * ${WAVE_HEIGHT.toFixed(3)};
   vWaterWorld = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xyz;
+  vRestHeight = restWorld.y;
   vShore = aShore;
   vUp = normal.y;
+  // Los laterales del bloque miran justo a un lado (norte, este, sur u oeste): step elige ese; arriba y abajo, ninguno.
   vec3 facing = mat3(modelMatrix) * mat3(instanceMatrix) * normal;
   vBank = dot(aEdge, step(0.5, vec4(-facing.z, facing.x, facing.z, -facing.x)));
 `;
@@ -95,6 +98,7 @@ uniform vec3 uBankShade;
 uniform vec3 uBank;
 uniform vec3 uBankLight;
 varying vec3 vWaterWorld;
+varying float vRestHeight;
 varying vec4 vShore;
 varying float vUp;
 varying float vBank;
@@ -115,7 +119,8 @@ const FRAGMENT_WATER = /* glsl */ `
   float foam = max(max(vShore.x * step(local.y, width), vShore.y * step(1.0 - local.x, width)),
                    max(vShore.z * step(1.0 - local.y, width), vShore.w * step(local.x, width)));
   diffuseColor.rgb = mix(diffuseColor.rgb, uFoam, foam * topFace * 0.85);
-  float grain = waterHash(floor(vec2(vWaterWorld.x + vWaterWorld.z, vWaterWorld.y) * ${TEXELS_PER_TILE.toFixed(1)}));
+  // Con la altura sin oleaje: si no, la fila de arriba cambiaria de tono al subir y bajar la ola.
+  float grain = waterHash(floor(vec2(vWaterWorld.x + vWaterWorld.z, vRestHeight) * ${TEXELS_PER_TILE.toFixed(1)}));
   vec3 bank = grain < ${BANK_SHADE_SHARE.toFixed(2)} ? uBankShade : (grain < ${(1 - BANK_LIGHT_SHARE).toFixed(2)} ? uBank : uBankLight);
   diffuseColor.rgb = mix(diffuseColor.rgb, bank, vBank);
 `;
