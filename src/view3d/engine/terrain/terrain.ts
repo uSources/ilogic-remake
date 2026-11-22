@@ -213,6 +213,7 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   const life = new BiomeLife(s, library, {
     positions,
     groundOf: (pos) => tileToWorld(pos, heightOf(pos)),
+    heightAt: (x, z) => relief.surfaceAt(x, z) ?? heights.atClamped({ x: Math.round(x), y: Math.round(z) }),
     decorPlaceOf: (pos) => (hasDecor(s, pos) ? decorPlace(pos, heightOf(pos)) : null),
   });
   const copies = [...tiles, ...decor];

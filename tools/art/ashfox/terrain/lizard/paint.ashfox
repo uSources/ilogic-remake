@@ -1,0 +1,27 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = lizard; background-alpha = 255;
+      palette {
+        lizard = (#6a5c32, #7e7040, #94854e);
+        lizard_spots = (#4e4426, #5c5030, #6a5e38);
+        side_eye_k = #141824;
+      }
+      stamp side_eye { pixels = "k"; k = side_eye_k; }
+      chart body box { origin = (0px, 0px); fill = lizard; pattern blotch { paint = lizard_spots; scale = (1px, 1px, 1px); density = 0.3ratio; phase = 7; } }
+      chart head box { origin = (35px, 0px); fill = lizard; pattern blotch { paint = lizard_spots; scale = (1px, 1px, 1px); density = 0.3ratio; phase = 7; } face east { stamp side_eye { at = (0px, 0px); } } face west { stamp side_eye { at = (1px, 0px); } } }
+      chart snout box { origin = (44px, 0px); fill = lizard; pattern blotch { paint = lizard_spots; scale = (1px, 1px, 1px); density = 0.3ratio; phase = 7; } }
+      chart tail box { origin = (15px, 0px); fill = lizard; pattern blotch { paint = lizard_spots; scale = (1px, 1px, 1px); density = 0.3ratio; phase = 7; } }
+      chart tail_tip box { origin = (26px, 0px); fill = lizard; pattern blotch { paint = lizard_spots; scale = (1px, 1px, 1px); density = 0.3ratio; phase = 7; } }
+      chart leg_front_left box { origin = (49px, 0px); fill = lizard; pattern blotch { paint = lizard_spots; scale = (1px, 1px, 1px); density = 0.3ratio; phase = 7; } }
+      chart leg_front_right box { origin = (54px, 0px); fill = lizard; pattern blotch { paint = lizard_spots; scale = (1px, 1px, 1px); density = 0.3ratio; phase = 7; } }
+      chart leg_back_left box { origin = (59px, 0px); fill = lizard; pattern blotch { paint = lizard_spots; scale = (1px, 1px, 1px); density = 0.3ratio; phase = 7; } }
+      chart leg_back_right box { origin = (0px, 7px); fill = lizard; pattern blotch { paint = lizard_spots; scale = (1px, 1px, 1px); density = 0.3ratio; phase = 7; } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

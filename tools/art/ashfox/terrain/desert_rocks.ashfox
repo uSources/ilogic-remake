@@ -1,0 +1,12 @@
+ashfox-model 1
+asset desert_rocks {
+  import "./desert_rocks/rig.ashfox" as rig;
+  import "./desert_rocks/paint.ashfox" as paint;
+  import "./desert_rocks/body.ashfox" as body;
+  export asset desert_rocks {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

@@ -17,7 +17,7 @@ import { WIND_DIRECTION } from '../core/space';
 import { toonMaterial } from '../core/toon';
 import { massifRises } from './massif';
 import { reliefPalette } from './reliefColors';
-import { noise, PIXEL, type ReliefMap, type Rise, SUBCELLS, subcellCenter, tileKey, tileOfSubcell } from './reliefGrid';
+import { noise, PIXEL, type ReliefMap, type Rise, SUBCELLS, subcellAt, subcellCenter, tileKey, tileOfSubcell } from './reliefGrid';
 
 export type { ReliefShape, ReliefStyle } from './reliefGrid';
 
@@ -36,6 +36,8 @@ export interface ReliefView {
   readonly tileOfColumn: readonly Pos[];
   /** Lo alto del centro de la casilla (donde se pone lo que hay en ella). */
   topAt(pos: Pos): number;
+  /** Lo alto del relieve en un punto del suelo (en casillas), o null si ahi no hay (es llano). */
+  surfaceAt(x: number, z: number): number | null;
   /** El color de cada columna sin niebla (para volver a el al verla). */
   readonly baseColors: readonly THREE.Color[];
 }
@@ -139,7 +141,11 @@ export function buildRelief(map: ReliefMap): ReliefView {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   const tileOfColumn = columns.map(({ sub }) => tileOfSubcell(sub));
-  return { mesh, tileOfColumn, topAt: (pos) => centerTop(tops, pos), baseColors };
+  const surfaceAt = (x: number, z: number): number | null => {
+    const sub = subcellAt(x, z);
+    return tops.contains(sub) ? tops.at(sub) : null;
+  };
+  return { mesh, tileOfColumn, topAt: (pos) => centerTop(tops, pos), surfaceAt, baseColors };
 }
 
 /** Lo alto del centro de una casilla: lo mas alto de sus cuatro subcasillas del medio. */

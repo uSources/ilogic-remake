@@ -19,6 +19,9 @@ const PACE = 2;
 const BLINK = 3;
 const SPIN = 4;
 const CURVE = 5;
+const LEVEL = 6;
+const BOUNCE = 7;
+const ORBIT = 8;
 /** Una vuelta entera: el desfase de cada mota, para que no vayan a la par. */
 const FULL_TURN: Range = [0, Math.PI * 2];
 
@@ -209,7 +212,139 @@ export const FOREST_BIRDS: TravellerKind = {
   life: [2.5, 4],
   height: [0.38, 0.45],
   birthRate: () => 0.6,
-  landing: BIRD_LANDING,
+  landing: { distance: BIRD_LANDING },
   flight: hopToAnotherTree,
   wings: { beats: 5, narrowest: 0.35 },
+};
+
+// --- La lagartija del desierto: tomando el sol en una losa de arenisca o al pie de un cactus; de vez en
+// cuando hace sus flexiones (sube y baja dos veces) y se gira.
+
+export const LIZARD: CritterKind = {
+  model: 'lizard',
+  size: 0.5,
+  every: [2, 7],
+  move: { seconds: 0.5, height: 0.015, turn: [0.6, 2.4], hops: 2 },
+};
+
+// --- Las bolas rodadoras: de vez en cuando una cruza unas casillas de arena cerca de la camara, rodando
+// con el viento y dando botes, subiendo y bajando las dunas (va por el suelo). No cruza las mesetas: solo
+// sale si hay arena hasta donde va.
+
+const TUMBLEWEED_SIZE = 0.7;
+/** Lo que mide su radio (casillas): el de su modelo (3,5 de 32 por casilla), a su tamaño. A esa altura va su centro. */
+const TUMBLEWEED_RADIUS = (3.5 / 32) * TUMBLEWEED_SIZE;
+/** Cuantos botes da en su viaje y lo que sube cada uno (casillas). */
+const TUMBLEWEED_BOUNCES: Range = [3, 5];
+const TUMBLEWEED_BOUNCE: Range = [0.03, 0.08];
+
+/** Rueda en linea recta hasta su sitio (`goal`), a botes. Su altura es sobre el suelo (`onTheGround`). */
+function rollWithTheWind(ball: Flier, out: THREE.Vector3): THREE.Vector3 {
+  const progress = ball.age / ball.life;
+  const bounces = Math.round(vary(ball, PACE, TUMBLEWEED_BOUNCES));
+  const bounce = Math.abs(Math.sin(progress * Math.PI * bounces)) * vary(ball, BOUNCE, TUMBLEWEED_BOUNCE);
+  return out.lerpVectors(ball.home, ball.goal ?? ball.home, progress).setY(TUMBLEWEED_RADIUS + bounce);
+}
+
+export const TUMBLEWEEDS: TravellerKind = {
+  model: 'tumbleweed',
+  size: TUMBLEWEED_SIZE,
+  count: 2,
+  life: [3.5, 5],
+  height: [0, 0],
+  birthRate: () => 0.15,
+  reach: 0.5,
+  landing: { distance: [2.5, 4], toward: { direction: WIND_DIRECTION, spread: 0.35 }, overland: true },
+  flight: rollWithTheWind,
+  onTheGround: true,
+  /** Lo que avanza por segundo entre su radio, mas o menos: rueda sin patinar. */
+  rolls: 10,
+};
+
+// --- Los remolinos de polvo: de vez en cuando, cerca de la camara, uno pequeño de granos de arena que
+// suben girando en embudo, se mueven un poco con el viento y se deshacen. Cada remolino es una tanda de
+// motas que nacen juntas (`together`).
+
+const DEVIL_GRAINS = 50;
+/** Lo alto del embudo y lo ancho (radio, casillas): abajo y lo que se abre hasta arriba. */
+const DEVIL_HEIGHT = 0.85;
+const DEVIL_FOOT = 0.03;
+const DEVIL_FLARE = 0.22;
+/** Lo deprisa que giran los granos (radianes por segundo) y que parte del embudo suben por segundo. */
+const DEVIL_SPIN: Range = [6, 9];
+const DEVIL_RISE = 0.3;
+/** Lo que lo lleva el viento (casillas por segundo) y lo que se cimbrea arriba (casillas, y lo deprisa). */
+const DEVIL_DRIFT = WIND_DIRECTION.clone().multiplyScalar(0.12);
+const DEVIL_SWAY = 0.05;
+const DEVIL_SWAY_SPEED = 1.7;
+
+/** A que altura del embudo va un grano (0 abajo, 1 arriba): sube y, al llegar arriba, vuelve abajo. */
+function levelOf(grain: Flier): number {
+  const level = vary(grain, LEVEL, [0, 1]) + grain.age * DEVIL_RISE;
+  return level - Math.floor(level);
+}
+
+/** Sube girando alrededor del eje del remolino, mas abierto cuanto mas arriba. */
+function swirlUp(grain: Flier, out: THREE.Vector3): THREE.Vector3 {
+  const level = levelOf(grain);
+  const radius = DEVIL_FOOT + DEVIL_FLARE * level;
+  const turn = vary(grain, PHASE, FULL_TURN) + grain.age * vary(grain, PACE, DEVIL_SPIN);
+  const sway = Math.sin(grain.age * DEVIL_SWAY_SPEED) * DEVIL_SWAY * level;
+  out.copy(grain.home).addScaledVector(DEVIL_DRIFT, grain.age);
+  out.x += Math.cos(turn) * radius + sway;
+  out.y += level * DEVIL_HEIGHT;
+  out.z += Math.sin(turn) * radius;
+  return out;
+}
+
+/** Se ve mas abajo que arriba, donde se deshace (asi no se nota cuando vuelve abajo), y entra y sale despacio. */
+const thinningUp = (grain: Flier): number => (1 - levelOf(grain) ** 2) * lifeFade(grain);
+
+export const DUST_DEVILS: MoteKind = {
+  count: DEVIL_GRAINS * 2,
+  together: DEVIL_GRAINS,
+  layers: [{ colors: [0xf6dca8, 0xeacb8e, 0xfff0cc], opacity: 0.9, size: [0.035, 0.065] }],
+  life: [4, 6],
+  height: [0, 0],
+  birthRate: () => 0.12,
+  reach: 0.5,
+  flight: swirlUp,
+  brightness: thinningUp,
+};
+
+// --- Los buitres: uno o dos dan vueltas en lo alto sobre el desierto cerca de la camara, planeando sin
+// batir las alas, con su sombra en el suelo (la del sol, como todo lo del tablero). Llegan de lejos
+// planeando en espiral y se van igual.
+
+/** El circulo: su radio (casillas) y lo deprisa que lo dan (radianes por segundo; todos hacia el mismo lado). */
+const VULTURE_ORBIT: Range = [0.9, 1.4];
+const VULTURE_PACE: Range = [0.35, 0.5];
+/** De lo lejos que llegan (casillas, ademas del circulo) y lo que tardan en llegar y en irse (segundos). */
+const VULTURE_ARRIVAL = 5;
+const VULTURE_GLIDE_IN = 4;
+/** Lo que suben y bajan mientras planean (casillas) y lo despacio (radianes por segundo). */
+const VULTURE_SOAR = 0.06;
+const VULTURE_SOAR_SPEED = 0.6;
+
+/** Da vueltas sobre donde nacio; al llegar y al irse, desde mas lejos (en espiral). */
+function circleOverhead(vulture: Flier, out: THREE.Vector3): THREE.Vector3 {
+  const away = Math.max(0, 1 - Math.min(vulture.age, vulture.life - vulture.age) / VULTURE_GLIDE_IN);
+  const radius = vary(vulture, ORBIT, VULTURE_ORBIT) + VULTURE_ARRIVAL * away * away;
+  const turn = vary(vulture, PHASE, FULL_TURN) + vulture.age * vary(vulture, PACE, VULTURE_PACE);
+  out.copy(vulture.home);
+  out.x += Math.cos(turn) * radius;
+  out.y += Math.sin(vulture.age * VULTURE_SOAR_SPEED) * VULTURE_SOAR;
+  out.z += Math.sin(turn) * radius;
+  return out;
+}
+
+export const VULTURES: TravellerKind = {
+  model: 'vulture',
+  size: 0.55,
+  count: 2,
+  life: [16, 24],
+  height: [1.3, 1.6],
+  birthRate: () => 0.06,
+  reach: 0.4,
+  flight: circleOverhead,
 };

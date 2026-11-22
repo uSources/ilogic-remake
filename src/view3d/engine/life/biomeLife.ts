@@ -17,14 +17,12 @@ import { pieceAt, type TerrainPiece } from '../terrain/pieces';
 import { shade, tileNoise } from '../terrain/placed';
 import { Critters, type CritterKind, type CritterSpot } from './critters';
 import { MoteSwarm, type MoteKind } from './motes';
-import { Travellers, type TravellerKind } from './travellers';
+import { Travellers, type TravelGround, type TravellerKind } from './travellers';
 
-/** Lo que la vida del bioma pregunta al terreno. */
-export interface LifeGround {
+/** Lo que la vida del bioma pregunta al terreno (y, de eso, lo de los viajeros: el suelo de cada sitio). */
+export interface LifeGround extends TravelGround {
   /** Las casillas del mapa. */
   positions: readonly Pos[];
-  /** El punto del suelo de una casilla, nuevo cada vez: de ahi salen las motas y cada una se queda el suyo. */
-  groundOf: (pos: Pos) => THREE.Vector3;
   /** Donde va el decorado de una casilla, o null si no lleva (ahi se sientan los animales). */
   decorPlaceOf: (pos: Pos) => THREE.Matrix4 | null;
 }
@@ -103,9 +101,7 @@ export class BiomeLife {
   constructor(s: GameState, library: GlbLibrary, ground: LifeGround) {
     this.swarms = [...tilesByMote(s, ground.positions)].map(([kind, tiles]) => new MoteSwarm(kind, tiles, ground.groundOf));
     this.critters = [...spotsByCritter(s, ground)].map(([kind, spots]) => new Critters(library, kind, spots));
-    this.travellers = [...tilesByTraveller(s, ground.positions)].map(
-      ([kind, tiles]) => new Travellers(library, kind, tiles, ground.groundOf),
-    );
+    this.travellers = [...tilesByTraveller(s, ground.positions)].map(([kind, tiles]) => new Travellers(library, kind, tiles, ground));
     const parts = [
       ...this.swarms.map((swarm) => swarm.object),
       ...this.critters.flatMap((group) => group.placed.map((placed) => placed.mesh)),

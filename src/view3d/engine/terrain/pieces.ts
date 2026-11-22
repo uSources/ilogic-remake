@@ -1,7 +1,8 @@
 /**
  * Que lleva cada terreno en 3D (por id de terrain.json): el bloque de su casilla, el decorado de encima,
  * si es relieve y lo que vive en ella (las motas que vuelan, los animalitos del decorado y los que se van
- * volando, engine/life/). Cada tema puede cambiar los suyos (`THEME_PIECES`): el nevado tiene sus
+ * volando, engine/life/: en el desierto, polvo, remolinos, lagartijas, bolas rodadoras y buitres). Cada
+ * tema puede cambiar los suyos (`THEME_PIECES`): el nevado tiene sus
  * montañas; el bosque, su vida (hojas, ardillas, ciervos y pajaros), y el pantano, todo lo suyo (suelo
  * oliva con charcos, agua turbia con nenufares, cipreses con musgo, juncos y ranas). Un terreno sin
  * entrada se ve segun lo que es (agua, esconde, llano), asi cualquier contenido se puede mirar.
@@ -10,7 +11,19 @@ import type { TerrainType } from '../../../core/content';
 import { terrainAt, themeOf } from '../../../core/gameContent';
 import type { GameState, Pos } from '../../../core/model';
 import type { CritterSeat } from '../life/critters';
-import { DEER, FALLING_LEAVES, FIREFLIES, FOREST_BIRDS, FROG, SAND_DUST, SQUIRREL } from '../life/kinds';
+import {
+  DEER,
+  DUST_DEVILS,
+  FALLING_LEAVES,
+  FIREFLIES,
+  FOREST_BIRDS,
+  FROG,
+  LIZARD,
+  SAND_DUST,
+  SQUIRREL,
+  TUMBLEWEEDS,
+  VULTURES,
+} from '../life/kinds';
 import type { MoteKind } from '../life/motes';
 import type { TravellerKind } from '../life/travellers';
 import type { ReliefStyle } from './relief';
@@ -129,6 +142,15 @@ const DUNES: ReliefStyle = {
   ],
 };
 
+/**
+ * Lo que vive en el desierto: el polvo de las rafagas y los remolinos sobre la arena, los buitres en lo
+ * alto, las bolas rodadoras por las dunas y las lagartijas, en una losa de arenisca (en algunas casillas
+ * de arena) o al pie del cactus (modelos a 16 por casilla).
+ */
+const DESERT_DUST = [SAND_DUST, DUST_DEVILS];
+const ON_THE_ROCK: CritterSeat = { kind: LIZARD, share: 0.6, at: [4 / 16, 2 / 16, 2.5 / 16] };
+const BY_THE_CACTUS: CritterSeat = { kind: LIZARD, share: 0.3, at: [-4 / 16, 0, 4 / 16] };
+
 const GRASS: TerrainPiece = { tile: 'tile_grass' };
 const WATER: TerrainPiece = { tile: 'tile_water' };
 const WOODS: TerrainPiece = { tile: 'tile_forest', decor: ['trees'] };
@@ -141,9 +163,17 @@ export const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
   Water: WATER,
   SWater: { tile: 'tile_shallow' },
   DWater: { tile: 'tile_deep' },
-  Sand: { tile: 'tile_sand', relief: DUNES, motes: [SAND_DUST] },
-  Cactus: { tile: 'tile_sand', relief: DUNES, decor: ['cactus'], motes: [SAND_DUST] },
-  SandMountain: { tile: 'tile_sand', relief: MESA, motes: [SAND_DUST] },
+  Sand: {
+    tile: 'tile_sand',
+    relief: DUNES,
+    decor: ['desert_rocks'],
+    decorShare: 0.06,
+    motes: DESERT_DUST,
+    critters: [ON_THE_ROCK],
+    travellers: [TUMBLEWEEDS, VULTURES],
+  },
+  Cactus: { tile: 'tile_sand', relief: DUNES, decor: ['cactus'], motes: DESERT_DUST, critters: [BY_THE_CACTUS], travellers: [VULTURES] },
+  SandMountain: { tile: 'tile_sand', relief: MESA, motes: [SAND_DUST], travellers: [VULTURES] },
   Snow: { tile: 'tile_snow' },
   Frosty: { tile: 'tile_snow', decor: ['snowman'] },
   SnowMountain: { tile: 'tile_snow', relief: SNOW_MOUNTAIN },
