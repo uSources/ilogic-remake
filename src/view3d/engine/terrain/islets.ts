@@ -118,6 +118,7 @@ function isletMesh(islet: Islet, style: ReliefStyle, random: () => number): THRE
     tiles: footprint.map((pos) => ({ pos: { x: pos.x + offset, y: pos.y + offset }, style })),
     groundAt: () => BEACH_TOP,
     canSpill: () => true,
+    spillRestsOnGround: false,
   };
   const view = buildRelief(map);
   view.mesh.position.set(islet.at.x - offset, 0, islet.at.y - offset);

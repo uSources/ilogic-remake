@@ -85,15 +85,31 @@ function growInward(distance: Grid<number>, frontier: readonly Pos[], step: numb
 
 const toPixels = (height: number): number => Math.round(height / PIXEL) * PIXEL;
 
+/** Una columna del relieve: su subcasilla, lo que sube y donde empieza. */
+interface ReliefColumn {
+  sub: Pos;
+  rise: Rise;
+  bottom: number;
+}
+
 /** Las subcasillas que se dibujan: las de las casillas con relieve y las faldas que asoman fuera. */
-function columnsOf(map: ReliefMap, rises: Grid<Rise | null>): { sub: Pos; rise: Rise }[] {
+function columnsOf(map: ReliefMap, rises: Grid<Rise | null>): ReliefColumn[] {
   const isReliefTile = new Set(map.tiles.map((tile) => tileKey(tile.pos)));
   return [...rises.cells()].flatMap(({ pos: sub, value: rise }) => {
     if (!rise) return [];
     const tile = tileOfSubcell(sub);
-    const isOwn = isReliefTile.has(tileKey(tile));
-    return isOwn || (rise.height >= VISIBLE_RISE && map.canSpill(tile)) ? [{ sub, rise }] : [];
+    if (isReliefTile.has(tileKey(tile))) return [{ sub, rise, bottom: COLUMN_BOTTOM }];
+    if (rise.height < VISIBLE_RISE || !map.canSpill(tile)) return [];
+    return [{ sub, rise, bottom: map.spillRestsOnGround ? map.groundAt(tile) : COLUMN_BOTTOM }];
   });
+}
+
+/** Donde va una columna, de su base a su cara de arriba. */
+function columnPlace({ sub, bottom }: ReliefColumn, top: number): THREE.Matrix4 {
+  const middle = subcellCenter(sub);
+  const center = new THREE.Vector3(middle.x, (top + bottom) / 2, middle.y);
+  const size = new THREE.Vector3(1 / SUBCELLS, top - bottom, 1 / SUBCELLS);
+  return new THREE.Matrix4().compose(center, new THREE.Quaternion(), size);
 }
 
 /** Lo que baja la ladera desde una columna hasta su vecina mas baja (de las que se dibujan): su pendiente. */
@@ -103,7 +119,7 @@ function dropAt(tops: Grid<number | null>, sub: Pos): number {
   return Math.max(0, ...lower.map((next) => top - next));
 }
 
-/** Las columnas: una por subcasilla con relieve, de COLUMN_BOTTOM a su altura. */
+/** Las columnas: una por subcasilla con relieve, de su base (COLUMN_BOTTOM o el suelo en el que se apoya) a su altura. */
 export function buildRelief(map: ReliefMap): ReliefView {
   const rises = Grid.filled<Rise | null>({ width: map.width * SUBCELLS, height: map.height * SUBCELLS }, null);
   massifRises(map, rises);
@@ -113,12 +129,9 @@ export function buildRelief(map: ReliefMap): ReliefView {
   for (const { sub, rise } of columns) tops.set(sub, toPixels(map.groundAt(tileOfSubcell(sub)) + rise.height));
   const palette = reliefPalette(rises);
   const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), toonMaterial(0xffffff), columns.length);
-  const baseColors = columns.map(({ sub, rise }, index) => {
-    const top = tops.at(sub) ?? 0;
-    const middle = subcellCenter(sub);
-    const center = new THREE.Vector3(middle.x, (top + COLUMN_BOTTOM) / 2, middle.y);
-    const size = new THREE.Vector3(1 / SUBCELLS, top - COLUMN_BOTTOM, 1 / SUBCELLS);
-    mesh.setMatrixAt(index, new THREE.Matrix4().compose(center, new THREE.Quaternion(), size));
+  const baseColors = columns.map((column, index) => {
+    const { sub, rise } = column;
+    mesh.setMatrixAt(index, columnPlace(column, tops.at(sub) ?? 0));
     const color = palette.colorOf(rise.style, rise.height, dropAt(tops, sub), sub);
     mesh.setColorAt(index, color);
     return color;

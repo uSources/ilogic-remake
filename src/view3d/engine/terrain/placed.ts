@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
 import type { Grid } from '../../../core/util/grid';
-import type { GlbLibrary } from '../pieces/glbModels';
+import type { GlbLibrary, StaticPart } from '../pieces/glbModels';
 
 /** Las casillas en la niebla: mas oscuras y algo azuladas (como de noche), sin dejar de leerse. */
 const FOG_TINT = new THREE.Color(0.52, 0.56, 0.72);
@@ -25,9 +25,17 @@ export function tileNoise(pos: Pos, salt: number): number {
   return value - Math.floor(value);
 }
 
+/** Las piezas de un modelo del terreno (assets/models/terrain). */
+export const terrainParts = (library: GlbLibrary, file: string): StaticPart[] => library.staticParts(`terrain/${file}`);
+
 /** Copias de un modelo de Ashfox, una por sitio (`places`: donde va y como gira cada una). */
 export function instanced(library: GlbLibrary, file: string, positions: readonly Pos[], places: readonly THREE.Matrix4[]): PlacedMesh[] {
-  return library.staticParts(`terrain/${file}`).map((part) => {
+  return instancedParts(terrainParts(library, file), positions, places);
+}
+
+/** Copias de las piezas de un modelo, una por sitio. */
+export function instancedParts(parts: readonly StaticPart[], positions: readonly Pos[], places: readonly THREE.Matrix4[]): PlacedMesh[] {
+  return parts.map((part) => {
     const mesh = new THREE.InstancedMesh(part.geometry, part.material, places.length);
     places.forEach((place, index) => {
       mesh.setMatrixAt(index, place.clone().multiply(part.matrix));
