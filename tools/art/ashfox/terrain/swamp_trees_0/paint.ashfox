@@ -1,0 +1,69 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 128px); background = swamp_trunk; background-alpha = 255;
+      palette {
+        swamp_trunk = (#3c3228, #50443a, #66584a);
+        swamp_leaf = (#34502a, #426434, #527840);
+        swamp_leaf_spots = (#5a7c3c, #6c9046, #80a452);
+        hanging_moss = (#5e6e46, #728256, #869868);
+        snag = (#5a5248, #6e6658, #827a6a);
+      }
+
+      chart a_flare box { origin = (0px, 81px); fill = swamp_trunk; }
+      chart a_trunk box { origin = (13px, 21px); fill = swamp_trunk; }
+      chart a_crown0 box { origin = (0px, 0px); fill = swamp_leaf; pattern blotch { paint = swamp_leaf_spots; scale = (2px, 2px, 2px); density = 0.22ratio; phase = 6; } }
+      chart a_crown1 box { origin = (0px, 54px); fill = swamp_leaf; pattern blotch { paint = swamp_leaf_spots; scale = (2px, 2px, 2px); density = 0.22ratio; phase = 19; } }
+      chart a_crown2 box { origin = (25px, 91px); fill = swamp_leaf; pattern blotch { paint = swamp_leaf_spots; scale = (2px, 2px, 2px); density = 0.22ratio; phase = 32; } }
+      chart a_moss0_0 box { origin = (56px, 101px); fill = hanging_moss; }
+      chart a_moss0_3 box { origin = (0px, 110px); fill = hanging_moss; }
+      chart a_moss0_6 box { origin = (44px, 117px); fill = hanging_moss; }
+      chart a_moss0_9 box { origin = (44px, 110px); fill = hanging_moss; }
+      chart a_moss0_12 box { origin = (21px, 101px); fill = hanging_moss; }
+      chart a_moss1_0 box { origin = (33px, 69px); fill = hanging_moss; }
+      chart a_moss1_3 box { origin = (7px, 110px); fill = hanging_moss; }
+      chart a_moss1_6 box { origin = (25px, 81px); fill = hanging_moss; }
+      chart a_moss1_9 box { origin = (14px, 110px); fill = hanging_moss; }
+      chart a_moss1_12 box { origin = (32px, 81px); fill = hanging_moss; }
+      chart a_moss2_0 box { origin = (51px, 110px); fill = hanging_moss; }
+      chart a_moss2_6 box { origin = (39px, 81px); fill = hanging_moss; }
+      chart a_moss2_9 box { origin = (50px, 91px); fill = hanging_moss; }
+      chart a_moss3_0 box { origin = (58px, 110px); fill = hanging_moss; }
+      chart a_moss3_3 box { origin = (0px, 117px); fill = hanging_moss; }
+      chart a_moss3_6 box { origin = (28px, 101px); fill = hanging_moss; }
+      chart a_moss3_9 box { origin = (40px, 69px); fill = hanging_moss; }
+      chart a_moss3_12 box { origin = (57px, 91px); fill = hanging_moss; }
+      chart b_flare box { origin = (0px, 91px); fill = swamp_trunk; }
+      chart b_trunk box { origin = (45px, 54px); fill = swamp_trunk; }
+      chart b_crown0 box { origin = (0px, 38px); fill = swamp_leaf; pattern blotch { paint = swamp_leaf_spots; scale = (2px, 2px, 2px); density = 0.22ratio; phase = 8; } }
+      chart b_crown1 box { origin = (0px, 69px); fill = swamp_leaf; pattern blotch { paint = swamp_leaf_spots; scale = (2px, 2px, 2px); density = 0.22ratio; phase = 21; } }
+      chart b_moss0_0 box { origin = (51px, 117px); fill = hanging_moss; }
+      chart b_moss0_3 box { origin = (35px, 101px); fill = hanging_moss; }
+      chart b_moss0_6 box { origin = (0px, 101px); fill = hanging_moss; }
+      chart b_moss0_9 box { origin = (21px, 110px); fill = hanging_moss; }
+      chart b_moss1_3 box { origin = (7px, 101px); fill = hanging_moss; }
+      chart b_moss1_6 box { origin = (7px, 117px); fill = hanging_moss; }
+      chart b_moss1_9 box { origin = (42px, 101px); fill = hanging_moss; }
+      chart b_moss2_0 box { origin = (14px, 101px); fill = hanging_moss; }
+      chart b_moss2_6 box { origin = (14px, 117px); fill = hanging_moss; }
+      chart b_moss2_9 box { origin = (58px, 117px); fill = hanging_moss; }
+      chart b_moss3_0 box { origin = (49px, 101px); fill = hanging_moss; }
+      chart b_moss3_3 box { origin = (47px, 69px); fill = hanging_moss; }
+      chart b_moss3_6 box { origin = (28px, 110px); fill = hanging_moss; }
+      chart b_moss3_9 box { origin = (21px, 117px); fill = hanging_moss; }
+      chart c_trunk box { origin = (0px, 21px); fill = snag; }
+      chart c_branch box { origin = (0px, 123px); fill = snag; }
+      chart c_twig box { origin = (35px, 110px); fill = snag; }
+      chart c_stub box { origin = (17px, 123px); fill = snag; }
+      chart c_moss box { origin = (28px, 117px); fill = hanging_moss; }
+      chart k1_knee box { origin = (35px, 117px); fill = swamp_trunk; }
+      chart k2_knee box { origin = (28px, 123px); fill = swamp_trunk; }
+      chart k3_knee box { origin = (37px, 123px); fill = swamp_trunk; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

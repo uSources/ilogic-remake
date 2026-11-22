@@ -112,7 +112,8 @@ ASHFOX=<carpeta>/node_modules/.bin/ashfox node tools/art/ashfox/generate.mjs --e
 - **Aviones**: todo cuelga del hueso `body`, subido `FLYING_HEIGHT`; la barra de vida se pone sola
   encima de lo mas alto del modelo.
 - **Terreno**: que casilla y que decorado lleva cada terreno, `TERRAIN_PIECES` en
-  `src/view3d/engine/terrain/terrain.ts`. Las montañas, las mesetas y la arena **no son modelos de Ashfox**: son
+  `src/view3d/engine/terrain/pieces.ts` (y lo que cambia cada tema, `THEME_PIECES`: el pantano tiene
+  sus propios modelos). Las montañas, las mesetas y la arena **no son modelos de Ashfox**: son
   relieve que dibuja el juego (`relief.ts`, su `ReliefStyle` en `TERRAIN_PIECES`); el agua se mueve
   con un shader (`water.ts`).
 

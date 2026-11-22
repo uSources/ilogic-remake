@@ -129,6 +129,14 @@
         "es": "Pantano",
         "en": "Swamp"
       },
+      "mapColors": {
+        "Grass": "#7a9444",
+        "Flowers": "#86a04c",
+        "Woods": "#30502a",
+        "Water": "#3a8a80",
+        "SWater": "#5a9a86",
+        "DWater": "#2a6a68"
+      },
       "mapLetters": {
         ".": "Grass",
         "T": "Woods",

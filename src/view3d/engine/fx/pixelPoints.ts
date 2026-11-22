@@ -22,13 +22,21 @@ void main() {
 }
 `;
 
+/**
+ * Con `uGlow`, la particula se apaga hacia el borde en tres anillos (un halo redondo de pixel, no un
+ * cuadrado); sin el, es un cuadrado lleno.
+ */
 const FRAGMENT = /* glsl */ `
 uniform vec3 uColor;
 uniform float uOpacity;
+uniform float uGlow;
 varying float vAlpha;
 varying vec3 vColor;
 void main() {
-  gl_FragColor = vec4(uColor * vColor, uOpacity * vAlpha);
+  float ring = floor(length(gl_PointCoord - 0.5) * 6.0) / 3.0;
+  float falloff = mix(1.0, 1.0 - ring, uGlow);
+  if (falloff <= 0.0) discard;
+  gl_FragColor = vec4(uColor * vColor, uOpacity * vAlpha * falloff);
   #include <colorspace_fragment>
 }
 `;
@@ -65,7 +73,13 @@ export class PixelPoints {
     this.material = new THREE.ShaderMaterial({
       vertexShader: VERTEX,
       fragmentShader: FRAGMENT,
-      uniforms: { uColor: { value: new THREE.Color() }, uOpacity: { value: 1 }, uScale: { value: 1 }, uNearest: { value: nearest } },
+      uniforms: {
+        uColor: { value: new THREE.Color() },
+        uOpacity: { value: 1 },
+        uScale: { value: 1 },
+        uNearest: { value: nearest },
+        uGlow: { value: 0 },
+      },
       transparent: true,
       depthWrite: false,
     });
@@ -77,6 +91,12 @@ export class PixelPoints {
   setLook(color: THREE.ColorRepresentation, opacity: number): void {
     (this.material.uniforms.uColor!.value as THREE.Color).set(color);
     this.material.uniforms.uOpacity!.value = opacity;
+  }
+
+  /** Que brillen: suman su luz a lo de detras en vez de taparlo y se apagan hacia el borde (las luciernagas). */
+  glow(): void {
+    this.material.blending = THREE.AdditiveBlending;
+    this.material.uniforms.uGlow!.value = 1;
   }
 
   /** Pasa de casillas a pixeles de pantalla segun la ventana y la camara (al cambiar de tamaño). */

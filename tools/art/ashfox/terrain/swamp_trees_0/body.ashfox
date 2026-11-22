@@ -1,0 +1,63 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube a_flare { origin = (-9u, 0u, -8u); size = (6u, 3u, 6u); surface = skin.a_flare; }
+        cube a_trunk { origin = (-8u, 3u, -7u); size = (4u, 11u, 4u); surface = skin.a_trunk; }
+        cube a_crown0 { origin = (-14u, 13u, -13u); size = (16u, 4u, 16u); surface = skin.a_crown0; }
+        cube a_crown1 { origin = (-11.5u, 17u, -10.5u); size = (11u, 3u, 11u); surface = skin.a_crown1; }
+        cube a_crown2 { origin = (-9u, 20u, -8u); size = (6u, 2u, 6u); surface = skin.a_crown2; }
+        cube a_moss0_0 { origin = (-14u, 8u, -13u); size = (2u, 5u, 1u); surface = skin.a_moss0_0; }
+        cube a_moss0_3 { origin = (-11u, 8u, -13u); size = (2u, 5u, 1u); surface = skin.a_moss0_3; }
+        cube a_moss0_6 { origin = (-8u, 10u, -13u); size = (2u, 3u, 1u); surface = skin.a_moss0_6; }
+        cube a_moss0_9 { origin = (-5u, 9u, -13u); size = (2u, 4u, 1u); surface = skin.a_moss0_9; }
+        cube a_moss0_12 { origin = (-2u, 7u, -13u); size = (2u, 6u, 1u); surface = skin.a_moss0_12; }
+        cube a_moss1_0 { origin = (1u, 5u, -13u); size = (1u, 8u, 2u); surface = skin.a_moss1_0; }
+        cube a_moss1_3 { origin = (1u, 9u, -10u); size = (1u, 4u, 2u); surface = skin.a_moss1_3; }
+        cube a_moss1_6 { origin = (1u, 6u, -7u); size = (1u, 7u, 2u); surface = skin.a_moss1_6; }
+        cube a_moss1_9 { origin = (1u, 9u, -4u); size = (1u, 4u, 2u); surface = skin.a_moss1_9; }
+        cube a_moss1_12 { origin = (1u, 6u, -1u); size = (1u, 7u, 2u); surface = skin.a_moss1_12; }
+        cube a_moss2_0 { origin = (-14u, 9u, 2u); size = (2u, 4u, 1u); surface = skin.a_moss2_0; }
+        cube a_moss2_6 { origin = (-8u, 5u, 2u); size = (2u, 8u, 1u); surface = skin.a_moss2_6; }
+        cube a_moss2_9 { origin = (-5u, 6u, 2u); size = (2u, 7u, 1u); surface = skin.a_moss2_9; }
+        cube a_moss3_0 { origin = (-14u, 10u, -13u); size = (1u, 3u, 2u); surface = skin.a_moss3_0; }
+        cube a_moss3_3 { origin = (-14u, 10u, -10u); size = (1u, 3u, 2u); surface = skin.a_moss3_3; }
+        cube a_moss3_6 { origin = (-14u, 8u, -7u); size = (1u, 5u, 2u); surface = skin.a_moss3_6; }
+        cube a_moss3_9 { origin = (-14u, 5u, -4u); size = (1u, 8u, 2u); surface = skin.a_moss3_9; }
+        cube a_moss3_12 { origin = (-14u, 7u, -1u); size = (1u, 6u, 2u); surface = skin.a_moss3_12; }
+        cube b_flare { origin = (5u, 0u, 5u); size = (6u, 3u, 6u); surface = skin.b_flare; }
+        cube b_trunk { origin = (6u, 3u, 6u); size = (4u, 7u, 4u); surface = skin.b_trunk; }
+        cube b_crown0 { origin = (2u, 9u, 2u); size = (12u, 3u, 12u); surface = skin.b_crown0; }
+        cube b_crown1 { origin = (4u, 12u, 4u); size = (8u, 3u, 8u); surface = skin.b_crown1; }
+        cube b_moss0_0 { origin = (2u, 6u, 2u); size = (2u, 3u, 1u); surface = skin.b_moss0_0; }
+        cube b_moss0_3 { origin = (5u, 3u, 2u); size = (2u, 6u, 1u); surface = skin.b_moss0_3; }
+        cube b_moss0_6 { origin = (8u, 2u, 2u); size = (2u, 7u, 1u); surface = skin.b_moss0_6; }
+        cube b_moss0_9 { origin = (11u, 4u, 2u); size = (2u, 5u, 1u); surface = skin.b_moss0_9; }
+        cube b_moss1_3 { origin = (13u, 3u, 5u); size = (1u, 6u, 2u); surface = skin.b_moss1_3; }
+        cube b_moss1_6 { origin = (13u, 6u, 8u); size = (1u, 3u, 2u); surface = skin.b_moss1_6; }
+        cube b_moss1_9 { origin = (13u, 4u, 11u); size = (1u, 5u, 2u); surface = skin.b_moss1_9; }
+        cube b_moss2_0 { origin = (2u, 2u, 13u); size = (2u, 7u, 1u); surface = skin.b_moss2_0; }
+        cube b_moss2_6 { origin = (8u, 5u, 13u); size = (2u, 4u, 1u); surface = skin.b_moss2_6; }
+        cube b_moss2_9 { origin = (11u, 6u, 13u); size = (2u, 3u, 1u); surface = skin.b_moss2_9; }
+        cube b_moss3_0 { origin = (2u, 4u, 2u); size = (1u, 5u, 2u); surface = skin.b_moss3_0; }
+        cube b_moss3_3 { origin = (2u, 1u, 5u); size = (1u, 8u, 2u); surface = skin.b_moss3_3; }
+        cube b_moss3_6 { origin = (2u, 5u, 8u); size = (1u, 4u, 2u); surface = skin.b_moss3_6; }
+        cube b_moss3_9 { origin = (2u, 6u, 11u); size = (1u, 3u, 2u); surface = skin.b_moss3_9; }
+        cube c_trunk { origin = (7.5u, 0u, -11.5u); size = (3u, 13u, 3u); surface = skin.c_trunk; }
+        cube c_branch { origin = (10.5u, 8u, -11u); size = (6u, 2u, 2u); surface = skin.c_branch; }
+        cube c_twig { origin = (14.5u, 10u, -11u); size = (2u, 4u, 2u); surface = skin.c_twig; }
+        cube c_stub { origin = (4.5u, 5u, -11u); size = (3u, 2u, 2u); surface = skin.c_stub; }
+        cube c_moss { origin = (12u, 4u, -10.5u); size = (2u, 4u, 1u); surface = skin.c_moss; }
+        cube k1_knee { origin = (-2u, 0u, 3u); size = (2u, 3u, 2u); surface = skin.k1_knee; }
+        cube k2_knee { origin = (-13u, 0u, 5u); size = (2u, 2u, 2u); surface = skin.k2_knee; }
+        cube k3_knee { origin = (1u, 0u, 11u); size = (2u, 2u, 2u); surface = skin.k3_knee; }
+      }
+    }
+  }
+}

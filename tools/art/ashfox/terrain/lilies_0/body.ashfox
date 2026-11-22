@@ -1,0 +1,49 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube center_pad { origin = (-4u, 0u, -4u); size = (8u, 1u, 8u); surface = skin.center_pad; }
+        cube center_north { origin = (-3u, 0u, -5u); size = (6u, 1u, 1u); surface = skin.center_north; }
+        cube center_south { origin = (-3u, 0u, 4u); size = (6u, 1u, 1u); surface = skin.center_south; }
+        cube center_west { origin = (-5u, 0u, -3u); size = (1u, 1u, 6u); surface = skin.center_west; }
+        cube center_east { origin = (4u, 0u, -3u); size = (1u, 1u, 6u); surface = skin.center_east; }
+        cube a_pad { origin = (-12u, 0u, -11u); size = (4u, 1u, 4u); surface = skin.a_pad; }
+        cube a_north { origin = (-11u, 0u, -12u); size = (2u, 1u, 1u); surface = skin.a_north; }
+        cube a_south { origin = (-11u, 0u, -7u); size = (2u, 1u, 1u); surface = skin.a_south; }
+        cube a_west { origin = (-13u, 0u, -10u); size = (1u, 1u, 2u); surface = skin.a_west; }
+        cube a_east { origin = (-8u, 0u, -10u); size = (1u, 1u, 2u); surface = skin.a_east; }
+        cube b_pad { origin = (6u, 0u, -11u); size = (6u, 1u, 6u); surface = skin.b_pad; }
+        cube b_north { origin = (7u, 0u, -12u); size = (4u, 1u, 1u); surface = skin.b_north; }
+        cube b_south { origin = (7u, 0u, -5u); size = (4u, 1u, 1u); surface = skin.b_south; }
+        cube b_west { origin = (5u, 0u, -10u); size = (1u, 1u, 4u); surface = skin.b_west; }
+        cube b_east { origin = (12u, 0u, -10u); size = (1u, 1u, 4u); surface = skin.b_east; }
+        cube c_pad { origin = (-11u, 0u, 7u); size = (4u, 1u, 4u); surface = skin.c_pad; }
+        cube c_north { origin = (-10u, 0u, 6u); size = (2u, 1u, 1u); surface = skin.c_north; }
+        cube c_south { origin = (-10u, 0u, 11u); size = (2u, 1u, 1u); surface = skin.c_south; }
+        cube c_west { origin = (-12u, 0u, 8u); size = (1u, 1u, 2u); surface = skin.c_west; }
+        cube c_east { origin = (-7u, 0u, 8u); size = (1u, 1u, 2u); surface = skin.c_east; }
+        cube d_pad { origin = (8u, 0u, 7u); size = (4u, 1u, 4u); surface = skin.d_pad; }
+        cube d_north { origin = (9u, 0u, 6u); size = (2u, 1u, 1u); surface = skin.d_north; }
+        cube d_south { origin = (9u, 0u, 11u); size = (2u, 1u, 1u); surface = skin.d_south; }
+        cube d_west { origin = (7u, 0u, 8u); size = (1u, 1u, 2u); surface = skin.d_west; }
+        cube d_east { origin = (12u, 0u, 8u); size = (1u, 1u, 2u); surface = skin.d_east; }
+        cube fa_heart { origin = (-10u, 1u, 8u); size = (2u, 1u, 2u); surface = skin.fa_heart; }
+        cube fa_petal_n { origin = (-10u, 1u, 7u); size = (2u, 2u, 1u); surface = skin.fa_petal_n; }
+        cube fa_petal_s { origin = (-10u, 1u, 10u); size = (2u, 2u, 1u); surface = skin.fa_petal_s; }
+        cube fa_petal_w { origin = (-11u, 1u, 8u); size = (1u, 2u, 2u); surface = skin.fa_petal_w; }
+        cube fa_petal_e { origin = (-8u, 1u, 8u); size = (1u, 2u, 2u); surface = skin.fa_petal_e; }
+        cube fb_heart { origin = (8u, 1u, -9u); size = (2u, 1u, 2u); surface = skin.fb_heart; }
+        cube fb_petal_n { origin = (8u, 1u, -10u); size = (2u, 2u, 1u); surface = skin.fb_petal_n; }
+        cube fb_petal_s { origin = (8u, 1u, -7u); size = (2u, 2u, 1u); surface = skin.fb_petal_s; }
+        cube fb_petal_w { origin = (7u, 1u, -9u); size = (1u, 2u, 2u); surface = skin.fb_petal_w; }
+        cube fb_petal_e { origin = (10u, 1u, -9u); size = (1u, 2u, 2u); surface = skin.fb_petal_e; }
+      }
+    }
+  }
+}

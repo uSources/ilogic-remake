@@ -1,0 +1,33 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 32px; }
+    chart center_pad box { width = 32px; height = 9px; coverage = opaque; }
+    chart center_north box { width = 14px; height = 2px; coverage = opaque; }
+    chart center_south box { width = 14px; height = 2px; coverage = opaque; }
+    chart center_west box { width = 14px; height = 7px; coverage = opaque; }
+    chart center_east box { width = 14px; height = 7px; coverage = opaque; }
+    chart a_pad box { width = 24px; height = 7px; coverage = opaque; }
+    chart a_north box { width = 10px; height = 2px; coverage = opaque; }
+    chart a_south box { width = 10px; height = 2px; coverage = opaque; }
+    chart a_west box { width = 10px; height = 5px; coverage = opaque; }
+    chart a_east box { width = 10px; height = 5px; coverage = opaque; }
+    chart b_pad box { width = 16px; height = 5px; coverage = opaque; }
+    chart b_north box { width = 6px; height = 2px; coverage = opaque; }
+    chart b_south box { width = 6px; height = 2px; coverage = opaque; }
+    chart b_west box { width = 6px; height = 3px; coverage = opaque; }
+    chart b_east box { width = 6px; height = 3px; coverage = opaque; }
+    chart c_pad box { width = 16px; height = 5px; coverage = opaque; }
+    chart c_north box { width = 6px; height = 2px; coverage = opaque; }
+    chart c_south box { width = 6px; height = 2px; coverage = opaque; }
+    chart c_west box { width = 6px; height = 3px; coverage = opaque; }
+    chart c_east box { width = 6px; height = 3px; coverage = opaque; }
+    chart fa_heart box { width = 8px; height = 3px; coverage = opaque; }
+    chart fa_petal_n box { width = 6px; height = 3px; coverage = opaque; }
+    chart fa_petal_s box { width = 6px; height = 3px; coverage = opaque; }
+    chart fa_petal_w box { width = 6px; height = 4px; coverage = opaque; }
+    chart fa_petal_e box { width = 6px; height = 4px; coverage = opaque; }
+    chart ba_bud box { width = 8px; height = 5px; coverage = opaque; }
+    material = opaque;
+  }
+}

@@ -1,0 +1,35 @@
+ashfox-model 1
+module body {
+  import "./rig.ashfox" as rig;
+  import "./skin.ashfox" as surfaces;
+  export component Body {
+    requires rig skeleton: rig.ModelRig;
+    requires surface skin: surfaces.Skin;
+    bind bone body to skeleton.body;
+    geometry {
+      bone body {
+        cube a_stem0 { origin = (-8u, 0u, -8u); size = (1u, 12u, 1u); surface = skin.a_stem0; }
+        cube a_head0 { origin = (-8.5u, 11u, -8.5u); size = (2u, 3u, 2u); surface = skin.a_head0; }
+        cube a_stem1 { origin = (-6u, 0u, -7u); size = (1u, 9u, 1u); surface = skin.a_stem1; }
+        cube a_stem2 { origin = (-9u, 0u, -6u); size = (1u, 10u, 1u); surface = skin.a_stem2; }
+        cube a_head2 { origin = (-9.5u, 9u, -6.5u); size = (2u, 3u, 2u); surface = skin.a_head2; }
+        cube a_stem3 { origin = (-7u, 0u, -10u); size = (1u, 7u, 1u); surface = skin.a_stem3; }
+        cube b_stem0 { origin = (7u, 0u, -6u); size = (1u, 10u, 1u); surface = skin.b_stem0; }
+        cube b_head0 { origin = (6.5u, 9u, -6.5u); size = (2u, 3u, 2u); surface = skin.b_head0; }
+        cube b_stem1 { origin = (5u, 0u, -5u); size = (1u, 8u, 1u); surface = skin.b_stem1; }
+        cube b_stem2 { origin = (8u, 0u, -4u); size = (1u, 11u, 1u); surface = skin.b_stem2; }
+        cube b_head2 { origin = (7.5u, 10u, -4.5u); size = (2u, 3u, 2u); surface = skin.b_head2; }
+        cube c_stem0 { origin = (-7u, 0u, 8u); size = (1u, 9u, 1u); surface = skin.c_stem0; }
+        cube c_stem1 { origin = (-5u, 0u, 7u); size = (1u, 11u, 1u); surface = skin.c_stem1; }
+        cube c_head1 { origin = (-5.5u, 10u, 6.5u); size = (2u, 3u, 2u); surface = skin.c_head1; }
+        cube c_stem2 { origin = (-8u, 0u, 6u); size = (1u, 7u, 1u); surface = skin.c_stem2; }
+        cube i1_stem { origin = (-1u, 0u, -11u); size = (1u, 8u, 1u); surface = skin.i1_stem; }
+        cube i1_bloom { origin = (-1.5u, 8u, -11.5u); size = (2u, 2u, 2u); surface = skin.i1_bloom; }
+        cube i2_stem { origin = (12u, 0u, 1u); size = (1u, 7u, 1u); surface = skin.i2_stem; }
+        cube i2_bloom { origin = (11.5u, 7u, 0.5u); size = (2u, 2u, 2u); surface = skin.i2_bloom; }
+        cube i3_stem { origin = (-12u, 0u, 1u); size = (1u, 6u, 1u); surface = skin.i3_stem; }
+        cube i3_bloom { origin = (-12.5u, 6u, 0.5u); size = (2u, 2u, 2u); surface = skin.i3_bloom; }
+      }
+    }
+  }
+}

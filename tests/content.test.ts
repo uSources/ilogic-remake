@@ -175,12 +175,15 @@ describe('contenido (src/core/content/*.json)', () => {
     files.themes[1]!.generator = { ...files.themes[1]!.generator, narrowWater: 'Lava' };
     files.mapgen = { ...files.mapgen, startingUnits: ['Soldier', 'Dragon'], neutralBuildings: { Castle: [1, 2] } };
     files.weather[0]!.chance = { ...files.weather[0]!.chance, Moon: 1 };
+    files.themes[2]!.mapColors = { Lava: '#ff0000', Water: 'azul' };
     const errors = errsOf(files);
     expect(errors).toContain('tema Plains: mapLetters.T nombra el terreno "Jungle", que no existe');
     expect(errors).toContain('tema Desert: generator.narrowWater nombra el terreno "Lava", que no existe');
     expect(errors).toContain('mapgen.json: startingUnits nombra "Dragon", que no existe');
     expect(errors).toContain('mapgen.json: neutralBuildings nombra el edificio "Castle", que no existe');
     expect(errors).toContain('clima Clear: chance nombra el tema "Moon", que no existe');
+    expect(errors).toContain('tema Forest: mapColors nombra el terreno "Lava", que no existe');
+    expect(errors).toContain('tema Forest: mapColors.Water tiene que ser un color #rrggbb');
   });
 
   it('un tema y su generador, resueltos (themes.json)', () => {

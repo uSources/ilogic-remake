@@ -36,7 +36,7 @@ const TEMPERATE_SEA: SeaColors = { shallow: 0x7fd0ec, mid: 0x5aa2e6, deep: 0x467
 /** El mar por tema del mapa (id de themes.json); el que no esta, el templado. */
 const SEA_BY_THEME: Readonly<Record<string, SeaColors>> = {
   Desert: { shallow: 0x7fe0d6, mid: 0x3fb2d0, deep: 0x2f7cc4 },
-  Swamp: { shallow: 0x7cb8a0, mid: 0x4a8fa8, deep: 0x3a6a96 },
+  Swamp: { shallow: 0x5e8a6a, mid: 0x44725e, deep: 0x335e54 },
   Snowy: { shallow: 0x9cc8e8, mid: 0x5b8cc8, deep: 0x4466aa },
 };
 const NO_ISLET = new THREE.Vector3(1e6, 1e6, -1);

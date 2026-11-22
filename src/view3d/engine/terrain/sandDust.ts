@@ -9,6 +9,7 @@ import type { Pos } from '../../../core/model';
 import { reducedMotion } from '../../../ui/motion';
 import { PixelPoints } from '../fx/pixelPoints';
 import { WIND_DIRECTION } from '../core/space';
+import { randomBetween } from '../core/random';
 
 const GRAINS = 90;
 const GRAIN_COLOR = 0xffe4a8;
@@ -28,8 +29,6 @@ interface Grain {
   /** Un vaiven propio para que no vayan todos en fila. */
   phase: number;
 }
-
-const between = ([low, high]: readonly [number, number]): number => low + Math.random() * (high - low);
 
 export class SandDust {
   private readonly points = new PixelPoints(GRAINS);
@@ -75,7 +74,7 @@ export class SandDust {
   private newGrain(nearby: readonly Pos[]): Grain {
     const tile = nearby[Math.floor(Math.random() * nearby.length)]!;
     const position = this.groundOf(tile).add(new THREE.Vector3(Math.random() - 0.5, 0.05 + Math.random() * 0.25, Math.random() - 0.5));
-    return { position, age: 0, life: between(LIFE_SECONDS), size: 0.04 + Math.random() * 0.04, phase: Math.random() * Math.PI * 2 };
+    return { position, age: 0, life: randomBetween(LIFE_SECONDS), size: 0.04 + Math.random() * 0.04, phase: Math.random() * Math.PI * 2 };
   }
 
   private draw(): void {

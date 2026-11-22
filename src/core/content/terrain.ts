@@ -5,8 +5,6 @@ import type { MoveType, TerrainDef, Texts } from './types';
 
 /** Coste de movimiento admitido en un terreno (null = no se pasa). */
 const MAX_MOVE_COST = 9;
-/** Un color como #rrggbb. */
-const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 
 export function validateTerrain(terrain: readonly TerrainDef[], movements: readonly MovementDef[], check: Checker): void {
   const top = check.scope('terrain.json');
@@ -24,7 +22,7 @@ export function validateTerrain(terrain: readonly TerrainDef[], movements: reado
     if (type?.plain !== undefined) scope.bool('plain', type.plain);
     validateMovement(scope, type?.movement, movements);
     uniqueLetter(scope, 'textLetter', type?.textLetter, textLetters);
-    scope.expect(typeof type?.mapColor === 'string' && HEX_COLOR.test(type.mapColor), 'mapColor tiene que ser un color #rrggbb');
+    scope.color('mapColor', type?.mapColor);
     if (type?.mapLetter === undefined) continue;
     scope.expect(typeof type.mapLetter === 'string' && type.mapLetter.length === 1, 'mapLetter tiene que ser una sola letra');
     scope.expect(!letters.has(type.mapLetter), `la letra "${type.mapLetter}" ya es de otro terreno`);

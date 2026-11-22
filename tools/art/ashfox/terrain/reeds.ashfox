@@ -1,0 +1,12 @@
+ashfox-model 1
+asset reeds {
+  import "./reeds/rig.ashfox" as rig;
+  import "./reeds/paint.ashfox" as paint;
+  import "./reeds/body.ashfox" as body;
+  export asset reeds {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

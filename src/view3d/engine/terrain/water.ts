@@ -6,7 +6,8 @@
  * - brillos: vetas claras que cruzan el agua despacio;
  * - espuma: una franja clara que late en los lados que dan a tierra (`shoreSides`).
  * Funciona con las casillas instanciadas (cada copia sabe sus orillas por un atributo) y con la niebla,
- * que oscurece despues (el color de cada copia).
+ * que oscurece despues (el color de cada copia). Los brillos y la espuma son del color de su agua
+ * (`WaterLook`): blancos en la clara y verdosos en la turbia del pantano.
  */
 import * as THREE from 'three';
 import { terrainAt } from '../../../core/gameContent';
@@ -18,8 +19,16 @@ const TEXELS_PER_TILE = 16;
 const WAVE_HEIGHT = 0.012;
 /** Por debajo de esta altura no se mueve: es el fondo del bloque (que no se ve). */
 const SURFACE_FROM = -0.2;
-const GLINT_COLOR = new THREE.Color(0.86, 0.95, 1);
-const FOAM_COLOR = new THREE.Color(0.93, 0.98, 1);
+
+/** El color de los brillos y de la espuma de una clase de agua. */
+export interface WaterLook {
+  glint: THREE.Color;
+  foam: THREE.Color;
+}
+
+export const CLEAR_WATER: WaterLook = { glint: new THREE.Color(0.86, 0.95, 1), foam: new THREE.Color(0.93, 0.98, 1) };
+/** El agua del pantano: brillos verdosos y, en la orilla, verdin en vez de espuma blanca. */
+export const MURKY_WATER: WaterLook = { glint: new THREE.Color(0.6, 0.76, 0.52), foam: new THREE.Color(0.46, 0.62, 0.3) };
 
 /** Los lados de una casilla, en el orden del atributo: norte (-z), este (+x), sur (+z), oeste (-x). */
 const SIDES: readonly Pos[] = [
@@ -83,13 +92,13 @@ const FRAGMENT_WATER = /* glsl */ `
 /** El reloj de todos los materiales de agua (lo adelanta el terreno en cada fotograma). */
 export const waterClock = { value: 0 };
 
-/** El material de agua a partir del de la casilla (la misma textura y la misma luz cartoon). */
-export function waterMaterial(base: THREE.Material): THREE.Material {
+/** El material de agua a partir del de la casilla (la misma textura y la misma luz cartoon), con sus brillos y su espuma. */
+export function waterMaterial(base: THREE.Material, look: WaterLook): THREE.Material {
   const material = base.clone();
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uTime = waterClock;
-    shader.uniforms.uGlint = { value: GLINT_COLOR };
-    shader.uniforms.uFoam = { value: FOAM_COLOR };
+    shader.uniforms.uGlint = { value: look.glint };
+    shader.uniforms.uFoam = { value: look.foam };
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', `#include <common>\n${VERTEX_HEAD}`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>\n${VERTEX_WAVE}`);

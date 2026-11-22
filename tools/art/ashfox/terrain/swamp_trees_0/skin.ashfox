@@ -1,0 +1,56 @@
+ashfox-model 1
+module skin {
+  export surface contract Skin {
+    atlas { width = 64px; height = 128px; }
+    chart a_flare box { width = 24px; height = 9px; coverage = opaque; }
+    chart a_trunk box { width = 16px; height = 15px; coverage = opaque; }
+    chart a_crown0 box { width = 64px; height = 20px; coverage = opaque; }
+    chart a_crown1 box { width = 44px; height = 14px; coverage = opaque; }
+    chart a_crown2 box { width = 24px; height = 8px; coverage = opaque; }
+    chart a_moss0_0 box { width = 6px; height = 6px; coverage = opaque; }
+    chart a_moss0_3 box { width = 6px; height = 6px; coverage = opaque; }
+    chart a_moss0_6 box { width = 6px; height = 4px; coverage = opaque; }
+    chart a_moss0_9 box { width = 6px; height = 5px; coverage = opaque; }
+    chart a_moss0_12 box { width = 6px; height = 7px; coverage = opaque; }
+    chart a_moss1_0 box { width = 6px; height = 10px; coverage = opaque; }
+    chart a_moss1_3 box { width = 6px; height = 6px; coverage = opaque; }
+    chart a_moss1_6 box { width = 6px; height = 9px; coverage = opaque; }
+    chart a_moss1_9 box { width = 6px; height = 6px; coverage = opaque; }
+    chart a_moss1_12 box { width = 6px; height = 9px; coverage = opaque; }
+    chart a_moss2_0 box { width = 6px; height = 5px; coverage = opaque; }
+    chart a_moss2_6 box { width = 6px; height = 9px; coverage = opaque; }
+    chart a_moss2_9 box { width = 6px; height = 8px; coverage = opaque; }
+    chart a_moss3_0 box { width = 6px; height = 5px; coverage = opaque; }
+    chart a_moss3_3 box { width = 6px; height = 5px; coverage = opaque; }
+    chart a_moss3_6 box { width = 6px; height = 7px; coverage = opaque; }
+    chart a_moss3_9 box { width = 6px; height = 10px; coverage = opaque; }
+    chart a_moss3_12 box { width = 6px; height = 8px; coverage = opaque; }
+    chart b_flare box { width = 24px; height = 9px; coverage = opaque; }
+    chart b_trunk box { width = 16px; height = 11px; coverage = opaque; }
+    chart b_crown0 box { width = 48px; height = 15px; coverage = opaque; }
+    chart b_crown1 box { width = 32px; height = 11px; coverage = opaque; }
+    chart b_moss0_0 box { width = 6px; height = 4px; coverage = opaque; }
+    chart b_moss0_3 box { width = 6px; height = 7px; coverage = opaque; }
+    chart b_moss0_6 box { width = 6px; height = 8px; coverage = opaque; }
+    chart b_moss0_9 box { width = 6px; height = 6px; coverage = opaque; }
+    chart b_moss1_3 box { width = 6px; height = 8px; coverage = opaque; }
+    chart b_moss1_6 box { width = 6px; height = 5px; coverage = opaque; }
+    chart b_moss1_9 box { width = 6px; height = 7px; coverage = opaque; }
+    chart b_moss2_0 box { width = 6px; height = 8px; coverage = opaque; }
+    chart b_moss2_6 box { width = 6px; height = 5px; coverage = opaque; }
+    chart b_moss2_9 box { width = 6px; height = 4px; coverage = opaque; }
+    chart b_moss3_0 box { width = 6px; height = 7px; coverage = opaque; }
+    chart b_moss3_3 box { width = 6px; height = 10px; coverage = opaque; }
+    chart b_moss3_6 box { width = 6px; height = 6px; coverage = opaque; }
+    chart b_moss3_9 box { width = 6px; height = 5px; coverage = opaque; }
+    chart c_trunk box { width = 12px; height = 16px; coverage = opaque; }
+    chart c_branch box { width = 16px; height = 4px; coverage = opaque; }
+    chart c_twig box { width = 8px; height = 6px; coverage = opaque; }
+    chart c_stub box { width = 10px; height = 4px; coverage = opaque; }
+    chart c_moss box { width = 6px; height = 5px; coverage = opaque; }
+    chart k1_knee box { width = 8px; height = 5px; coverage = opaque; }
+    chart k2_knee box { width = 8px; height = 4px; coverage = opaque; }
+    chart k3_knee box { width = 8px; height = 4px; coverage = opaque; }
+    material = opaque;
+  }
+}
