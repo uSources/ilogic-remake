@@ -1,8 +1,9 @@
 /**
- * Islotes en el mar, cerca del tablero: que el mapa parezca un trozo de un mundo de juguete y no lo
- * unico que hay. Cada islote es una sierra pequeña de la tierra del tema: se calcula con el mismo
- * relieve que las montañas del tablero (relief.ts, massif.ts), con su color por alturas, roca en las
- * laderas empinadas y manchas (reliefColors.ts). Siempre los mismos en cada partida. No son del mapa.
+ * Islotes en el mar alrededor del tablero: que el mapa parezca un trozo de un mundo de juguete y no
+ * lo unico que hay. Cada uno es una sierra pequeña: se calcula con el mismo relieve que las montañas
+ * del tablero (relief.ts, massif.ts), con su color por alturas, roca en las laderas empinadas y
+ * manchas (reliefColors.ts); su estilo lo elige el tema (surroundings.ts). Siempre los mismos en cada
+ * partida. No son del mapa.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
@@ -21,20 +22,18 @@ const BEACH_TOP = 0.02;
 /** Casillas de margen alrededor del islote, para que sus faldas caigan al mar sin salirse del mapa. */
 const ISLET_MARGIN = 2;
 
-/** Arena de la playa, tierra de encima y roca del pico, por tema (id de themes.json). */
-interface IsletColors {
+/** Arena de la playa, tierra de encima y roca del pico de un islote en el mar. */
+export interface IsletColors {
   beach: number;
   land: number;
   peak: number;
 }
 
-const GREEN_ISLET: IsletColors = { beach: 0xf2d38a, land: 0x6fae3c, peak: 0x8c8676 };
-const ISLET_BY_THEME: Readonly<Record<string, IsletColors>> = {
-  Forest: { beach: 0xe8c880, land: 0x4f8f34, peak: 0x8c8676 },
-  Swamp: { beach: 0x8a7650, land: 0x58702e, peak: 0x6e6a58 },
-  Desert: { beach: 0xffe2a0, land: 0xf2c66e, peak: 0xd0712c },
-  Snowy: { beach: 0xc6d4e6, land: 0xf4f8ff, peak: 0x9eacc2 },
-};
+export const GREEN_ISLET: IsletColors = { beach: 0xf2d38a, land: 0x6fae3c, peak: 0x8c8676 };
+export const FOREST_ISLET: IsletColors = { beach: 0xe8c880, land: 0x4f8f34, peak: 0x8c8676 };
+export const SWAMP_ISLET: IsletColors = { beach: 0x8a7650, land: 0x58702e, peak: 0x6e6a58 };
+export const DESERT_ISLET: IsletColors = { beach: 0xffe2a0, land: 0xf2c66e, peak: 0xd0712c };
+export const SNOWY_ISLET: IsletColors = { beach: 0xc6d4e6, land: 0xf4f8ff, peak: 0x9eacc2 };
 
 /** Numeros al azar siempre iguales. */
 function seededRandom(seed: number): () => number {
@@ -82,8 +81,8 @@ function isletFootprint({ radius }: Islet, random: () => number): Pos[] {
   return footprint;
 }
 
-/** El estilo de relieve de un islote: playa, tierra y roca como una montaña del tema. */
-function isletStyle(colors: IsletColors): ReliefStyle {
+/** El estilo de relieve de un islote en el mar: playa, tierra y roca como una montaña del tema. */
+export function isletStyle(colors: IsletColors): ReliefStyle {
   return {
     shape: 'peak',
     bands: [
@@ -95,7 +94,7 @@ function isletStyle(colors: IsletColors): ReliefStyle {
   };
 }
 
-/** El relieve de un islote, en su propia rejilla y movido a su sitio en el mar. */
+/** El relieve de un islote, en su propia rejilla y movido a su sitio. */
 function isletMesh(islet: Islet, style: ReliefStyle, random: () => number): THREE.InstancedMesh {
   const footprint = isletFootprint(islet, random);
   const reach = Math.ceil(islet.radius);
@@ -124,9 +123,8 @@ function visibleIsletMesh(mesh: THREE.InstancedMesh): THREE.Mesh {
   return visible;
 }
 
-/** Los islotes, con la tierra del tema (id de themes.json): cada uno con solo sus caras visibles, para que la camara deje fuera los que no se ven. */
-export function buildIslets(islets: readonly Islet[], theme: string): THREE.Group {
-  const style = isletStyle(ISLET_BY_THEME[theme] ?? GREEN_ISLET);
+/** Los islotes, con ese relieve: cada uno con solo sus caras visibles, para que la camara deje fuera los que no se ven. */
+export function buildIslets(islets: readonly Islet[], style: ReliefStyle): THREE.Group {
   const random = seededRandom(13);
   const group = new THREE.Group();
   for (const islet of islets) group.add(visibleIsletMesh(isletMesh(islet, style, random)));
