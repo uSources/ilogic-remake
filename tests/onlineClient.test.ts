@@ -247,11 +247,15 @@ function seated(teams = TWO_PEOPLE_AND_AI) {
   const plays: RoomPlay[] = [];
   let seq = 0;
   const resyncs: number[] = [];
+  /** Lo que contesta la sala mientras se retiene (`hold`), hasta que se suelta (`release`). */
+  let held: Outgoing[][] | null = null;
   const client = new RoomClient(
     {
       send: (message) => {
         seq += 1;
-        deliver(room.handle(0, { ...message, seq }));
+        const outgoing = room.handle(0, { ...message, seq });
+        if (held) held.push(outgoing);
+        else deliver(outgoing);
         return seq;
       },
       resync: () => {
@@ -270,7 +274,13 @@ function seated(teams = TWO_PEOPLE_AND_AI) {
     if (!result.ok) throw new Error(result.error);
     deliver(result.messages);
   };
-  return { room, client, plays, join, deliver, resyncs, tokens };
+  const hold = () => (held = []);
+  const release = () => {
+    const outgoings = held ?? [];
+    held = null;
+    for (const outgoing of outgoings) deliver(outgoing);
+  };
+  return { room, client, plays, join, deliver, resyncs, tokens, hold, release };
 }
 
 const kinds = (plays: RoomPlay[]) => plays.map((play) => play.kind);
@@ -291,20 +301,33 @@ describe('RoomClient', () => {
     expect(kinds(plays).at(-1)).toBe('turn');
   });
 
-  it('una accion propia: su resultado llega por la promesa y su eco pone la vista al dia sin animarse', async () => {
+  it('una accion propia: la promesa trae su resultado y su eco, la vista al dia, que no se anima', async () => {
     const { client, plays, join } = seated();
     join(0);
     join(1);
     const before = plays.length;
     const unit = client.state!.units.find((candidate) => candidate.team === 0)!;
-    const echo = client.nextEcho();
     const reply = await client.act({ kind: 'wait', uid: unit.uid });
-    expect(reply.ok).toBe(true);
-    const after = await echo;
-    expect(unitById(after, unit.uid)?.turnState).toBe('done');
-    expect(client.state).toBe(after);
+    if (!reply.ok) throw new Error(reply.reason);
+    expect(unitById(reply.state, unit.uid)?.turnState).toBe('done');
+    expect(client.state).toBe(reply.state);
     // Nada que animar: el eco no es una jugada.
     expect(plays.length).toBe(before);
+  });
+
+  it('una vista que llega antes de la respuesta (la de un resync de antes) no la contesta: la contesta su eco', async () => {
+    const { room, client, join, hold, release } = seated();
+    join(0);
+    join(1);
+    const unit = client.state!.units.find((candidate) => candidate.team === 0)!;
+    const stale = viewSnapshotOf(room.state, 0);
+    hold();
+    const reply = client.act({ kind: 'wait', uid: unit.uid });
+    client.receive({ kind: 'view', step: 99, view: stale });
+    release();
+    const answered = await reply;
+    if (!answered.ok) throw new Error(answered.reason);
+    expect(unitById(answered.state, unit.uid)?.turnState).toBe('done');
   });
 
   it('una accion rechazada por la sala contesta con su motivo', async () => {
@@ -384,12 +407,13 @@ describe('RoomClient', () => {
     const unit = client.state!.units.find((candidate) => candidate.team === 0)!;
     // El servidor la atiende, pero su respuesta y su eco se pierden en el corte.
     isCut = true;
-    const echo = client.nextEcho();
     const reply = client.act({ kind: 'wait', uid: unit.uid });
     isCut = false;
     hello();
-    expect(await reply).toEqual({ ok: true, events: [] });
-    expect(unitById(await echo, unit.uid)?.turnState).toBe('done');
+    const answered = await reply;
+    if (!answered.ok) throw new Error(answered.reason);
+    expect(answered.events).toEqual([]);
+    expect(unitById(answered.state, unit.uid)?.turnState).toBe('done');
   });
 
   it('la vista con la que se anima lleva las unidades que ya no estan en la de despues', () => {

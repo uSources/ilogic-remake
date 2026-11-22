@@ -35,23 +35,32 @@ async function onlineMatch() {
   const room = Room.create({ match: config }, context());
   const sent: string[] = [];
   let seq = 0;
+  /** Lo que contesta la sala mientras se retiene (`hold`), hasta que se suelta (`release`): la red tarda. */
+  let held: (readonly Outgoing[])[] | null = null;
+  const answer = (outgoing: readonly Outgoing[]) => (held ? held.push(outgoing) : deliver(outgoing));
   const client = new RoomClient(
     {
       send: (message) => {
         seq += 1;
         sent.push(message.kind);
-        deliver(room.handle(PERSON, { ...message, seq }));
+        answer(room.handle(PERSON, { ...message, seq }));
         return seq;
       },
       resync: () => {
         sent.push('resync');
-        deliver(room.handle(PERSON, { kind: 'resync' }));
+        answer(room.handle(PERSON, { kind: 'resync' }));
       },
     },
     defaultContent(),
   );
   const deliver = (outgoing: readonly Outgoing[]) => {
     for (const { seat, message } of outgoing) if (seat === PERSON) client.receive(message);
+  };
+  const hold = () => (held = []);
+  const release = () => {
+    const outgoings = held ?? [];
+    held = null;
+    for (const outgoing of outgoings) deliver(outgoing);
   };
   const joined = room.join({ kind: 'hello', token: room.personSeats()[0]!.token, ...CURRENT_PROTOCOL });
   if (!joined.ok) throw new Error(joined.error);
@@ -80,7 +89,7 @@ async function onlineMatch() {
   });
   online.listen();
   await controls.runUntilInput();
-  return { room, client, online, controls, events, sent, deliver, ended, shown: session.state, ownTurns: () => ownTurns };
+  return { room, client, online, controls, events, sent, deliver, hold, release, ended, shown: session.state, ownTurns: () => ownTurns };
 }
 
 /** Una unidad propia que aun se mueve y una casilla vacia a la que llega. */
@@ -118,6 +127,19 @@ describe('la partida por la red en 3D (OnlinePlay)', () => {
     expect(playedKinds(events)).toContain('move');
   });
 
+  it('la vista de un resync que llega detras de una accion no la deshace en la pantalla', async () => {
+    const { online, client, hold, release, shown } = await onlineMatch();
+    const { unit, goal } = moverAndGoal(shown.units, shown);
+    hold();
+    // La vista que pidio un rechazo de antes sale de la sala antes que la respuesta a la accion.
+    client.resync();
+    const reply = online.act({ kind: 'move', uid: unit.uid, to: goal });
+    release();
+    expect((await reply).ok).toBe(true);
+    await settle();
+    expect(unitById(shown, unit.uid)).toMatchObject(goal);
+  });
+
   it('lo que no vale con lo que sabe el equipo se contesta aqui, sin preguntar a la sala', async () => {
     const { online, sent } = await onlineMatch();
     const before = sent.length;
@@ -145,6 +167,9 @@ describe('la partida por la red en 3D (OnlinePlay)', () => {
     deliver(room.endTurnOf(PERSON));
     await settle();
     expect(controls.selectedUnits()).toEqual([]);
+    // Dos lotes seguidos: el fin del turno propio (que ya lo pasa) y el de la IA hasta el dia siguiente.
+    expect(events.played.length).toBeGreaterThanOrEqual(2);
+    expect(playedKinds(events)).toContain('turnEnd');
     expect(playedKinds(events)).toContain('turnStart');
     expect(shown.day).toBe(2);
     expect(online.session.awaitingInput).toBe(PERSON);

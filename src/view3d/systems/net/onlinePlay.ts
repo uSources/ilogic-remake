@@ -13,9 +13,10 @@
  *   contra `animationView(antes, despues)` (con las unidades que cayeron o se fueron a la niebla) y
  *   deja la de despues; un `turn` de otro pone «Esperando al equipo N…» en la linea de la conexion; el
  *   propio devuelve el mando; un `ended`, el final.
- * - **Lo que llega en el turno propio**: una vista (tras un corte) o un lote pasan a ser la partida;
- *   lo que dice que el turno ya ha pasado (se le acabo el tiempo: el `turn` de otro, o un lote en el
- *   que ya juegan otros) o el final sacan del turno (`OnlineHooks.othersGoOn`) y lo atiende la
+ * - **Lo que llega en el turno propio**: una vista (tras un corte) o un lote ponen la partida al dia
+ *   (con la ultima que sabe el cliente: una vista de un `resync` puede llegar detras de algo mas
+ *   nuevo); lo que dice que el turno ya ha pasado (se le acabo el tiempo: el `turn` de otro, o un
+ *   lote que pasa de turno) o el final sacan del turno (`OnlineHooks.othersGoOn`) y lo atiende la
  *   espera, en orden.
  * - **La conexion** se enseña en la linea de arriba; un cierre sin arreglo avisa y vuelve al menu.
  *
@@ -113,16 +114,14 @@ export class OnlinePlay implements MatchRunner {
     return answered;
   }
 
-  /** La accion por la sala: su eco pasa a ser la partida y sus sucesos son los que se animan. */
+  /** La accion por la sala: su eco (la vista al dia) pasa a ser la partida y sus sucesos son los que se animan. */
   private async askRoom(action: GameAction): Promise<RunnerReply> {
-    const { client } = this.room;
-    const echo = client.nextEcho();
-    const reply = await client.act(action);
+    const reply = await this.room.client.act(action);
     if (!reply.ok) {
-      client.resync();
+      this.room.client.resync();
       return { ok: false, notice: t('onlineRejected') };
     }
-    this.adopt(await echo);
+    this.adopt(reply.state);
     return { ok: true, events: reply.events };
   }
 
@@ -218,7 +217,8 @@ export class OnlinePlay implements MatchRunner {
       case 'turn':
         return play.team !== this.viewer;
       case 'events':
-        return play.after.turn !== this.state.turn || play.after.day !== this.state.day;
+        // Con lo que trae el propio lote: la partida que se ve puede ir ya por delante (`duringOwnTurn`).
+        return play.after.turn !== play.before.turn || play.after.day !== play.before.day;
       case 'view':
         return false;
       default:
@@ -226,10 +226,14 @@ export class OnlinePlay implements MatchRunner {
     }
   }
 
-  /** En el turno propio, una vista o un lote (tras un corte, la rendicion de otro) pasan a ser la partida. */
+  /**
+   * En el turno propio, una vista o un lote (tras un corte, la rendicion de otro) ponen la partida al
+   * dia con la ultima del cliente, no con la suya: la de un `resync` puede llegar detras del eco de
+   * una accion posterior, y volver a ella desharia esa accion en la pantalla.
+   */
   private duringOwnTurn(play: RoomPlay): void {
-    if (play.kind === 'view') this.adopt(play.state);
-    if (play.kind === 'events') this.adopt(play.after);
+    const latest = this.room.client.state;
+    if ((play.kind === 'view' || play.kind === 'events') && latest) this.adopt(latest);
   }
 
   private toWatcher(play: RoomPlay): void {
@@ -276,6 +280,11 @@ export class OnlinePlay implements MatchRunner {
   private roomClosed(reason: FatalClose): void {
     showToast(closeText(reason));
     this.publishLink('closed');
-    if (!this.isOver) setTimeout(() => this.hooks.quit(), ROOM_CLOSED_QUIT_MS);
+    if (!this.isOver) setTimeout(() => this.quitUnlessClosed(), ROOM_CLOSED_QUIT_MS);
+  }
+
+  /** Al menu, salvo que mientras se leia el aviso ya se haya dejado la partida (`close`: el final la deja). */
+  private quitUnlessClosed(): void {
+    if (!this.isClosed) this.hooks.quit();
   }
 }

@@ -74,7 +74,7 @@ Tres piezas, en tres sitios:
 | `OnlineMatch` | `onlineMatch.ts` | Enlace y cliente juntos, con quien los escucha ahora: la pantalla del vestibulo y, en la partida (otra carga de pagina, otra conexion), `OnlinePlay` |
 | Quien lleva la partida | `MatchRunner` (`src/view3d/systems/turn/matchRunner.ts`) | Lo unico que el turno 3D (`TurnControls`) sabe de quien lleva la partida: hacer una accion, acabar el turno y esperar a que vuelva a tocar. `localRunner` (la sesion de esta pantalla) u `OnlinePlay` (la sala) |
 | Sesion espejo | `mirrorSession` (`src/net/mirrorSession.ts`) | La `GameSession` de la pantalla sobre la vista del servidor: la persona juega su equipo (`humanController`), los demas son `remoteController` (la sesion los espera y no juega nada por ellos) |
-| Eco | `RoomClient.nextEcho`, `echoDue`; en la sala, `echoTo` | El `events` que sigue a un `result` que valio: es la vista al dia tras la accion propia. Sale siempre, aunque quien actuo no vea nada nuevo. No se anima (ya se anima con el `result`); se da a quien la espera |
+| Eco | `RoomClient.echoDue` (en la sala, `echoTo`) | El `events` que sigue a un `result` que valio: es la vista al dia tras la accion propia. Sale siempre, aunque quien actuo no vea nada nuevo. No se anima (ya se anima con el `result`): `act` lo devuelve junto al resultado (`RoomReply.state`) |
 | Presupuesto de pasos | `ADVANCE_STEP_BUDGET`, `Room.isMidway`, `Room.continueMatch` | Cuantos pasos seguidos da la sala en una llamada (un turno de la IA puede ser largo y una llamada del servidor tiene su tiempo contado). Si se queda a medias, el servidor sigue desde una alarma |
 
 ## El viaje de una jugada
@@ -87,12 +87,12 @@ La persona de la pantalla ataca con una unidad. Lo que pasa, en orden, nombrando
    accion la decide el servidor (los dados y lo escondido estan alli), asi que no se hace en la
    sesion espejo.
 2. **`OnlinePlay.act`** mira primero si vale con lo que sabe el equipo (`actionProblem` sobre la
-   vista; si no, contesta el aviso sin preguntar a la sala) y, si vale, `askRoom`: pide el eco por
-   adelantado (`client.nextEcho()`) y manda la accion (`client.act(action)`).
+   vista; si no, contesta el aviso sin preguntar a la sala) y, si vale, `askRoom` la manda
+   (`client.act(action)`).
 3. **`RoomClient.act`** (`src/net/roomClient.ts`) la envuelve en un mensaje `act` y lo manda por
    `ServerLink.send`, que le pone el siguiente `seq`, lo guarda en localStorage (`seqStorageKey`), lo
    apunta como sin contestar (`unanswered`) y lo escribe en el WebSocket como JSON. `act` devuelve
-   una promesa que se resuelve con el `result` de ese `seq`.
+   una promesa que se resuelve con el `result` de ese `seq` y, si vale, con su eco.
 4. **El servidor** lo da a la sala, `HostedRoom.receive` (`server/src/hostedRoom.ts`). En Cloudflare
    el Worker no ve el mensaje: el WebSocket esta aceptado por el Durable Object de la sala
    (`RoomObject.fetch` lo subio) y llega a `RoomObject.webSocketMessage`; en Node, a la conexion que
@@ -126,13 +126,15 @@ La persona de la pantalla ataca con una unidad. Lo que pasa, en orden, nombrando
 12. **En cada cliente**, `ServerLink.receive`: si el mensaje lleva `seq`, deja de estar sin contestar
     (`answered`); si lleva `step`, tiene que ser el siguiente (`followsStep`; si no, `resync`). Se lo
     pasa a `RoomClient.receive`.
-13. **Quien ataco**: el `result` resuelve la promesa de `act` (`resultArrived`, que apunta que viene
-    un eco: `echoDue`); el `events` que sigue es el eco (`eventsArrived`): pone `state` al dia con
-    `mergeView` + `loadView` y lo da a `nextEcho`. `OnlinePlay.askRoom` recibe el `result` (si no
-    vale: `resync` y el aviso «La sala no lo ha aceptado»), espera el eco y lo adopta como la partida
-    que se ve (`adopt`: `fillWith` en el mismo objeto, sesion espejo nueva y
-    `TurnControls.viewReplaced`); `TurnControls.perform` anima los sucesos del `result` como en una
-    partida de esta pantalla (`events.play`).
+13. **Quien ataco**: un `result` que no vale resuelve ya la promesa de `act`; uno que vale la deja
+    esperando su eco (`resultArrived` lo apunta en `echoDue` con sus sucesos). El `events` que sigue
+    es el eco (`eventsArrived`): pone `state` al dia con `mergeView` + `loadView` y resuelve la
+    promesa con los sucesos y esa vista (`answerEchoes`). Una vista entera que llegue antes no la
+    resuelve (puede ser de antes de la accion: la de un `resync`); solo hace de eco a lo que ya valio
+    o se perdio en un corte. `OnlinePlay.askRoom` recibe la respuesta (si no vale: `resync` y el
+    aviso «La sala no lo ha aceptado») y adopta el eco como la partida que se ve (`adopt`: `fillWith`
+    en el mismo objeto, sesion espejo nueva y `TurnControls.viewReplaced`); `TurnControls.perform`
+    anima los sucesos del `result` como en una partida de esta pantalla (`events.play`).
 14. **Un aliado** recibe su `events` al momento (es de su alianza): `eventsArrived` lo pone en la cola
     como jugada `'events'` (con `before` y `after`). Su pantalla esta mirando la cola
     (`OnlinePlay.untilInput` → `showBatch`): pone en la partida que se ve `animationView(before,
@@ -153,7 +155,7 @@ sequenceDiagram
   participant K as Courier
   P->>S: Atacar
   S->>S: actionProblem(vista del equipo)
-  S->>C: client.nextEcho(); client.act({ kind: 'attack' })
+  S->>C: client.act({ kind: 'attack' })
   C->>O: { kind: 'act', seq, action } (WebSocket)
   O->>A: handle(seat, message)
   A->>R: handle(seat, message)
@@ -167,7 +169,7 @@ sequenceDiagram
   A-->>O: Outgoing[]
   O->>O: sync: relojes, snapshot, alarma
   O-->>C: result; events (eco)
-  C-->>S: act() resuelve con el result; nextEcho() con la vista al dia
+  C-->>S: act() resuelve con los sucesos del result y la vista al dia (el eco)
   S->>S: adopt(vista); events.play(sucesos)
   S-->>P: el combate animado
   Note over K: los enemigos reciben su lote cuando la sala para (deliverAll)
@@ -236,9 +238,11 @@ nota. Mientras, el turno esta ocupado (`TurnControls.busy`) y no se puede pulsar
   `events` sin vista entera, y la partida cuando la sala rechaza una accion (`OnlinePlay.askRoom`).
 - **La vista que llega en la partida**: `OnlinePlay` atiende cada jugada en su orden (`pump`, que
   espera a la accion en curso). Si esta mirando la cola (`untilInput`), la adopta (`adopt`: `fillWith`
-  sobre la partida que se ve, sesion espejo nueva, `TurnControls.viewReplaced`); si es su turno, la
-  adopta igual (`duringOwnTurn`). Lo elegido que ya no esta se suelta: el turno busca sus unidades por
-  uid (`onBoardNow`), no se fia de las de antes.
+  sobre la partida que se ve, sesion espejo nueva, `TurnControls.viewReplaced`); si es su turno, pone
+  la partida al dia con la ultima que sabe el cliente (`duringOwnTurn`), no con la de la jugada: la
+  vista de un `resync` puede atenderse detras del eco de una accion posterior, y volver a ella la
+  desharia en la pantalla. Lo elegido que ya no esta se suelta: el turno busca sus unidades por uid
+  (`onBoardNow`), no se fia de las de antes.
 - **El servidor despierta.** Un Durable Object puede dormirse con los sockets abiertos
   (Hibernation API), y el servidor de Node arranca otra vez con las salas en disco (ahi nadie sigue
   dentro: los clientes vuelven a entrar por su cuenta). `HostedRoom.load` recupera la sala del almacen (`RoomAdapter.restore` →
@@ -293,7 +297,7 @@ nota. Mientras, el turno esta ocupado (`TurnControls.busy`) y no se puede pulsar
 - **Se acaba el tiempo** (`turnSeconds`): `HostedRoom.ring` ('turn') → `adapter.timeOut(seat)` →
   `Room.endTurnOf`: su turno acaba como si hubiera pulsado «Fin de turno», este dentro o no. En su
   pantalla llega, en pleno turno propio, un `turn` de otro equipo o un lote que pasa de turno:
-  `OnlinePlay.route` (`endsOwnTurn`) lo pasa a la cola y avisa al turno (`othersGoOn`), que suelta lo
+  `OnlinePlay.route` (`endsOwnTurn`, con el antes y el despues del propio lote) lo pasa a la cola y avisa al turno (`othersGoOn`), que suelta lo
   elegido y se pone a animar a los demas (si estaba animando lo propio, al acabar).
 
 ### Fin de partida
@@ -422,7 +426,7 @@ puerto; ademas, sus alarmas, arrancar otra vez y servir el juego).
 |---|---|
 | `src/net/serverUrl.ts` | Donde esta el servidor (`VITE_SERVER_URL` o `ilogic.server` en localStorage; "/" es el que sirve el juego) |
 | `src/net/serverLink.ts` | `ServerLink`: el WebSocket con el protocolo encima: saludo, `seq`, reconexion, reenvio, `step` |
-| `src/net/roomClient.ts` | `RoomClient`: los mensajes como partida (`state`) y jugadas (`RoomPlay`, `next`), `act` con su promesa, el eco (y las respuestas perdidas en un corte, `answerLost`); `animationView` para animar un lote |
+| `src/net/roomClient.ts` | `RoomClient`: los mensajes como partida (`state`) y jugadas (`RoomPlay`, `next`), `act` con su promesa, que trae el resultado y su eco (y las respuestas perdidas en un corte, `answerLost`); `animationView` para animar un lote |
 | `src/net/onlineMatch.ts` | `OnlineMatch`: enlace y cliente juntos, con quien los escucha; `inPlay` (conectar y esperar a estar en juego) |
 | `src/net/mirrorSession.ts` | `mirrorSession`: la sesion de la pantalla sobre una vista |
 | `src/net/roomApi.ts` | Las rutas HTTP: `createRoom`, `lobbyOf`, `handToAi` |
