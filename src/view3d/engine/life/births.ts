@@ -61,7 +61,10 @@ export class Births {
   /** Las casillas cerca de lo que se mira y alrededor de donde (casilla y radio redondeados) se buscaron. */
   private nearby: readonly Pos[] = [];
   private readonly nearbyAround = { x: Number.NaN, z: Number.NaN, radius: Number.NaN };
-  /** Con `landing`, a que casillas puede ir el que nace en cada una: se buscan una vez por casilla. */
+  /**
+   * Con `landing`, a que casillas puede ir el que nace en cada una: se buscan una vez por casilla. Las
+   * claves son los mismos objetos de `tiles` (de ahi salen las de `nearby`), que no cambian en la partida.
+   */
   private readonly landings = new Map<Pos, readonly Pos[]>();
 
   constructor(
@@ -141,7 +144,8 @@ export class Births {
     const reach = Math.round(radius);
     if (x === around.x && z === around.z && reach === around.radius) return;
     Object.assign(around, { x, z, radius: reach });
-    this.nearby = this.tiles.filter((pos) => Math.abs(pos.x - x) < reach && Math.abs(pos.y - z) < reach && this.canTakeOff(pos));
+    const isNear = (pos: Pos) => Math.abs(pos.x - x) < reach && Math.abs(pos.y - z) < reach;
+    this.nearby = this.tiles.filter((pos) => isNear(pos) && this.canTakeOff(pos));
   }
 }
 
