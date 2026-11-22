@@ -15,11 +15,31 @@ export function newCanvas(width: number, height: number): { canvas: HTMLCanvasEl
   return { canvas, draw };
 }
 
+/**
+ * La carga de cada letra, que se pide una sola vez: si no llega (sin red, sin el fichero), lo que se
+ * pinte despues no la vuelve a pedir ni llena la consola de avisos. Da si ha cargado.
+ */
+const fontLoads = new Map<string, Promise<boolean>>();
+
+function loadOnce(font: string): Promise<boolean> {
+  let loading = fontLoads.get(font);
+  if (!loading) {
+    loading = document.fonts.load(font).then(
+      () => true,
+      (error: unknown) => {
+        console.warn('No ha cargado la letra', font, error);
+        return false;
+      },
+    );
+    fontLoads.set(font, loading);
+  }
+  return loading;
+}
+
 /** Llama a `repaint` cuando cargue esa letra, si aun no ha cargado (mientras, un lienzo pinta con la de reserva). */
 export function whenFontLoads(font: string, repaint: () => void): void {
   if (document.fonts.check(font)) return;
-  document.fonts
-    .load(font)
-    .then(() => repaint())
-    .catch((error: unknown) => console.warn('No ha cargado la letra', font, error));
+  void loadOnce(font).then((hasLoaded) => {
+    if (hasLoaded) repaint();
+  });
 }
