@@ -69,6 +69,8 @@ function refuseUpgrade(socket: Duplex, status: number): void {
 function upgrader(rooms: NodeRooms, allowedOrigins: string): (incoming: IncomingMessage, socket: Duplex, head: Buffer) => void {
   const sockets = new WebSocketServer({ noServer: true, maxPayload: MAX_FRAME_BYTES });
   return (incoming, socket, head) => {
+    // Node no escucha los errores de un socket que se sube (un corte a medias tumbaria el proceso); `ws` pone los suyos despues.
+    socket.on('error', () => socket.destroy());
     const origin = incoming.headers.origin ?? null;
     if (!isOriginAllowed(origin, allowedOrigins, incoming.headers.host)) return refuseUpgrade(socket, 403);
     const code = socketRoomCode(pathOf(incoming));

@@ -77,6 +77,9 @@ class NodeRoom implements RoomHost {
   accept(socket: WebSocket): void {
     const connection = new NodeSocket(socket);
     this.connections.add(connection);
+    // Una trama que pasa del tope o esta mal hecha: `ws` la cierra solo (y llega 'close'). Sin quien
+    // escuche su 'error', el error tumbaria el proceso con todas las salas.
+    socket.on('error', (error) => console.error('Fallo en una conexion:', error.message));
     socket.on('message', (data, isBinary) => reportFailure(this.room.receive(connection, messageOf(data, isBinary))));
     socket.on('close', () => {
       this.connections.delete(connection);

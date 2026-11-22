@@ -9,19 +9,34 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CLOSE_CODES } from '../../src/hostedRoom';
-import { ROOM_EXPIRY_MS } from '../../src/limits';
+import { MAX_MESSAGE_BYTES, ROOM_EXPIRY_MS } from '../../src/limits';
 import { createRoom, describeServer, joinedRoom, lobbyOf } from '../../test/shared/serverSuite';
-import { SocketClient } from '../../test/shared/socketClient';
+import { closingOf, SocketClient } from '../../test/shared/socketClient';
 import { GAME_ORIGIN } from '../../test/shared/testServer';
 import { useNodeServer } from './nodeTestServer';
 
 /** Lo que se cierra al parar el servidor (1001: «se va»). */
 const GOING_AWAY = 1001;
+/** Lo que cierra `ws` cuando una trama pasa de su tope (1009: «demasiado grande»). */
+const MESSAGE_TOO_BIG = 1009;
 const SECOND = 1000;
 
 describe('las pruebas comunes, en Node', () => {
   const node = useNodeServer();
   describeServer(() => node.server);
+});
+
+describe('lo que no tumba el servidor', () => {
+  const node = useNodeServer();
+
+  it('una trama mas grande de lo que admite `ws` cierra esa conexion, y el servidor sigue', async () => {
+    const { code, clients } = await joinedRoom(node.server);
+    const socket = await node.server.openSocket(code, GAME_ORIGIN);
+    socket.send('x'.repeat(8 * MAX_MESSAGE_BYTES));
+    expect(await closingOf(socket)).toMatchObject({ code: MESSAGE_TOO_BIG });
+    expect((await lobbyOf(node.server, code)).info?.status).toBe('playing');
+    await Promise.all(clients.map((client) => client.take(['turn'])));
+  });
 });
 
 describe('las alarmas en Node', () => {
