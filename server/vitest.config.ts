@@ -1,7 +1,9 @@
 /**
- * Dos clases de tests: los de las piezas puras del servidor (test/unit, en Node, con la sala del
- * nucleo de verdad) y los de integracion (test/workers), que corren dentro de workerd con el Worker y
- * el Durable Object de verdad (@cloudflare/vitest-plugin, con la configuracion de wrangler.toml).
+ * Tres clases de tests: los de las piezas puras del servidor (test/unit, en Node, con la sala del
+ * nucleo de verdad), los de Cloudflare (test/workers), que corren dentro de workerd con el Worker y
+ * el Durable Object de verdad (@cloudflare/vitest-plugin, con la configuracion de wrangler.toml), y
+ * los de Node (node/test), con el servidor de Node de verdad en un puerto. Los de integracion de los
+ * dos comparten las pruebas de test/shared.
  */
 import { fileURLToPath } from 'node:url';
 import { cloudflareTest } from '@cloudflare/vitest-plugin';
@@ -19,6 +21,7 @@ export default defineConfig({
   test: {
     projects: [
       { resolve, server, test: { name: 'unit', include: ['test/unit/**/*.test.ts'] } },
+      { resolve, server, test: { name: 'node', include: ['node/test/**/*.test.ts'], testTimeout: 60_000 } },
       {
         resolve,
         server,

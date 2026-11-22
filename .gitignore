@@ -5,6 +5,7 @@ __pycache__/
 tests/visual/out/
 tools/art/retrodiffusion/inbox/
 .wrangler/
+server/data/
 .env
 .env.*.local
 tests/visual/out/

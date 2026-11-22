@@ -1,7 +1,8 @@
 /**
  * Desde que paginas puede hablar un navegador con el servidor (CORS): la web del juego (GitHub Pages)
- * y las que diga `ALLOWED_ORIGINS` (wrangler.toml), mas localhost y 127.0.0.1 en cualquier puerto
- * (desarrollo). "null" en la lista deja entrar al juego abierto desde un fichero (file://: es lo
+ * y las que diga `ALLOWED_ORIGINS` (wrangler.toml, o la variable de entorno en Node), mas localhost y
+ * 127.0.0.1 en cualquier puerto (desarrollo) y la propia direccion del servidor (el de Node sirve
+ * tambien el juego). "null" en la lista deja entrar al juego abierto desde un fichero (file://: es lo
  * que manda el navegador como origen). Una peticion sin origen (otro servidor, curl) no es de un
  * navegador: no hace falta CORS y pasa. La subida a WebSocket mira el origen igual.
  */
@@ -15,10 +16,22 @@ export const allowedOrigins = (configured: string): string[] =>
     .map((origin) => origin.trim())
     .filter((origin) => origin.length > 0);
 
+/** El `nombre:puerto` de un origen, o null si no es una URL ("null", el de file://). */
+function hostOf(origin: string): string | null {
+  try {
+    return new URL(origin).host;
+  } catch {
+    return null;
+  }
+}
+
+/** La pagina es del mismo sitio que el servidor (`host`: a quien se ha hecho la peticion). */
+const isSameHost = (origin: string, host: string | undefined): boolean => host !== undefined && hostOf(origin) === host;
+
 /** El origen de la peticion puede hablar con el servidor (sin origen, tambien). */
-export function isOriginAllowed(origin: string | null, configured: string): boolean {
+export function isOriginAllowed(origin: string | null, configured: string, host?: string): boolean {
   if (origin === null) return true;
-  return LOCAL_ORIGIN.test(origin) || allowedOrigins(configured).includes(origin);
+  return LOCAL_ORIGIN.test(origin) || isSameHost(origin, host) || allowedOrigins(configured).includes(origin);
 }
 
 const ALLOWED_METHODS = 'GET, POST, OPTIONS';

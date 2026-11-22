@@ -179,7 +179,7 @@ function withCors(response: Response, origin: string | null): Response {
 /** La respuesta del servidor a una peticion: el origen primero, luego la pregunta previa de CORS y luego su ruta. */
 export async function respond(request: Request, setup: ServerSetup): Promise<Response> {
   const origin = request.headers.get('Origin');
-  if (!isOriginAllowed(origin, setup.allowedOrigins)) return refuse('badOrigin');
+  if (!isOriginAllowed(origin, setup.allowedOrigins, new URL(request.url).host)) return refuse('badOrigin');
   if (request.method === 'OPTIONS') return withCors(new Response(null, { status: 204 }), origin);
   return withCors(await route(request, setup.rooms), origin);
 }

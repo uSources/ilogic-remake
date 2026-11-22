@@ -3,19 +3,26 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Servidor de las partidas por la red de Ilogic: Cloudflare Workers + un Durable Object por sala",
+  "description": "Servidor de las partidas por la red de Ilogic: en Cloudflare (Workers + un Durable Object por sala) o en Node, para alojarlo uno mismo",
   "scripts": {
     "dev": "wrangler dev",
-    "typecheck": "tsc --noEmit",
+    "start": "tsx --tsconfig node/tsconfig.json node/src/main.ts",
+    "typecheck": "tsc --noEmit && tsc -p node/tsconfig.json --noEmit",
     "test": "vitest run",
-    "check": "tsc --noEmit && vitest run",
+    "check": "npm run typecheck && vitest run",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.8.0",
     "@cloudflare/workers-types": "5.20261110.1",
+    "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.2",
     "typescript": "5.9",
     "vitest": "^5.0.5",
     "wrangler": "4.160.1"
+  },
+  "dependencies": {
+    "tsx": "^4.23.15",
+    "ws": "^8.23.0"
   }
 }
