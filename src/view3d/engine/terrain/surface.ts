@@ -2,7 +2,7 @@
  * El suelo que rodea el tablero hasta el horizonte, para que no flote en el vacio: un plano muy grande
  * un poco por debajo del tablero (se ve su borde, como un acantilado) que recibe la sombra del mapa y
  * se funde con la niebla del fondo. Lo que se pinta en el lo dice su aspecto (`SurfaceLook`): el mar
- * (sea.ts)... Todos saben a cuantas casillas esta la tierra
+ * (sea.ts), el mar de dunas del desierto (duneSea.ts)... Todos saben a cuantas casillas esta la tierra
  * mas cercana (el borde del tablero o la orilla de un islote), para asentar el tablero con franjas de
  * la orilla hacia fuera, y van en pasos de un texel (16 por casilla), como las casillas.
  */
@@ -27,9 +27,11 @@ export interface SurfaceLook {
   /**
    * El GLSL que pinta `diffuseColor.rgb`. Tiene a mano `texel` y `tile` (el centro del texel y de la
    * casilla de este punto, en casillas), `uTime` (segundos), `surfaceHash(celda)` (de 0 a 1, siempre
-   * igual para la misma celda) y `tilesFromLand(punto)`.
+   * igual para la misma celda), `tilesFromLand(punto)` y lo que defina en `functions`.
    */
   paint: string;
+  /** Funciones GLSL que usa `paint` (van fuera de `main`, despues de las comunes). */
+  functions?: string;
 }
 
 /** La tierra que rodea el suelo: el tablero (centro en el suelo y medio lado, en casillas) y sus islotes. */
@@ -107,7 +109,7 @@ export class Surface {
 
 function surfaceMaterial(look: SurfaceLook, uniforms: Record<string, THREE.IUniform>, isletSlots: number): THREE.Material {
   const colorUniforms = Object.keys(look.colors).map((name) => `uniform vec3 ${uniformName(name)};`);
-  const head = [FRAGMENT_HEAD.replaceAll('ISLET_SLOTS', String(isletSlots)), ...colorUniforms].join('\n');
+  const head = [FRAGMENT_HEAD.replaceAll('ISLET_SLOTS', String(isletSlots)), ...colorUniforms, look.functions ?? ''].join('\n');
   const material = toonMaterial(0xffffff).clone();
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);

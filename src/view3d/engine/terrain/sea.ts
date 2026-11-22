@@ -26,9 +26,6 @@ export interface SeaColors {
 export const TEMPERATE_SEA: SeaColors = { shallow: 0x7fd0ec, mid: 0x5aa2e6, deep: 0x4678d4 };
 /** El del pantano, verde de agua estancada. */
 export const STAGNANT_SEA: SeaColors = { shallow: 0x5e8a6a, mid: 0x44725e, deep: 0x335e54 };
-/** El del desierto, turquesa. */
-export const TROPICAL_SEA: SeaColors = { shallow: 0x7fe0d6, mid: 0x3fb2d0, deep: 0x2f7cc4 };
-export const COLD_SEA: SeaColors = { shallow: 0x9cc8e8, mid: 0x5b8cc8, deep: 0x4466aa };
 const FOAM_COLOR = new THREE.Color(0.93, 0.98, 1);
 const GLINT_COLOR = new THREE.Color(0.86, 0.95, 1);
 

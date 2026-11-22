@@ -1,9 +1,9 @@
 /**
- * Islotes en el mar alrededor del tablero: que el mapa parezca un trozo de un mundo de juguete y no
- * lo unico que hay. Cada uno es una sierra pequeña: se calcula con el mismo relieve que las montañas
- * del tablero (relief.ts, massif.ts), con su color por alturas, roca en las laderas empinadas y
- * manchas (reliefColors.ts); su estilo lo elige el tema (surroundings.ts). Siempre los mismos en cada
- * partida. No son del mapa.
+ * Islotes alrededor del tablero (en el mar; en el desierto, mesetas entre las dunas; en el nevado,
+ * icebergs): que el mapa parezca un trozo de un mundo de juguete y no lo unico que hay. Cada uno es
+ * una sierra pequeña: se calcula con el mismo relieve que las montañas del tablero (relief.ts,
+ * massif.ts), con su color por alturas, roca en las laderas empinadas y manchas (reliefColors.ts); su
+ * estilo lo elige el tema (surroundings.ts). Siempre los mismos en cada partida. No son del mapa.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
@@ -32,8 +32,20 @@ export interface IsletColors {
 export const GREEN_ISLET: IsletColors = { beach: 0xf2d38a, land: 0x6fae3c, peak: 0x8c8676 };
 export const FOREST_ISLET: IsletColors = { beach: 0xe8c880, land: 0x4f8f34, peak: 0x8c8676 };
 export const SWAMP_ISLET: IsletColors = { beach: 0x8a7650, land: 0x58702e, peak: 0x6e6a58 };
-export const DESERT_ISLET: IsletColors = { beach: 0xffe2a0, land: 0xf2c66e, peak: 0xd0712c };
-export const SNOWY_ISLET: IsletColors = { beach: 0xc6d4e6, land: 0xf4f8ff, peak: 0x9eacc2 };
+
+/**
+ * Un iceberg tabular (los del mar helado): una meseta de hielo, de lados rectos y arriba plana, azul
+ * en la linea del agua y cada vez mas blanco hacia arriba.
+ */
+export const ICEBERG: ReliefStyle = {
+  shape: 'mesa',
+  bands: [
+    { from: 0, color: 0x8fc0e4 },
+    { from: 0.2, color: 0xbfe0f2 },
+    { from: 0.45, color: 0xdcedf8 },
+    { from: 0.7, color: 0xf4f9ff },
+  ],
+};
 
 /** Numeros al azar siempre iguales. */
 function seededRandom(seed: number): () => number {

@@ -1,12 +1,17 @@
 /**
  * Lo que rodea el tablero hasta el horizonte, segun el tema del mapa: el suelo (surface.ts) y los
- * cerros que asoman en el (islets.ts), elegidos en un solo sitio. Por ahora todos son el mar con
- * islotes de su tierra. Un tema sin entrada, el de la llanura.
+ * cerros que asoman en el (islets.ts). Decidido con el usuario: no todos los temas son una isla en el
+ * mar (en el desierto chocaba), cada uno tiene su alrededor: el mar con islotes de su tierra; en el
+ * desierto, un mar de dunas con mesetas de cañon; y en el nevado, un mar helado con icebergs. Un tema
+ * sin entrada, el de la llanura.
  */
 import * as THREE from 'three';
-import { buildIslets, DESERT_ISLET, FOREST_ISLET, GREEN_ISLET, isletStyle, planIslets, SNOWY_ISLET, SWAMP_ISLET } from './islets';
+import { DUNE_SEA } from './duneSea';
+import { ICE_SEA } from './iceSea';
+import { buildIslets, FOREST_ISLET, GREEN_ISLET, ICEBERG, isletStyle, planIslets, SWAMP_ISLET } from './islets';
+import { MESA } from './pieces';
 import type { ReliefStyle } from './reliefGrid';
-import { COLD_SEA, seaLook, STAGNANT_SEA, TEMPERATE_SEA, TROPICAL_SEA } from './sea';
+import { seaLook, STAGNANT_SEA, TEMPERATE_SEA } from './sea';
 import { Surface, type SurfaceLook } from './surface';
 
 /** El alrededor de un tema: como es su suelo y el relieve de sus cerros. */
@@ -21,8 +26,8 @@ const ISLAND_IN_THE_SEA: Surrounding = { surface: seaLook(TEMPERATE_SEA), hills:
 const SURROUNDINGS_BY_THEME: Readonly<Record<string, Surrounding>> = {
   Forest: { surface: seaLook(TEMPERATE_SEA), hills: isletStyle(FOREST_ISLET) },
   Swamp: { surface: seaLook(STAGNANT_SEA), hills: isletStyle(SWAMP_ISLET) },
-  Snowy: { surface: seaLook(COLD_SEA), hills: isletStyle(SNOWY_ISLET) },
-  Desert: { surface: seaLook(TROPICAL_SEA), hills: isletStyle(DESERT_ISLET) },
+  Snowy: { surface: ICE_SEA, hills: ICEBERG },
+  Desert: { surface: DUNE_SEA, hills: MESA },
 };
 
 export class Surroundings {

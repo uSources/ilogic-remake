@@ -351,6 +351,18 @@ Decidido con el usuario (16-11-2026): el tablero es **una isla de juguete en un 
 horizonte**, bajo un cielo de dibujo animado. Se eligió frente a una tierra de bloques alrededor (el
 tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
 
+**Cada tema, su alrededor** (decidido con el usuario el 22-11-2026): que todos los temas fueran una
+isla en el mar «es raro», sobre todo en el desierto. El tablero sigue siendo una meseta que sobresale
+de un suelo liso hasta el horizonte (no hace falta barrera: el borde de acantilado dice dónde acaba el
+mapa), pero ese suelo y sus cerros son del tema: el mar con islotes (llanura, bosque y pantano), el
+**mar de dunas** con mesetas de cañón en el desierto y el **mar helado** con icebergs en el nevado.
+Se descartó la tierra del tema alrededor con una barrera invisible: se volvió a probar en el desierto
+(la arena del tablero siguiendo a su altura, más apagada fuera) y, al lado del mar de dunas, el borde
+del mapa casi no se veía (solo en los escalones de altura y en lo sin explorar), lo de fuera parecía
+mapa jugable y la arena de píxeles hasta el horizonte cargaba mucho. De rendimiento iban igual (un
+plano con su shader: unos 0,1 ms por fotograma); para que se pareciera de verdad al tablero haría
+falta relieve de columnas alrededor, y eso sí costaría.
+
 - **Cielo en bandas**: una cúpula con seis bandas secas del horizonte (claro) al cenit (azul), sin
   degradado suave, como la sombra de dos tonos de las piezas. Sol **cuadrado** de píxel con un halo.
 - **Nubes de voxels**: cada nube es la suma de unas cuantas esferas de voxels (1,6 casillas), así el
@@ -364,11 +376,26 @@ tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
   casilla con el borde mellado: **bajío** claro pegado a la tierra, agua media y **hondo** del azul
   del agua del tablero. Al pie de la tierra late una franja de **espuma** de píxel, y los brillos
   son rayitas de tres píxeles que titilan (no líneas largas), solo cerca de la tierra. Los tonos van
-  por tema: templado, turquesa en el desierto, verde de agua estancada en el pantano y frío con nieve.
+  por tema: templado y verde de agua estancada en el pantano.
+- **Mar de dunas** (desierto): arena en vez de agua, con las mismas franjas melladas de casilla. Pegada
+  a la tierra, arena amontonada lisa y clara (hace de bajío); más allá, dunas de través al viento (el
+  mismo que ondula la arena del tablero), más marcadas cuanto más lejos y de poco contraste para no
+  quitarle protagonismo al tablero: cara al sol larga en dos tonos, cresta clara y cara de sotavento
+  en sombra, estrecha. El borde entre tonos va mellado en bloques de tres texels: con ruido de puntos
+  sueltos se veía deshilachado. Por encima corren con el viento hilos de arena (rayitas, como los
+  brillos del mar).
+- **Mar helado** (nevado), con las mismas franjas melladas: pegada a la tierra, agua abierta con
+  trozos de hielo sueltos (enlaza con el agua del tablero y hace que destaque su borde blanco);
+  luego, témpanos separados por canales de agua; y lejos, la banquisa, placas juntas con grietas
+  finas. Las placas son celdas de Voronoi en texels, cada una entera de un tono (hielo, hielo en
+  sombra o nevada): con un círculo de nieve en el centro de cada una parecían huevos fritos. Al pie
+  de la tierra, un reborde de hielo blanco (quieto, en vez de la espuma) y escarcha que titila.
 - **Islotes** alrededor (14, siempre los mismos): cada uno es una sierra pequeña con el relieve de
   las montañas del tablero (`massif.ts`, `reliefColors.ts`): playa baja, tierra del tema, roca pelada
-  en las laderas empinadas y manchas de color, con su propio bajío y espuma. Dicen que el mapa es un
-  trozo de un mundo. Código: `engine/terrain/islets.ts`.
+  en las laderas empinadas y manchas de color, con su propio bajío y espuma. En el desierto son
+  mesetas de cañón a capas, como las del tablero, y en el nevado, icebergs tabulares: mesetas de
+  hielo azul en la línea del agua y blancas arriba. Dicen que el mapa es un trozo de un mundo. Código:
+  `engine/terrain/islets.ts`.
 - **Niebla del horizonte**: del color de abajo del cielo, empieza pasado el mapa (nunca lo tapa) y
   funde el mar con el cielo.
 - **Con el clima**: cielo, nubes y niebla cambian a la vez que la luz: gris y sin sol con lluvia,
@@ -376,9 +403,10 @@ tablero destacaba menos) y a un mar de nubes (seguía pareciendo que flotaba).
 - Para ver el cielo, la cámara se puede inclinar hasta 12° sobre el suelo.
 - Las partículas del clima (copos, polvo) no crecen a menos de 12 casillas de la cámara: con la
   cámara baja un copo pegado al objetivo tapaba media pantalla.
-- Código: `src/view3d/engine/core/sky.ts` (cielo y nubes), `engine/terrain/sea.ts` (mar),
-  `engine/terrain/islets.ts` (islotes) y los colores de cada clima en `engine/core/world.ts`
-  (`WEATHER_MOODS`).
+- Código: `src/view3d/engine/core/sky.ts` (cielo y nubes), `engine/terrain/surroundings.ts` (qué
+  suelo y qué cerros lleva cada tema), `engine/terrain/surface.ts` (el suelo de alrededor),
+  `sea.ts` (mar), `duneSea.ts` (mar de dunas), `iceSea.ts` (mar helado), `islets.ts` (islotes) y los
+  colores de cada clima en `engine/core/world.ts` (`WEATHER_MOODS`).
 
 ## Cómo comprobarlo
 
