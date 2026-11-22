@@ -1056,10 +1056,10 @@ decisiones:
   rinden en el turno propio no se anuncian hasta que llega su lote; el reloj por turno corre en el
   servidor sin cuenta atras en la pantalla.
 
-`tests/visual/online.mjs` (`npm run online`) lo prueba de punta a punta: arranca `wrangler dev` en
-un puerto libre, dos navegadores por `file://` con el servidor en `ilogic.server`, A crea la sala, B
-entra por el enlace, juegan dos turnos cada uno, B pierde la conexion y vuelve sola, recarga por el
-enlace, y los dos ven lo mismo. Esta en el workflow de capturas (informativo).
+La prueba de punta a punta con dos navegadores (`tests/visual/online.mjs`, `npm run online`) se quito
+al pasar a la vista 3D, con la escena 2D que probaba; vuelve con «Jugar en línea en 3D»
+(`docs/IDEAS.md`). Hasta entonces, la sala se prueba sin red (`tests/room.test.ts`) y el servidor con
+sus tests (`npm run server:test`).
 
 ## Graficos
 

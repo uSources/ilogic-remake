@@ -55,10 +55,6 @@ const CORE_FACADES_ONLY = [
 ];
 
 /**
- * Medir sin comprobar (core/measure.ts: el combate suelto, poner unidades) es de las herramientas y los
- * tests, no del juego: ningun fichero de src/ lo importa, con la ruta que sea (con o sin `.ts`, por alias).
- */
-/**
  * La capa del motor de la vista 3D: los unicos ficheros que pueden importar three.js. Es la carpeta
  * src/view3d/engine/ y el playground de modelos (una herramienta, usa el motor directamente). No añadir
  * ficheros a mano: uno nuevo que dibuje va al motor; uno que decida, a su sistema (systems/), sin
@@ -78,6 +74,10 @@ const ONLY_THE_ENGINE_DRAWS = {
     'Solo el motor de la vista 3D importa three.js (ENGINE_FILES): un sistema decide sin el y le pide lo que necesita por una interfaz (docs/ARQUITECTURA.md, "Vista 3D").',
 };
 
+/**
+ * Medir sin comprobar (core/measure.ts: el combate suelto, poner unidades) es de las herramientas y los
+ * tests, no del juego: ningun fichero de src/ lo importa, con la ruta que sea (con o sin `.ts`, por alias).
+ */
 const MEASURING_IS_NOT_THE_GAME = {
   regex: '(^|/)measure(\\.ts)?$',
   message: 'core/measure.ts no comprueba nada: es para tools/ y tests/. El juego cambia la partida con dispatch.',
@@ -340,7 +340,7 @@ export default tseslint.config(
   },
   {
     // Leer partidas no depende del catalogo de misiones: lo da quien lee (SaveContext).
-    files: ['src/core/save.ts', 'src/core/saveMigrations.ts'],
+    files: ['src/core/save.ts'],
     rules: {
       'no-restricted-imports': [
         'error',

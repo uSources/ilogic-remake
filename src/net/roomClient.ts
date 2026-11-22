@@ -13,8 +13,8 @@
  * tiempo) va a la cola como lo de cualquier paso.
  *
  * Sin red ni Phaser: habla con el enlace por `send`/`resync` (ServerLink, o uno falso en los tests).
- * Lo crea `OnlineMatch` (onlineMatch.ts); lo leen el vestibulo (src/menu/online/lobbyScreen.ts) y,
- * en la partida, `OnlinePlay` (src/scenes/game/onlinePlay.ts).
+ * Lo crea `OnlineMatch` (onlineMatch.ts); lo lee el vestibulo (src/menu/online/lobbyScreen.ts). La
+ * partida en 3D aun no lo usa (docs/IDEAS.md, «Jugar en línea en 3D»).
  */
 import type { GameContent } from '../core/content';
 import { loadView, mergeView, type RoomStatus, type SeatId, type ServerMessage, type ViewChange, type ViewSnapshot } from '../core/net';
