@@ -17,9 +17,10 @@ import type { Grid } from '../../../core/util/grid';
 import { BiomeLife } from '../life/biomeLife';
 import { groupBy } from '../core/groupBy';
 import { tileToWorld } from '../core/space';
-import type { GlbLibrary } from '../pieces/glbModels';
-import { pieceAt, tileTop, variantFiles, WATER_LOOKS } from './pieces';
-import { fogged, instanced, shade, tileNoise, type PlacedMesh } from './placed';
+import type { GlbLibrary, StaticPart } from '../pieces/glbModels';
+import { cutPartBelow } from './cutBelow';
+import { pieceAt, type TileModel, tileTop, variantFiles, WATER_LOOKS } from './pieces';
+import { fogged, instanced, instancedParts, shade, terrainParts, tileNoise, type PlacedMesh } from './placed';
 import { buildRelief, type ReliefView } from './relief';
 import { shoreSides, waterClock, waterMaterial, type WaterLook } from './water';
 
@@ -61,17 +62,45 @@ const tilePlace = (pos: Pos, lift: number): THREE.Matrix4 =>
 const LEVEL_HEIGHT = 0.3;
 const liftOf = (s: GameState, pos: Pos): number => elevationAt(s, pos) * LEVEL_HEIGHT;
 
+/** Copias de un modelo: donde va cada una y de que casilla es (para la niebla). */
+interface Copies {
+  positions: Pos[];
+  places: THREE.Matrix4[];
+}
+
+/** Una copia de una casilla, `below` niveles por debajo de su cara de arriba. */
+interface LevelCopy {
+  pos: Pos;
+  below: number;
+}
+
+const copiesOf = (s: GameState, levels: readonly LevelCopy[]): Copies => ({
+  positions: levels.map(({ pos }) => pos),
+  places: levels.map(({ pos, below }) => tilePlace(pos, liftOf(s, pos) - below * LEVEL_HEIGHT)),
+});
+
 /**
  * Donde va cada casilla y, debajo de las altas, una copia por nivel: rellenan el desnivel y en el
  * borde del mapa y frente a lo mas bajo se ven como terrazas (la capa de arriba de cada copia, con
- * su borde de hierba o arena). Cada sitio lleva su casilla (para la niebla).
+ * su borde de hierba o arena). El bloque es mas alto que un nivel: enteras, las copias se pisarian y
+ * sus laterales, en el mismo plano, parpadearian. Por eso solo va entera la de abajo del todo
+ * (`whole`, hasta el fondo del tablero) y las de encima van recortadas a un nivel (`slices`).
  */
-function stackedPlaces(s: GameState, positions: readonly Pos[]): { positions: Pos[]; places: THREE.Matrix4[] } {
-  const stacked = positions.flatMap((pos) => Array.from({ length: elevationAt(s, pos) + 1 }, (_, below) => ({ pos, below })));
-  return {
-    positions: stacked.map(({ pos }) => pos),
-    places: stacked.map(({ pos, below }) => tilePlace(pos, liftOf(s, pos) - below * LEVEL_HEIGHT)),
-  };
+function stackedPlaces(s: GameState, positions: readonly Pos[]): { whole: Copies; slices: Copies } {
+  const bottoms = positions.map((pos) => ({ pos, below: elevationAt(s, pos) }));
+  const levels = positions.flatMap((pos) => Array.from({ length: elevationAt(s, pos) }, (_, below) => ({ pos, below })));
+  return { whole: copiesOf(s, bottoms), slices: copiesOf(s, levels) };
+}
+
+/** Las copias recortadas a un nivel, con solo la parte de arriba del bloque (nada si no hay casillas altas de ese modelo). */
+function levelSlices(parts: readonly StaticPart[], tile: TileModel, slices: Copies): PlacedMesh[] {
+  if (!slices.places.length) return [];
+  const floor = tileTop(tile) - LEVEL_HEIGHT;
+  return instancedParts(
+    parts.map((part) => cutPartBelow(part, floor)),
+    slices.positions,
+    slices.places,
+  );
 }
 
 /** El modelo de la casilla: su clase y, si tiene variantes, una (siempre la misma). */
@@ -90,10 +119,12 @@ function decorPlace(pos: Pos, top: number): THREE.Matrix4 {
 /** Las casillas de cada clase de modelo; las de agua, con el agua que se mueve (water.ts). */
 function tileMeshes(library: GlbLibrary, s: GameState, byFile: ReadonlyMap<string, Pos[]>): PlacedMesh[] {
   return [...byFile].flatMap(([file, tilePositions]) => {
-    const { positions, places } = stackedPlaces(s, tilePositions);
-    const placed = instanced(library, file, positions, places);
-    const water = WATER_LOOKS[pieceAt(s, positions[0]!).tile];
-    if (water) for (const { mesh } of placed) makeWater(mesh, s, positions, water);
+    const tile = pieceAt(s, tilePositions[0]!).tile;
+    const { whole, slices } = stackedPlaces(s, tilePositions);
+    const parts = terrainParts(library, file);
+    const placed = [...instancedParts(parts, whole.positions, whole.places), ...levelSlices(parts, tile, slices)];
+    const water = WATER_LOOKS[tile];
+    if (water) for (const copies of placed) makeWater(copies.mesh, s, copies.positions, water);
     return placed;
   });
 }
@@ -149,6 +180,7 @@ function reliefOf(s: GameState, positions: readonly Pos[]): ReliefView {
     tiles,
     groundAt: (pos) => tileTop(pieceAt(s, pos).tile) + liftOf(s, pos),
     canSpill: (pos) => !terrainAt(s, pos).isWater,
+    spillRestsOnGround: true,
   });
 }
 

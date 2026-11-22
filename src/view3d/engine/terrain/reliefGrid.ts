@@ -37,6 +37,13 @@ export interface ReliefMap {
   groundAt(pos: Pos): number;
   /** Las faldas pueden salirse a esa casilla (no al agua: ahi no se dibujan). */
   canSpill(pos: Pos): boolean;
+  /**
+   * Si lo que se sale a otra casilla empieza en su suelo o baja hasta el fondo, como lo de las casillas
+   * con relieve. En el tablero, en su suelo: debajo esta el bloque de la casilla, y si las columnas
+   * bajaran, sus laterales pisarian los del bloque (en el borde del mapa parpadeaban). Los islotes no
+   * tienen bloque debajo, solo mar: bajan hasta el fondo.
+   */
+  spillRestsOnGround: boolean;
 }
 
 /** Lo que sube el relieve en una subcasilla: cuanto y con que estilo (el del relieve mas alto ahi). */
