@@ -89,8 +89,9 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     en tres PR: (1) el núcleo habla por la red, sin servidor (hecho: `src/core/net`, ver
     `docs/ARQUITECTURA.md`, "Red": el protocolo como datos, la sala `Room` sobre una `GameSession`,
     la niebla de los sucesos y la vista del cliente); (2) el servidor, en Cloudflare Workers con un
-    Durable Object por sala, que guarda la sala (`snapshot`/`restore`), lleva los tiempos y manda a
-    cada uno solo lo que ve (hecho: `server/`); (3) la pantalla: crear una sala, el enlace de
+    Durable Object por sala o en Node para alojarlo uno mismo (la misma sala, `HostedRoom`), que
+    guarda la sala (`snapshot`/`restore`), lleva los tiempos y manda a cada uno solo lo que ve
+    (hecho: `server/`); (3) la pantalla: crear una sala, el enlace de
     invitación y jugar desde la vista y los sucesos que llegan (hecho: `src/net`, «Jugar en línea»;
     ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"). Queda: la cuenta atrás del reloj por turno en la pantalla y avisos fuera de la pestaña (notificaciones
     del navegador). Decidido: el servidor manda (las acciones pasan por la sesión

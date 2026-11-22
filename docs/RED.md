@@ -16,7 +16,7 @@ Tres piezas, en tres sitios:
 | Pieza | Donde | Que es |
 |---|---|---|
 | El nucleo de la red | `src/core/net/` (fachada `src/core/net.ts`) | Una partida por la red **sin red**: el protocolo como datos, la sala (`Room`) que lo habla sobre una `GameSession`, la niebla de los sucesos y la vista de un cliente. TypeScript puro; se prueba sin servidor (`tests/room.test.ts`) |
-| El servidor | `server/src/` | Un Worker de Cloudflare con un Durable Object por sala. Mueve mensajes entre los sockets y la sala, la guarda y lleva los relojes. No sabe de la partida |
+| El servidor | `server/` | La sala del servidor (`HostedRoom`, `server/src/`) alojada en uno de dos sitios: un Worker de Cloudflare con un Durable Object por sala (`server/src/cloudflare/`) o un proceso de Node que cualquiera puede alojar (`server/node/`). Mueve mensajes entre los sockets y la sala, la guarda y lleva los relojes. No sabe de la partida |
 | El cliente | `src/net/`, `src/menu/online/`, `src/scenes/game/onlinePlay.ts` | El navegador: la conexion con la sala, lo que llega convertido en partida y jugadas, la pantalla «Jugar en línea» y lo que la escena hace distinto cuando la partida es por la red |
 
 ## Que garantiza
@@ -52,7 +52,7 @@ Tres piezas, en tres sitios:
 
 | Palabra | En el codigo | Que es |
 |---|---|---|
-| Sala | `Room` (nucleo), `RoomObject` + `RoomAdapter` (servidor) | Una partida por la red: la `GameSession` de verdad, sus asientos, y lo que hay que mandar a cada uno. Se guarda entera como JSON (`RoomSnapshot`) |
+| Sala | `Room` (nucleo), `HostedRoom` + `RoomAdapter` (servidor; lo que da cada sitio, `RoomHost`: el Durable Object `RoomObject` en Cloudflare, `NodeRooms` en Node) | Una partida por la red: la `GameSession` de verdad, sus asientos, y lo que hay que mandar a cada uno. Se guarda entera como JSON (`RoomSnapshot`) |
 | Asiento | `Seat` = `PersonSeat` \| `AiSeat`; su numero, `SeatId` | Un puesto de la partida: hoy uno por equipo (`seat.team`), en el orden de los equipos. El 0 es siempre quien creo la sala |
 | Persona / IA | `PersonSeat` (`kind: 'person'`) / `AiSeat` (`kind: 'ai'`) | Quien juega el asiento. En la partida, el `controller` del equipo es `'human'` o `'ai'` (nombres del nucleo del juego, no de la red): la red solo cambia **quien** mueve a la persona (un `remoteController` en el servidor, un `humanController` en la pantalla) |
 | Ficha | `token` (`PersonSeat.token`) | El secreto con el que una persona entra en su asiento. La pone el servidor (`server/src/codes.ts`) |
@@ -91,11 +91,12 @@ La persona de la pantalla ataca con una unidad. Lo que pasa, en orden, nombrando
    `ServerLink.send`, que le pone el siguiente `seq`, lo guarda en localStorage (`seqStorageKey`), lo
    apunta como sin contestar (`unanswered`) y lo escribe en el WebSocket como JSON. `act` devuelve
    una promesa que se resuelve con el `result` de ese `seq`.
-4. **El Worker** no ve el mensaje: el WebSocket esta aceptado por el Durable Object de la sala
-   (`RoomObject.fetch` lo subio; `server/src/roomObject.ts`). Llega a `RoomObject.webSocketMessage`:
-   comprueba los bytes (`MAX_MESSAGE_BYTES`), carga la sala si estaba dormida (`load`), lee el JSON y,
-   como el socket ya tiene su `Attachment` (asiento, conexion, ficha), llama a
-   `adapter.handle(attachment.seat, message)`.
+4. **El servidor** lo da a la sala, `HostedRoom.receive` (`server/src/hostedRoom.ts`). En Cloudflare
+   el Worker no ve el mensaje: el WebSocket esta aceptado por el Durable Object de la sala
+   (`RoomObject.fetch` lo subio) y llega a `RoomObject.webSocketMessage`; en Node, a la conexion que
+   `NodeRooms.accept` dio a su sala. `receive` comprueba los bytes (`MAX_MESSAGE_BYTES`), carga la
+   sala si no estaba en memoria (`load`), lee el JSON y, como el socket ya tiene su `Attachment`
+   (asiento, conexion, ficha), llama a `adapter.handle(attachment.seat, message)`.
 5. **`RoomAdapter.handle`** (`server/src/roomAdapter.ts`) es un paso fino a `Room.handle`.
 6. **`Room.handle`** (`src/core/net/room.ts`): el asiento es de una persona (si no, 'noSeat'); el
    mensaje tiene forma (`isValidMessage`; si no, 'badMessage'); la persona esta dentro ('notJoined');
@@ -116,9 +117,10 @@ La persona de la pantalla ataca con una unidad. Lo que pasa, en orden, nombrando
     como el los ve) y va **antes** del `events` del paso; despues `advance()` lleva la sesion si hay
     algo que llevar (tras un ataque no: se sigue esperando a la misma persona). Todo sale como una
     lista de `Outgoing`.
-11. **`RoomObject.afterActivity` → `sync`**: pone los relojes al dia (`timers.ts`), guarda la sala
-    entera (`save`: `snapshot` + `meta`, y la alarma del primer reloj) y reparte cada `Outgoing` a los
-    sockets abiertos de su asiento (`deliver`). `restrain` corta a quien lleva demasiados rechazos.
+11. **`HostedRoom.afterActivity` → `sync`**: pone los relojes al dia (`timers.ts`), guarda la sala
+    entera (`save`: `snapshot` + `meta`, y la alarma del primer reloj, `RoomHost.save`) y reparte cada
+    `Outgoing` a los sockets abiertos de su asiento (`deliver`). A quien lleva demasiados rechazos
+    (`isOverRejectionLimit`, contado al llegar cada mensaje) se le corta despues.
 12. **En cada cliente**, `ServerLink.receive`: si el mensaje lleva `seq`, deja de estar sin contestar
     (`answered`); si lleva `step`, tiene que ser el siguiente (`followsStep`; si no, `resync`). Se lo
     pasa a `RoomClient.receive`.
@@ -140,7 +142,7 @@ sequenceDiagram
   participant P as Persona (pantalla)
   participant S as GameScene / OnlinePlay
   participant C as RoomClient + ServerLink
-  participant O as RoomObject (Durable Object)
+  participant O as HostedRoom (Cloudflare o Node)
   participant A as RoomAdapter
   participant R as Room
   participant G as GameSession
@@ -180,8 +182,9 @@ a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.d
    quien crea; los demas, persona o IA) y los relojes. «Empezar» →
    `createRoom(base, { match: SkirmishChoices, turnSeconds?, waitingSeconds? })` (`src/net/roomApi.ts`,
    `POST /rooms`).
-2. `server/src/index.ts`, ruta `createRoom`: comprueba el cuerpo campo a campo (`isRoomRequest`,
-   `roomRequest.ts`), elige un codigo (`newRoomCode`) y llama por RPC a `RoomObject.create` →
+2. `server/src/routes.ts`, ruta `createRoom`: comprueba el cuerpo campo a campo (`isRoomRequest`,
+   `roomRequest.ts`), elige un codigo (`newRoomCode`) y pide la sala a quien aloja el servidor
+   (`RoomDirectory.create`: en Cloudflare, por RPC a `RoomObject.create`) → `HostedRoom.create` →
    `RoomAdapter.create` → `Room.create(config, context)`: `buildMatch` prepara la partida y `seatsFor`
    los asientos, con una ficha por persona (`context.newToken`). Se guarda (`save`) con sus relojes
    (`initialTimers`). La respuesta: el codigo y, por asiento de persona, su ficha y su enlace
@@ -189,9 +192,9 @@ a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.d
 3. Quien creo se queda con el asiento 0 y guarda los enlaces de los demas (`OnlineRoomEntry.invites`,
    `rememberRoom`) para repartirlos desde el vestibulo. Y entra: `OnlineScreens.joinRoom(code, token)`.
 4. **Entrar** (`LobbyScreen.join`, `src/menu/online/lobbyScreen.ts`): `new OnlineMatch(base, code, token)` →
-   `ServerLink.connect` → `GET /rooms/:code/ws` (`index.ts` → `RoomObject.fetch`: la subida a
-   WebSocket) → al abrirse, `hello` con la ficha y las versiones (`CURRENT_PROTOCOL`).
-5. `RoomObject.webSocketMessage` sin `Attachment` → `greet` → `adapter.join(hello)` → `Room.join`:
+   `ServerLink.connect` → `GET /rooms/:code/ws` (la subida a WebSocket: en Cloudflare, `routes.ts` →
+   `RoomObject.fetch`; en Node, `upgrader` en `nodeServer.ts`) → al abrirse, `hello` con la ficha y las versiones (`CURRENT_PROTOCOL`).
+5. `HostedRoom.receive` sin `Attachment` → `greet` → `adapter.join(hello)` → `Room.join`:
    forma y version ('badMessage', 'badVersion'), la ficha es de un asiento (`personWithToken`; si no,
    'badToken'), conexion nueva, y le manda `welcome` (asiento, equipo, versiones, estado, `lastSeq`) y
    su situacion (`sendSituation`: su vista entera y, si toca, a quien se espera o que acabo). Si con
@@ -226,7 +229,8 @@ a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.d
   `OnlinePlay.playDuringOwnTurn` la adopta igual (lo que estuviera a
   medio decidir se abandona).
 - **El servidor despierta.** Un Durable Object puede dormirse con los sockets abiertos
-  (Hibernation API). `RoomObject.load` recupera la sala del almacen (`RoomAdapter.restore` →
+  (Hibernation API), y el servidor de Node arranca otra vez con las salas en disco (ahi nadie sigue
+  dentro: los clientes vuelven a entrar por su cuenta). `HostedRoom.load` recupera la sala del almacen (`RoomAdapter.restore` →
   `Room.restore`: la partida se lee como una guardada y los asientos se comprueban, `isSeatOf`;
   `resume` deja a todos fuera y, si estaba jugando, `advance` sin mandar nada) y vuelve a meter a
   cada socket con la ficha de su `Attachment` (`readmitAll` → `adapter.rejoin(token)`): esos clientes
@@ -247,7 +251,7 @@ a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.d
    - **la partida se decide** (`over`) o ya no juega ninguna persona (`somebodyPlays`): 'ended';
    - **se agota el presupuesto** (`ADVANCE_STEP_BUDGET`, 400 pasos; `RoomContext.stepBudget` en
      los tests): `isMidway()` es true. El servidor lo ve en `sync` (`withContinuation` pone
-     `continueAt: now`), pone la alarma y, en `RoomObject.alarm` ('continue'), llama a
+     `continueAt: now`), pone la alarma y, en `HostedRoom.ring` ('continue'), llama a
      `adapter.continueMatch()` → `Room.continueMatch` → `advance` otra vez, con su propio tiempo de
      CPU. Lo que sale de una alarma llega a los que estan dentro como lo de cualquier paso.
 4. En la pantalla, el `turn` de otro equipo pone «Esperando al equipo N…» en la linea de la conexion
@@ -257,14 +261,14 @@ a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.d
 
 ### Abandono y sustituir por la IA
 
-- **Cerrar la pestaña** no es abandonar: `RoomObject.webSocketClose` → `adapter.leave(seat,
+- **Cerrar la pestaña** no es abandonar: `HostedRoom.forget` → `adapter.leave(seat,
   connection)` → `Room.leave`: la persona queda fuera (`connection: null`, el `Courier` la olvida), su
   asiento sigue siendo suyo y la sala sigue esperandola. Vuelve con el enlace o desde «Mis partidas».
 - **Rendirse** (menu de pausa, dos pulsaciones): `surrender` por la red (`RoomClient.act` lo manda
   como mensaje `surrender`; vale fuera de turno: `isAnyTime`). La sesion lo apunta, el `Courier` lo
   cuenta a todos (es publico) y, si ya no juega ninguna persona, la sala acaba (`ended.abandoned`).
 - **Los que no llegan**: si quien creo pidio una espera (`waitingSeconds`), al vencer
-  (`RoomObject.alarm`, 'waiting') cada asiento vacio pasa a la IA (`adapter.absentSeats` →
+  (`HostedRoom.ring`, 'waiting') cada asiento vacio pasa a la IA (`adapter.absentSeats` →
   `replaceWithAi`) y la partida empieza. Quien creo puede hacerlo antes, asiento a asiento, desde el
   vestibulo (`handToAi`).
 - **`Room.replaceWithAi(seat)`**: el asiento pasa a ser `AiSeat`, la sesion cambia su controlador
@@ -272,7 +276,7 @@ a ser la partida (`OnlinePlay.send`). Las ordenes que empiezan ya (`ActionHost.d
 - **`Room.abandon(seat)`** (su equipo se rinde y queda fuera; si la sala esperaba, ya no se le
   espera) esta en el nucleo y probado, pero hoy el servidor no lo llama: quien se va conserva su
   asiento. Esta para cuando se quiera dar por ido a alguien.
-- **Se acaba el tiempo** (`turnSeconds`): `RoomObject.alarm` ('turn') → `adapter.timeOut(seat)` →
+- **Se acaba el tiempo** (`turnSeconds`): `HostedRoom.ring` ('turn') → `adapter.timeOut(seat)` →
   `Room.endTurnOf`: su turno acaba como si hubiera pulsado «Fin de turno», este dentro o no. En su
   pantalla llega un `turn` de otro equipo en pleno turno propio: `OnlinePlay.playDuringOwnTurn` lo
   atiende poniendose a esperar.
@@ -314,14 +318,14 @@ version de la partida (`SAVE_VERSION`) va aparte en el saludo porque la vista es
 | `result` | `Room.act` | la respuesta a un `act` o `surrender` suyo | `seq`, `result` (`{ ok, events }` con sus sucesos tal como los ve, o `{ ok: false, reason }`) |
 | `turn` | `Courier.sendTurn` (desde `announceTurn` y `sendSituation`) | la sala para esperando a una persona (a todos), y al entrar si ya se esperaba a alguien | `step`, `team`, `day` |
 | `ended` | `Room.advance`, `sendSituation` | la partida se decide o ya no juega ninguna persona | `result` (`MatchResult`), `abandoned` |
-| `error` | `Room.refuse`, `RoomObject.turnAway` | un mensaje que la sala no atiende | `error` (`NetError`), `seq` si lo llevaba |
+| `error` | `Room.refuse`, `HostedRoom.turnAway` | un mensaje que la sala no atiende | `error` (`NetError`), `seq` si lo llevaba |
 
 `NetError`: 'badMessage', 'badVersion', 'badToken', 'noSeat', 'notJoined', 'notPlaying',
 'notYourTurn', 'stale'. Un `hello` que no entra se contesta con `error` y se cierra el socket con su
 codigo (`CLOSE_CODES`: 4400 badMessage, 4401 badToken, 4409 replaced, 4410 gone, 4413 tooBig, 4426
 badVersion, 4429 tooManyRejections).
 
-**Las rutas HTTP** (`server/src/index.ts`, `ROUTES`; el cliente en `src/net/roomApi.ts`):
+**Las rutas HTTP** (`server/src/routes.ts`, `ROUTES`, las mismas en Cloudflare y en Node; el cliente en `src/net/roomApi.ts`):
 
 | Ruta | Que hace | Lleva / devuelve |
 |---|---|---|
@@ -373,27 +377,32 @@ Pruebas: `tests/room.test.ts` (la sala entera por mensajes, con niebla y varios 
 recuperar; que no delata nada), `tests/eventFog.test.ts`, `tests/sim/netClient.ts` (un cliente
 simulado que comprueba cada mensaje, usado tambien por el servidor).
 
-**El servidor (`server/src/`)**:
+**El servidor (`server/src/`, lo comun; despues, quien lo aloja)**:
 
 | Archivo | Que hay |
 |---|---|
-| `index.ts` | El Worker: las rutas (`ROUTES`), CORS, el cuerpo acotado, y buscar el Durable Object de un codigo (`roomOf`) |
-| `roomObject.ts` | `RoomObject`: el Durable Object de una sala. Los sockets (`webSocketMessage`, `greet`, `webSocketClose`), guardar y cargar (`save`, `load`, `readmitAll`), la alarma (`alarm`) y repartir lo que sale (`deliver`) |
+| `routes.ts` | Las rutas (`ROUTES`), CORS, el cuerpo acotado; las salas las da quien aloja el servidor (`RoomDirectory`) |
+| `hostedRoom.ts` | `HostedRoom`: una sala del servidor, se aloje donde se aloje. Los sockets (`receive`, `greet`, `forget`), guardar y cargar (`save`, `load`, `readmitAll`), la alarma (`ring`) y repartir lo que sale (`deliver`) |
+| `roomHost.ts` | `RoomHost`: lo que la sala pide a quien la aloja (guardar con su alarma, cargar, borrar, sus conexiones, la hora) |
+| `cloudflare/` | `index.ts`, el Worker (las rutas con un Durable Object por codigo, `roomOf`); `roomObject.ts`, `RoomObject`: el Durable Object de una sala, con su almacen, su alarma y sus sockets hibernados |
+| `../node/src/` | El servidor de Node: `nodeServer.ts` (HTTP, la subida a WebSocket y el juego compilado), `nodeRooms.ts` (las salas del proceso, con `setTimeout` como alarma), `roomFiles.ts` (un JSON por sala), `config.ts` (las variables de entorno) |
 | `roomAdapter.ts` | `RoomAdapter`: lo unico que toca `Room`, con nombres del servidor; el vestibulo (`lobby`) y dar un asiento a la IA (`handToAi`) |
 | `timers.ts` | Los relojes como datos puros (caducar, el turno, la espera, seguir a medias) y cuando suena la alarma |
 | `roomRequest.ts` | La forma de lo que se pide al crear una sala (`isRoomRequest`) |
 | `codes.ts` | El codigo de sala, las fichas (`newToken`) y `sameToken` |
 | `limits.ts`, `rateLimit.ts`, `cors.ts` | Topes y tiempos; frenar a quien insiste; desde que paginas se puede hablar |
 
-Pruebas: `server/test/unit/` (las piezas puras con la sala de verdad) y `server/test/workers/`
-(el Worker y el objeto de verdad dentro de workerd: dos personas por WebSocket y la IA, volver a
-entrar, despertar, un `seq` repetido, las alarmas).
+Pruebas: `server/test/unit/` (las piezas puras con la sala de verdad), `server/test/shared/` (lo que
+tiene que hacer cualquier servidor: dos personas por WebSocket y la IA, volver a entrar, un `seq`
+repetido, lo que no deja pasar), que corren `server/test/workers/` (el Worker y el objeto de verdad
+dentro de workerd; ademas, despertar y las alarmas) y `server/node/test/` (el servidor de Node en un
+puerto; ademas, sus alarmas, arrancar otra vez y servir el juego).
 
 **El cliente (`src/net/`, el menu y la escena)**, en este orden:
 
 | Archivo | Que hay |
 |---|---|
-| `src/net/serverUrl.ts` | Donde esta el servidor (`VITE_SERVER_URL` o `ilogic.server` en localStorage) |
+| `src/net/serverUrl.ts` | Donde esta el servidor (`VITE_SERVER_URL` o `ilogic.server` en localStorage; "/" es el que sirve el juego) |
 | `src/net/serverLink.ts` | `ServerLink`: el WebSocket con el protocolo encima: saludo, `seq`, reconexion, reenvio, `step` |
 | `src/net/roomClient.ts` | `RoomClient`: los mensajes como partida (`state`) y jugadas (`RoomPlay`, `next`), `act` con su promesa, el eco; `animationView` y `splitByTurn` para animar un lote |
 | `src/net/onlineMatch.ts` | `OnlineMatch`: enlace y cliente juntos, con quien los escucha |

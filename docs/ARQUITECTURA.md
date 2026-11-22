@@ -861,7 +861,7 @@ sequenceDiagram
 ## Red (`core/net`)
 
 Una partida por la red, en el nucleo y sin red: el servidor (un Durable Object en Cloudflare
-Workers) y la pantalla solo tienen que mover mensajes. **El recorrido entero** (que garantiza, el
+Workers, o un proceso de Node para alojarlo uno mismo) y la pantalla solo tienen que mover mensajes. **El recorrido entero** (que garantiza, el
 glosario, el viaje de una jugada funcion a funcion, los mensajes, los estados de la sala y en que
 orden leer los archivos) esta en [`docs/RED.md`](RED.md); aqui, las decisiones que no conviene
 deshacer y el porque:
@@ -952,13 +952,33 @@ por la sesion. `tests/layers.test.ts` y `tests/lintImports.test.ts` lo comprueba
 
 ### Servidor (`server/`)
 
-Un Worker de Cloudflare con un Durable Object por sala (el como se publica, `server/README.md`; el
-recorrido de cada mensaje y las rutas, `docs/RED.md`). Es un adaptador fino sobre `Room`: no sabe de
-la partida, solo mueve lo que la sala devuelve para cada asiento (`Outgoing`), la guarda y lleva los
-relojes. Es un paquete aparte (`server/package.json`, workspace de npm) que importa el nucleo tal cual
+Un adaptador fino sobre `Room` que se puede alojar en dos sitios: un Worker de Cloudflare con un
+Durable Object por sala (la web publica) o un proceso de Node que cualquiera aloja en su casa o en un
+servidor suyo (el como de los dos, `server/README.md`; el recorrido de cada mensaje y las rutas,
+`docs/RED.md`). No sabe de la partida: solo mueve lo que la sala devuelve para cada asiento
+(`Outgoing`), la guarda y lleva los relojes. Es un paquete aparte (`server/package.json`, workspace de npm) que importa el nucleo tal cual
 (`@core/...` → `src/core`): el mismo codigo que la pantalla, sin compilar nada aparte; `npm run check`
 de la raiz acaba con sus tipos y sus tests. Las decisiones:
 
+- **Una sala, dos anfitriones.** Lo que hace una sala del servidor (entrar, cada mensaje, guardarla,
+  recuperarla, sus relojes) esta una sola vez, en `HostedRoom` (`server/src/hostedRoom.ts`), y las
+  rutas tambien (`routes.ts`, sobre `Request`/`Response`). Lo de cada sitio entra por interfaces
+  pequeñas: `RoomHost` (`roomHost.ts`: guardar con la hora de su alarma, cargar, borrar, sus
+  conexiones como `RoomSocket`, la hora) y `RoomDirectory` (las salas por su codigo). Cloudflare
+  (`server/src/cloudflare/`) las da con el almacen, la alarma y los sockets del Durable Object;
+  Node (`server/node/`), con un JSON por sala en disco, un `setTimeout` y `ws`. Un tercer sitio seria
+  otro adaptador, sin tocar la sala. Las pruebas de integracion son las mismas para los dos
+  (`server/test/shared/`). Node va aparte (`server/node/`, con su `tsconfig.json`) porque sus tipos
+  (`@types/node`) y los de workerd chocan.
+- **Node: todo en un proceso.** Las salas viven en memoria y se guardan tras cada mensaje (cada
+  escritura entera o nada: un fichero aparte que se renombra; las de una sala, en fila). Al arrancar
+  se cargan las guardadas y se ponen sus alarmas. Sirve tambien el juego compilado en la misma
+  direccion: un navegador no deja que una pagina https (la web publica) hable con un servidor sin
+  cifrar, que es lo normal en casa; asi el juego se compila con `VITE_SERVER_URL=/`
+  (`npm run build:selfhost`, `.env.selfhost`) y no hace falta CORS ni certificado. Como en Node los
+  mensajes de una conexion se atienden a la vez (en Cloudflare, uno tras otro), lo que depende del
+  orden se hace al llegar cada uno, antes de esperar a guardar (contar los rechazos), y una sala que
+  caduca sale de memoria antes de borrarse.
 - **La ficha no viaja en la URL.** El saludo (`hello`) va como primer mensaje del WebSocket, asi la
   ficha no queda en registros de acceso ni en el historial. Lo que una conexion necesita saber
   (asiento, conexion, ficha) va pegado al socket (`Attachment`, WebSocket Hibernation API) y
@@ -976,21 +996,24 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
   de leer el JSON (`MAX_MESSAGE_BYTES`; los topes de la forma los pone `isValidMessage`); a quien la
   sala le rechaza mas de `MAX_REJECTIONS_PER_WINDOW` mensajes en un minuto (`rateLimit.ts`) se le
   corta; lo que no entra se despide con un codigo de cierre propio (`CLOSE_CODES`).
-- **CORS** (`cors.ts`): la web del juego y lo que diga `ALLOWED_ORIGINS` (wrangler.toml), mas
-  `localhost`, `127.0.0.1` y `null` (el HTML abierto desde un fichero). Sin origen (otro servidor)
-  pasa: no es un navegador.
-- **Lo que hay que configurar** (una vez, `server/README.md`): una cuenta de Cloudflare (vale el plan
+- **CORS** (`cors.ts`): la web del juego y lo que diga `ALLOWED_ORIGINS` (wrangler.toml, o la
+  variable de entorno en Node), mas `localhost`, `127.0.0.1`, la propia direccion del servidor (el de
+  Node sirve el juego) y `null` (el HTML abierto desde un fichero). Sin origen (otro servidor) pasa:
+  no es un navegador.
+- **Lo que hay que configurar en Cloudflare** (una vez, `server/README.md`): una cuenta de Cloudflare (vale el plan
   gratuito: las salas son Durable Objects con SQLite, `new_sqlite_classes`; los clasicos piden el de
   pago), los secretos `CLOUDFLARE_API_TOKEN` y `CLOUDFLARE_ACCOUNT_ID` en GitHub (con ellos,
   `.github/workflows/server.yml` publica con cada push a `main` que toque el servidor o el nucleo;
   sin ellos no hace nada) y la variable `VITE_SERVER_URL` con la URL del Worker (los workflows de
   la web y de las previews la pasan al `vite build`; en local, `.env` a partir de `.env.example`).
-- **Tests**: `server/test/unit` (las piezas puras con la sala de verdad) y `server/test/workers`
-  (`@cloudflare/vitest-plugin`: el Worker y el objeto de verdad dentro de workerd; dos personas por
-  WebSocket y la IA juegan varios dias con el cliente simulado de `tests/sim/netClient.ts`, que
-  comprueba cada mensaje; volver a entrar, despertar el objeto (`evictDurableObject`), un `seq`
-  repetido, el tope de bytes, y las alarmas adelantando los relojes guardados y sonando con
-  `runDurableObjectAlarm`).
+- **Tests**: `server/test/unit` (las piezas puras con la sala de verdad); `server/test/shared`, lo
+  que tiene que hacer cualquier servidor (dos personas por WebSocket y la IA juegan varios dias con
+  el cliente simulado de `tests/sim/netClient.ts`, que comprueba cada mensaje; volver a entrar, un
+  `seq` repetido, el tope de bytes, los rechazos), que corren los dos: `server/test/workers`
+  (`@cloudflare/vitest-plugin`: el Worker y el objeto de verdad dentro de workerd; ademas despertar el
+  objeto, `evictDurableObject`, y las alarmas adelantando los relojes guardados y sonando con
+  `runDurableObjectAlarm`) y `server/node/test` (el servidor de Node en un puerto; ademas sus alarmas
+  con la hora adelantada a mano, arrancar otra vez con las salas en disco y servir el juego).
 
 ### Cliente (`src/net/`, el menu y la escena)
 
