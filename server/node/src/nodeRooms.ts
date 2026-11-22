@@ -127,11 +127,20 @@ export class NodeRooms implements RoomDirectory {
     return rooms;
   }
 
-  /** La sala se apunta antes de esperar a guardarla: dos que se crean a la vez no pasan las dos del tope. */
-  create(code: string, request: RoomRequest): Promise<CreateResult | RoomsFull> {
-    if (this.rooms.has(code)) return Promise.resolve({ ok: false, error: 'exists' });
-    if (this.rooms.size >= this.maxRooms) return Promise.resolve({ ok: false, error: 'full' });
-    return this.add(code).room.create(request);
+  /**
+   * La sala se apunta antes de esperar a guardarla: dos que se crean a la vez no pasan las dos del
+   * tope. Si no se llega a guardar (el disco lleno), se quita: no existe y no ocupa sitio.
+   */
+  async create(code: string, request: RoomRequest): Promise<CreateResult | RoomsFull> {
+    if (this.rooms.has(code)) return { ok: false, error: 'exists' };
+    if (this.rooms.size >= this.maxRooms) return { ok: false, error: 'full' };
+    const entry = this.add(code);
+    try {
+      return await entry.room.create(request);
+    } catch (error) {
+      this.forget(code, entry);
+      throw error;
+    }
   }
 
   info(code: string): Promise<LobbyInfo | null> {

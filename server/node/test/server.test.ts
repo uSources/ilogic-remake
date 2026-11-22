@@ -5,14 +5,18 @@
  * servir el juego en la misma direccion.
  */
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { chmod, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { newRoomCode } from '../../src/codes';
 import { CLOSE_CODES } from '../../src/hostedRoom';
 import { MAX_MESSAGE_BYTES, ROOM_EXPIRY_MS } from '../../src/limits';
 import { bodyOf, createRoom, describeServer, joinedRoom, lobbyOf, post, roomRequest } from '../../test/shared/serverSuite';
 import { closingOf, SocketClient } from '../../test/shared/socketClient';
 import { GAME_ORIGIN } from '../../test/shared/testServer';
+import { NodeRooms } from '../src/nodeRooms';
+import { RoomFiles } from '../src/roomFiles';
 import { useNodeServer } from './nodeTestServer';
 
 /** Lo que se cierra al parar el servidor (1001: «se va»). */
@@ -20,6 +24,11 @@ const GOING_AWAY = 1001;
 /** Lo que cierra `ws` cuando una trama pasa de su tope (1009: «demasiado grande»). */
 const MESSAGE_TOO_BIG = 1009;
 const SECOND = 1000;
+/** Una carpeta donde se puede leer pero no escribir (y la de siempre). */
+const READ_ONLY_DIR = 0o500;
+const WRITABLE_DIR = 0o700;
+/** Root escribe aunque la carpeta no le deje: alli el guardado no se puede hacer fallar asi. */
+const IS_ROOT = process.getuid?.() === 0;
 
 describe('las pruebas comunes, en Node', () => {
   const node = useNodeServer();
@@ -50,6 +59,17 @@ describe('el tope de salas', () => {
     node.advance(ROOM_EXPIRY_MS + SECOND);
     await node.ring(code);
     await createRoom(node.server);
+  });
+
+  it.skipIf(IS_ROOT)('una sala que no se llega a guardar no ocupa sitio', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ilogic-salas-'));
+    const rooms = await NodeRooms.open(await RoomFiles.open(dir), 1);
+    await chmod(dir, READ_ONLY_DIR);
+    await expect(rooms.create(newRoomCode(), roomRequest())).rejects.toThrow();
+    await chmod(dir, WRITABLE_DIR);
+    expect(await rooms.create(newRoomCode(), roomRequest())).toMatchObject({ ok: true });
+    await rooms.shutDown();
+    await rm(dir, { recursive: true, force: true });
   });
 });
 
