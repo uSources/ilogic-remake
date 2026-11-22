@@ -1,6 +1,6 @@
 /**
  * Que lleva cada terreno en 3D (por id de terrain.json): el bloque de su casilla, el decorado de encima,
- * si es relieve y lo que vive en ella (las motas que vuelan y los animalitos del decorado, ambience/). Cada tema puede cambiar los suyos
+ * si es relieve y lo que vive en ella (las motas que vuelan y los animalitos del decorado, engine/life/). Cada tema puede cambiar los suyos
  * (`THEME_PIECES`): el nevado tiene sus montañas y el pantano, todo lo suyo (suelo oliva con charcos,
  * agua turbia con nenufares, cipreses con musgo, juncos y ranas). Un terreno sin entrada se ve segun lo
  * que es (agua, esconde, llano), asi cualquier contenido se puede mirar.
@@ -8,9 +8,9 @@
 import type { TerrainType } from '../../../core/content';
 import { terrainAt, themeOf } from '../../../core/gameContent';
 import type { GameState, Pos } from '../../../core/model';
-import type { CritterSeat } from '../ambience/critters';
-import { FIREFLIES, FROG, SAND_DUST } from '../ambience/life';
-import type { MoteKind } from '../ambience/motes';
+import type { CritterSeat } from '../life/critters';
+import { FIREFLIES, FROG, SAND_DUST } from '../life/kinds';
+import type { MoteKind } from '../life/motes';
 import type { ReliefStyle } from './relief';
 import { CLEAR_WATER, MURKY_WATER, type WaterLook } from './water';
 
@@ -56,9 +56,9 @@ export interface TerrainPiece {
    * (`tile` sigue diciendo de que suelo es), y lo que hay encima se pone en lo alto, como en 2D.
    */
   relief?: ReliefStyle;
-  /** Las motas que vuelan por encima (ambience/life.ts: el polvo, las luciernagas). */
+  /** Las motas que vuelan por encima (life/kinds.ts: el polvo, las luciernagas). */
   motes?: readonly MoteKind[];
-  /** Los animalitos que se sientan en su decorado, y donde (ambience/life.ts: las ranas). */
+  /** Los animalitos que se sientan en su decorado, y donde (life/kinds.ts: las ranas). */
   critters?: readonly CritterSeat[];
 }
 

@@ -34,7 +34,7 @@ import { BoardView } from './pieces/boardView';
 import type { GlbLibrary } from './pieces/glbModels';
 import { GroundMarks } from './pieces/groundMarks';
 import { Wrecks } from './pieces/wrecks';
-import type { Ambience } from './ambience/ambience';
+import type { BiomeLife } from './life/biomeLife';
 import { buildTerrain, type TerrainView } from './terrain/terrain';
 import { buildIslets, planIslets } from './terrain/islets';
 import { Sea } from './terrain/sea';
@@ -227,8 +227,8 @@ export class MatchScene implements ScreenView {
   }
 
   /** Lo que vive en el tablero sin ser de la partida (las motas, los animalitos). */
-  get ambience(): Ambience {
-    return this.terrain.ambience;
+  get life(): BiomeLife {
+    return this.terrain.life;
   }
 
   onFrame(listener: FrameListener): void {
@@ -253,7 +253,7 @@ export class MatchScene implements ScreenView {
     const reach = pose.distance * WEATHER_REACH;
     const viewportHeight = this.canvas.clientHeight;
     this.weather.update(seconds, target, reach, this.world.camera, viewportHeight);
-    this.ambience.update(seconds, target, reach, this.world.camera, viewportHeight);
+    this.life.update(seconds, target, reach, this.world.camera, viewportHeight);
     this.wrecks.update(seconds);
     this.particles.keepEmitting([...this.board.smokeSources(), ...this.wrecks.smokeSources()], seconds);
     this.particles.update(seconds, this.world.camera, viewportHeight);

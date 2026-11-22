@@ -1,7 +1,7 @@
 /**
  * Los animalitos del ambiente: pequeños, sentados en su sitio del decorado (la rana en el nenufar o
  * entre los juncos) y de vez en cuando hacen algo sin irse de ahi (un saltito y se giran). Cada clase
- * es un dato (`CritterKind`, en life.ts: su modelo de Ashfox, lo que mide, cada cuanto se mueve y
+ * es un dato (`CritterKind`, en kinds.ts: su modelo de Ashfox, lo que mide, cada cuanto se mueve y
  * como); aqui solo se mueven sus copias. Con «reducir el movimiento» se quedan quietos.
  */
 import * as THREE from 'three';

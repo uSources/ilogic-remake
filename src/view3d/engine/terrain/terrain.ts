@@ -1,7 +1,7 @@
 /**
  * El terreno en 3D, con los modelos de Ashfox (tools/art/ashfox/models/terrain.mjs, a semejanza del
  * terreno 2D): cada casilla es el bloque de su clase (hierba, agua...) y, si lleva, su decorado encima
- * (arboles, cactus, flores, muñeco de nieve, nenufares), y lo que vive en ella (ambience/: las motas que
+ * (arboles, cactus, flores, muñeco de nieve, nenufares), y lo que vive en ella (engine/life/: las motas que
  * vuelan y los animalitos del decorado, que se oscurecen con la niebla como el). Las montañas y la arena
  * no son casillas sino relieve (relief.ts): sierras, mesetas y dunas que siguen de una casilla a otra.
  * Que lleva cada terreno lo dice pieces.ts. Cada clase de casilla y de decorado es una malla
@@ -13,7 +13,7 @@ import { terrainAt } from '../../../core/gameContent';
 import { mapGrid } from '../../../core/mapGrid';
 import type { GameState, Pos } from '../../../core/model';
 import type { Grid } from '../../../core/util/grid';
-import { Ambience } from '../ambience/ambience';
+import { BiomeLife } from '../life/biomeLife';
 import { groupBy } from '../core/groupBy';
 import { tileToWorld } from '../core/space';
 import type { GlbLibrary } from '../pieces/glbModels';
@@ -45,7 +45,7 @@ export interface TerrainView {
   /** El agua, que se mueve sola. */
   update(seconds: number): void;
   /** Lo que vive en el (las motas y los animalitos): se mueve con lo que mira la camara. */
-  readonly ambience: Ambience;
+  readonly life: BiomeLife;
 }
 
 /** Un giro de un cuarto de vuelta (0 a 3) que sale siempre igual para la misma casilla. */
@@ -173,14 +173,14 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   const heightOf = (pos: Pos) => heights.at(pos);
   const decorated = positions.filter((pos) => hasDecor(s, pos));
   const decor = decorMeshes(library, s, decorated, heightOf);
-  const ambience = new Ambience(s, library, {
+  const life = new BiomeLife(s, library, {
     positions,
     groundOf: (pos) => tileToWorld(pos, heightOf(pos)),
     decorPlaceOf: (pos) => (hasDecor(s, pos) ? decorPlace(pos, heightOf(pos)) : null),
   });
   const copies = [...tiles, ...decor];
   const object = new THREE.Group();
-  object.add(relief.mesh, ...copies.map((placed) => placed.mesh), ambience.object);
+  object.add(relief.mesh, ...copies.map((placed) => placed.mesh), life.object);
   const placedOf = new Map(tiles.map((placed) => [placed.mesh as THREE.Object3D, placed]));
   const tileOfHit = (hit: THREE.Intersection): Pos | null => {
     if (hit.instanceId === undefined) return null;
@@ -195,11 +195,11 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
     showSeen: (seen) => {
       shade(copies, seen);
       shadeRelief(relief, seen);
-      ambience.showSeen(seen);
+      life.showSeen(seen);
     },
     update: (seconds) => {
       waterClock.value += seconds;
     },
-    ambience,
+    life,
   };
 }

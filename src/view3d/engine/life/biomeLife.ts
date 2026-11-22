@@ -1,7 +1,7 @@
 /**
  * Lo que vive en el tablero sin ser de la partida: las motas que vuelan cerca de lo que se mira
  * (motes.ts) y los animalitos sentados en el decorado (critters.ts). Que lleva cada terreno lo dicen
- * sus piezas (terrain/pieces.ts) y que es cada cosa, life.ts; aqui se junta todo: una bandada por clase
+ * sus piezas (terrain/pieces.ts) y que es cada cosa, kinds.ts; aqui se junta todo: una bandada por clase
  * de mota y unas copias por clase de animal. Lo crea el terreno, porque los animales se oscurecen con
  * la niebla como el decorado en el que se sientan.
  */
@@ -15,8 +15,8 @@ import { shade, tileNoise } from '../terrain/placed';
 import { Critters, type CritterKind, type CritterSpot } from './critters';
 import { MoteSwarm, type MoteKind } from './motes';
 
-/** Lo que el ambiente pregunta al terreno. */
-export interface AmbienceGround {
+/** Lo que la vida del bioma pregunta al terreno. */
+export interface LifeGround {
   /** Las casillas del mapa. */
   positions: readonly Pos[];
   /** El punto del suelo de una casilla (de ahi salen las motas). */
@@ -48,18 +48,18 @@ function seatedAt(s: GameState, pos: Pos, decorPlace: THREE.Matrix4 | null): { k
 }
 
 /** Los sitios de los animales de cada clase. */
-function spotsByCritter(s: GameState, ground: AmbienceGround): Map<CritterKind, CritterSpot[]> {
+function spotsByCritter(s: GameState, ground: LifeGround): Map<CritterKind, CritterSpot[]> {
   const seated = ground.positions.flatMap((pos) => seatedAt(s, pos, ground.decorPlaceOf(pos)));
   const byKind = groupBy(seated, (critter) => critter.kind);
   return new Map([...byKind].map(([kind, critters]) => [kind, critters.map((critter) => critter.spot)]));
 }
 
-export class Ambience {
+export class BiomeLife {
   readonly object = new THREE.Group();
   private readonly swarms: readonly MoteSwarm[];
   private readonly critters: readonly Critters[];
 
-  constructor(s: GameState, library: GlbLibrary, ground: AmbienceGround) {
+  constructor(s: GameState, library: GlbLibrary, ground: LifeGround) {
     this.swarms = [...tilesByMote(s, ground.positions)].map(([kind, tiles]) => new MoteSwarm(kind, tiles, ground.groundOf));
     this.critters = [...spotsByCritter(s, ground)].map(([kind, spots]) => new Critters(library, kind, spots));
     const parts = [

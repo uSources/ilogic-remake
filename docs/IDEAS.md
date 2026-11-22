@@ -40,7 +40,7 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 ## Vida en los biomas
 
 El pantano ya tiene la suya (luciérnagas, ranas) y el sistema común está hecho
-(`src/view3d/engine/ambience/`; cómo se ve, `docs/ESTETICA.md`, «Lo que vive en cada bioma»).
+(`src/view3d/engine/life/`; cómo se ve, `docs/ESTETICA.md`, «Lo que vive en cada bioma»).
 Falta, cada bioma en su PR:
 
 25. **Bosque:** hojas que caen girando (verdes y ocres), ardillas en los troncos, algún ciervo que
@@ -56,7 +56,7 @@ Falta, cada bioma en su PR:
 30. **Que reaccionen a la partida:** los pájaros salen volando cuando una unidad entra en el bosque,
     las ranas se tiran al agua si pasa un tanque y los pingüinos se deslizan al acercarse alguien.
     Los sucesos (`systems/events/`) avisan al motor por un puerto (algo como
-    `ambience.disturb(casilla)`), sin que el motor sepa de reglas.
+    `life.disturb(casilla)`), sin que el motor sepa de reglas.
 
 ## Jugabilidad
 

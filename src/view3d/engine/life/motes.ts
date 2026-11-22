@@ -1,7 +1,7 @@
 /**
  * Las motas del ambiente: puntitos que salen de las casillas de su terreno cerca de lo que se mira,
  * viven un rato y se van (el polvo de la arena, las luciernagas). Cada clase es un dato (`MoteKind`,
- * en life.ts: cuantas, de que color, como vuelan y como brillan); aqui todas se mueven y se dibujan
+ * en kinds.ts: cuantas, de que color, como vuelan y como brillan); aqui todas se mueven y se dibujan
  * igual, una bandada por clase. Con «reducir el movimiento» no salen.
  */
 import * as THREE from 'three';
@@ -51,7 +51,7 @@ export interface MoteKind {
 
 /** Hasta donde llegan las semillas: lo bastante para que dos motas no salgan parecidas. */
 const SEED_SPREAD = 1000;
-/** Las semillas de `vary` desde aqui son del tamaño de cada capa (las de antes, de las clases de life.ts). */
+/** Las semillas de `vary` desde aqui son del tamaño de cada capa (las de antes, de las clases de kinds.ts). */
 const LAYER_SIZE_SALT = 100;
 
 /** Un numero de `range` propio de esa mota: con la misma `salt`, siempre el mismo para ella. */

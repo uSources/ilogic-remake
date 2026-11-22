@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { defaultContent } from '@core/content/default';
 import { describe, expect, it } from 'vitest';
-import { FIREFLIES, FROG } from '../src/view3d/engine/ambience/life';
+import { FIREFLIES, FROG } from '../src/view3d/engine/life/kinds';
 import { pieceAt, TERRAIN_MODEL_FILES, TERRAIN_PIECES, THEME_PIECES } from '../src/view3d/engine/terrain/pieces';
 import { blankState } from './helpers';
 

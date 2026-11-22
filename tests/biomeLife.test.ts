@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { FIREFLIES, SAND_DUST } from '../src/view3d/engine/ambience/life';
-import type { Mote, MoteKind } from '../src/view3d/engine/ambience/motes';
+import { FIREFLIES, SAND_DUST } from '../src/view3d/engine/life/kinds';
+import type { Mote, MoteKind } from '../src/view3d/engine/life/motes';
 import { WIND_DIRECTION } from '../src/view3d/engine/core/space';
 
-/** Lo que vive en los biomas (ambience/life.ts): que las motas se vean bien, sean de la clase que sean. */
+/** Lo que vive en los biomas (engine/life/kinds.ts): que las motas se vean bien, sean de la clase que sean. */
 
 const KINDS: Record<string, MoteKind> = { SAND_DUST, FIREFLIES };
 const SEEDS = [0.1, 1.7, 250, 999];
