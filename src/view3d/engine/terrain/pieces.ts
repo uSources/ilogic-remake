@@ -12,7 +12,7 @@ import type { CritterSeat } from '../life/critters';
 import { FIREFLIES, FROG, SAND_DUST } from '../life/kinds';
 import type { MoteKind } from '../life/motes';
 import type { ReliefStyle } from './relief';
-import { CLEAR_WATER, MURKY_WATER, type WaterLook } from './water';
+import { type BankColors, CLEAR_WATER, MURKY_WATER, type WaterLook } from './water';
 
 /** Las casillas de Ashfox y la altura de su cara de arriba (en unidades de Ashfox: 16 = una casilla). */
 const TILE_TOPS = {
@@ -164,6 +164,19 @@ const SWAMP_PIECES: Readonly<Record<string, TerrainPiece>> = {
   SWater: { tile: 'tile_swamp_shallow', decor: ['reeds'], decorShare: 0.4 },
   DWater: { tile: 'tile_swamp_deep' },
 };
+
+/**
+ * La tierra que sujeta el agua en el borde del mapa (water.ts), por tema: la del lateral de sus
+ * casillas de tierra (los PAINTS de tools/art/ashfox/models/terrain.mjs: tierra, roca helada, barro)
+ * o, en el desierto, la arena del pie de sus dunas.
+ */
+const EARTH_BANK: BankColors = { shade: 0x5a3420, middle: 0x8a5530, light: 0xb47a45 };
+const BANKS_BY_THEME: Readonly<Record<string, BankColors>> = {
+  Snowy: { shade: 0x2c4c7c, middle: 0x4a72a8, light: 0x7aa2d6 },
+  Swamp: { shade: 0x3e2e20, middle: 0x54402c, light: 0x6a5238 },
+  Desert: { shade: 0xc8923f, middle: 0xe3ac55, light: 0xf2c66e },
+};
+export const bankOf = (s: GameState): BankColors => BANKS_BY_THEME[themeOf(s).id] ?? EARTH_BANK;
 
 /** Lo que cambia cada tema (id de themes.json): en el nevado, las montañas de hierba son nevadas (como en 2D). */
 export const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece>>>> = {

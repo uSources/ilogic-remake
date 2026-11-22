@@ -19,10 +19,10 @@ import { groupBy } from '../core/groupBy';
 import { tileToWorld } from '../core/space';
 import type { GlbLibrary, StaticPart } from '../pieces/glbModels';
 import { cutPartBelow } from './cutBelow';
-import { pieceAt, type TileModel, tileTop, variantFiles, WATER_LOOKS } from './pieces';
+import { bankOf, pieceAt, type TileModel, tileTop, variantFiles, WATER_LOOKS } from './pieces';
 import { fogged, instanced, instancedParts, shade, terrainParts, tileNoise, type PlacedMesh } from './placed';
 import { buildRelief, type ReliefView } from './relief';
-import { shoreSides, waterClock, waterMaterial, type WaterLook } from './water';
+import { edgeSides, shoreSides, waterClock, waterMaterial, type WaterLook } from './water';
 
 export { TERRAIN_MODEL_FILES } from './pieces';
 
@@ -129,11 +129,15 @@ function tileMeshes(library: GlbLibrary, s: GameState, byFile: ReadonlyMap<strin
   });
 }
 
-/** Le pone a las casillas de agua su material que se mueve (con sus brillos y su espuma) y, a cada copia, sus orillas. */
+/**
+ * Le pone a las casillas de agua su material que se mueve (con sus brillos, su espuma y la tierra del
+ * tema en el borde del mapa) y, a cada copia, sus orillas y sus lados que dan fuera del mapa.
+ */
 function makeWater(mesh: THREE.InstancedMesh, s: GameState, positions: readonly Pos[], look: WaterLook): void {
-  mesh.material = waterMaterial(mesh.material as THREE.Material, look);
+  mesh.material = waterMaterial(mesh.material as THREE.Material, look, bankOf(s));
   mesh.geometry = mesh.geometry.clone();
   mesh.geometry.setAttribute('aShore', shoreSides(s, positions));
+  mesh.geometry.setAttribute('aEdge', edgeSides(s, positions));
 }
 
 /** Si la casilla lleva decorado: su terreno tiene y le toca (`decorShare`, siempre igual para la misma casilla). */
