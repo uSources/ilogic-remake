@@ -22,67 +22,72 @@ export interface PatchNote {
 /** Separador del texto en ingles dentro de unas notas. */
 const EN_MARK = /^\s*<!--\s*en\s*-->\s*$/im;
 
-export function splitLangs(md: string): { es: string; en: string } {
-  const m = EN_MARK.exec(md);
-  if (!m) return { es: md.trim(), en: md.trim() };
-  const es = md.slice(0, m.index).trim();
-  const en = md.slice(m.index + m[0].length).trim();
+export function splitLangs(markdown: string): { es: string; en: string } {
+  const mark = EN_MARK.exec(markdown);
+  if (!mark) return { es: markdown.trim(), en: markdown.trim() };
+  const es = markdown.slice(0, mark.index).trim();
+  const en = markdown.slice(mark.index + mark[0].length).trim();
   return { es, en: en || es };
 }
 
 /** "v1.2.3", "1.2" o "1.2.3-beta.1" → numeros comparables; null si no es una version. */
-export function parseVersion(v: string): number[] | null {
-  const m = /^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?$/.exec(v.trim());
-  if (!m) return null;
+export function parseVersion(version: string): number[] | null {
+  const found = /^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z.-]+))?$/.exec(version.trim());
+  if (!found) return null;
+  const [, major, minor, patch, prerelease] = found;
   // Una prerelease va antes que la version final: 1.0.0-beta < 1.0.0.
-  return [Number(m[1]), Number(m[2] ?? 0), Number(m[3] ?? 0), m[4] ? 0 : 1];
+  return [Number(major), Number(minor ?? 0), Number(patch ?? 0), prerelease ? 0 : 1];
 }
 
-export function normVersion(v: string): string {
-  return v.trim().replace(/^v/i, '');
+export function normVersion(version: string): string {
+  return version.trim().replace(/^v/i, '');
 }
 
 /** Negativo si a < b, 0 si iguales, positivo si a > b. Lo que no es version va al final. */
 export function compareVersions(a: string, b: string): number {
-  const pa = parseVersion(a);
-  const pb = parseVersion(b);
-  if (!pa || !pb) return pa ? 1 : pb ? -1 : a.localeCompare(b);
-  for (let i = 0; i < 4; i++) if (pa[i] !== pb[i]) return pa[i]! - pb[i]!;
-  return 0;
+  const partsA = parseVersion(a);
+  const partsB = parseVersion(b);
+  if (!partsA || !partsB) return partsA ? 1 : partsB ? -1 : a.localeCompare(b);
+  const differs = partsA.findIndex((part, index) => part !== partsB[index]);
+  return differs < 0 ? 0 : (partsA[differs] ?? 0) - (partsB[differs] ?? 0);
 }
 
 /** Cabecera de version del CHANGELOG: "## [0.1.0] - 2026-10-29 — Titulo" (corchetes, fecha y titulo opcionales). */
 const HEAD = /^##\s+\[?v?(\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?)\]?(?:\s*[-–(]\s*(\d{4}-\d{2}-\d{2})\)?)?(?:\s*[—–-]\s*(.+?))?\s*$/;
 
-export function parseChangelog(md: string): PatchNote[] {
-  const out: PatchNote[] = [];
-  let cur: { version: string; date: string; title: string; lines: string[] } | null = null;
+export function parseChangelog(markdown: string): PatchNote[] {
+  const notes: PatchNote[] = [];
+  let current: { version: string; date: string; title: string; lines: string[] } | null = null;
   const flush = () => {
-    if (cur)
-      out.push({
-        version: cur.version,
-        title: cur.title,
-        date: cur.date,
-        body: splitLangs(cur.lines.join('\n')),
+    if (current)
+      notes.push({
+        version: current.version,
+        title: current.title,
+        date: current.date,
+        body: splitLangs(current.lines.join('\n')),
         url: null,
         download: null,
-        prerelease: (parseVersion(cur.version)?.[3] ?? 1) === 0,
+        prerelease: (parseVersion(current.version)?.[3] ?? 1) === 0,
       });
   };
-  for (const line of md.split(/\r?\n/)) {
-    const h = HEAD.exec(line);
-    if (h) {
+  for (const line of markdown.split(/\r?\n/)) {
+    const header = HEAD.exec(line);
+    if (header) {
       flush();
-      cur = { version: h[1]!, date: h[2] ?? '', title: h[3] ?? '', lines: [] };
+      const [, version = '', date = '', title = ''] = header;
+      current = { version, date, title, lines: [] };
     } else if (/^#{1,2}\s/.test(line)) {
       // Otra cabecera de primer nivel (no de version): termina la anterior.
       flush();
-      cur = null;
-    } else if (cur) cur.lines.push(line);
+      current = null;
+    } else if (current) current.lines.push(line);
   }
   flush();
-  return out.sort((a, b) => compareVersions(b.version, a.version));
+  return notes.sort((a, b) => compareVersions(b.version, a.version));
 }
+
+/** "2026-10-29": lo que se queda de una fecha ISO con hora. */
+const ISO_DATE_LENGTH = 10;
 
 /** Lo que el juego usa de una Release de la API de GitHub. */
 export interface GithubRelease {
@@ -96,34 +101,34 @@ export interface GithubRelease {
   assets?: { name: string; browser_download_url: string }[];
 }
 
-export function fromRelease(r: GithubRelease): PatchNote | null {
-  if (r.draft || !parseVersion(r.tag_name)) return null;
-  const version = normVersion(r.tag_name);
+export function fromRelease(release: GithubRelease): PatchNote | null {
+  if (release.draft || !parseVersion(release.tag_name)) return null;
+  const version = normVersion(release.tag_name);
   // El nombre suele ser "v0.1.0 — Titulo": se quita la version.
-  const title = (r.name ?? '').replace(/^v?\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?\s*[—–:-]?\s*/, '').trim();
-  const html = r.assets?.find((a) => /\.html$/i.test(a.name));
+  const title = (release.name ?? '').replace(/^v?\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?\s*[—–:-]?\s*/, '').trim();
+  const html = release.assets?.find((asset) => /\.html$/i.test(asset.name));
   return {
     version,
     title,
-    date: (r.published_at ?? '').slice(0, 10),
-    body: splitLangs(r.body ?? ''),
-    url: r.html_url,
+    date: (release.published_at ?? '').slice(0, ISO_DATE_LENGTH),
+    body: splitLangs(release.body ?? ''),
+    url: release.html_url,
     download: html?.browser_download_url ?? null,
-    prerelease: r.prerelease,
+    prerelease: release.prerelease,
   };
 }
 
 /** Une las notas de GitHub con las del juego: manda GitHub, salvo que su texto venga vacio. */
 export function mergeNotes(local: PatchNote[], remote: PatchNote[]): PatchNote[] {
   const byVersion = new Map<string, PatchNote>();
-  for (const n of local) byVersion.set(n.version, n);
-  for (const r of remote) {
-    const l = byVersion.get(r.version);
-    byVersion.set(r.version, {
-      ...r,
-      title: r.title || l?.title || '',
-      date: r.date || l?.date || '',
-      body: r.body.es || r.body.en ? r.body : (l?.body ?? r.body),
+  for (const note of local) byVersion.set(note.version, note);
+  for (const release of remote) {
+    const own = byVersion.get(release.version);
+    byVersion.set(release.version, {
+      ...release,
+      title: release.title || own?.title || '',
+      date: release.date || own?.date || '',
+      body: release.body.es || release.body.en ? release.body : (own?.body ?? release.body),
     });
   }
   return [...byVersion.values()].sort((a, b) => compareVersions(b.version, a.version));

@@ -30,27 +30,27 @@ function InlineText({ parts }: { parts: Inline[] }) {
   return (
     <>
       {parts.map((part): ComponentChildren => {
-        switch (part.t) {
+        switch (part.kind) {
           case 'text':
-            return part.v;
+            return part.text;
           case 'strong':
             return (
               <strong>
-                <InlineText parts={part.c} />
+                <InlineText parts={part.children} />
               </strong>
             );
           case 'em':
             return (
               <em>
-                <InlineText parts={part.c} />
+                <InlineText parts={part.children} />
               </em>
             );
           case 'code':
-            return <code>{part.v}</code>;
+            return <code>{part.text}</code>;
           case 'link':
             return (
               <a href={part.href} target="_blank" rel="noopener noreferrer">
-                <InlineText parts={part.c} />
+                <InlineText parts={part.children} />
               </a>
             );
         }
@@ -59,13 +59,13 @@ function InlineText({ parts }: { parts: Inline[] }) {
   );
 }
 
-function List({ block }: { block: Extract<Block, { t: 'list' }> }) {
+function List({ block }: { block: Extract<Block, { kind: 'list' }> }) {
   const Tag = block.ordered ? 'ol' : 'ul';
   return (
     <Tag>
       {block.items.map((item) => (
         <li class={item.depth ? 'sub' : ''}>
-          <InlineText parts={item.c} />
+          <InlineText parts={item.children} />
         </li>
       ))}
     </Tag>
@@ -77,32 +77,32 @@ function Blocks({ blocks }: { blocks: Block[] }) {
   return (
     <>
       {blocks.map((block): ComponentChildren => {
-        switch (block.t) {
-          case 'h':
+        switch (block.kind) {
+          case 'heading':
             return block.level <= 2 ? (
               <h3>
-                <InlineText parts={block.c} />
+                <InlineText parts={block.children} />
               </h3>
             ) : (
               <h4>
-                <InlineText parts={block.c} />
+                <InlineText parts={block.children} />
               </h4>
             );
-          case 'p':
+          case 'paragraph':
             return (
               <p>
-                <InlineText parts={block.c} />
+                <InlineText parts={block.children} />
               </p>
             );
           case 'quote':
             return (
               <blockquote>
-                <InlineText parts={block.c} />
+                <InlineText parts={block.children} />
               </blockquote>
             );
           case 'code':
-            return <pre>{block.v}</pre>;
-          case 'hr':
+            return <pre>{block.text}</pre>;
+          case 'rule':
             return <hr />;
           case 'list':
             return <List block={block} />;

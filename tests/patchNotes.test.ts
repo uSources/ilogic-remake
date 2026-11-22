@@ -54,16 +54,17 @@ describe('notas de parche', () => {
   });
 
   it('markdown: bloques, enlaces seguros y nada de HTML', () => {
-    const b = parseMarkdown(
+    const blocks = parseMarkdown(
       '### Novedades\n- **Campaña** con `6` misiones\n  - sub\n1. uno\n\n<script>alert(1)</script>texto [x](javascript:alert(1)) y https://github.com/a/b.\n\n---\n> cita',
     );
-    expect(b.map((x) => x.t)).toEqual(['h', 'list', 'list', 'p', 'hr', 'quote']);
-    const list = b[1] as Extract<(typeof b)[number], { t: 'list' }>;
-    expect(list.items.map((i) => i.depth)).toEqual([0, 1]);
-    const p = JSON.stringify(b[3]);
-    expect(p).not.toContain('script');
-    expect(p).not.toContain('javascript');
-    expect(p).toContain('"href":"https://github.com/a/b"');
-    expect(parseInline('a *b* _c_ **d**').map((x) => x.t)).toEqual(['text', 'em', 'text', 'em', 'text', 'strong']);
+    expect(blocks.map((block) => block.kind)).toEqual(['heading', 'list', 'list', 'paragraph', 'rule', 'quote']);
+    const list = blocks[1];
+    if (list?.kind !== 'list') throw new Error('el segundo bloque tiene que ser una lista');
+    expect(list.items.map((item) => item.depth)).toEqual([0, 1]);
+    const paragraph = JSON.stringify(blocks[3]);
+    expect(paragraph).not.toContain('script');
+    expect(paragraph).not.toContain('javascript');
+    expect(paragraph).toContain('"href":"https://github.com/a/b"');
+    expect(parseInline('a *b* _c_ **d**').map((part) => part.kind)).toEqual(['text', 'em', 'text', 'em', 'text', 'strong']);
   });
 });
