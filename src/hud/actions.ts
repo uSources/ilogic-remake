@@ -27,8 +27,12 @@ export interface UIActions {
   onlineText(text: string): void;
   optionsHover(index: number): void;
   optionsSet(row: number, index: number): void;
-  /** Pulsar el boton de una fila de tecla («Cambiar») o de accion («Por defecto»). */
+  /** Pulsar el boton de una fila de tecla («Cambiar»), de accion («Por defecto») o de volumen (callarlo). */
   optionsPick(row: number): void;
+  /** Llevar el deslizador de volumen de la fila `row` a `level` (mientras se arrastra). */
+  optionsSlide(row: number, level: number): void;
+  /** Soltar el deslizador de la fila `row`: suena una muestra, para oir como queda. */
+  optionsSlideEnd(row: number): void;
   /** Abrir la pestaña `tab` de las opciones. */
   optionsTab(tab: number): void;
   optionsClose(): void;

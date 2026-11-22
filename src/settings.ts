@@ -1,10 +1,11 @@
 /**
- * Configuracion del jugador (idioma, autoguardado, musica, efectos, teclas).
+ * Configuracion del jugador (idioma, autoguardado, volumenes, teclas).
  * En el original se guardaba en data/config al cerrar la ventana;
  * aqui se guarda en localStorage en cada cambio.
  */
 import type { Texts } from './core/content';
 import { parseKeyOverrides, type KeyOverrides } from './controls/keyboard';
+import { DEFAULT_VOLUMES, parseVolumes, type Volumes } from './audio/volumes';
 import { TEXTS, type TextKey } from './i18n';
 
 export type { TextKey };
@@ -16,13 +17,13 @@ export type Speed = 'normal' | 'fast' | 'instant';
 export interface Settings {
   lang: Lang;
   autosave: boolean;
-  music: boolean;
-  /** Efectos de sonido (disparos, pasos, menus). */
-  sfx: boolean;
-  /** Ambiente del tablero: el mar en la costa, pajaros en el bosque, la lluvia... */
-  ambience: boolean;
-  /** Voces de juguete de las unidades al elegirlas y darles ordenes. */
-  voices: boolean;
+  /**
+   * El volumen de cada canal: el general, la musica, los efectos del tablero (disparos, pasos), el
+   * ambiente (el mar en la costa, la lluvia...), las voces de las unidades y la interfaz (menus, botones).
+   */
+  volumes: Volumes;
+  /** Callar todo mientras la pestaña del juego esta escondida (otra pestaña, ventana minimizada). */
+  muteInBackground: boolean;
   /** Al soltar una unidad donde no tiene nada mas que hacer, espera sola. */
   autoWait: boolean;
   /** Tras terminar con una unidad, el cursor salta a la siguiente sin mover. */
@@ -49,10 +50,8 @@ const STORAGE_KEY = 'ilogic.settings';
 const DEFAULTS: Settings = {
   lang: 'es',
   autosave: false,
-  music: false,
-  sfx: true,
-  ambience: true,
-  voices: true,
+  volumes: DEFAULT_VOLUMES,
+  muteInBackground: false,
   autoWait: true,
   autoNext: false,
   speedOwn: 'normal',
@@ -80,10 +79,8 @@ export function parseSaved(saved: Partial<Settings>): Settings {
   return {
     lang: oneOf(saved.lang, LANGS, DEFAULTS.lang),
     autosave: !!saved.autosave,
-    music: !!saved.music,
-    sfx: saved.sfx !== false,
-    ambience: saved.ambience !== false,
-    voices: saved.voices !== false,
+    volumes: parseVolumes(saved.volumes),
+    muteInBackground: !!saved.muteInBackground,
     autoWait: saved.autoWait !== false,
     autoNext: !!saved.autoNext,
     speedOwn: oneOf(saved.speedOwn, SPEEDS, DEFAULTS.speedOwn),

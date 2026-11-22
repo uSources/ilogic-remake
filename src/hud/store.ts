@@ -66,6 +66,8 @@ const DEFAULT_ACTIONS: UIActions = {
   optionsHover: noop,
   optionsSet: noop,
   optionsPick: noop,
+  optionsSlide: noop,
+  optionsSlideEnd: noop,
   optionsTab: noop,
   optionsClose: noop,
   campaignHover: noop,

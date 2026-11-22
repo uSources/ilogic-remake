@@ -2,10 +2,15 @@ import type { options as es } from '../es/options';
 import type { Translation } from '../translation';
 
 export const options: Translation<typeof es> = {
-  music: 'Music',
-  sfx: 'Sound effects',
-  ambience: 'Ambience',
-  voices: 'Unit voices',
+  volume_master: 'Master',
+  volume_music: 'Music',
+  volume_effects: 'Battlefield effects',
+  volume_ambience: 'Ambience',
+  volume_voices: 'Unit voices',
+  volume_interface: 'Interface and menus',
+  volumeMute: 'Mute',
+  volumeMuted: 'Muted',
+  optMuteInBackground: 'Mute in background',
   autosave: 'Autosave',
   language: 'Language',
   on: 'ON',
@@ -18,6 +23,7 @@ export const options: Translation<typeof es> = {
   speed_fast: 'Fast',
   speed_instant: 'Instant',
   options: 'Options',
+  optGroupVolume: 'Volume',
   optGroupSound: 'Sound',
   optGroupGame: 'Game',
   optGroupScreen: 'Display and accessibility',

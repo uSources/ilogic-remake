@@ -60,14 +60,14 @@
   }
 }
 
-/* Controles: la tecla de cada orden y el boton para cambiarla; el grupo ocupa todo el ancho, en columnas */
-.opt-card.keys {
+/* Controles y volumenes: el grupo ocupa todo el ancho, con sus filas en columnas */
+.opt-card.wide {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   column-gap: 24px;
 }
-.opt-card.keys .label {
+.opt-card.wide .label {
   grid-column: 1 / -1;
 }
 .key-row .key-value {
@@ -99,4 +99,84 @@
   50% {
     opacity: 0.4;
   }
+}
+
+/* Volumen de un canal: el altavoz (callarlo), el deslizador y lo que marca. Un nombre largo se parte en
+   dos lineas antes que mandar el deslizador a la siguiente. */
+.volume-row {
+  flex-wrap: nowrap;
+}
+.volume-row .seg-label {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 230px;
+  min-width: 0;
+}
+.volume-mute.px-btn.small {
+  padding: 4px 6px;
+  line-height: 0;
+}
+.speaker {
+  width: 18px;
+  height: 16px;
+}
+.volume-row.silenced:not(.sel) .seg-label {
+  color: var(--muted);
+}
+.volume-row.silenced .volume-mute {
+  color: var(--red-lo);
+}
+.volume-slider {
+  --fill: 0%;
+  flex: 1;
+  min-width: 80px;
+  height: 14px;
+  margin: 0;
+  appearance: none;
+  border: 3px solid var(--ink);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(to right, var(--blue-btn) var(--fill), var(--slot) var(--fill));
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--ink) 18%, transparent);
+  cursor: pointer;
+}
+.volume-row.silenced .volume-slider {
+  background: linear-gradient(to right, var(--lo) var(--fill), var(--slot) var(--fill));
+}
+.volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 22px;
+  border: 3px solid var(--ink);
+  border-radius: 4px;
+  background: var(--panel);
+  box-shadow: inset 0 -3px 0 var(--lo);
+}
+.volume-slider::-moz-range-thumb {
+  width: 8px;
+  height: 16px;
+  border: 3px solid var(--ink);
+  border-radius: 4px;
+  background: var(--panel);
+  box-shadow: inset 0 -3px 0 var(--lo);
+}
+.volume-row.sel .volume-slider::-webkit-slider-thumb {
+  background: var(--gold);
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--ink) 35%, transparent);
+}
+.volume-row.sel .volume-slider::-moz-range-thumb {
+  background: var(--gold);
+}
+.volume-value {
+  min-width: 4.5em;
+  text-align: right;
+  font-size: 14px;
+  color: var(--muted);
+}
+.volume-row.silenced .volume-value {
+  color: var(--red-lo);
 }

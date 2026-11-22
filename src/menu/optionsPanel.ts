@@ -1,7 +1,9 @@
 import { ui, type OptionsRowVM, type OptionsTabVM } from '../hud/store';
 import { keyLabelOf } from '../hud/keyLabels';
-import { setChannelLevel } from '../audio/audioContext';
-import { playMusic, stopMusic, type MusicTrack } from '../audio/music';
+import type { MusicTrack } from '../audio/music';
+import { previewVolume } from '../audio/sfx';
+import { applyVolumes } from '../audio/volumeControl';
+import { LEVEL_STEP, MAX_LEVEL, VOLUME_CHANNELS, withLevel, withMuteToggled, type VolumeChannel, type Volumes } from '../audio/volumes';
 import { saveSettings, settings, t, UI_SCALES, type Settings, type TextKey } from '../settings';
 import type { MenuCommand, MenuContext } from '../controls/menu';
 import { KEY_BINDING_IDS, keyConflict, withKeyBound, type KeyBindingId, type KeyConflict } from '../controls/keyboard';
@@ -22,10 +24,7 @@ const BOOL = [false, true] as const;
 const SPEEDS = ['normal', 'fast', 'instant'] as const;
 
 const ROWS: Row[] = [
-  { key: 'music', group: 'optGroupSound', label: 'music', values: BOOL, show: onOff },
-  { key: 'sfx', group: 'optGroupSound', label: 'sfx', values: BOOL, show: onOff },
-  { key: 'ambience', group: 'optGroupSound', label: 'ambience', values: BOOL, show: onOff },
-  { key: 'voices', group: 'optGroupSound', label: 'voices', values: BOOL, show: onOff },
+  { key: 'muteInBackground', group: 'optGroupSound', label: 'optMuteInBackground', values: BOOL, show: onOff },
   { key: 'autosave', group: 'optGroupGame', label: 'autosave', values: BOOL, show: onOff },
   { key: 'autoWait', group: 'optGroupGame', label: 'optAutoWait', values: BOOL, show: onOff },
   { key: 'autoNext', group: 'optGroupGame', label: 'optAutoNext', values: BOOL, show: onOff },
@@ -44,6 +43,16 @@ const ROWS: Row[] = [
   },
   { key: 'lang', group: 'optGroupLang', label: 'language', values: ['es', 'en'], show: (v) => (v === 'es' ? 'Español' : 'English') },
 ] as Row[];
+
+/** El nombre de cada canal de volumen (textos en i18n/<idioma>/options.ts). */
+const VOLUME_LABELS: Readonly<Record<VolumeChannel, TextKey>> = {
+  master: 'volume_master',
+  music: 'volume_music',
+  effects: 'volume_effects',
+  ambience: 'volume_ambience',
+  voices: 'volume_voices',
+  interface: 'volume_interface',
+};
 
 /** El nombre de cada orden cuya tecla se puede cambiar (textos en i18n/<idioma>/options.ts). */
 const KEY_LABELS: Readonly<Record<KeyBindingId, TextKey>> = {
@@ -65,7 +74,7 @@ const KEY_LABELS: Readonly<Record<KeyBindingId, TextKey>> = {
   options: 'key_options',
 };
 
-/** Las pestañas, en orden: cada una con los grupos de filas que enseña (las teclas van aparte). */
+/** Las pestañas, en orden: cada una con los grupos de filas que enseña. */
 interface Tab {
   id: string;
   title: TextKey;
@@ -75,10 +84,9 @@ interface Tab {
 const TABS: readonly Tab[] = [
   { id: 'game', title: 'optGroupGame', groups: ['optGroupGame'] },
   { id: 'screen', title: 'optGroupScreen', groups: ['optGroupScreen'] },
-  { id: 'soundLang', title: 'optTabSoundLang', groups: ['optGroupSound', 'optGroupLang'] },
+  { id: 'soundLang', title: 'optTabSoundLang', groups: ['optGroupVolume', 'optGroupSound', 'optGroupLang'] },
   { id: 'keys', title: 'optGroupKeys', groups: ['optGroupKeys'] },
 ];
-const KEYS_TAB = 'keys';
 
 /** Por que no vale una tecla, para el jugador. */
 function conflictText(conflict: KeyConflict): string {
@@ -96,6 +104,15 @@ interface Entry {
   pick(): void;
   /** El boton de segmento `choice` con el raton (las filas sin segmentos lo toman como pulsarlas). */
   select(choice: number): void;
+  /** Solo las de volumen: arrastrar el deslizador a `level` y soltarlo. */
+  slide?(level: number): void;
+  slideEnd?(): void;
+}
+
+/** Una fila y el grupo en el que sale (de el depende en que pestaña). */
+interface GroupedEntry {
+  group: TextKey;
+  entry: Entry;
 }
 
 /**
@@ -115,16 +132,22 @@ export class OptionsPanel {
   private notice: { id: KeyBindingId; text: string } | null = null;
 
   constructor(
-    private track: MusicTrack,
+    /** Donde se abre: en el menu (`'menu'`) o en la partida; algunas filas solo valen en el menu. */
+    track: MusicTrack,
     /** Se llama al cambiar algo (p. ej. el idioma, para repintar lo de debajo). */
     private onChange: (key: keyof Settings) => void,
     private onClose: () => void,
   ) {
     const rows = ROWS.filter((row) => !(row.menuOnly && track === 'game'));
-    const keyEntries = [...KEY_BINDING_IDS.map((id) => this.keyEntry(id)), this.resetEntry()];
+    const entries: GroupedEntry[] = [
+      ...VOLUME_CHANNELS.map((channel) => ({ group: 'optGroupVolume' as const, entry: this.volumeEntry(channel) })),
+      ...rows.map((row) => ({ group: row.group, entry: this.choiceEntry(row) })),
+      ...KEY_BINDING_IDS.map((id) => ({ group: 'optGroupKeys' as const, entry: this.keyEntry(id) })),
+      { group: 'optGroupKeys', entry: this.resetEntry() },
+    ];
     this.tabs = TABS.map((tab) => ({
       tab,
-      entries: tab.id === KEYS_TAB ? keyEntries : rows.filter((row) => tab.groups.includes(row.group)).map((row) => this.choiceEntry(row)),
+      entries: entries.filter(({ group }) => tab.groups.includes(group)).map(({ entry }) => entry),
     }));
   }
 
@@ -154,6 +177,8 @@ export class OptionsPanel {
       },
       optionsSet: (index: number, choice: number) => this.setChoice(index, choice),
       optionsPick: (index: number) => this.pick(index),
+      optionsSlide: (index: number, level: number) => this.slide(index, level),
+      optionsSlideEnd: (index: number) => this.entries[index]?.slideEnd?.(),
       optionsTab: (tab: number) => this.showTab(tab),
       optionsClose: () => this.close(),
     });
@@ -210,6 +235,43 @@ export class OptionsPanel {
       step: (direction) => set(current() + direction),
       pick: () => set(current() + 1),
       select: set,
+    };
+  }
+
+  /**
+   * El volumen de un canal: los lados lo bajan y lo suben (con una muestra, para oirlo) y pulsarla lo
+   * calla o lo vuelve a poner.
+   */
+  private volumeEntry(channel: VolumeChannel): Entry {
+    const volume = () => settings.volumes[channel];
+    const update = (volumes: Volumes) => {
+      settings.volumes = volumes;
+      this.changed('volumes');
+    };
+    const slide = (level: number) => update(withLevel(settings.volumes, channel, level));
+    const toggleMute = () => {
+      update(withMuteToggled(settings.volumes, channel));
+      previewVolume(channel);
+    };
+    return {
+      vm: () => ({
+        kind: 'volume',
+        id: `volume-${channel}`,
+        group: t('optGroupVolume'),
+        label: t(VOLUME_LABELS[channel]),
+        level: volume().level,
+        max: MAX_LEVEL,
+        muted: volume().muted,
+        text: volume().muted ? t('volumeMuted') : `${volume().level} %`,
+      }),
+      step: (direction) => {
+        slide(volume().level + direction * LEVEL_STEP);
+        previewVolume(channel);
+      },
+      pick: toggleMute,
+      select: toggleMute,
+      slide,
+      slideEnd: () => previewVolume(channel),
     };
   }
 
@@ -285,11 +347,7 @@ export class OptionsPanel {
   /** Un ajuste ha cambiado: guardarlo, aplicarlo y repintar. */
   private changed(key: keyof Settings): void {
     saveSettings();
-    if (key === 'music') {
-      if (settings.music) playMusic(this.track, true);
-      else stopMusic();
-    }
-    if (key === 'ambience') setChannelLevel('ambience', settings.ambience ? 1 : 0);
+    if (key === 'volumes') applyVolumes();
     this.onChange(key);
     this.publish();
   }
@@ -302,5 +360,10 @@ export class OptionsPanel {
   private setChoice(index: number, choice: number): void {
     this.focus = index;
     this.entries[index]?.select(choice);
+  }
+
+  private slide(index: number, level: number): void {
+    this.focus = index;
+    this.entries[index]?.slide?.(level);
   }
 }

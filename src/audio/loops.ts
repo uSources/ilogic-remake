@@ -2,10 +2,10 @@
  * Los ambientes con Web Audio: la implementacion de `LoopPort` (ambientNames.ts). Cada ambiente se baja y
  * decodifica una sola vez y todos sus emisores comparten el buffer (seis o siete por mapa, unos 40 MB en
  * memoria). Cada bucle empieza en un punto al azar y entra y sale con un fundido; con sitio, se apaga con
- * la distancia antes que los efectos (`AMBIENT_FALLOFF`). Sin ambiente en ajustes, no suena.
+ * la distancia antes que los efectos (`AMBIENT_FALLOFF`). Lo que se oye lo pone el canal del ambiente
+ * (Opciones): aunque este callado, los bucles corren, para que al subirlo se oigan en seguida.
  */
 import { asset, assetsAvailable } from '../assets';
-import { settings } from '../settings';
 import type { AmbientName, LoopHandle, LoopPort } from './ambientNames';
 import { whenUnlocked, type Mixer } from './audioContext';
 import { AMBIENT_FALLOFF, pannerAt, type Point3 } from './spatial';
@@ -84,7 +84,7 @@ function fadeOut({ source, gain }: Playing, context: BaseAudioContext): void {
 /** Empieza `name` en cuanto pueda (el audio se abre con el primer gesto y el fichero tarda en bajar). */
 function startLoop(name: AmbientName, at: Point3 | null, startLevel: number): LoopHandle {
   let playing: Playing | null = null;
-  let isStopped = !settings.ambience;
+  let isStopped = false;
   let level = startLevel;
   whenUnlocked((mixer) => {
     if (isStopped) return;
