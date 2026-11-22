@@ -1,0 +1,25 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = rabbit; background-alpha = 255;
+      palette {
+        rabbit = (#76685a, #8a7c6c, #9e907e);
+        animal_eyes_k = #141824;
+        rabbit_tail = (#d6d0c4, #e4ded2, #f0ebe0);
+      }
+      stamp animal_eyes { pixels = "k.k"; k = animal_eyes_k; }
+      chart body box { origin = (0px, 0px); fill = rabbit; }
+      chart head box { origin = (21px, 0px); fill = rabbit; face north { stamp animal_eyes { at = (0px, 1px); } } }
+      chart ear_left box { origin = (34px, 0px); fill = rabbit; }
+      chart ear_right box { origin = (39px, 0px); fill = rabbit; }
+      chart paw_left box { origin = (51px, 0px); fill = rabbit; }
+      chart paw_right box { origin = (56px, 0px); fill = rabbit; }
+      chart tail box { origin = (44px, 0px); fill = rabbit_tail; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

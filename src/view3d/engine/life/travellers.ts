@@ -3,8 +3,9 @@
  * cerca de lo que se mira y se va (los pajaros que van de una copa a otra, los buitres que dan vueltas,
  * las bolas que ruedan por las dunas). Como las motas, pero con su modelo de Ashfox, mirando hacia donde
  * van: cada clase es un dato (`TravellerKind`, en kinds.ts: su modelo, cuantos, como van, si baten las
- * alas, si ruedan y si van por el suelo). Salen creciendo y se van encogiendo, sin aparecer de golpe.
- * Con «reducir el movimiento» no salen.
+ * alas, si ruedan, si se inclinan al subir y bajar y si van por el suelo). Salen creciendo y se van
+ * encogiendo, sin aparecer de golpe (salvo lo que sale de donde no se ve: el pez, del agua). Con
+ * «reducir el movimiento» no salen.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
@@ -35,6 +36,13 @@ export interface TravellerKind extends BirthPlan {
   onTheGround?: boolean;
   /** Si rueda hacia delante: lo que gira por segundo (radianes) sobre su centro, el origen de su modelo. */
   rolls?: number;
+  /** Si se inclina hacia donde va, tambien arriba y abajo: el pez que salta sube de morro y cae de cabeza. */
+  pitches?: boolean;
+  /**
+   * Si sale creciendo y se va encogiendo (sin decir, si). El que nace y se va donde no se ve (el pez,
+   * bajo el agua) no lo necesita: sale entero.
+   */
+  grows?: boolean;
 }
 
 /** Lo que los viajeros preguntan al terreno. */
@@ -55,8 +63,8 @@ const UP = new THREE.Vector3(0, 1, 0);
 const ACROSS = new THREE.Vector3(1, 0, 0);
 
 /** Cuanto ha crecido a su edad: de nada a entero al nacer y otra vez a nada al irse. */
-const grownAt = (traveller: Flier): number =>
-  THREE.MathUtils.clamp(Math.min(traveller.age, traveller.life - traveller.age) / GROW_SECONDS, 0, 1);
+const grownAt = (kind: TravellerKind, traveller: Flier): number =>
+  kind.grows === false ? 1 : THREE.MathUtils.clamp(Math.min(traveller.age, traveller.life - traveller.age) / GROW_SECONDS, 0, 1);
 
 /** Los viajeros de una clase sobre sus casillas. */
 export class Travellers {
@@ -69,6 +77,7 @@ export class Travellers {
   private readonly lookingAhead: Flier = { home: new THREE.Vector3(), age: 0, life: 0, seed: 0 };
   private readonly facing = new THREE.Quaternion();
   private readonly rolling = new THREE.Quaternion();
+  private readonly tilting = new THREE.Quaternion();
   private readonly scale = new THREE.Vector3();
   private readonly place = new THREE.Matrix4();
 
@@ -112,9 +121,11 @@ export class Travellers {
     const ahead = this.kind.flight(this.soonAfter(traveller), this.ahead).sub(at);
     // Los modelos de Ashfox miran al norte (-z): se giran hacia donde van, en el suelo.
     this.facing.setFromAxisAngle(UP, Math.atan2(-ahead.x, -ahead.z));
+    // Girar sobre el eje de traves hacia arriba sube el morro (el -z de los modelos).
+    if (this.kind.pitches) this.facing.multiply(this.tilting.setFromAxisAngle(ACROSS, Math.atan2(ahead.y, Math.hypot(ahead.x, ahead.z))));
     if (this.kind.rolls) this.facing.multiply(this.rolling.setFromAxisAngle(ACROSS, -traveller.age * this.kind.rolls));
     if (this.kind.onTheGround) at.y += this.ground.heightAt(at.x, at.z);
-    const size = this.kind.size * grownAt(traveller);
+    const size = this.kind.size * grownAt(this.kind, traveller);
     this.scale.set(size * this.wingsOf(traveller), size, size);
     return this.place.compose(at, this.facing, this.scale);
   }
@@ -126,6 +137,7 @@ export class Travellers {
     later.goal = traveller.goal;
     later.life = traveller.life;
     later.seed = traveller.seed;
+    later.rank = traveller.rank;
     later.age = traveller.age + LOOK_AHEAD;
     return later;
   }

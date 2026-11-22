@@ -1,0 +1,12 @@
+ashfox-model 1
+asset butterfly_white {
+  import "./butterfly_white/rig.ashfox" as rig;
+  import "./butterfly_white/paint.ashfox" as paint;
+  import "./butterfly_white/body.ashfox" as body;
+  export asset butterfly_white {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

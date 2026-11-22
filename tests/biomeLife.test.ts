@@ -13,14 +13,20 @@ import {
   FIREFLIES,
   FOREST_BIRDS,
   FROG,
+  GEESE,
+  JUMPING_FISH,
   LIZARD,
   PENGUIN,
+  RABBIT,
+  RABBIT_CLIMB,
   SAND_DUST,
   SEAL,
   SNOW_GLITTER,
   SQUIRREL,
   TUMBLEWEEDS,
   VULTURES,
+  WHITE_BUTTERFLIES,
+  YELLOW_BUTTERFLIES,
 } from '../src/view3d/engine/life/kinds';
 import type { MoteKind } from '../src/view3d/engine/life/motes';
 import { WIND_DIRECTION } from '../src/view3d/engine/core/space';
@@ -267,9 +273,10 @@ describe('lo que vive en el bosque', () => {
     const woods = positions.filter((pos) => pos.x < 4);
     expect(tilesByMote(s, positions)).toEqual(new Map([[FALLING_LEAVES, woods]]));
     expect(tilesByTraveller(s, positions)).toEqual(new Map([[FOREST_BIRDS, woods]]));
+    // En la llanura, sus arboles no llevan nada del bosque: solo pasan por encima las bandadas.
     s.theme = 'Plains';
     expect(tilesByMote(s, positions).size).toBe(0);
-    expect(tilesByTraveller(s, positions).size).toBe(0);
+    expect([...tilesByTraveller(s, positions).keys()]).toEqual([GEESE]);
   });
 
   it('el ciervo solo esta en el borde del bosque que da a la pradera, mirando hacia ella', () => {
@@ -468,5 +475,99 @@ describe('lo que vive en la nieve', () => {
       const gaps = tile.flatMap((spot, index) => tile.slice(index + 1).map((other) => spot.at.distanceTo(other.at)));
       expect(Math.min(...gaps)).toBeGreaterThan(0.1);
     }
+  });
+});
+
+/**
+ * Una llanura en franjas: hierba (con madriguera en las casillas de `y` par), flores, bosque y agua,
+ * de izquierda a derecha.
+ */
+function plainsInStripes() {
+  const s = blankState();
+  s.theme = 'Plains';
+  const positions = [...mapGrid(s).cells()].map((cell) => cell.pos);
+  const terrainOf = (pos: Pos) => (pos.x < 4 ? 'Grass' : pos.x < 8 ? 'Flowers' : pos.x < 12 ? 'Woods' : 'Water');
+  for (const pos of positions) s.map[pos.x]![pos.y] = terrainOf(pos);
+  const hasDecor = (pos: Pos) => terrainOf(pos) !== 'Grass' || pos.y % 2 === 0;
+  const ground = {
+    positions,
+    groundOf: (pos: Pos) => new THREE.Vector3(pos.x, 0, pos.y),
+    heightAt: () => 0,
+    decorPlaceOf: (pos: Pos) => (hasDecor(pos) ? new THREE.Matrix4().makeTranslation(pos.x, 0, pos.y) : null),
+  };
+  return { s, positions, ground, terrainOf, hasDecor };
+}
+
+describe('donde vive cada cosa en la llanura', () => {
+  it('las mariposas salen de las flores, los peces del agua y las bandadas pasan por encima de todo', () => {
+    const { s, positions, terrainOf } = plainsInStripes();
+    const travellers = tilesByTraveller(s, positions);
+    const flowers = positions.filter((pos) => terrainOf(pos) === 'Flowers');
+    expect(travellers.get(YELLOW_BUTTERFLIES)).toEqual(flowers);
+    expect(travellers.get(WHITE_BUTTERFLIES)).toEqual(flowers);
+    expect(travellers.get(JUMPING_FISH)).toEqual(positions.filter((pos) => terrainOf(pos) === 'Water'));
+    expect(travellers.get(GEESE)).toEqual(positions);
+    expect(tilesByMote(s, positions).size).toBe(0);
+  });
+
+  it('los conejos estan en algunas madrigueras de la hierba, metidos bajo tierra hasta que asoman', () => {
+    const { s, ground, terrainOf, hasDecor } = plainsInStripes();
+    const rabbits = spotsByCritter(s, ground).get(RABBIT) ?? [];
+    expect(rabbits.length).toBeGreaterThan(0);
+    expect(rabbits.every((spot) => terrainOf(spot.pos) === 'Grass' && hasDecor(spot.pos))).toBe(true);
+    expect(rabbits.every((spot) => spot.at.y < 0)).toBe(true);
+    s.theme = 'Forest';
+    expect(spotsByCritter(s, ground).get(RABBIT)).toBeUndefined();
+  });
+});
+
+describe('como se mueve lo de la llanura', () => {
+  const along = <Value>(steps: number, value: (share: number) => Value): Value[] =>
+    Array.from({ length: steps + 1 }, (_, step) => value(step / steps));
+
+  it('el conejo asoma de su madriguera, mira a los lados y se vuelve a meter', () => {
+    const poses = along(240, (progress) => ({ ...poseAt(RABBIT.move, progress) }));
+    expect(poses[0]!.lift).toBeCloseTo(0);
+    expect(poses.at(-1)!.lift).toBeCloseTo(0);
+    expect(Math.max(...poses.map((pose) => pose.lift))).toBeGreaterThanOrEqual(RABBIT_CLIMB);
+    expect(Math.min(...poses.map((pose) => pose.yaw))).toBeLessThan(-0.3);
+    expect(Math.max(...poses.map((pose) => pose.yaw))).toBeGreaterThan(0.3);
+  });
+
+  it.each(SEEDS)('el pez salta del agua y vuelve a ella sin salirse de su casilla (semilla %s)', (seed) => {
+    const life = JUMPING_FISH.life[0];
+    const water = new THREE.Vector3(6, 0.06, 2);
+    const jump = along(40, (share) => JUMPING_FISH.flight({ home: water.clone(), age: share * life, life, seed }, new THREE.Vector3()));
+    expect(jump[0]!.y).toBeLessThan(water.y - 0.1);
+    expect(jump.at(-1)!.y).toBeLessThan(water.y - 0.1);
+    expect(Math.max(...jump.map((at) => at.y))).toBeGreaterThan(water.y + 0.1);
+    expect(jump.every((at) => Math.abs(at.x - water.x) < 0.45 && Math.abs(at.z - water.z) < 0.45)).toBe(true);
+  });
+
+  it.each(SEEDS)('las mariposas revolotean sobre su flor (semilla %s)', (seed) => {
+    const life = YELLOW_BUTTERFLIES.life[1];
+    const flower = new THREE.Vector3(3, 0.2, 5);
+    const flight = along(80, (share) => YELLOW_BUTTERFLIES.flight({ home: flower, age: share * life, life, seed }, new THREE.Vector3()));
+    expect(flight.every((at) => Math.hypot(at.x - flower.x, at.z - flower.z) < 0.6 && at.y >= flower.y)).toBe(true);
+    expect(new Set(flight.map((at) => at.x.toFixed(2))).size).toBeGreaterThan(10);
+  });
+
+  it('los gansos nacen en tandas y vuelan en V: uno en cabeza y los demas detras, a un lado y a otro', () => {
+    const line = Array.from({ length: 12 }, (_, x) => ({ x, y: 0 }));
+    const flock = bornWith(GEESE, line, 20).slice(0, GEESE.together);
+    expect(flock.map((goose) => goose.rank)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    const middle = flock.map((goose) => GEESE.flight({ ...goose, age: goose.life / 2 }, new THREE.Vector3()));
+    const leader = middle[0]!;
+    const goal = flock[0]!.goal!;
+    const forward = new THREE.Vector3(goal.x - flock[0]!.home.x, 0, goal.z - flock[0]!.home.z).normalize();
+    const across = new THREE.Vector3(-forward.z, 0, forward.x);
+    const offsets = middle.map((at) => at.clone().sub(leader));
+    expect(offsets.slice(1).every((offset) => offset.dot(forward) < -0.1)).toBe(true);
+    const sides = offsets.slice(1).map((offset) => Math.sign(Math.round(offset.dot(across) * 100)));
+    expect(sides.filter((side) => side > 0)).toHaveLength(3);
+    expect(sides.filter((side) => side < 0)).toHaveLength(3);
+    // Cruzan de lado a lado: empiezan y acaban lejos de donde nacieron.
+    const start = GEESE.flight({ ...flock[0]!, age: 0 }, new THREE.Vector3());
+    expect(start.distanceTo(flock[0]!.home)).toBeGreaterThan(5);
   });
 });

@@ -1,0 +1,23 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 8px); background = butterfly_body; background-alpha = 255;
+      palette {
+        butterfly_body = (#2a2620, #36302a, #423a32);
+        butterfly_yellow = (#d2b23a, #e2c654, #efd86e);
+        wing_tip_d = #2a2620;
+      }
+      stamp wing_tip { pixels = "d"; d = wing_tip_d; }
+      chart body box { origin = (0px, 0px); fill = butterfly_body; }
+      chart forewing_left box { origin = (11px, 0px); fill = butterfly_yellow; face up { stamp wing_tip { at = (0px, 0px); } } }
+      chart forewing_right box { origin = (26px, 0px); fill = butterfly_yellow; face up { stamp wing_tip { at = (3px, 0px); } } }
+      chart hindwing_left box { origin = (41px, 0px); fill = butterfly_yellow; }
+      chart hindwing_right box { origin = (52px, 0px); fill = butterfly_yellow; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

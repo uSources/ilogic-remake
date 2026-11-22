@@ -1,0 +1,12 @@
+ashfox-model 1
+asset goose {
+  import "./goose/rig.ashfox" as rig;
+  import "./goose/paint.ashfox" as paint;
+  import "./goose/body.ashfox" as body;
+  export asset goose {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

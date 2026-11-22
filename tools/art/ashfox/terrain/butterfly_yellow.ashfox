@@ -1,0 +1,12 @@
+ashfox-model 1
+asset butterfly_yellow {
+  import "./butterfly_yellow/rig.ashfox" as rig;
+  import "./butterfly_yellow/paint.ashfox" as paint;
+  import "./butterfly_yellow/body.ashfox" as body;
+  export asset butterfly_yellow {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}

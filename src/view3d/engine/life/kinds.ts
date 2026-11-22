@@ -523,3 +523,154 @@ export const SEAL: CritterKind = {
   every: [6, 14],
   move: { seconds: 3.5, turn: [0, 0], pose: lookAround },
 };
+
+// --- Las mariposas de la llanura: amarillas y blancas, revolotean sobre las flores en lazos que no se
+// repiten, subiendo y bajando, batiendo las alas deprisa (visto desde arriba, se estrechan y se ensanchan).
+
+/** Lo que se alejan de su flor al revolotear (casillas: un lazo grande y otro pequeño encima) y lo deprisa. */
+const BUTTERFLY_LOOP = 0.3;
+const BUTTERFLY_WOBBLE = 0.12;
+const BUTTERFLY_PACE: Range = [0.8, 1.4];
+/** Lo que suben y bajan a cada aletazo (casillas) y lo deprisa (radianes por segundo). */
+const BUTTERFLY_BOB = 0.05;
+const BUTTERFLY_BOB_SPEED = 6;
+
+/** Revolotea alrededor de donde nacio en lazos irregulares (uno grande y otro pequeño, cada uno a su paso). */
+function flitAbout(butterfly: Flier, out: THREE.Vector3): THREE.Vector3 {
+  const phase = vary(butterfly, PHASE, FULL_TURN);
+  const turn = butterfly.age * vary(butterfly, PACE, BUTTERFLY_PACE) + phase;
+  const wobble = turn * 2.7 + phase;
+  out.set(
+    Math.sin(turn) * BUTTERFLY_LOOP + Math.sin(wobble) * BUTTERFLY_WOBBLE,
+    Math.abs(Math.sin(butterfly.age * BUTTERFLY_BOB_SPEED + phase)) * BUTTERFLY_BOB,
+    Math.sin(turn * 0.8 + phase) * BUTTERFLY_LOOP + Math.cos(wobble) * BUTTERFLY_WOBBLE,
+  );
+  return out.add(butterfly.home);
+}
+
+/** Lo comun de las mariposas de cada color. */
+const BUTTERFLY: Omit<TravellerKind, 'model'> = {
+  size: 0.55,
+  count: 4,
+  life: [6, 10],
+  height: [0.12, 0.28],
+  birthRate: () => 0.4,
+  reach: 0.6,
+  flight: flitAbout,
+  wings: { beats: 7, narrowest: 0.15 },
+};
+export const YELLOW_BUTTERFLIES: TravellerKind = { ...BUTTERFLY, model: 'butterfly_yellow' };
+export const WHITE_BUTTERFLIES: TravellerKind = { ...BUTTERFLY, model: 'butterfly_white' };
+
+// --- El conejo de la llanura: escondido en su madriguera (en algunas casillas de hierba); de vez en
+// cuando asoma, mira a un lado y a otro con un saltito y se vuelve a meter.
+
+const RABBIT_SIZE = 0.5;
+/** Lo que sube para asomar: lo que esta metido en el monticulo de su madriguera (casillas; pieces.ts lo sienta ahi). */
+export const RABBIT_CLIMB = 0.18;
+/** Cuando ha salido del todo y cuando empieza a meterse (en lo que va de su movimiento, de 0 a 1). */
+const RABBIT_OUT = 0.12;
+const RABBIT_BACK = 0.85;
+/** Lo que mira a los lados (radianes) y lo que sube su saltito (casillas). */
+const RABBIT_LOOK = 0.6;
+const RABBIT_HOP = 0.025;
+
+/** Asoma deprisa, mira a un lado y a otro con un saltito cada vez y se vuelve a meter. */
+function peekOutOfTheBurrow(progress: number, pose: CritterPose): CritterPose {
+  const out = Math.min(progress / RABBIT_OUT, (1 - progress) / (1 - RABBIT_BACK), 1);
+  const looking = THREE.MathUtils.clamp((progress - RABBIT_OUT) / (RABBIT_BACK - RABBIT_OUT), 0, 1);
+  const glance = Math.sin(looking * Math.PI * 2);
+  pose.lift = Math.sin((out * Math.PI) / 2) * RABBIT_CLIMB + Math.abs(glance) * RABBIT_HOP;
+  pose.yaw = glance * RABBIT_LOOK;
+  return pose;
+}
+
+export const RABBIT: CritterKind = {
+  model: 'rabbit',
+  size: RABBIT_SIZE,
+  every: [4, 10],
+  move: { seconds: 4, turn: [0.3, 1.5], pose: peekOutOfTheBurrow },
+};
+
+// --- Los peces de la llanura: de vez en cuando, cerca de la camara, uno salta del agua en arco y vuelve
+// a caer (sube de morro y cae de cabeza). Sale de debajo del agua: no hace falta que crezca.
+
+/** Lo que avanza en el salto, lo que sube sobre el agua y lo hondo que empieza y acaba (casillas). */
+const FISH_LEAP: Range = [0.25, 0.4];
+const FISH_HEIGHT: Range = [0.14, 0.24];
+const FISH_DEPTH = 0.15;
+/** Lo que se aparta del centro de su casilla, como mucho: el salto no se sale del agua. */
+const FISH_ASIDE: Range = [0, 0.12];
+
+/** Salta en arco cerca del centro de su casilla de agua, de debajo del agua a debajo del agua. */
+function leapOutOfTheWater(fish: Flier, out: THREE.Vector3): THREE.Vector3 {
+  const progress = fish.age / fish.life;
+  const heading = vary(fish, PHASE, FULL_TURN);
+  const aside = vary(fish, CURVE, FISH_ASIDE);
+  const along = (progress - 0.5) * vary(fish, PACE, FISH_LEAP);
+  out.set(
+    Math.round(fish.home.x) + Math.cos(heading) * along - Math.sin(heading) * aside,
+    fish.home.y - FISH_DEPTH + Math.sin(progress * Math.PI) * (vary(fish, LEVEL, FISH_HEIGHT) + FISH_DEPTH),
+    Math.round(fish.home.z) + Math.sin(heading) * along + Math.cos(heading) * aside,
+  );
+  return out;
+}
+
+export const JUMPING_FISH: TravellerKind = {
+  model: 'fish',
+  size: 0.5,
+  count: 3,
+  life: [0.8, 1.1],
+  height: [0, 0],
+  birthRate: () => 0.5,
+  reach: 0.5,
+  flight: leapOutOfTheWater,
+  pitches: true,
+  grows: false,
+};
+
+// --- Las bandadas de la llanura: de vez en cuando pasan unos gansos en V, altos, cruzando lo que se mira
+// de lado a lado sin pararse, batiendo las alas despacio. Cada uno va en su puesto de la V (`rank`).
+
+const GEESE_IN_A_FLOCK = 7;
+/** Lo que se separa cada fila de la V de la de delante, hacia atras y a cada lado (casillas). */
+const VEE_BACK = 0.3;
+const VEE_SIDE = 0.3;
+/** Lo que cruzan en su vida, la mitad antes de pasar por donde nacieron (casillas). */
+const FLOCK_SPAN = 16;
+/** Su vaiven al volar: lo que suben y bajan (casillas) y lo deprisa (radianes por segundo). */
+const GOOSE_BOB = 0.02;
+const GOOSE_BOB_SPEED = 3;
+
+/** Va en su puesto de la V, en linea recta por donde nacio la bandada, hacia donde va (`goal`). */
+function flyInAVee(goose: Flier, out: THREE.Vector3): THREE.Vector3 {
+  const { home } = goose;
+  const goal = goose.goal ?? home;
+  const length = Math.hypot(goal.x - home.x, goal.z - home.z) || 1;
+  const forwardX = (goal.x - home.x) / length;
+  const forwardZ = (goal.z - home.z) / length;
+  const rank = goose.rank ?? 0;
+  const row = Math.ceil(rank / 2);
+  const side = rank % 2 === 1 ? -1 : 1;
+  const along = (goose.age / goose.life - 0.5) * FLOCK_SPAN - row * VEE_BACK;
+  const aside = side * row * VEE_SIDE;
+  return out.set(
+    home.x + forwardX * along - forwardZ * aside,
+    home.y + Math.sin(goose.age * GOOSE_BOB_SPEED + goose.seed) * GOOSE_BOB,
+    home.z + forwardZ * along + forwardX * aside,
+  );
+}
+
+export const GEESE: TravellerKind = {
+  model: 'goose',
+  size: 0.5,
+  count: GEESE_IN_A_FLOCK * 2,
+  together: GEESE_IN_A_FLOCK,
+  life: [12, 16],
+  height: [1.2, 1.4],
+  birthRate: () => 0.04,
+  reach: 0.4,
+  landing: { distance: [3, 6] },
+  flight: flyInAVee,
+  wings: { beats: 2.2, narrowest: 0.4 },
+};

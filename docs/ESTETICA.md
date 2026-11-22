@@ -428,6 +428,25 @@ bosque, en colores apagados.
   adelantarse, girarse, inclinarse y ladearse), y pueden tener otro que hacen alguna vez
   (`sometimes`): la zambullida.
 
+### Llanura
+
+Decidido con el usuario (22-11-2026). Lo suyo va solo en el tema Llanura (`THEME_PIECES.Plains`): la
+hierba, las flores, los árboles y el agua del bosque no lo llevan. Los animales, a 32 por casilla como
+los demás, en colores apagados (nada de rojo ni turquesa, que son de los equipos).
+
+- **Mariposas** amarillas y blancas de cuerpo oscuro, con una mancha oscura en la punta de las alas de
+  delante: revolotean sobre las casillas de flores en lazos que no se repiten, subiendo y bajando y
+  batiendo las alas deprisa (`YELLOW_BUTTERFLIES`, `WHITE_BUTTERFLIES`). Más pequeñas se perdían.
+- **Conejos** pardos grises de cola blanca y orejas largas, metidos en su **madriguera**: un bulto bajo
+  de hierba con la boca de tierra arriba, en una esquina de algunas casillas de hierba. De vez en cuando
+  asoman, miran a un lado y a otro con un saltito y se vuelven a meter (`RABBIT`). Quietos, no se ven.
+  La madriguera de tierra y más alta parecía una maceta.
+- **Peces** verdes plateados que, de vez en cuando, saltan del agua en arco cerca de la cámara: suben
+  de morro y caen de cabeza (`JUMPING_FISH`; salen enteros de debajo del agua, sin crecer).
+- **Bandadas de gansos en V**, pardos de cuello negro con la mejilla clara: de vez en cuando pasan
+  altos, en línea recta de lado a lado de lo que se mira, batiendo las alas despacio, con su sombra en
+  el suelo (`GEESE`: una tanda de siete, cada uno en su puesto de la V).
+
 ## Cielo y fondo
 
 Decidido con el usuario (16-11-2026): el tablero es **una isla de juguete en un mar que llega al

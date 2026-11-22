@@ -2,10 +2,10 @@
  * Que lleva cada terreno en 3D (por id de terrain.json): el bloque de su casilla, el decorado de encima,
  * si es relieve y lo que vive en ella (las motas que vuelan, los animalitos del decorado y los que se van
  * volando, engine/life/; el desierto y la nieve, en sus terrenos). Cada tema puede cambiar los suyos
- * (`THEME_PIECES`): el nevado tiene sus montañas; el bosque, su vida (hojas, ardillas, ciervos y
- * pajaros), y el pantano, todo lo suyo (suelo oliva con charcos, agua turbia con nenufares, cipreses
- * con musgo, juncos y ranas). Un terreno sin entrada se ve segun lo que es (agua, esconde, llano), asi
- * cualquier contenido se puede mirar.
+ * (`THEME_PIECES`): el nevado tiene sus montañas; la llanura, su vida (mariposas, conejos, peces y
+ * bandadas); el bosque, la suya (hojas, ardillas, ciervos y pajaros), y el pantano, todo lo suyo
+ * (suelo oliva con charcos, agua turbia con nenufares, cipreses con musgo, juncos y ranas). Un terreno
+ * sin entrada se ve segun lo que es (agua, esconde, llano), asi cualquier contenido se puede mirar.
  */
 import type { TerrainType } from '../../../core/content';
 import { terrainAt, themeOf } from '../../../core/gameContent';
@@ -18,14 +18,19 @@ import {
   FIREFLIES,
   FOREST_BIRDS,
   FROG,
+  GEESE,
+  JUMPING_FISH,
   LIZARD,
   PENGUIN,
+  RABBIT,
   SAND_DUST,
   SEAL,
   SNOW_GLITTER,
   SQUIRREL,
   TUMBLEWEEDS,
   VULTURES,
+  WHITE_BUTTERFLIES,
+  YELLOW_BUTTERFLIES,
 } from '../life/kinds';
 import type { MoteKind } from '../life/motes';
 import type { TravellerKind } from '../life/travellers';
@@ -173,15 +178,19 @@ const ON_THE_SHORE: readonly CritterSeat[] = [
 const GRASS: TerrainPiece = { tile: 'tile_grass' };
 const WATER: TerrainPiece = { tile: 'tile_water' };
 const WOODS: TerrainPiece = { tile: 'tile_forest', decor: ['trees'] };
+const FLOWERS: TerrainPiece = { tile: 'tile_grass', decor: ['flowers_red', 'flowers_yellow', 'flowers_purple', 'flowers_mixed'] };
+const GRASS_MOUNTAIN: TerrainPiece = { tile: 'tile_grass', relief: GREEN_MOUNTAIN };
+const SHALLOW_WATER: TerrainPiece = { tile: 'tile_shallow' };
+const DEEP_WATER: TerrainPiece = { tile: 'tile_deep' };
 
 export const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
   Grass: GRASS,
-  Flowers: { tile: 'tile_grass', decor: ['flowers_red', 'flowers_yellow', 'flowers_purple', 'flowers_mixed'] },
+  Flowers: FLOWERS,
   Woods: WOODS,
-  GrassMountain: { tile: 'tile_grass', relief: GREEN_MOUNTAIN },
+  GrassMountain: GRASS_MOUNTAIN,
   Water: WATER,
-  SWater: { tile: 'tile_shallow' },
-  DWater: { tile: 'tile_deep' },
+  SWater: SHALLOW_WATER,
+  DWater: DEEP_WATER,
   Sand: {
     tile: 'tile_sand',
     relief: DUNES,
@@ -248,8 +257,31 @@ const BANKS_BY_THEME: Readonly<Record<string, BankColors>> = {
 };
 export const bankOf = (s: GameState): BankColors => BANKS_BY_THEME[themeOf(s).id] ?? EARTH_BANK;
 
+/**
+ * El conejo, metido en el monticulo de su madriguera (modelo a 16 por casilla, encogido como todo el
+ * decorado): la boca esta a 1.5/16 y asoma `RABBIT_CLIMB` (0.18 casillas: 3.5/16 del decorado encogido).
+ */
+const BURROW_MOUTH = 1.5 / 16;
+const IN_THE_BURROW: CritterSeat = { kind: RABBIT, share: 0.8, at: [5 / 16, BURROW_MOUTH - 3.5 / 16, 5 / 16] };
+
+/**
+ * La llanura: lo suyo va solo en su tema (los mismos terrenos del bosque no lo llevan). Las bandadas en V
+ * pasan por encima de todo; las mariposas, sobre las flores; los peces saltan en el agua y los conejos
+ * asoman de su madriguera, en algunas casillas de hierba.
+ */
+const PLAINS_PIECES: Readonly<Record<string, TerrainPiece>> = {
+  Grass: { ...GRASS, decor: ['burrow'], decorShare: 0.06, critters: [IN_THE_BURROW], travellers: [GEESE] },
+  Flowers: { ...FLOWERS, travellers: [YELLOW_BUTTERFLIES, WHITE_BUTTERFLIES, GEESE] },
+  Woods: { ...WOODS, travellers: [GEESE] },
+  GrassMountain: { ...GRASS_MOUNTAIN, travellers: [GEESE] },
+  Water: { ...WATER, travellers: [JUMPING_FISH, GEESE] },
+  SWater: { ...SHALLOW_WATER, travellers: [JUMPING_FISH, GEESE] },
+  DWater: { ...DEEP_WATER, travellers: [JUMPING_FISH, GEESE] },
+};
+
 /** Lo que cambia cada tema (id de themes.json): en el nevado, las montañas de hierba son nevadas (como en 2D). */
 export const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece>>>> = {
+  Plains: PLAINS_PIECES,
   Snowy: { GrassMountain: { tile: 'tile_snow', relief: SNOW_MOUNTAIN } },
   Forest: FOREST_PIECES,
   Swamp: SWAMP_PIECES,
