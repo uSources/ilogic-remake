@@ -1,8 +1,7 @@
 /**
  * Que lleva cada terreno en 3D (por id de terrain.json): el bloque de su casilla, el decorado de encima,
  * si es relieve y lo que vive en ella (las motas que vuelan, los animalitos del decorado y los que se van
- * volando, engine/life/: en el desierto, polvo, remolinos, lagartijas, bolas rodadoras y buitres). Cada
- * tema puede cambiar los suyos (`THEME_PIECES`): el nevado tiene sus
+ * volando, engine/life/). Cada tema puede cambiar los suyos (`THEME_PIECES`): el nevado tiene sus
  * montañas; el bosque, su vida (hojas, ardillas, ciervos y pajaros), y el pantano, todo lo suyo (suelo
  * oliva con charcos, agua turbia con nenufares, cipreses con musgo, juncos y ranas). Un terreno sin
  * entrada se ve segun lo que es (agua, esconde, llano), asi cualquier contenido se puede mirar.

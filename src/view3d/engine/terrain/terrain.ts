@@ -197,6 +197,14 @@ function heightsOf(s: GameState, relief: ReliefView): Grid<number> {
   return heights;
 }
 
+/** La casilla en la que cae un punto del suelo. Se escribe siempre en el mismo objeto: se pide en cada fotograma. */
+const UNDER: Pos = { x: 0, y: 0 };
+function tileUnder(x: number, z: number): Pos {
+  UNDER.x = Math.round(x);
+  UNDER.y = Math.round(z);
+  return UNDER;
+}
+
 export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   const positions = [...mapGrid(s).cells()].map((cell) => cell.pos);
   const relief = reliefOf(s, positions);
@@ -213,7 +221,7 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   const life = new BiomeLife(s, library, {
     positions,
     groundOf: (pos) => tileToWorld(pos, heightOf(pos)),
-    heightAt: (x, z) => relief.surfaceAt(x, z) ?? heights.atClamped({ x: Math.round(x), y: Math.round(z) }),
+    heightAt: (x, z) => relief.surfaceAt(x, z) ?? heights.atClamped(tileUnder(x, z)),
     decorPlaceOf: (pos) => (hasDecor(s, pos) ? decorPlace(pos, heightOf(pos)) : null),
   });
   const copies = [...tiles, ...decor];
