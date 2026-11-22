@@ -48,7 +48,7 @@ const END_SCREEN_DELAY_MS = 2200;
 /** Juega esa partida en la pagina (hasta que se sale al menu, que recarga). */
 export function playMatch({ session, viewer }: StartedGame, images: GameImages, glbModels: GlbLibrary, sounds: SoundPort): void {
   const state = session.state;
-  const scene = new MatchScene(document.getElementById('game')!, state, viewer, glbModels);
+  const scene = new MatchScene(document.getElementById('game')!, state, viewer, glbModels, images);
   const { board } = scene;
   const grid = mapGrid(state);
   const bounds = { minX: 0, maxX: grid.width - 1, minZ: 0, maxZ: grid.height - 1 };
