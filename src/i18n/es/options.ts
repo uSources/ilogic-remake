@@ -2,6 +2,8 @@
 export const options = {
   music: 'Música',
   sfx: 'Efectos de sonido',
+  ambience: 'Ambiente',
+  voices: 'Voces de las unidades',
   autosave: 'Autoguardado',
   language: 'Idioma',
   on: 'SÍ',

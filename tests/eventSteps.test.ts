@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { newUnit } from '@core/measure';
 import type { GameEvent, GameEventOf, Pos } from '@core/model';
 import { seededRng } from '@core/util/random';
-import type { SoundId, SoundPort } from '../src/audio/sounds';
-import type { EffectStage, PieceClip, PieceLookup, PieceStage, PuffKind, ShownPiece, Spot } from '../src/view3d/ports/stage';
-import { incomeSpotsOf, stepsOf } from '../src/view3d/systems/events/eventSteps';
+import type { SoundName } from '../src/audio/sounds';
+import type { EffectStage, PieceClip, PieceLookup, PieceStage, PuffKind, ShownPiece, SoundStage, Spot } from '../src/view3d/ports/stage';
+import { incomeSpotsOf, stepsOf, type BoardLookup } from '../src/view3d/systems/events/eventSteps';
+import type { Surface } from '../src/view3d/systems/sound/soundCues';
 import type { AnimationStep } from '../src/view3d/systems/events/steps';
 import { playEvents, runSteps } from '../src/view3d/systems/events/timeline';
 import { blankState, diceFrom, ENEMY, fight, PLAYER, unitTypeNamed } from './helpers';
@@ -28,8 +29,9 @@ class FakeLookup implements PieceLookup {
   }
 }
 
-const shown = (motion: ShownPiece['motion']): ShownPiece => ({ motion, isVisible: true });
-const hidden = (motion: ShownPiece['motion']): ShownPiece => ({ motion, isVisible: false });
+/** Una pieza que se ve; sin clase de unidad conocida, suena como las de su forma de moverse. */
+const shown = (motion: ShownPiece['motion'], unitType = 'Unknown'): ShownPiece => ({ unitType, motion, isVisible: true });
+const hidden = (motion: ShownPiece['motion'], unitType = 'Unknown'): ShownPiece => ({ unitType, motion, isVisible: false });
 
 const kindsOf = (steps: readonly AnimationStep[]): string[] =>
   steps.map((step) => (step.kind === 'together' ? `together(${kindsOf(step.steps).join(',')})` : step.kind));
@@ -62,7 +64,7 @@ describe('pasos de cada suceso', () => {
       new FakeLookup({ [SHOOTER]: shown('drive') }),
     );
     expect(kindsOf(steps)).toEqual(['clip', 'sound', 'walk', 'sound', 'walk', 'clip']);
-    expect(steps[1]).toEqual({ kind: 'sound', sound: 'step_drive' });
+    expect(steps[1]).toEqual({ kind: 'sound', sound: 'step_drive', at: { kind: 'feet', uid: SHOOTER } });
     expect(steps[4]).toEqual({ kind: 'walk', uid: SHOOTER, from: { x: 1, y: 0 }, to: { x: 2, y: 0 } });
   });
 
@@ -92,13 +94,15 @@ describe('pasos de cada suceso', () => {
       'sound',
       'together(sparks,shake,lifeLoss,text)',
     ]);
-    expect(steps).toContainEqual({ kind: 'sound', sound: 'shot_cannon' });
+    expect(steps).toContainEqual({ kind: 'sound', sound: 'shot_cannon', at: { kind: 'muzzle', uid: SHOOTER } });
+    expect(steps).toContainEqual({ kind: 'sound', sound: 'hit_infantry', at: { kind: 'muzzle', uid: TARGET } });
     expect(steps.at(-1)).toMatchObject({ steps: expect.arrayContaining([expect.objectContaining({ kind: 'text', text: '−30' })]) });
   });
 
-  it('de lejos el disparo va en arco (y suena a artilleria)', () => {
-    const steps = stepsOf(attackEvent({}), new FakeLookup({ [SHOOTER]: shown('drive'), [TARGET]: shown('march') }, 2));
-    expect(steps).toContainEqual({ kind: 'sound', sound: 'shot_artillery' });
+  it('de lejos el disparo va en arco y el proyectil silba al caer', () => {
+    const steps = stepsOf(attackEvent({}), new FakeLookup({ [SHOOTER]: shown('drive', 'Artillery'), [TARGET]: shown('march') }, 2));
+    expect(steps).toContainEqual({ kind: 'sound', sound: 'shot_artillery', at: { kind: 'muzzle', uid: SHOOTER } });
+    expect(steps).toContainEqual({ kind: 'sound', sound: 'shell_incoming', at: { kind: 'muzzle', uid: TARGET } });
     expect(steps).toContainEqual(
       expect.objectContaining({ kind: 'together', steps: expect.arrayContaining([expect.objectContaining({ isArc: true })]) }),
     );
@@ -137,11 +141,19 @@ describe('pasos de cada suceso', () => {
 
   it('capturar: lo que le queda, o el edificio ya es suyo', () => {
     const lookup = new FakeLookup({ [SHOOTER]: shown('march') });
-    expect(stepsOf(captureEvent(5), lookup)[0]).toEqual({ kind: 'sound', sound: 'capture' });
+    expect(stepsOf(captureEvent(5), lookup)[0]).toEqual({
+      kind: 'sound',
+      sound: 'capture',
+      at: expect.objectContaining({ kind: 'tile', pos: { x: 3, y: 3 } }),
+    });
     expect(stepsOf(captureEvent(5), lookup)[1]).toMatchObject({
       steps: expect.arrayContaining([expect.objectContaining({ text: '5/20' })]),
     });
-    expect(stepsOf(captureEvent(0), lookup)[0]).toEqual({ kind: 'sound', sound: 'capture_done' });
+    expect(stepsOf(captureEvent(0), lookup)[0]).toEqual({
+      kind: 'sound',
+      sound: 'capture_done',
+      at: expect.objectContaining({ kind: 'tile', pos: { x: 3, y: 3 } }),
+    });
   });
 
   it('los sucesos sin entrada no se animan', () => {
@@ -150,12 +162,12 @@ describe('pasos de cada suceso', () => {
 });
 
 /** Apunta cada cosa que se le pide al motor y al sonido, en orden; las que tardan acaban cuando se diga. */
-class FakeStages implements PieceStage, EffectStage, SoundPort {
+class FakeStages implements PieceStage, EffectStage, SoundStage {
   readonly calls: string[] = [];
   private readonly waiting: (() => void)[] = [];
   holdAnimations = false;
 
-  play(sound: SoundId): void {
+  play(sound: SoundName): void {
     this.calls.push(`sound:${sound}`);
   }
   playClip(uid: number, clip: PieceClip): void {
@@ -267,7 +279,7 @@ describe('la linea de tiempo', () => {
       'puff:gunSmoke',
       `recoil:${SHOOTER}`,
       'projectile',
-      'sound:hit',
+      'sound:hit_infantry',
       'sparks',
       `shake:${TARGET}`,
       `life:${TARGET}:100>70`,
@@ -303,5 +315,42 @@ describe('lo que se cobra al empezar el dia', () => {
     expect(mine).toContainEqual(expect.objectContaining({ pos: { x: 4, y: 4 } }));
     expect(mine).not.toContainEqual(expect.objectContaining({ pos: { x: 8, y: 8 } }));
     expect(mine.every((spot) => spot.amount > 0)).toBe(true);
+  });
+});
+
+describe('lo que suena con sitio, sin delatar lo que tapa la niebla', () => {
+  const board = (seen: boolean, surface: Surface = 'grass'): BoardLookup => ({
+    surfaceAt: () => surface,
+    isSeen: () => seen,
+    motionOf: () => 'drive',
+  });
+  const spawn: GameEvent = { kind: 'spawn', actor: ENEMY, uid: 9, unitType: 'Tank', team: ENEMY, at: { x: 2, y: 2 } };
+
+  it('una compra suena en su casilla, tambien la del rival, si se ve', () => {
+    const steps = stepsOf(spawn, new FakeLookup({}), null, board(true));
+    expect(steps).toEqual([{ kind: 'sound', sound: 'spawn_vehicle', at: { kind: 'tile', pos: { x: 2, y: 2 }, lift: 0.3 } }]);
+    expect(stepsOf(spawn, new FakeLookup({}), null, board(false))).toEqual([]);
+  });
+
+  it('los pasos suenan segun el suelo de cada casilla', () => {
+    const move: GameEvent = {
+      kind: 'move',
+      actor: PLAYER,
+      uid: SHOOTER,
+      path: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+      ],
+    };
+    const steps = stepsOf(move, new FakeLookup({ [SHOOTER]: shown('march', 'Soldier') }), null, board(true, 'snow'));
+    expect(steps).toContainEqual({ kind: 'sound', sound: 'step_snow', at: { kind: 'feet', uid: SHOOTER } });
+  });
+
+  it('esperar solo suena si es de quien mira', () => {
+    const wait = (actor: number): GameEvent => ({ kind: 'wait', actor, uid: SHOOTER });
+    const lookup = new FakeLookup({ [SHOOTER]: shown('march') });
+    const day = { viewer: PLAYER, incomeSpots: () => [] };
+    expect(stepsOf(wait(PLAYER), lookup, day)).toEqual([{ kind: 'sound', sound: 'wait', at: { kind: 'feet', uid: SHOOTER } }]);
+    expect(stepsOf(wait(ENEMY), lookup, day)).toEqual([]);
   });
 });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newUnit } from '@core/measure';
 import { GameSession, humanController, passiveController } from '@core/session';
 import type { GameEvent, Pos } from '@core/model';
-import type { SoundId, SoundPort } from '../src/audio/sounds';
+import type { SoundName, SoundPort } from '../src/audio/sounds';
 import { TurnControls } from '../src/view3d/systems/turn/turnControls';
 import type { EventPlayer, MoveLook, MovePreview, ShotLook, TileMarks } from '../src/view3d/ports/turn';
 import { blankState, ENEMY, PLAYER, unitTypeNamed } from './helpers';
@@ -65,8 +65,8 @@ class FakePreview implements MovePreview {
 }
 
 class FakeSounds implements SoundPort {
-  readonly heard: SoundId[] = [];
-  play(sound: SoundId): void {
+  readonly heard: SoundName[] = [];
+  play(sound: SoundName): void {
     this.heard.push(sound);
   }
 }

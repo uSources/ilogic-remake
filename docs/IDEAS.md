@@ -114,6 +114,19 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
 - **Nunca:** cajas de botín o gacha, monedas premium, energía, anuncios que cortan la partida.
 - Antes de cobrar: derechos del Ilogic original, facturación e IVA.
 
+## Sonido
+
+- **Volumen por canal** (efectos, ambiente, voces, interfaz) en Opciones, en vez de solo encendido o apagado:
+  los canales ya existen (`src/audio/audioContext.ts`).
+- **Bucles de unidades paradas**: el rotor del helicoptero, el fuego de las muy dañadas, el radar del
+  antiaereo (un emisor mas del ambiente, que se mueve con su pieza).
+- **Musica**: `enemy_turn` mientras juega el rival y jingles de victoria y derrota en vez de los efectos
+  (`MusicTrack`, `src/audio/music.ts`).
+- **Sonidos en linea** (`room_created`, `player_joined`...): ya tienen nombre en `soundNames.ts`;
+  falta que la partida en linea llegue a 3D.
+- **Mas momentos con sonido**: subir de rango, el botin, la torreta del aerodeslizador... (inventario en
+  `docs/PLAN-SONIDO.md`).
+
 ## Técnico
 
 11. **Tab en la pantalla final.** Mirar si Tab funciona (en la pantalla final no mueve la selección, ni antes del cambio).

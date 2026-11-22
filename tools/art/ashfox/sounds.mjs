@@ -1,6 +1,7 @@
-// Escribe los .ashfox de los efectos de sonido a partir de sus descripciones cortas (models/sounds.mjs)
-// y la lista que lee el juego (src/audio/soundList.ts). Con --export saca cada variante a WAV en
-// public/assets/sfx/<sonido>_<n>.wav (hace falta el CLI de Ashfox: ver README.md).
+// Escribe los .ashfox de los efectos de sonido a partir de sus descripciones cortas (models/sounds.mjs).
+// Con --export saca cada variante a WAV en public/assets/sfx/<sonido>_<n>.wav (hace falta el CLI de
+// Ashfox: ver README.md) y rehace la lista que lee el juego (src/audio/soundList.ts) con los WAV que hay,
+// que tambien pone la herramienta de IA (tools/audio).
 //
 //   node tools/art/ashfox/sounds.mjs                    escribe los .ashfox y la lista
 //   ASHFOX=<ejecutable> node tools/art/ashfox/sounds.mjs --export      y los WAV
@@ -9,11 +10,11 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { SOUNDS } from './models/sounds.mjs';
+import { writeSoundList } from '../../audio/soundList.mjs';
 
 const ROOT = new URL('../../../', import.meta.url).pathname;
 const SOURCES = join(ROOT, 'tools/art/ashfox/sounds');
 const OUTPUT = join(ROOT, 'public/assets/sfx');
-const SOUND_LIST = join(ROOT, 'src/audio/soundList.ts');
 
 const SAMPLE_RATE = 48000;
 /** Silencio antes de la primera nota (el azar del momento no puede caer antes del principio). */
@@ -87,19 +88,6 @@ function sourceOf(name, sound) {
 
 const variantId = (index) => `v${index + 1}`;
 
-function writeSoundList(sounds) {
-  const entries = Object.entries(sounds).map(([name, sound]) => `  ${name}: ${sound.variants ?? 1},`);
-  const text = [
-    '// Generado por tools/art/ashfox/sounds.mjs. No editar a mano.',
-    '/** Los efectos de sonido (public/assets/sfx/<id>_<n>.wav) y cuantas variantes tiene cada uno. */',
-    'export const SOUND_VARIANTS = {',
-    ...entries,
-    '} as const;',
-    '',
-  ].join('\n');
-  writeFileSync(SOUND_LIST, text);
-}
-
 function exportSound(name, sound) {
   const ashfox = process.env.ASHFOX ?? 'ashfox';
   const input = join(SOURCES, `${name}.ashfox`);
@@ -121,6 +109,8 @@ mkdirSync(SOURCES, { recursive: true });
 mkdirSync(OUTPUT, { recursive: true });
 const sounds = chosen();
 for (const [name, sound] of Object.entries(sounds)) writeFileSync(join(SOURCES, `${name}.ashfox`), sourceOf(name, sound));
-writeSoundList(SOUNDS);
-if (process.argv.includes('--export')) for (const [name, sound] of Object.entries(sounds)) exportSound(name, sound);
+if (process.argv.includes('--export')) {
+  for (const [name, sound] of Object.entries(sounds)) exportSound(name, sound);
+  writeSoundList();
+}
 console.log(`sonidos: ${Object.keys(sounds).length}${process.argv.includes('--export') ? ' (con WAV)' : ''}`);

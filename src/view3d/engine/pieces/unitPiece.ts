@@ -37,6 +37,8 @@ export interface UnitPiece {
   readonly orderBadge: THREE.Sprite;
   /** El modelo GLB animado (Ashfox), si su tipo lo tiene; si no, es de bloques. */
   readonly glb: GlbUnit | null;
+  /** La clase de unidad (id de units.json): su disparo, su motor y su caida (soundCues.ts). */
+  readonly unitType: string;
   /** Como se mueve (movements.json, "motion"): que huella deja y si levanta polvo. */
   readonly motion: MovementMotion;
   /** Esta encima de un edificio: se pone en la esquina de delante de la casilla (`sharedTile.ts`). */
@@ -91,6 +93,7 @@ export function newUnitPiece(look: UnitLook, glbModels: GlbLibrary): UnitPiece {
     lifeBadge,
     orderBadge,
     glb,
+    unitType: look.type,
     motion: look.motion,
     standsOnBuilding: look.standsOnBuilding,
     popping: null,

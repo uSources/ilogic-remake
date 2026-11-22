@@ -121,7 +121,7 @@ export function Options({ options }: { options: OptionsVM }) {
       <div class="px options" role="dialog" aria-label={t('options')}>
         <div class="help-head">
           <span class="htitle">{t('options')}</span>
-          <Btn cls="px-btn plain" onPick={() => actions.optionsClose()}>
+          <Btn cls="px-btn plain" sound="ui_close" onPick={() => actions.optionsClose()}>
             {t('close')} <span class="key">Esc</span>
           </Btn>
         </div>

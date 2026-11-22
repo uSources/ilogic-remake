@@ -2,23 +2,22 @@
  * Cumple los pasos de una animacion (steps.ts) uno tras otro, pidiendoselos a los puertos del motor
  * (ports/stage.ts) y al sonido. No sabe de three.js: se prueba con puertos falsos.
  */
-import type { SoundPort } from '../../../audio/sounds';
 import type { GameEvent } from '../../../core/model';
-import type { EffectStage, PieceLookup, PieceStage } from '../../ports/stage';
-import { stepsOf, type DayLookup } from './eventSteps';
+import type { EffectStage, PieceLookup, PieceStage, SoundStage } from '../../ports/stage';
+import { stepsOf, type BoardLookup, type DayLookup } from './eventSteps';
 import type { AnimationStep, AnimationStepKind, StepOf } from './steps';
 
 /** A quien se le piden los pasos. */
 export interface Stages {
   pieces: PieceStage;
   effects: EffectStage;
-  sounds: SoundPort;
+  sounds: SoundStage;
 }
 
 type StepRunners = { readonly [K in AnimationStepKind]: (step: StepOf<K>, stages: Stages) => Promise<void> | void };
 
 const STEP_RUNNERS: StepRunners = {
-  sound: (step, { sounds }) => sounds.play(step.sound),
+  sound: (step, { sounds }) => sounds.play(step.sound, step.at),
   clip: (step, { pieces }) => pieces.playClip(step.uid, step.clip),
   walk: (step, { pieces }) => pieces.walk(step.uid, step.from, step.to),
   aim: (step, { pieces }) => pieces.aim(step.uid, step.target),
@@ -54,9 +53,10 @@ export async function runSteps(steps: readonly AnimationStep[], stages: Stages):
 export interface EventStages extends Stages {
   lookup: PieceLookup;
   day?: DayLookup;
+  board?: BoardLookup;
 }
 
 /** Anima los sucesos uno tras otro; los pasos de cada uno se deciden al llegarle (con las piezas como esten entonces). */
 export async function playEvents(events: readonly GameEvent[], stages: EventStages): Promise<void> {
-  for (const event of events) await runSteps(stepsOf(event, stages.lookup, stages.day ?? null), stages);
+  for (const event of events) await runSteps(stepsOf(event, stages.lookup, stages.day ?? null, stages.board ?? null), stages);
 }
