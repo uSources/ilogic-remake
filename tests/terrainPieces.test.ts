@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { defaultContent } from '@core/content/default';
 import { describe, expect, it } from 'vitest';
-import { FIREFLIES, FROG } from '../src/view3d/engine/life/kinds';
+import * as LIFE_KINDS from '../src/view3d/engine/life/kinds';
 import { bankOf, pieceAt, TERRAIN_MODEL_FILES, TERRAIN_PIECES, THEME_PIECES } from '../src/view3d/engine/terrain/pieces';
 import { PAINTS } from '../tools/art/ashfox/models/terrain.mjs';
 import { blankState } from './helpers';
@@ -26,6 +26,18 @@ describe('las piezas del terreno 3D', () => {
     expect(named.filter((id) => !terrain.includes(id))).toEqual([]);
   });
 
+  it('lo que vive en cada pieza es una de las clases de life/kinds.ts', () => {
+    const pieces = [...Object.values(TERRAIN_PIECES), ...Object.values(THEME_PIECES).flatMap((theme) => Object.values(theme))];
+    const named = pieces.flatMap((piece) => [
+      ...(piece.motes ?? []),
+      ...(piece.critters ?? []).map((seat) => seat.kind),
+      ...(piece.travellers ?? []),
+    ]);
+    const kinds: readonly unknown[] = Object.values(LIFE_KINDS);
+    expect(named.length).toBeGreaterThan(0);
+    expect(named.filter((kind) => !kinds.includes(kind))).toEqual([]);
+  });
+
   it('la tierra del agua en el borde del mapa es la del lateral de las casillas de su tema', () => {
     const s = blankState();
     const banks = Object.keys(SIDE_PAINT_BY_THEME).map((theme) => {
@@ -42,7 +54,11 @@ describe('las piezas del terreno 3D', () => {
     s.map[water.x]![water.y] = 'Water';
     expect(pieceAt(s, water).tile).toBe('tile_water');
     s.theme = 'Swamp';
-    expect(pieceAt(s, water)).toMatchObject({ tile: 'tile_swamp_water', decor: ['lilies_0', 'lilies_1', 'lilies_2'], motes: [FIREFLIES] });
-    expect(pieceAt(s, water).critters).toEqual([expect.objectContaining({ kind: FROG, share: expect.any(Number) })]);
+    expect(pieceAt(s, water)).toMatchObject({
+      tile: 'tile_swamp_water',
+      decor: ['lilies_0', 'lilies_1', 'lilies_2'],
+      motes: [LIFE_KINDS.FIREFLIES],
+    });
+    expect(pieceAt(s, water).critters).toEqual([expect.objectContaining({ kind: LIFE_KINDS.FROG, share: expect.any(Number) })]);
   });
 });

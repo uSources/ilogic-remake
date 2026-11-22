@@ -1,16 +1,18 @@
 /**
  * Que lleva cada terreno en 3D (por id de terrain.json): el bloque de su casilla, el decorado de encima,
- * si es relieve y lo que vive en ella (las motas que vuelan y los animalitos del decorado, engine/life/).
- * Cada tema puede cambiar los suyos (`THEME_PIECES`): el nevado tiene sus montañas y el pantano, todo lo
- * suyo (suelo oliva con charcos, agua turbia con nenufares, cipreses con musgo, juncos y ranas). Un
- * terreno sin entrada se ve segun lo que es (agua, esconde, llano), asi cualquier contenido se puede mirar.
+ * si es relieve y lo que vive en ella (las motas que vuelan, los animalitos del decorado y los que se van
+ * volando, engine/life/). Cada tema puede cambiar los suyos (`THEME_PIECES`): el nevado tiene sus
+ * montañas; el bosque, su vida (hojas, ardillas, ciervos y pajaros), y el pantano, todo lo suyo (suelo
+ * oliva con charcos, agua turbia con nenufares, cipreses con musgo, juncos y ranas). Un terreno sin
+ * entrada se ve segun lo que es (agua, esconde, llano), asi cualquier contenido se puede mirar.
  */
 import type { TerrainType } from '../../../core/content';
 import { terrainAt, themeOf } from '../../../core/gameContent';
 import type { GameState, Pos } from '../../../core/model';
 import type { CritterSeat } from '../life/critters';
-import { FIREFLIES, FROG, SAND_DUST } from '../life/kinds';
+import { DEER, FALLING_LEAVES, FIREFLIES, FOREST_BIRDS, FROG, SAND_DUST, SQUIRREL } from '../life/kinds';
 import type { MoteKind } from '../life/motes';
+import type { TravellerKind } from '../life/travellers';
 import type { ReliefStyle } from './relief';
 import { type BankColors, CLEAR_WATER, MURKY_WATER, type WaterLook } from './water';
 
@@ -60,6 +62,8 @@ export interface TerrainPiece {
   motes?: readonly MoteKind[];
   /** Los animalitos que se sientan en su decorado, y donde (life/kinds.ts: las ranas). */
   critters?: readonly CritterSeat[];
+  /** Los que salen de sus casillas y se van (life/kinds.ts: los pajaros de las copas). */
+  travellers?: readonly TravellerKind[];
 }
 
 /**
@@ -147,6 +151,19 @@ export const TERRAIN_PIECES: Readonly<Record<string, TerrainPiece>> = {
   Ice: { tile: 'tile_ice' },
 };
 
+/**
+ * Donde viven los animales del bosque, en su modelo de arboles (tools/art/ashfox/models/terrain.mjs, a
+ * 16 por casilla): la ardilla, en el escalon de la copa de abajo del arbol grande, junto a la de arriba;
+ * el ciervo, en la esquina sin copas, y solo si esa esquina da fuera del bosque.
+ */
+const IN_THE_TREETOP: CritterSeat = { kind: SQUIRREL, share: 0.2, at: [3.25 / 16, 7 / 16, 4 / 16] };
+const AT_THE_EDGE: CritterSeat = { kind: DEER, share: 0.2, at: [6 / 16, 0, 4.5 / 16], edge: true };
+
+/** El bosque: sus arboles con lo que vive en ellos (las hojas que caen, las ardillas, los ciervos y los pajaros). */
+const FOREST_PIECES: Readonly<Record<string, TerrainPiece>> = {
+  Woods: { ...WOODS, motes: [FALLING_LEAVES], critters: [IN_THE_TREETOP, AT_THE_EDGE], travellers: [FOREST_BIRDS] },
+};
+
 /** Donde se sientan las ranas: en el nenufar grande del centro o en el hueco de la esquina de los juncos (modelos a 32 por casilla). */
 const ON_THE_LILY_PAD: CritterSeat = { kind: FROG, share: 0.3, at: [0, 1 / 32, 0] };
 const IN_THE_REEDS: CritterSeat = { kind: FROG, share: 0.3, at: [0.25, 0, 0.25] };
@@ -185,6 +202,7 @@ export const bankOf = (s: GameState): BankColors => BANKS_BY_THEME[themeOf(s).id
 /** Lo que cambia cada tema (id de themes.json): en el nevado, las montañas de hierba son nevadas (como en 2D). */
 export const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece>>>> = {
   Snowy: { GrassMountain: { tile: 'tile_snow', relief: SNOW_MOUNTAIN } },
+  Forest: FOREST_PIECES,
   Swamp: SWAMP_PIECES,
 };
 
@@ -212,6 +230,7 @@ const modelsOf = (piece: TerrainPiece): string[] => [
   ...(piece.relief ? [] : variantFiles(piece.tile)),
   ...(piece.decor ?? []),
   ...(piece.critters ?? []).map((seat) => seat.kind.model),
+  ...(piece.travellers ?? []).map((kind) => kind.model),
 ];
 
 /** Los modelos que hay que cargar (rutas dentro de assets/models). */

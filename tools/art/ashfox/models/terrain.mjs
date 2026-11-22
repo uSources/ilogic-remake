@@ -73,6 +73,18 @@ export const PAINTS = {
   cattail: { ramp: ['#4a2c16', '#5e3a1e', '#744a28'] },
   frog: { ramp: ['#5a9a1e', '#74b42a', '#92cc3c'] },
   frog_eye: { ramp: ['#141824', '#1e2232', '#2a2e40'] },
+  // Lo que vive en el bosque: pardos apagados, como su suelo y sus troncos (nunca los de un equipo).
+  squirrel: { ramp: ['#7a4422', '#965a30', '#ae6e3c'] },
+  squirrel_tail: {
+    ramp: ['#8a4e28', '#a6643a', '#c0804e'],
+    blotch: { ramp: ['#b47648', '#c88c5c', '#d8a070'], scale: [1, 2, 1], density: 0.3 },
+  },
+  deer: { ramp: ['#7a5232', '#94683e', '#ac7e4c'] },
+  deer_white: { ramp: ['#d4c8b0', '#e8decc', '#f6f0e2'] },
+  antler: { ramp: ['#6a5a44', '#807058', '#988670'] },
+  bird: { ramp: ['#3a3430', '#4c4640', '#605850'] },
+  bird_wing: { ramp: ['#2e2a26', '#403a34', '#544c44'] },
+  beak: { ramp: ['#6e5430', '#86663a', '#9c7846'] },
 };
 
 /**
@@ -371,6 +383,70 @@ const iris = (id, [x, z], height) => [
 /** Las matas de juncos de una casilla. Dejan libre la esquina de (8, 8): ahi se sienta la rana. */
 const reeds = (cubes) => ({ detail: SWAMP_DETAIL, cubes });
 
+/**
+ * Los animales del bosque, a 32 unidades por casilla como la rana (el juego los encoge con su tamaño,
+ * src/view3d/engine/life/kinds.ts): la ardilla de cola grande, el ciervo con sus cuernas y el pajaro
+ * con las alas abiertas (vuela: el juego le bate las alas estrechandolo).
+ */
+const ANIMAL_DETAIL = 2;
+const ANIMAL_EYES = { name: 'animal_eyes', face: 'north', pixels: 'k.k', colors: { k: '#141824' }, at: [[0, 1]] };
+const DEER_EYE = { name: 'deer_eye', face: 'east', pixels: 'k', colors: { k: '#141824' }, at: [[1, 1]] };
+const DEER_EYE_LEFT = { ...DEER_EYE, face: 'west', at: [[2, 1]] };
+const DEER_NOSE = { name: 'deer_nose', face: 'north', pixels: '.n.', colors: { n: '#2a2220' }, at: [[0, 2]] };
+
+const squirrel = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'body', origin: [-1.5, 0, -2], size: [3, 3, 5], paint: 'squirrel' },
+    { name: 'head', origin: [-1.5, 2, -4], size: [3, 3, 3], paint: 'squirrel', stamps: [ANIMAL_EYES] },
+    { name: 'ear_left', origin: [-1.5, 5, -2.5], size: [1, 1, 1], paint: 'squirrel' },
+    { name: 'ear_right', origin: [0.5, 5, -2.5], size: [1, 1, 1], paint: 'squirrel' },
+    { name: 'paw_left', origin: [-1.5, 0, -3], size: [1, 1, 1], paint: 'squirrel' },
+    { name: 'paw_right', origin: [0.5, 0, -3], size: [1, 1, 1], paint: 'squirrel' },
+    { name: 'tail', origin: [-1.5, 1, 3], size: [3, 6, 2], paint: 'squirrel_tail' },
+    { name: 'tail_tip', origin: [-1.5, 7, 1], size: [3, 2, 3], paint: 'squirrel_tail' },
+  ],
+};
+
+/** Una pata del ciervo en (x, z), fina y alta. */
+const deerLeg = (id, [x, z]) => ({ name: `leg_${id}`, origin: [x, 0, z], size: [1, 5, 1], paint: 'deer' });
+/** Una cuerna: el palo y su punta hacia fuera (`side`: -1 a la izquierda, 1 a la derecha). */
+const antler = (id, x, side) => [
+  { name: `antler_${id}`, origin: [x, 14, -6], size: [1, 3, 1], paint: 'antler' },
+  { name: `antler_${id}_tip`, origin: [x + side, 16, -6], size: [1, 2, 1], paint: 'antler' },
+  { name: `antler_${id}_prong`, origin: [x, 17, -7], size: [1, 1, 1], paint: 'antler' },
+];
+
+const deer = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    deerLeg('front_left', [-2, -4]),
+    deerLeg('front_right', [1, -4]),
+    deerLeg('back_left', [-2, 3]),
+    deerLeg('back_right', [1, 3]),
+    { name: 'body', origin: [-2, 5, -5], size: [4, 4, 10], paint: 'deer' },
+    { name: 'neck', origin: [-1, 9, -6], size: [2, 3, 2], paint: 'deer' },
+    { name: 'head', origin: [-1.5, 11, -9], size: [3, 3, 4], paint: 'deer', stamps: [DEER_EYE, DEER_EYE_LEFT, DEER_NOSE] },
+    { name: 'ear_left', origin: [-2.5, 13, -6], size: [1, 1, 1], paint: 'deer' },
+    { name: 'ear_right', origin: [1.5, 13, -6], size: [1, 1, 1], paint: 'deer' },
+    ...antler('left', -1.5, -1),
+    ...antler('right', 0.5, 1),
+    { name: 'tail', origin: [-1, 7, 5], size: [2, 2, 1], paint: 'deer_white' },
+  ],
+};
+
+const bird = {
+  detail: ANIMAL_DETAIL,
+  cubes: [
+    { name: 'body', origin: [-1, 0, -2], size: [2, 2, 4], paint: 'bird' },
+    { name: 'head', origin: [-1, 1, -4], size: [2, 2, 2], paint: 'bird' },
+    { name: 'beak', origin: [-0.5, 1, -5], size: [1, 1, 1], paint: 'beak' },
+    { name: 'wing_left', origin: [-5, 1, -1.5], size: [4, 1, 3], paint: 'bird_wing' },
+    { name: 'wing_right', origin: [1, 1, -1.5], size: [4, 1, 3], paint: 'bird_wing' },
+    { name: 'tail', origin: [-1, 1, 2], size: [2, 1, 3], paint: 'bird_wing' },
+  ],
+};
+
 export const MODELS = {
   ...groundVariants('grass', 'grass', 'earth', 4),
   ...groundVariants('forest', 'forest_floor', 'earth', 3),
@@ -623,6 +699,9 @@ export const MODELS = {
       { name: 'hand_right', origin: [1, 0, -3], size: [1, 1, 1], paint: 'frog' },
     ],
   },
+  squirrel,
+  deer,
+  bird,
   snowman: {
     cubes: [
       { name: 'body', origin: [-3, 0, -3], size: [6, 5, 6], paint: 'snowcap' },

@@ -1,0 +1,24 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = bird; background-alpha = 255;
+      palette {
+        bird = (#3a3430, #4c4640, #605850);
+        beak = (#6e5430, #86663a, #9c7846);
+        bird_wing = (#2e2a26, #403a34, #544c44);
+      }
+
+      chart body box { origin = (0px, 0px); fill = bird; }
+      chart head box { origin = (13px, 0px); fill = bird; }
+      chart beak box { origin = (0px, 7px); fill = beak; }
+      chart wing_left box { origin = (22px, 0px); fill = bird_wing; }
+      chart wing_right box { origin = (37px, 0px); fill = bird_wing; }
+      chart tail box { origin = (52px, 0px); fill = bird_wing; }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

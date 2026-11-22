@@ -39,15 +39,14 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 
 ## Vida en los biomas
 
-El pantano ya tiene la suya (luciérnagas, ranas) y el sistema común está hecho
-(`src/view3d/engine/life/`; cómo se ve, `docs/ESTETICA.md`, «Lo que vive en cada bioma»).
-Falta, cada bioma en su PR:
+El pantano (luciérnagas, ranas) y el bosque (hojas, ardillas, ciervos, pájaros) ya tienen la suya y
+el sistema común está hecho (`src/view3d/engine/life/`; cómo se ve, `docs/ESTETICA.md`, «Lo que vive
+en cada bioma»). Falta, cada bioma en su PR:
 
-25. **Bosque:** hojas que caen girando (verdes y ocres), ardillas en los troncos, algún ciervo que
-    asoma en el borde del bosque y pájaros que salen de las copas.
 26. **Desierto:** bolas rodadoras que cruzan con el viento, remolinos de polvo pequeños, lagartijas
     en las rocas y los cactus, y buitres en círculo con su sombra en el suelo. Las bolas y los
-    pájaros son una clase nueva: lo que cruza el mapa.
+    buitres van como viajeros (`travellers.ts`, como los pájaros del bosque); a las bolas les falta
+    rodar.
 27. **Nieve:** pingüinos que andan como patos y se tiran de barriga al agua, alguna foca junto al
     hielo y copos que brillan al sol.
 28. **Llanura:** mariposas sobre las flores, conejos que asoman en la hierba, peces que saltan y

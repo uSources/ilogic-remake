@@ -1,0 +1,27 @@
+ashfox-model 1
+module paint {
+  import "./skin.ashfox" as skin;
+  export surface look: skin.Skin {
+    material = opaque;
+    texture atlas {
+      atlas = (64px, 16px); background = squirrel; background-alpha = 255;
+      palette {
+        squirrel = (#7a4422, #965a30, #ae6e3c);
+        animal_eyes_k = #141824;
+        squirrel_tail = (#8a4e28, #a6643a, #c0804e);
+        squirrel_tail_spots = (#b47648, #c88c5c, #d8a070);
+      }
+      stamp animal_eyes { pixels = "k.k"; k = animal_eyes_k; }
+      chart body box { origin = (0px, 0px); fill = squirrel; }
+      chart head box { origin = (28px, 0px); fill = squirrel; face north { stamp animal_eyes { at = (0px, 1px); } } }
+      chart ear_left box { origin = (54px, 0px); fill = squirrel; }
+      chart ear_right box { origin = (59px, 0px); fill = squirrel; }
+      chart paw_left box { origin = (0px, 9px); fill = squirrel; }
+      chart paw_right box { origin = (5px, 9px); fill = squirrel; }
+      chart tail box { origin = (17px, 0px); fill = squirrel_tail; pattern blotch { paint = squirrel_tail_spots; scale = (1px, 2px, 1px); density = 0.3ratio; phase = 7; } }
+      chart tail_tip box { origin = (41px, 0px); fill = squirrel_tail; pattern blotch { paint = squirrel_tail_spots; scale = (1px, 2px, 1px); density = 0.3ratio; phase = 7; } }
+      grain clustered { seed = 2013; }
+      tone voxel;
+    }
+  }
+}

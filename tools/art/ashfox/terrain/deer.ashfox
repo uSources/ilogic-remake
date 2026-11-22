@@ -1,0 +1,12 @@
+ashfox-model 1
+asset deer {
+  import "./deer/rig.ashfox" as rig;
+  import "./deer/paint.ashfox" as paint;
+  import "./deer/body.ashfox" as body;
+  export asset deer {
+    settings { density = 16; forward = north; }
+    skeleton = rig.ModelSkeleton;
+
+    use body.Body as model { bind skeleton = rig.ModelRig; bind skin = paint.look; };
+  }
+}
