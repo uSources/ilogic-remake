@@ -255,6 +255,8 @@ export default tseslint.config(
       // falta a proposito (un apaño para un navegador viejo), eslint-disable en su linea con el porque.
       '@typescript-eslint/no-deprecated': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': ['error', { considerDefaultExhaustiveForUnions: true }],
+      // Una funcion, una idea (docs/ESTILO.md, regla 2): lo orientativo son 2 niveles; mas de 3 no pasa.
+      'max-depth': ['error', 3],
     },
   },
   {

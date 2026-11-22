@@ -39,7 +39,8 @@ return gotCloser ? best.pos : null;
    Solo valen letras sueltas en bucles de 2-3 lineas (`x`, `y`, `i`) y `s` para el `GameState`
    (esta en todo el nucleo). Un booleano se lee como pregunta: `isReachable`, `hasCargo`, `canCapture`.
 2. **Una funcion, una idea.** Si hace falta un comentario para separar partes, cada parte es una
-   funcion con nombre. Orientativo: unas 25 lineas y 2 niveles de anidacion como mucho.
+   funcion con nombre. Orientativo: unas 25 lineas y 2 niveles de anidacion como mucho (ESLint no
+   deja pasar de 3: `max-depth`).
 3. **Salir pronto.** Las comprobaciones arriba con `return`, en vez de `if` dentro de `if`.
 4. **Nada magico.** Ni numeros ni condiciones sueltas que haya que adivinar: `steps > 0` es
    `canReach(range, pos)`, y ningun valor dice dos cosas (0 para "no llega" y para "ya esta alli": se
