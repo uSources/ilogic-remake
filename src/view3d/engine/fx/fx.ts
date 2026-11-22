@@ -3,6 +3,7 @@
  * reloj del mundo y se quitan solos. No saben de reglas ni de la partida: reciben puntos del mundo.
  */
 import * as THREE from 'three';
+import { newCanvas, whenFontLoads } from '../core/canvasText';
 
 /** Lo que necesita un efecto: donde ponerse y el reloj del mundo. */
 export interface FxHost {
@@ -75,45 +76,62 @@ const CHIP_SHADOW = 6;
 /** Alto de la chapa en el mundo (casillas); el ancho, el que pida el texto. */
 const TEXT_WORLD_HEIGHT = 0.36;
 
+/** Lo que ocupa la chapa de un texto: el alto, sin la sombra. */
+const CHIP_HEIGHT = TEXT_HEIGHT - CHIP_SHADOW;
+
 /** El texto (en su color, con borde de tinta) sobre una chapa redonda, en un lienzo tan ancho como pida. */
 function textTexture(text: string, color: string): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  const measure = canvas.getContext('2d')!;
-  measure.font = TEXT_FONT;
-  canvas.width = Math.ceil(measure.measureText(text).width) + TEXT_PADDING * 2;
-  canvas.height = TEXT_HEIGHT;
-  const draw = canvas.getContext('2d')!;
-  const chipHeight = TEXT_HEIGHT - CHIP_SHADOW;
-  const radius = chipHeight / 2;
-  draw.fillStyle = CHIP_INK;
-  draw.beginPath();
-  draw.roundRect(0, CHIP_SHADOW, canvas.width, chipHeight, radius);
-  draw.roundRect(0, 0, canvas.width, chipHeight, radius);
-  draw.fill();
-  draw.fillStyle = CHIP_FILL;
-  draw.beginPath();
-  draw.roundRect(CHIP_BORDER, CHIP_BORDER, canvas.width - CHIP_BORDER * 2, chipHeight - CHIP_BORDER * 2, radius - CHIP_BORDER);
-  draw.fill();
+  const { canvas, draw } = newCanvas(1, TEXT_HEIGHT);
+  draw.font = TEXT_FONT;
+  // Cambiar el ancho borra el lienzo y lo que se le haya dicho al pincel (la letra).
+  canvas.width = Math.ceil(draw.measureText(text).width) + TEXT_PADDING * 2;
+  drawTextChip(draw, canvas.width);
   draw.font = TEXT_FONT;
   draw.textAlign = 'center';
   draw.textBaseline = 'middle';
   draw.lineWidth = 7;
   draw.strokeStyle = CHIP_INK;
-  draw.strokeText(text, canvas.width / 2, chipHeight / 2 + 2);
+  draw.strokeText(text, canvas.width / 2, CHIP_HEIGHT / 2 + 2);
   draw.fillStyle = color;
-  draw.fillText(text, canvas.width / 2, chipHeight / 2 + 2);
+  draw.fillText(text, canvas.width / 2, CHIP_HEIGHT / 2 + 2);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
-/** Una chapa con un texto (el daño, lo que se cobra, lo que queda de una captura) que sube desde `at` y se desvanece. */
-export async function floatingText(host: FxHost, at: THREE.Vector3, text: string, color: string): Promise<void> {
-  const map = textTexture(text, color);
-  const material = new THREE.SpriteMaterial({ map, depthTest: false, transparent: true });
-  const label = new THREE.Sprite(material);
+/** La chapa redonda de ese ancho: tinta por fuera con su sombra debajo y crema por dentro. */
+function drawTextChip(draw: CanvasRenderingContext2D, width: number): void {
+  const radius = CHIP_HEIGHT / 2;
+  draw.fillStyle = CHIP_INK;
+  draw.beginPath();
+  draw.roundRect(0, CHIP_SHADOW, width, CHIP_HEIGHT, radius);
+  draw.roundRect(0, 0, width, CHIP_HEIGHT, radius);
+  draw.fill();
+  draw.fillStyle = CHIP_FILL;
+  draw.beginPath();
+  draw.roundRect(CHIP_BORDER, CHIP_BORDER, width - CHIP_BORDER * 2, CHIP_HEIGHT - CHIP_BORDER * 2, radius - CHIP_BORDER);
+  draw.fill();
+}
+
+/** Pone en la chapa esa textura (y suelta la que tuviera), con el ancho que pida su texto. */
+function showTexture(label: THREE.Sprite, map: THREE.CanvasTexture): void {
+  label.material.map?.dispose();
+  label.material.map = map;
+  label.material.needsUpdate = true;
   const { width, height } = map.image;
   label.scale.set((TEXT_WORLD_HEIGHT * width) / height, TEXT_WORLD_HEIGHT, 1);
+}
+
+/** Una chapa con un texto (el daño, lo que se cobra, lo que queda de una captura) que sube desde `at` y se desvanece. */
+export async function floatingText(host: FxHost, at: THREE.Vector3, text: string, color: string): Promise<void> {
+  const material = new THREE.SpriteMaterial({ depthTest: false, transparent: true });
+  const label = new THREE.Sprite(material);
+  showTexture(label, textTexture(text, color));
+  // Si la letra carga mientras sube, se pinta de nuevo en otra textura: con ella mide otro ancho, y una
+  // textura ya en la tarjeta grafica no cambia de tamaño. Si ya se ha ido, no (su textura ya se solto).
+  whenFontLoads(TEXT_FONT, () => {
+    if (label.parent) showTexture(label, textTexture(text, color));
+  });
   label.renderOrder = 20;
   host.layer.add(label);
   await host.animate(TEXT_SECONDS, (progress) => {

@@ -5,6 +5,7 @@
  * lean igual desde cualquier angulo. Las texturas se guardan por valor: hay pocas distintas.
  */
 import * as THREE from 'three';
+import { newCanvas, whenFontLoads } from '../core/canvasText';
 
 const BORDER = 2;
 /** Tamaño de la marca en el mundo (casillas). */
@@ -21,6 +22,35 @@ const LOSS_LIGHT = '#ff8a82';
 const LOSS_DARK = '#6b1f1c';
 
 const textures = new Map<string, THREE.CanvasTexture>();
+
+/** La textura guardada con esa clave o, la primera vez, la que pinte `make`. */
+function cached(key: string, make: () => THREE.CanvasTexture): THREE.CanvasTexture {
+  let texture = textures.get(key);
+  if (!texture) {
+    texture = make();
+    textures.set(key, texture);
+  }
+  return texture;
+}
+
+/**
+ * Una textura de marca de ese tamaño, pixelada, pintada con `paint` (con texto en la letra `font`). Como
+ * se guarda para siempre, si la letra aun no ha cargado se vuelve a pintar cuando cargue.
+ */
+function badgeTexture(width: number, height: number, font: string, paint: (draw: CanvasRenderingContext2D) => void): THREE.CanvasTexture {
+  const { canvas, draw } = newCanvas(width, height);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.NearestFilter;
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const repaint = (): void => {
+    draw.clearRect(0, 0, width, height);
+    paint(draw);
+    texture.needsUpdate = true;
+  };
+  repaint();
+  whenFontLoads(font, repaint);
+  return texture;
+}
 
 /** Pone esa textura en la marca (si no la tiene ya) y la enseña. */
 function paint(badge: THREE.Sprite, texture: THREE.CanvasTexture, scale: THREE.Vector2): void {
@@ -110,30 +140,18 @@ function drawLifeLabel(draw: CanvasRenderingContext2D, label: string, color: str
   draw.fillText(label, LIFE_WIDTH / 2, LIFE_LABEL_HEIGHT / 2 + 1);
 }
 
-function lifeTexture(label: string, life: PipLife): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = LIFE_WIDTH;
-  canvas.height = LIFE_HEIGHT;
-  const draw = canvas.getContext('2d')!;
+/** La marca de vida: la chapa con el porcentaje y, debajo, los tramos. */
+function drawLife(draw: CanvasRenderingContext2D, label: string, life: PipLife): void {
   drawLifeLabel(draw, label, life.color);
   draw.fillStyle = LIFE_BACK;
   draw.fillRect(0, PIP_BOX_TOP, LIFE_WIDTH, PIP_BOX_HEIGHT);
   for (let index = 0; index < PIP_COUNT; index++) drawPip(draw, index, life);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.NearestFilter;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
 }
 
 function cachedLife(label: string, life: PipLife): THREE.CanvasTexture {
   const afterKey = life.after === null ? '' : `-${Math.round(life.after * 100)}`;
   const key = `life:${label}:${Math.round(life.share * 100)}${afterKey}:${life.color}:${life.loss}`;
-  let texture = textures.get(key);
-  if (!texture) {
-    texture = lifeTexture(label, life);
-    textures.set(key, texture);
-  }
-  return texture;
+  return cached(key, () => badgeTexture(LIFE_WIDTH, LIFE_HEIGHT, LIFE_FONT, (draw) => drawLife(draw, label, life)));
 }
 
 /** La vida de una unidad a la que se apunta: lo que le quedaria, con sus tramos a rayas de lo que perderia. */
@@ -170,11 +188,7 @@ const CHIP_SCALE = new THREE.Vector2(0.3, 0.195);
 const CHIP_INK = '#2b2240';
 const CHIP_TEXT = '#ffffff';
 
-function chipTexture(text: string, fill: string): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = CHIP_WIDTH;
-  canvas.height = CHIP_HEIGHT;
-  const draw = canvas.getContext('2d')!;
+function drawChip(draw: CanvasRenderingContext2D, text: string, fill: string): void {
   draw.fillStyle = CHIP_INK;
   draw.fillRect(0, 0, CHIP_WIDTH, CHIP_HEIGHT);
   draw.fillStyle = fill;
@@ -187,20 +201,10 @@ function chipTexture(text: string, fill: string): THREE.CanvasTexture {
   draw.strokeText(text, CHIP_WIDTH / 2, CHIP_HEIGHT / 2 + 1);
   draw.fillStyle = CHIP_TEXT;
   draw.fillText(text, CHIP_WIDTH / 2, CHIP_HEIGHT / 2 + 1);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.NearestFilter;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
 }
 
 function cachedChip(text: string, fill: string): THREE.CanvasTexture {
-  const key = `chip:${text}${fill}`;
-  let texture = textures.get(key);
-  if (!texture) {
-    texture = chipTexture(text, fill);
-    textures.set(key, texture);
-  }
-  return texture;
+  return cached(`chip:${text}${fill}`, () => badgeTexture(CHIP_WIDTH, CHIP_HEIGHT, CHIP_FONT, (draw) => drawChip(draw, text, fill)));
 }
 
 /** Enseña una chapa con ese numero (null: la esconde), del color `fill`. */
@@ -236,11 +240,7 @@ const LETTER_SIDE = 0.34;
 const LETTER_COLOR = '#ffd447';
 const LETTER_INK = '#0b1220';
 
-function letterTexture(letter: string): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = LETTER_PIXELS;
-  canvas.height = LETTER_PIXELS;
-  const draw = canvas.getContext('2d')!;
+function drawLetter(draw: CanvasRenderingContext2D, letter: string): void {
   draw.fillStyle = LETTER_INK;
   draw.fillRect(0, 0, LETTER_PIXELS, LETTER_PIXELS);
   draw.fillStyle = LETTER_COLOR;
@@ -250,20 +250,10 @@ function letterTexture(letter: string): THREE.CanvasTexture {
   draw.textBaseline = 'middle';
   draw.fillStyle = LETTER_INK;
   draw.fillText(letter, LETTER_PIXELS / 2, LETTER_PIXELS / 2 + 1);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.NearestFilter;
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
 }
 
 function cachedLetter(letter: string): THREE.CanvasTexture {
-  const key = `letter:${letter}`;
-  let texture = textures.get(key);
-  if (!texture) {
-    texture = letterTexture(letter);
-    textures.set(key, texture);
-  }
-  return texture;
+  return cached(`letter:${letter}`, () => badgeTexture(LETTER_PIXELS, LETTER_PIXELS, LETTER_FONT, (draw) => drawLetter(draw, letter)));
 }
 
 /** La marca de la letra de la orden, a la altura de la barra de vida y a su derecha. */
