@@ -15,7 +15,7 @@ import { seaLook, STAGNANT_SEA, TEMPERATE_SEA } from './sea';
 import { Surface, type SurfaceLook } from './surface';
 
 /** El alrededor de un tema: como es su suelo y el relieve de sus cerros. */
-interface Surrounding {
+export interface Surrounding {
   surface: SurfaceLook;
   hills: ReliefStyle;
 }
@@ -30,13 +30,16 @@ const SURROUNDINGS_BY_THEME: Readonly<Record<string, Surrounding>> = {
   Desert: { surface: DUNE_SEA, hills: MESA },
 };
 
+/** El alrededor del tema `theme` (id de themes.json). */
+export const surroundingFor = (theme: string): Surrounding => SURROUNDINGS_BY_THEME[theme] ?? ISLAND_IN_THE_SEA;
+
 export class Surroundings {
   readonly object = new THREE.Group();
   private readonly surface: Surface;
 
   /** Alrededor de un tablero de ese centro (en el suelo) y medio lado (casillas), con el tema `theme` (id de themes.json). */
   constructor(center: THREE.Vector3, half: THREE.Vector2, theme: string) {
-    const surrounding = SURROUNDINGS_BY_THEME[theme] ?? ISLAND_IN_THE_SEA;
+    const surrounding = surroundingFor(theme);
     const islets = planIslets(center, half);
     this.surface = new Surface(surrounding.surface, { center, half, islets });
     this.object.add(this.surface.object, buildIslets(islets, surrounding.hills));

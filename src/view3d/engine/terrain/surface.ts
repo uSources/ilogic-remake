@@ -15,6 +15,12 @@ const SURFACE_SIZE = 900;
 /** Altura del suelo: algo por debajo del agua del tablero, para que se vea su borde. */
 const SURFACE_LEVEL = -0.12;
 export const TEXELS_PER_TILE = 16;
+/** Los texels por casilla, como numero de GLSL. */
+export const TEXELS_GLSL = TEXELS_PER_TILE.toFixed(1);
+/** Cuanto se mella el borde entre una franja y la siguiente de cualquier suelo (casillas). */
+export const RAGGED_TILES = 1.6;
+/** Los uniforms que tiene cualquier suelo; los demas `u...` de su GLSL son sus colores. */
+const COMMON_UNIFORMS = ['uTime', 'uBoardCenter', 'uBoardHalf', 'uIslets'];
 /** Un islote de radio negativo, muy lejos, no cuenta (el shader necesita al menos un hueco). */
 const NO_ISLET = new THREE.Vector3(1e6, 1e6, -1);
 
@@ -71,13 +77,22 @@ float tilesFromLand(vec2 point) {
 }
 `;
 
-const TEXELS = TEXELS_PER_TILE.toFixed(1);
 const FRAGMENT_POINT = /* glsl */ `
-  vec2 texel = (floor(vSurfaceWorld.xz * ${TEXELS}) + 0.5) / ${TEXELS};
+  vec2 texel = (floor(vSurfaceWorld.xz * ${TEXELS_GLSL}) + 0.5) / ${TEXELS_GLSL};
   vec2 tile = floor(vSurfaceWorld.xz + 0.5);
 `;
 
 const uniformName = (color: string): string => `u${color[0]?.toUpperCase() ?? ''}${color.slice(1)}`;
+
+/**
+ * Los uniforms que usa el GLSL de un aspecto y no son ni comunes ni de sus colores: tiene que no haber
+ * ninguno (un color mal escrito, como `uSnwo`, solo fallaria al compilar el shader en el navegador).
+ */
+export function undeclaredUniforms(look: SurfaceLook): string[] {
+  const declared = new Set([...COMMON_UNIFORMS, ...Object.keys(look.colors).map(uniformName)]);
+  const used = `${look.paint}\n${look.functions ?? ''}`.match(/\bu[A-Z]\w*/g) ?? [];
+  return [...new Set(used)].filter((name) => !declared.has(name));
+}
 
 export class Surface {
   readonly object: THREE.Mesh;

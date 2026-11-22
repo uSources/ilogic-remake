@@ -6,13 +6,11 @@
  * finas. Las placas son celdas de Voronoi en texels, cada una de su tono (hielo, hielo en sombra o nevada);
  * al pie de la tierra queda un reborde de hielo blanco y sobre el hielo titila la escarcha.
  */
-import { type SurfaceLook, TEXELS_PER_TILE } from './surface';
+import { RAGGED_TILES, type SurfaceLook, TEXELS_GLSL, TEXELS_PER_TILE } from './surface';
 
 /** Hasta cuantas casillas de la tierra hay agua abierta y hasta cuantas tempanos sueltos (luego, banquisa). */
 const OPEN_WATER_TILES = 1.5;
 const LOOSE_FLOE_TILES = 6;
-/** Cuanto se mella el borde entre una franja y otra (casillas). */
-const RAGGED_TILES = 1.6;
 /** Lo que mide cada placa (casillas): trozos sueltos en el agua, tempanos y placas de la banquisa. */
 const CHUNK_SIZE = 1.1;
 const FLOE_SIZE = 2.2;
@@ -53,13 +51,13 @@ vec3 floeAt(vec2 point, float size) {
     for (int dy = -1; dy <= 1; dy++) {
       vec2 other = cell + vec2(float(dx), float(dy));
       vec2 center = (other + 0.15 + 0.7 * vec2(surfaceHash(other), surfaceHash(other + 31.0))) * size;
-      float distance = length(point - center);
-      if (distance < nearest) {
+      float centerDistance = length(point - center);
+      if (centerDistance < nearest) {
         second = nearest;
-        nearest = distance;
+        nearest = centerDistance;
         id = surfaceHash(other + 7.0);
       } else {
-        second = min(second, distance);
+        second = min(second, centerDistance);
       }
     }
   return vec3(nearest, second - nearest, id);
@@ -79,7 +77,7 @@ const ICE_PAINT = /* glsl */ `
   vec3 plate = floe.z < ${glslFloat(SHADED_SHARE)} ? uIceShade : (floe.z < ${glslFloat(1 - SNOWY_SHARE)} ? uIce : uSnow);
   diffuseColor.rgb = isIce ? plate : between;
 
-  float sparkle = surfaceHash(floor(texel * ${TEXELS_PER_TILE.toFixed(1)}));
+  float sparkle = surfaceHash(floor(texel * ${TEXELS_GLSL}));
   float twinkle = step(fract(sparkle * 13.0 + uTime * 0.3), 0.3);
   float nearLand = step(tilesFromLand(texel), ${glslFloat(FROST_TILES)});
   diffuseColor.rgb = mix(diffuseColor.rgb, uSnow, float(isIce) * step(0.992, sparkle) * twinkle * nearLand);

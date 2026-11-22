@@ -6,15 +6,13 @@
  * espuma, y cerca de ella titilan brillos cortos de pocos pixeles.
  */
 import * as THREE from 'three';
-import { type SurfaceLook, TEXELS_PER_TILE } from './surface';
+import { RAGGED_TILES, type SurfaceLook, TEXELS_GLSL, TEXELS_PER_TILE } from './surface';
 
 /** Hasta cuantas casillas de la orilla llegan el bajio y el agua media. */
 const SHALLOW_TILES = 2;
 const MID_TILES = 6;
 /** Hasta donde (casillas desde la orilla) hay brillos: mas lejos solo serian ruido de pixeles. */
 const GLINT_TILES = 18;
-/** Cuanto se mella el borde entre una franja y otra (casillas). */
-const RAGGED_TILES = 1.6;
 
 /** Los tres tonos del mar, de la orilla a mar abierto. */
 export interface SeaColors {
@@ -29,19 +27,18 @@ export const STAGNANT_SEA: SeaColors = { shallow: 0x5e8a6a, mid: 0x44725e, deep:
 const FOAM_COLOR = new THREE.Color(0.93, 0.98, 1);
 const GLINT_COLOR = new THREE.Color(0.86, 0.95, 1);
 
-const TEXELS = TEXELS_PER_TILE.toFixed(1);
 const SEA_PAINT = /* glsl */ `
   float tileDistance = tilesFromLand(tile) + surfaceHash(tile) * ${RAGGED_TILES.toFixed(2)};
   vec3 water = tileDistance < ${SHALLOW_TILES.toFixed(1)} ? uShallow : (tileDistance < ${MID_TILES.toFixed(1)} ? uMid : uDeep);
   diffuseColor.rgb = water * (0.96 + step(0.5, surfaceHash(tile + 17.0)) * 0.04);
 
-  vec2 dash = floor(vec2(texel.x * ${(TEXELS_PER_TILE / 3).toFixed(4)}, texel.y * ${TEXELS}));
+  vec2 dash = floor(vec2(texel.x * ${(TEXELS_PER_TILE / 3).toFixed(4)}, texel.y * ${TEXELS_GLSL}));
   float sparkle = surfaceHash(dash);
   float twinkle = step(fract(sparkle * 13.0 + uTime * 0.3), 0.3);
   float nearLand = step(tilesFromLand(texel), ${GLINT_TILES.toFixed(1)});
   diffuseColor.rgb = mix(diffuseColor.rgb, uGlint, step(0.988, sparkle) * twinkle * nearLand * 0.8);
 
-  float foamWidth = (2.5 + 1.5 * sin(uTime * 2.2 + texel.x * 1.7 + texel.y * 2.3)) / ${TEXELS};
+  float foamWidth = (2.5 + 1.5 * sin(uTime * 2.2 + texel.x * 1.7 + texel.y * 2.3)) / ${TEXELS_GLSL};
   diffuseColor.rgb = mix(diffuseColor.rgb, uFoam, step(tilesFromLand(texel), foamWidth) * 0.9);
 `;
 

@@ -7,13 +7,11 @@
  * cresta clara y la cara de sotavento en sombra. Por encima corren con el viento hilos de arena.
  */
 import { WIND_DIRECTION } from '../core/space';
-import { type SurfaceLook, TEXELS_PER_TILE } from './surface';
+import { RAGGED_TILES, type SurfaceLook, TEXELS_GLSL, TEXELS_PER_TILE } from './surface';
 
 /** Hasta cuantas casillas de la tierra llega la arena amontonada y desde cuantas las dunas se ven del todo. */
 const DRIFT_TILES = 1.5;
 const FULL_DUNE_TILES = 5;
-/** Cuanto se mella el borde entre una franja y otra (casillas). */
-const RAGGED_TILES = 1.6;
 /** De una cresta a la siguiente (casillas). */
 const DUNE_WAVELENGTH = 4.5;
 /**
@@ -42,7 +40,6 @@ const SAND_COLORS = {
   shade: 0xcf9550,
 };
 
-const TEXELS = TEXELS_PER_TILE.toFixed(1);
 const DUNE_PAINT = /* glsl */ `
   vec2 wind = vec2(${WIND_DIRECTION.x.toFixed(4)}, ${WIND_DIRECTION.z.toFixed(4)});
   float along = dot(texel, wind);
@@ -57,7 +54,7 @@ const DUNE_PAINT = /* glsl */ `
   vec3 ground = tileDistance < ${DRIFT_TILES.toFixed(1)} ? uDrift : uSand;
   diffuseColor.rgb = mix(ground, dune, strength) * (0.97 + step(0.5, surfaceHash(tile + 17.0)) * 0.03);
 
-  vec2 streak = floor(vec2((along - uTime * ${WISP_SPEED.toFixed(2)}) * ${(TEXELS_PER_TILE / 4).toFixed(4)}, across * ${TEXELS}));
+  vec2 streak = floor(vec2((along - uTime * ${WISP_SPEED.toFixed(2)}) * ${(TEXELS_PER_TILE / 4).toFixed(4)}, across * ${TEXELS_GLSL}));
   float nearLand = step(tilesFromLand(texel), ${WISP_TILES.toFixed(1)});
   diffuseColor.rgb = mix(diffuseColor.rgb, uCrest, step(0.996, surfaceHash(streak)) * nearLand * 0.7);
 `;
