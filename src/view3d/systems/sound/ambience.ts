@@ -1,10 +1,11 @@
 /**
- * Que ambiente suena en cada sitio del mapa: el mar en la costa (y alrededor de la isla), pajaros en el
- * bosque, viento en las cumbres, ranas en el pantano, maquinas en las fabricas... Puro: del estado de la
- * partida salen los emisores (`ambientEmitters`), y de donde esta el oyente, cuales suenan
- * (`emittersInEarshot`). Lo hace sonar ambiencePlayer.ts.
+ * Que ambiente suena en cada sitio del mapa: el agua en la orilla, pajaros en el bosque, viento en las
+ * cumbres, ranas en el pantano, maquinas en las fabricas... Solo el agua de verdad suena a agua: ni el
+ * hielo ni el borde del tablero (el mar de alrededor es decorado). Puro: del estado de la partida salen
+ * los emisores (`ambientEmitters`), y de donde esta el oyente, cuales suenan (`emittersInEarshot`). Lo
+ * hace sonar ambiencePlayer.ts.
  */
-import type { BedAmbient, WeatherAmbient, ZoneAmbient } from '../../../audio/ambientNames';
+import type { AmbientName, BedAmbient, WeatherAmbient, ZoneAmbient } from '../../../audio/ambientNames';
 import { terrainAt, themeOf } from '../../../core/gameContent';
 import { neighbors4 } from '../../../core/geom';
 import { mapGrid } from '../../../core/mapGrid';
@@ -50,8 +51,23 @@ const WEATHER_AMBIENTS: Readonly<Record<string, WeatherAmbient>> = {
   Snow: 'amb_snowfall',
   Sandstorm: 'amb_sandstorm',
 };
-/** En este tema el agua de dentro de la isla es cienaga, no mar. */
+/** En este tema el agua es cienaga, no mar. */
 const MARSH_THEME = 'Swamp';
+/** El agua helada (id de terrain.json): no suena a agua, y la que toca hielo no es orilla (ahi no rompen olas). */
+const FROZEN_TERRAINS: ReadonlySet<string> = new Set(['Ice']);
+/**
+ * Lo fuerte de cada ambiente frente a los demas (1: tal cual). El agua es un murmullo de fondo: se nota
+ * al acercarse a la orilla, no tapa el resto. El viento, el bosque y el pantano, algo por debajo.
+ */
+const AMBIENT_VOLUMES: Partial<Record<AmbientName, number>> = {
+  amb_sea: 0.35,
+  amb_marsh: 0.6,
+  amb_desert: 0.65,
+  amb_dunes: 0.65,
+  amb_forest: 0.65,
+  amb_woods: 0.65,
+  amb_swamp: 0.65,
+};
 
 /** Los emisores se juntan por trozos del mapa de este lado (casillas): uno por sonido y trozo. */
 const REGION_SIZE = 6;
@@ -67,17 +83,22 @@ export const bedAmbientOf = (s: GameState): BedAmbient | null => BED_AMBIENTS[th
 
 export const weatherAmbientOf = (kind: string | null): WeatherAmbient | null => (kind && WEATHER_AMBIENTS[kind]) || null;
 
-/** En el borde del tablero empieza el mar que rodea la isla, aunque la casilla sea tierra. */
-const isBoardEdge = (s: GameState, pos: Pos): boolean => neighbors4(mapGrid(s), pos).length < 4;
+/** A que parte de su volumen suena `name` frente a los demas ambientes. */
+export const ambientVolumeOf = (name: AmbientName): number => AMBIENT_VOLUMES[name] ?? 1;
 
-/** El sonido de una casilla: el agua junto a tierra o en el borde es costa (en el pantano, dentro, cienaga). */
+/** Tierra firme donde rompe el agua: ni agua ni hielo. */
+function isShoreLand(s: GameState, pos: Pos): boolean {
+  const terrain = terrainAt(s, pos);
+  return !terrain.isWater && !FROZEN_TERRAINS.has(terrain.id);
+}
+
+/** El sonido de una casilla: el agua junto a tierra es orilla (en el pantano, cienaga); mar adentro, nada. */
 function tileAmbient(s: GameState, pos: Pos): ZoneAmbient | null {
   const terrain = terrainAt(s, pos);
   if (!terrain.isWater) return TERRAIN_AMBIENTS[terrain.id] ?? null;
-  const isEdge = isBoardEdge(s, pos);
-  const touchesLand = neighbors4(mapGrid(s), pos).some((next) => !terrainAt(s, next).isWater);
-  if (themeOf(s).id === MARSH_THEME && !isEdge) return 'amb_marsh';
-  return isEdge || touchesLand ? 'amb_sea' : null;
+  if (themeOf(s).id === MARSH_THEME) return 'amb_marsh';
+  const touchesLand = neighbors4(mapGrid(s), pos).some((next) => isShoreLand(s, next));
+  return touchesLand ? 'amb_sea' : null;
 }
 
 /** Las casillas de cada sonido, juntas por trozo del mapa. */
@@ -92,7 +113,6 @@ function tilesByRegion(s: GameState): Map<string, { sound: ZoneAmbient; tiles: P
   mapGrid(s).forEach((_terrain, pos) => {
     const sound = tileAmbient(s, pos);
     if (sound) add(sound, pos);
-    if (sound !== 'amb_sea' && isBoardEdge(s, pos)) add('amb_sea', pos);
   });
   for (const building of s.buildings) {
     const sound = BUILDING_AMBIENTS[building.type];

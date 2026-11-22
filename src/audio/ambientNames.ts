@@ -25,8 +25,9 @@ export type BedAmbient = (typeof BED_AMBIENTS)[number];
 export type WeatherAmbient = (typeof WEATHER_AMBIENTS)[number];
 export type AmbientName = ZoneAmbient | BedAmbient | WeatherAmbient;
 
-/** Un bucle que suena: se para con un fundido. */
+/** Un bucle que suena: cambia de volumen poco a poco (`setLevel`, 0-1) y se para con un fundido. */
 export interface LoopHandle {
+  setLevel(level: number): void;
   stop(): void;
 }
 

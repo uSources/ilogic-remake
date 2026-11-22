@@ -1149,7 +1149,8 @@ lo calcula un sistema puro con la pose de la camara (`systems/sound/listener.ts`
 ella se mueve (sin crear nada por fotograma). Lo
 de la interfaz suena sin sitio (`SoundPort`). El ambiente tambien decide puro: que suena en cada sitio
 del mapa (`systems/sound/ambience.ts`: costa, bosque, cumbres, cienaga, fabricas...) y cuales quedan
-cerca del oyente; `ambiencePlayer.ts` los enciende y apaga con un `LoopPort` (`src/audio/loops.ts`).
+cerca del oyente; `ambiencePlayer.ts` los enciende y apaga con un `LoopPort` (`src/audio/loops.ts`) y
+les baja el volumen al alejar la camara (`ambienceZoomLevel`, `listener.ts`).
 Los efectos se piden por nombre aunque aun no haya WAV (`src/audio/soundNames.ts`): mientras, suena
 su sustituto.
 

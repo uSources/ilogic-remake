@@ -22,7 +22,7 @@ const THEME_BEDS: SoundSpec[] = [
   ambient('amb_desert', 'Hot desert: dry wind blowing over sand dunes, faint sand hiss, very sparse'),
   ambient('amb_forest', 'Forest by day: leaves rustling in the wind, a woodpecker and many birds singing in the distance'),
   ambient('amb_swamp', 'Swamp: croaking frogs, buzzing insects, slow bubbling mud and still water'),
-  ambient('amb_snowy', 'Snowy mountains: cold whistling wind, muffled and lonely'),
+  ambient('amb_snowy', 'Snowy plain: a light icy breeze, soft and steady, with a fine hiss of drifting snow'),
 ];
 
 /** El clima va encima del tema; los truenos sueltos, con la tormenta y al azar, son un efecto. */

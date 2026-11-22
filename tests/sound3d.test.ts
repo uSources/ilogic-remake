@@ -4,6 +4,7 @@ import {
   WEATHER_AMBIENTS,
   ZONE_AMBIENTS,
   type AmbientName,
+  type LoopHandle,
   type LoopPort,
   type ZoneAmbient,
 } from '../src/audio/ambientNames';
@@ -12,9 +13,9 @@ import type { Point3 } from '../src/view3d/ports/camera';
 import type { EffectStage, PieceStage, Spot } from '../src/view3d/ports/stage';
 import { feet, sound } from '../src/view3d/systems/events/steps';
 import { runSteps } from '../src/view3d/systems/events/timeline';
-import { ambientEmitters, emittersInEarshot, thunderOf, type AmbientEmitter } from '../src/view3d/systems/sound/ambience';
+import { ambientEmitters, ambientVolumeOf, emittersInEarshot, thunderOf, type AmbientEmitter } from '../src/view3d/systems/sound/ambience';
 import { AmbiencePlayer } from '../src/view3d/systems/sound/ambiencePlayer';
-import { CameraListener, zoomLevel } from '../src/view3d/systems/sound/listener';
+import { ambienceZoomLevel, CameraListener, zoomLevel } from '../src/view3d/systems/sound/listener';
 import { CATALOG } from '../tools/audio/catalog';
 import { blankState } from './helpers';
 
@@ -72,6 +73,13 @@ describe('el oyente sigue a la camara', () => {
     expect(zoomLevel(40)).toBeCloseTo(0.6);
     expect(zoomLevel(100)).toBeCloseTo(0.6);
   });
+
+  it('el ambiente se oye con la camara baja y casi nada desde arriba', () => {
+    expect(ambienceZoomLevel(6)).toBe(1);
+    expect(ambienceZoomLevel(13)).toBeLessThan(1);
+    expect(ambienceZoomLevel(13)).toBeGreaterThan(ambienceZoomLevel(20));
+    expect(ambienceZoomLevel(40)).toBeCloseTo(0.15);
+  });
 });
 
 /** Pone `terrain` en el cuadrado de `size` casillas que empieza en `from`. */
@@ -82,11 +90,20 @@ function paint(s: ReturnType<typeof blankState>, from: { x: number; y: number },
 const soundsOf = (emitters: readonly AmbientEmitter[]) => new Set(emitters.map((emitter) => emitter.sound));
 
 describe('ambiente por zonas', () => {
-  it('pradera en la hierba y el mar alrededor de la isla', () => {
-    const emitters = ambientEmitters(blankState());
-    expect(soundsOf(emitters)).toEqual(new Set(['amb_meadow', 'amb_sea']));
-    const sea = emitters.filter((emitter) => emitter.sound === 'amb_sea');
-    expect(sea.every((emitter) => emitter.at.x < 6 || emitter.at.y < 6 || emitter.at.x > 25 || emitter.at.y > 25)).toBe(true);
+  it('pradera en la hierba; sin agua no hay mar, tampoco en el borde del tablero', () => {
+    expect(soundsOf(ambientEmitters(blankState()))).toEqual(new Set(['amb_meadow']));
+  });
+
+  it('el hielo no suena a agua, ni el agua que solo toca hielo', () => {
+    const s = blankState();
+    paint(s, { x: 10, y: 10 }, 8, 'Ice');
+    paint(s, { x: 12, y: 12 }, 4, 'Water');
+    expect(soundsOf(ambientEmitters(s)).has('amb_sea')).toBe(false);
+  });
+
+  it('el agua suena flojita frente al resto', () => {
+    expect(ambientVolumeOf('amb_sea')).toBeLessThan(ambientVolumeOf('amb_desert'));
+    expect(ambientVolumeOf('amb_desert')).toBeLessThan(ambientVolumeOf('amb_meadow'));
   });
 
   it('un bosque suena desde el bosque', () => {
@@ -155,13 +172,15 @@ describe('que emisores suenan', () => {
   });
 });
 
-/** Apunta los bucles que se empiezan y se paran. */
+/** Apunta los bucles que se empiezan y se paran, y el ultimo volumen de cada uno. */
 class FakeLoops implements LoopPort {
   readonly started: { name: AmbientName; at: Point3 | null }[] = [];
   readonly stopped: AmbientName[] = [];
-  start(name: AmbientName, at: Point3 | null): { stop(): void } {
+  readonly levels = new Map<AmbientName, number>();
+  start(name: AmbientName, at: Point3 | null, level: number): LoopHandle {
     this.started.push({ name, at });
-    return { stop: () => this.stopped.push(name) };
+    this.levels.set(name, level);
+    return { setLevel: (next) => this.levels.set(name, next), stop: () => this.stopped.push(name) };
   }
 }
 
@@ -204,6 +223,21 @@ describe('el ambiente de la partida', () => {
     expect(loops.started.some((loop) => loop.name === 'amb_woods' && loop.at !== null)).toBe(true);
     player.update(1, point(60, 60));
     expect(loops.stopped).toContain('amb_woods');
+  });
+
+  it('al alejar la camara bajan el fondo y lo de cerca, no el clima', () => {
+    const loops = new FakeLoops();
+    const { player } = playerWith(loops);
+    const s = blankState();
+    paint(s, { x: 2, y: 14 }, 4, 'Woods');
+    player.load(s);
+    player.setWeather('Rain');
+    player.update(1, point(4, 16));
+    const before = new Map(loops.levels);
+    player.setZoomLevel(0.2);
+    expect(loops.levels.get('amb_plains')).toBeCloseTo(before.get('amb_plains')! * 0.2);
+    expect(loops.levels.get('amb_woods')).toBeCloseTo(before.get('amb_woods')! * 0.2);
+    expect(loops.levels.get('amb_rain')).toBe(before.get('amb_rain'));
   });
 
   it('cada relampago trae su trueno, despues', () => {

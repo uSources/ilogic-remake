@@ -13,7 +13,7 @@ import type { GameImages } from '../../atlas';
 import { gameTrackOf, playMusic } from '../../audio/music';
 import type { GameAudio } from '../../audio/gameAudio';
 import { AmbiencePlayer } from '../systems/sound/ambiencePlayer';
-import { CameraListener, zoomLevel } from '../systems/sound/listener';
+import { ambienceZoomLevel, CameraListener, zoomLevel } from '../systems/sound/listener';
 import { OptionsPanel } from '../../menu/optionsPanel';
 import { MatchScene } from '../engine/matchScene';
 import type { GlbLibrary } from '../engine/pieces/glbModels';
@@ -261,6 +261,7 @@ export function playMatch({ session, viewer }: StartedGame, images: GameImages, 
     if (hearing.follow(camera.pose)) {
       audio.moveListener(hearing.pose);
       audio.setBoardLevel(zoomLevel(camera.pose.distance));
+      ambience.setZoomLevel(ambienceZoomLevel(camera.pose.distance));
     }
     ambience.update(seconds, hearing.pose.position);
     scene.render(seconds, camera.pose);

@@ -12,6 +12,8 @@ import { AMBIENT_FALLOFF, pannerAt, type Point3 } from './spatial';
 
 /** Cuanto tarda un bucle en entrar y en salir (segundos). */
 const FADE_SECONDS = 2.5;
+/** Cuanto tarda en notarse un cambio de volumen de un bucle que ya suena (segundos), para que no salte. */
+const LEVEL_SMOOTHING = 0.4;
 /** Formatos, del preferido al de reserva (el OGG es Opus y no tiene el silencio del principio del MP3). */
 const FORMATS = [
   { extension: 'ogg', type: 'audio/ogg; codecs=opus' },
@@ -63,6 +65,14 @@ function play(mixer: Mixer, buffer: AudioBuffer, at: Point3 | null, level: numbe
   return { source, gain };
 }
 
+/** Lleva el volumen a `level` poco a poco, desde donde este (tambien a mitad del fundido de entrada). */
+function glide({ gain }: Playing, level: number): void {
+  const now = gain.context.currentTime;
+  gain.gain.cancelScheduledValues(now);
+  gain.gain.setValueAtTime(gain.gain.value, now);
+  gain.gain.setTargetAtTime(level, now, LEVEL_SMOOTHING);
+}
+
 function fadeOut({ source, gain }: Playing, context: BaseAudioContext): void {
   const now = context.currentTime;
   gain.gain.cancelScheduledValues(now);
@@ -72,9 +82,10 @@ function fadeOut({ source, gain }: Playing, context: BaseAudioContext): void {
 }
 
 /** Empieza `name` en cuanto pueda (el audio se abre con el primer gesto y el fichero tarda en bajar). */
-function startLoop(name: AmbientName, at: Point3 | null, level: number): LoopHandle {
+function startLoop(name: AmbientName, at: Point3 | null, startLevel: number): LoopHandle {
   let playing: Playing | null = null;
   let isStopped = !settings.ambience;
+  let level = startLevel;
   whenUnlocked((mixer) => {
     if (isStopped) return;
     void bufferOf(mixer.context, name).then((buffer) => {
@@ -82,6 +93,10 @@ function startLoop(name: AmbientName, at: Point3 | null, level: number): LoopHan
     });
   });
   return {
+    setLevel: (next) => {
+      level = next;
+      if (playing) glide(playing, next);
+    },
     stop: () => {
       isStopped = true;
       if (playing) fadeOut(playing, playing.source.context);
