@@ -53,18 +53,6 @@ function ActionRow({ row, sel, onHover, onPick }: { row: ActionRowVM; sel: boole
   );
 }
 
-/** Un altavoz de pixeles (9 x 8): con ondas, o con una cruz si esta callado. */
-function Speaker({ muted }: { muted: boolean }) {
-  const pixels = muted ? SPEAKER_MUTED : SPEAKER_ON;
-  return (
-    <svg class="speaker" viewBox="0 0 9 8" aria-hidden="true" shape-rendering="crispEdges">
-      {[...SPEAKER, ...pixels].map(([x, y, width, height]) => (
-        <rect x={x} y={y} width={width} height={height} fill="currentColor" />
-      ))}
-    </svg>
-  );
-}
-
 /** Rectangulos `[x, y, ancho, alto]` del altavoz: la caja y el cono; luego las ondas o la cruz. */
 const SPEAKER = [
   [0, 2, 2, 4],
@@ -86,6 +74,18 @@ const SPEAKER_MUTED = [
   [5, 5, 1, 1],
   [8, 5, 1, 1],
 ] as const;
+
+/** Un altavoz de pixeles (9 x 8): con ondas, o con una cruz si esta callado. */
+function Speaker({ muted }: { muted: boolean }) {
+  const pixels = muted ? SPEAKER_MUTED : SPEAKER_ON;
+  return (
+    <svg class="speaker" viewBox="0 0 9 8" aria-hidden="true" shape-rendering="crispEdges">
+      {[...SPEAKER, ...pixels].map(([x, y, width, height]) => (
+        <rect x={x} y={y} width={width} height={height} fill="currentColor" />
+      ))}
+    </svg>
+  );
+}
 
 interface VolumeRowProps {
   row: VolumeRowVM;

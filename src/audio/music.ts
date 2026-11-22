@@ -51,6 +51,11 @@ const musicVolume = (): number => MUSIC_VOLUME * masterGain() * gainOf(settings.
  */
 export function playMusic(track: MusicTrack, restart = false): void {
   wantedTrack = track;
+  startTrack(track, restart);
+}
+
+/** Hace sonar `track` sin cambiar la elegida (la sustituta suena en su lugar, pero la elegida sigue siendo la otra). */
+function startTrack(track: MusicTrack, restart = false): void {
   if (!isAudible(settings.volumes, 'music')) return stopMusic();
   if (current?.track === track && !current.audio.paused && !restart) return applyMusicVolume();
   stopMusic();
@@ -64,7 +69,7 @@ export function playMusic(track: MusicTrack, restart = false): void {
 /** La pista no se ha podido bajar: si tiene sustituta y sigue tocandole, la sustituta. */
 function playFallback(track: MusicTrack, audio: HTMLAudioElement): void {
   const fallback = FALLBACK_TRACKS[track];
-  if (fallback && current?.audio === audio) playMusic(fallback, true);
+  if (fallback && current?.audio === audio) startTrack(fallback, true);
 }
 
 /**
@@ -73,7 +78,10 @@ function playFallback(track: MusicTrack, audio: HTMLAudioElement): void {
  */
 export function applyMusicVolume(): void {
   if (!isAudible(settings.volumes, 'music')) return stopMusic();
-  if (!current) return wantedTrack ? playMusic(wantedTrack) : undefined;
+  if (!current) {
+    if (wantedTrack) startTrack(wantedTrack);
+    return;
+  }
   const volume = musicVolume();
   current.audio.volume = volume;
   current.audio.muted = volume === 0;

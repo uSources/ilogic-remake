@@ -34,11 +34,12 @@ const RECENT_LIMIT = 40;
 /** Entre dos muestras de volumen, al menos esto (segundos): mantener la flecha no hace una rafaga. */
 const PREVIEW_GAP = 0.15;
 /**
- * Lo que suena al mover el volumen de cada canal en Opciones, para oir como queda, y por que canal. La
- * musica y el ambiente no llevan: ya suenan solos.
+ * Lo que suena al mover el volumen de cada canal en Opciones, para oir como queda, y por donde. La del
+ * general va directa al general: asi se oye aunque la interfaz este callada. La musica y el ambiente no
+ * llevan: ya suenan solos.
  */
-const PREVIEW_SOUNDS: Readonly<Record<VolumeChannel, { name: SoundName; channel: Channel } | null>> = {
-  master: { name: 'ui_select', channel: 'interface' },
+const PREVIEW_SOUNDS: Readonly<Record<VolumeChannel, { name: SoundName; channel: Output } | null>> = {
+  master: { name: 'ui_select', channel: 'master' },
   music: null,
   effects: { name: 'shot_rifle', channel: 'effects' },
   ambience: null,
@@ -59,6 +60,11 @@ const recent: HeardSound[] = [];
 let lastVoiceAt = -Infinity;
 let lastPreviewAt = -Infinity;
 let pending: { name: SoundName; at: Point3 | null; askedAt: number } | null = null;
+
+/** Por donde sale un sonido: un canal, o directo al general (la muestra de su volumen). */
+type Output = Channel | 'master';
+
+const outputOf = (mixer: Mixer, output: Output): GainNode => (output === 'master' ? mixer.master : mixer.channels[output]);
 
 const pathOf = (sound: SoundId, variant: number): string => `assets/sfx/${sound}_${variant}.wav`;
 
@@ -96,7 +102,7 @@ function playNow(mixer: Mixer, name: SoundName, played: SoundId | null, at: Poin
 }
 
 /** Una variante de `sound` al azar, por `channel` (en cuanto este bajada). */
-function playVariant(mixer: Mixer, sound: SoundId, channel: Channel, at: Point3 | null): void {
+function playVariant(mixer: Mixer, sound: SoundId, channel: Output, at: Point3 | null): void {
   const [path] = assetsAvailable([pathOf(sound, randomVariant(sound))]);
   if (!path) return;
   void bufferOf(mixer.context, path).then((buffer) => buffer && start(mixer, buffer, channel, at));
@@ -125,10 +131,10 @@ function tooSoon(name: SoundName, sound: SoundId, now: number): boolean {
   return false;
 }
 
-function start(mixer: Mixer, buffer: AudioBuffer, channel: Channel, at: Point3 | null): void {
+function start(mixer: Mixer, buffer: AudioBuffer, channel: Output, at: Point3 | null): void {
   const source = mixer.context.createBufferSource();
   source.buffer = buffer;
-  const output = mixer.channels[channel];
+  const output = outputOf(mixer, channel);
   if (at) source.connect(pannerAt(mixer.context, at)).connect(output);
   else source.connect(output);
   source.start();

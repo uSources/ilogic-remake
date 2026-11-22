@@ -59,7 +59,17 @@ export const withMuteToggled = (volumes: Volumes, channel: VolumeChannel): Volum
   [channel]: { ...volumes[channel], muted: !volumes[channel].muted },
 });
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/** Un valor por canal, en una tabla que el compilador comprueba entera. */
+const byChannel = <T>(valueOf: (channel: VolumeChannel) => T): Record<VolumeChannel, T> => ({
+  master: valueOf('master'),
+  music: valueOf('music'),
+  effects: valueOf('effects'),
+  ambience: valueOf('ambience'),
+  voices: valueOf('voices'),
+  interface: valueOf('interface'),
+});
 
 /** Un canal guardado, o `fallback` en lo que no valga (cada campo por su lado). */
 function parseChannel(saved: unknown, fallback: ChannelVolume): ChannelVolume {
@@ -74,7 +84,5 @@ function parseChannel(saved: unknown, fallback: ChannelVolume): ChannelVolume {
 /** Los volumenes guardados, sin fiarse de lo que haya: cada canal que falte o no valga, el de por defecto. */
 export function parseVolumes(saved: unknown): Volumes {
   const channels = isRecord(saved) ? saved : {};
-  return Object.fromEntries(
-    VOLUME_CHANNELS.map((channel) => [channel, parseChannel(channels[channel], DEFAULT_VOLUMES[channel])]),
-  ) as Volumes;
+  return byChannel((channel) => parseChannel(channels[channel], DEFAULT_VOLUMES[channel]));
 }
