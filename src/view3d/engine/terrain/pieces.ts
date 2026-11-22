@@ -12,7 +12,7 @@ import type { CritterSeat } from '../life/critters';
 import { FIREFLIES, FROG, SAND_DUST } from '../life/kinds';
 import type { MoteKind } from '../life/motes';
 import type { ReliefStyle } from './relief';
-import { CLEAR_WATER, MURKY_WATER, type WaterLook } from './water';
+import { type BankColors, CLEAR_WATER, MURKY_WATER, type WaterLook } from './water';
 
 /** Las casillas de Ashfox y la altura de su cara de arriba (en unidades de Ashfox: 16 = una casilla). */
 const TILE_TOPS = {
@@ -113,11 +113,14 @@ export const MESA: ReliefStyle = {
     { from: 1.12, color: 0xb4542a },
   ],
 };
+/** La arena del pie de las dunas: la de su capa de abajo y la de encima (tambien la del agua en el borde del mapa). */
+const DUNE_FOOT = 0xe3ac55;
+const DUNE_SAND = 0xf2c66e;
 const DUNES: ReliefStyle = {
   shape: 'dunes',
   bands: [
-    { from: 0, color: 0xe3ac55 },
-    { from: 0.05, color: 0xf2c66e },
+    { from: 0, color: DUNE_FOOT },
+    { from: 0.05, color: DUNE_SAND },
     { from: 0.11, color: 0xffe2a0 },
   ],
 };
@@ -164,6 +167,20 @@ const SWAMP_PIECES: Readonly<Record<string, TerrainPiece>> = {
   SWater: { tile: 'tile_swamp_shallow', decor: ['reeds'], decorShare: 0.4 },
   DWater: { tile: 'tile_swamp_deep' },
 };
+
+/**
+ * La tierra que sujeta el agua en el borde del mapa (water.ts), por tema: la del lateral de sus
+ * casillas de tierra (los PAINTS de tools/art/ashfox/models/terrain.mjs: tierra, roca helada, barro;
+ * tests/terrainPieces.test.ts avisa si dejan de coincidir) o, en el desierto, la arena del pie de sus
+ * dunas, con una sombra mas oscura.
+ */
+const EARTH_BANK: BankColors = { shade: 0x5a3420, middle: 0x8a5530, light: 0xb47a45 };
+const BANKS_BY_THEME: Readonly<Record<string, BankColors>> = {
+  Snowy: { shade: 0x2c4c7c, middle: 0x4a72a8, light: 0x7aa2d6 },
+  Swamp: { shade: 0x3e2e20, middle: 0x54402c, light: 0x6a5238 },
+  Desert: { shade: 0xc8923f, middle: DUNE_FOOT, light: DUNE_SAND },
+};
+export const bankOf = (s: GameState): BankColors => BANKS_BY_THEME[themeOf(s).id] ?? EARTH_BANK;
 
 /** Lo que cambia cada tema (id de themes.json): en el nevado, las montañas de hierba son nevadas (como en 2D). */
 export const THEME_PIECES: Readonly<Record<string, Readonly<Record<string, TerrainPiece>>>> = {
