@@ -6,7 +6,7 @@
  * finas. Las placas son celdas de Voronoi en texels, cada una de su tono (hielo, hielo en sombra o nevada);
  * al pie de la tierra queda un reborde de hielo blanco y sobre el hielo titila la escarcha.
  */
-import { RAGGED_TILES, type SurfaceLook, TEXELS_GLSL, TEXELS_PER_TILE } from './surface';
+import { glslFloat, type SurfaceLook, TEXELS_GLSL, TEXELS_PER_TILE } from './surface';
 
 /** Hasta cuantas casillas de la tierra hay agua abierta y hasta cuantas tempanos sueltos (luego, banquisa). */
 const OPEN_WATER_TILES = 1.5;
@@ -64,9 +64,7 @@ vec3 floeAt(vec2 point, float size) {
 }
 `;
 
-const glslFloat = (value: number): string => value.toFixed(3);
 const ICE_PAINT = /* glsl */ `
-  float tileDistance = tilesFromLand(tile) + surfaceHash(tile) * ${glslFloat(RAGGED_TILES)};
   bool isOpenWater = tileDistance < ${glslFloat(OPEN_WATER_TILES)};
   bool isLoose = tileDistance < ${glslFloat(LOOSE_FLOE_TILES)};
   float size = isOpenWater ? ${glslFloat(CHUNK_SIZE)} : (isLoose ? ${glslFloat(FLOE_SIZE)} : ${glslFloat(PACK_SIZE)});
@@ -79,10 +77,10 @@ const ICE_PAINT = /* glsl */ `
 
   float sparkle = surfaceHash(floor(texel * ${TEXELS_GLSL}));
   float twinkle = step(fract(sparkle * 13.0 + uTime * 0.3), 0.3);
-  float nearLand = step(tilesFromLand(texel), ${glslFloat(FROST_TILES)});
+  float nearLand = step(texelDistance, ${glslFloat(FROST_TILES)});
   diffuseColor.rgb = mix(diffuseColor.rgb, uSnow, float(isIce) * step(0.992, sparkle) * twinkle * nearLand);
 
-  diffuseColor.rgb = mix(diffuseColor.rgb, uSnow, step(tilesFromLand(texel), ${glslFloat(RIM_TEXELS / TEXELS_PER_TILE)}));
+  diffuseColor.rgb = mix(diffuseColor.rgb, uSnow, step(texelDistance, ${glslFloat(RIM_TEXELS / TEXELS_PER_TILE)}));
 `;
 
 export const ICE_SEA: SurfaceLook = { name: 'ice', colors: ICE_COLORS, paint: ICE_PAINT, functions: FLOE_FUNCTIONS };

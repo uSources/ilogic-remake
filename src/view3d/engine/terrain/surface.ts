@@ -15,10 +15,16 @@ const SURFACE_SIZE = 900;
 /** Altura del suelo: algo por debajo del agua del tablero, para que se vea su borde. */
 const SURFACE_LEVEL = -0.12;
 export const TEXELS_PER_TILE = 16;
-/** Los texels por casilla, como numero de GLSL. */
-export const TEXELS_GLSL = TEXELS_PER_TILE.toFixed(1);
 /** Cuanto se mella el borde entre una franja y la siguiente de cualquier suelo (casillas). */
-export const RAGGED_TILES = 1.6;
+const RAGGED_TILES = 1.6;
+
+/**
+ * Un numero como float de GLSL: con su punto (`2` seria un int, y GLSL no los mezcla con floats) y
+ * cuatro decimales, que bastan para todos los del suelo.
+ */
+export const glslFloat = (value: number): string => value.toFixed(4);
+/** Los texels por casilla, como numero de GLSL. */
+export const TEXELS_GLSL = glslFloat(TEXELS_PER_TILE);
 /** Los uniforms que tiene cualquier suelo; los demas `u...` de su GLSL son sus colores. */
 const COMMON_UNIFORMS = ['uTime', 'uBoardCenter', 'uBoardHalf', 'uIslets'];
 /** Un islote de radio negativo, muy lejos, no cuenta (el shader necesita al menos un hueco). */
@@ -32,8 +38,9 @@ export interface SurfaceLook {
   colors: Readonly<Record<string, THREE.ColorRepresentation>>;
   /**
    * El GLSL que pinta `diffuseColor.rgb`. Tiene a mano `texel` y `tile` (el centro del texel y de la
-   * casilla de este punto, en casillas), `uTime` (segundos), `surfaceHash(celda)` (de 0 a 1, siempre
-   * igual para la misma celda), `tilesFromLand(punto)` y lo que defina en `functions`.
+   * casilla de este punto, en casillas), lo lejos que estan de la tierra (`texelDistance`, justo, y
+   * `tileDistance`, en casillas con el borde mellado: para las franjas), `uTime` (segundos),
+   * `surfaceHash(celda)` (de 0 a 1, siempre igual para la misma celda) y lo que defina en `functions`.
    */
   paint: string;
   /** Funciones GLSL que usa `paint` (van fuera de `main`, despues de las comunes). */
@@ -77,9 +84,12 @@ float tilesFromLand(vec2 point) {
 }
 `;
 
+/** Lo de cada punto, una vez por pixel (`tilesFromLand` recorre todos los islotes: no se repite en cada aspecto). */
 const FRAGMENT_POINT = /* glsl */ `
   vec2 texel = (floor(vSurfaceWorld.xz * ${TEXELS_GLSL}) + 0.5) / ${TEXELS_GLSL};
   vec2 tile = floor(vSurfaceWorld.xz + 0.5);
+  float texelDistance = tilesFromLand(texel);
+  float tileDistance = tilesFromLand(tile) + surfaceHash(tile) * ${glslFloat(RAGGED_TILES)};
 `;
 
 const uniformName = (color: string): string => `u${color[0]?.toUpperCase() ?? ''}${color.slice(1)}`;

@@ -7,7 +7,7 @@
  * cresta clara y la cara de sotavento en sombra. Por encima corren con el viento hilos de arena.
  */
 import { WIND_DIRECTION } from '../core/space';
-import { RAGGED_TILES, type SurfaceLook, TEXELS_GLSL, TEXELS_PER_TILE } from './surface';
+import { glslFloat, type SurfaceLook, TEXELS_GLSL, TEXELS_PER_TILE } from './surface';
 
 /** Hasta cuantas casillas de la tierra llega la arena amontonada y desde cuantas las dunas se ven del todo. */
 const DRIFT_TILES = 1.5;
@@ -41,21 +41,20 @@ const SAND_COLORS = {
 };
 
 const DUNE_PAINT = /* glsl */ `
-  vec2 wind = vec2(${WIND_DIRECTION.x.toFixed(4)}, ${WIND_DIRECTION.z.toFixed(4)});
+  vec2 wind = vec2(${glslFloat(WIND_DIRECTION.x)}, ${glslFloat(WIND_DIRECTION.z)});
   float along = dot(texel, wind);
   float across = dot(texel, vec2(-wind.y, wind.x));
   float bend = sin(across * 0.23) * 1.4 + sin(across * 0.61 + 1.3) * 0.5;
-  float ragged = (surfaceHash(floor(texel * ${(TEXELS_PER_TILE / RAGGED_BLOCK_TEXELS).toFixed(4)})) - 0.5) * ${DUNE_RAGGED.toFixed(3)};
-  float phase = fract((along + bend) / ${DUNE_WAVELENGTH.toFixed(2)} + ragged);
-  vec3 dune = phase < ${SUNNY_FACE.toFixed(2)} ? uSand : (phase < ${CREST.toFixed(2)} ? uLit : (phase < ${LEE_FACE.toFixed(2)} ? uCrest : uShade));
+  float ragged = (surfaceHash(floor(texel * ${glslFloat(TEXELS_PER_TILE / RAGGED_BLOCK_TEXELS)})) - 0.5) * ${glslFloat(DUNE_RAGGED)};
+  float phase = fract((along + bend) / ${glslFloat(DUNE_WAVELENGTH)} + ragged);
+  vec3 dune = phase < ${glslFloat(SUNNY_FACE)} ? uSand : (phase < ${glslFloat(CREST)} ? uLit : (phase < ${glslFloat(LEE_FACE)} ? uCrest : uShade));
 
-  float tileDistance = tilesFromLand(tile) + surfaceHash(tile) * ${RAGGED_TILES.toFixed(2)};
-  float strength = tileDistance < ${DRIFT_TILES.toFixed(1)} ? 0.0 : (tileDistance < ${FULL_DUNE_TILES.toFixed(1)} ? ${NEAR_DUNES.toFixed(2)} : ${FAR_DUNES.toFixed(2)});
-  vec3 ground = tileDistance < ${DRIFT_TILES.toFixed(1)} ? uDrift : uSand;
+  float strength = tileDistance < ${glslFloat(DRIFT_TILES)} ? 0.0 : (tileDistance < ${glslFloat(FULL_DUNE_TILES)} ? ${glslFloat(NEAR_DUNES)} : ${glslFloat(FAR_DUNES)});
+  vec3 ground = tileDistance < ${glslFloat(DRIFT_TILES)} ? uDrift : uSand;
   diffuseColor.rgb = mix(ground, dune, strength) * (0.97 + step(0.5, surfaceHash(tile + 17.0)) * 0.03);
 
-  vec2 streak = floor(vec2((along - uTime * ${WISP_SPEED.toFixed(2)}) * ${(TEXELS_PER_TILE / 4).toFixed(4)}, across * ${TEXELS_GLSL}));
-  float nearLand = step(tilesFromLand(texel), ${WISP_TILES.toFixed(1)});
+  vec2 streak = floor(vec2((along - uTime * ${glslFloat(WISP_SPEED)}) * ${glslFloat(TEXELS_PER_TILE / 4)}, across * ${TEXELS_GLSL}));
+  float nearLand = step(texelDistance, ${glslFloat(WISP_TILES)});
   diffuseColor.rgb = mix(diffuseColor.rgb, uCrest, step(0.996, surfaceHash(streak)) * nearLand * 0.7);
 `;
 
