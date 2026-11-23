@@ -77,7 +77,8 @@ interface MissionContext extends ContentContext {
   teamCount: number;
 }
 
-const isTeamIn = (context: MissionContext, team: unknown): team is TeamId => isInt(team, 0, context.teamCount - 1);
+/** Si `team` es el puesto de un equipo de la mision (sin guarda de tipo: `TeamId` podria ser mas que un entero). */
+const isTeamIn = (context: MissionContext, team: unknown): boolean => isInt(team, 0, context.teamCount - 1);
 
 /** Una casilla de la lista: dos enteros no negativos (que este dentro del mapa lo mira checkMission). */
 const isTile = (at: unknown): at is Pos => isPos(at) && at.x >= 0 && at.y >= 0;
