@@ -8,6 +8,7 @@
  * la zona hasta su casilla).
  */
 import * as THREE from 'three';
+import { samePos } from '../../../core/geom';
 import type { Pos } from '../../../core/model';
 import type { OwnerSide } from '../../../ui/sides';
 import type { ControlZoneLook } from '../../systems/board/boardScene';
@@ -79,6 +80,7 @@ const CORNERS: readonly Pos[] = [
 interface PlacedZone {
   readonly group: THREE.Group;
   readonly side: OwnerSide;
+  readonly tiles: readonly Pos[];
   readonly border: THREE.MeshBasicMaterial;
   /** Sus materiales planos (los cartoon de los banderines se comparten: esos no se tiran). */
   readonly materials: readonly THREE.Material[];
@@ -89,7 +91,7 @@ interface PlacedZone {
 
 export class ControlZonesView {
   readonly object = new THREE.Group();
-  /** Por casilla del centro: solo se rehace la que cambia de dueño. */
+  /** Por casilla del centro: solo se rehace la que cambia (de dueño o de casillas). */
   private readonly zones = new Map<string, PlacedZone>();
   private seconds = 0;
   private readonly gold = new THREE.Color(GOLD);
@@ -99,7 +101,7 @@ export class ControlZonesView {
 
   sync(looks: readonly ControlZoneLook[]): void {
     const wanted = new Map(looks.map((look) => [look.key, look]));
-    for (const [key, zone] of this.zones) if (wanted.get(key)?.side !== zone.side) this.remove(key, zone);
+    for (const [key, zone] of this.zones) if (!stillFits(zone, wanted.get(key))) this.remove(key, zone);
     for (const look of looks) {
       const zone = this.zones.get(look.key) ?? this.add(look);
       zone.isContested = look.isContested;
@@ -134,6 +136,7 @@ export class ControlZonesView {
     const zone: PlacedZone = {
       group,
       side: look.side,
+      tiles: look.tiles,
       border,
       materials: [band, ink, border],
       cloths: pennants.flatMap((pennant) => pennant.getObjectByName(CLOTH) ?? []),
@@ -178,6 +181,14 @@ export class ControlZonesView {
 }
 
 const isMesh = (part: THREE.Object3D): part is THREE.Mesh => part instanceof THREE.Mesh;
+
+/** La zona puesta sigue valiendo: el mismo dueño y las mismas casillas (si no, se rehace). */
+const stillFits = (zone: PlacedZone, look: ControlZoneLook | undefined): boolean =>
+  look !== undefined && zone.side === look.side && sameTiles(zone.tiles, look.tiles);
+
+function sameTiles(placed: readonly Pos[], wanted: readonly Pos[]): boolean {
+  return placed.length === wanted.length && placed.every((pos, index) => wanted[index] !== undefined && samePos(pos, wanted[index]));
+}
 
 /** Una esquina de la zona: su casilla y hacia donde queda la esquina desde su centro. */
 interface ZoneCorner {
