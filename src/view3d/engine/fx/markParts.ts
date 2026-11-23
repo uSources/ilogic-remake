@@ -25,6 +25,24 @@ export function instanced(geometry: THREE.BufferGeometry, material: THREE.Materi
   return mesh;
 }
 
+/** Los numeros de la matriz de cada pieza (4 x 4). */
+const MATRIX_SIZE = 16;
+
+/**
+ * Hace sitio en la malla para `needed` piezas si no caben (sobre el relieve una marca va en trozos, y
+ * no se sabe cuantos hasta verla). Crece su bufer, no la malla: sigue en su sitio de la escena y se
+ * pinta en el mismo orden (las translucidas a la misma distancia van por orden de creacion). Las
+ * piezas que ya tenia se copian al bufer nuevo, y `dispose` suelta el de antes en la tarjeta grafica.
+ */
+export function makeRoomFor(mesh: THREE.InstancedMesh, needed: number): void {
+  const capacity = mesh.instanceMatrix.count;
+  if (needed <= capacity) return;
+  const matrices = new Float32Array(Math.max(needed, capacity * 2) * MATRIX_SIZE);
+  matrices.set(mesh.instanceMatrix.array);
+  mesh.dispose();
+  mesh.instanceMatrix = new THREE.InstancedBufferAttribute(matrices, MATRIX_SIZE);
+}
+
 /**
  * Un color plano (sin luz, como la interfaz). Los translucidos no escriben profundidad (no tapan lo que
  * hay detras); los opacos si, para que una losa translucida no se pinte encima de un borde que esta
@@ -43,15 +61,23 @@ export function slabMatrix(ground: THREE.Vector3, size: number, height = SLAB_HE
   return new THREE.Matrix4().compose(ground, new THREE.Quaternion(), new THREE.Vector3(size, height, size));
 }
 
+/** El ancho y el alto de una tira (casillas): las de siempre, o mas gruesas para un borde que mande. */
+export interface StripSize {
+  readonly width: number;
+  readonly height: number;
+}
+
+export const STRIP: StripSize = { width: STRIP_WIDTH, height: STRIP_HEIGHT };
+
 /**
  * Una tira en el lado `side` de la casilla, a `inset` del centro (0,5: el borde de la casilla), de
  * largo `length`. Las tiras de norte y sur van a lo largo de x; las de este y oeste, de z.
  */
-export function stripMatrix(ground: THREE.Vector3, side: TileSide, inset: number, length: number): THREE.Matrix4 {
+export function stripMatrix(ground: THREE.Vector3, side: TileSide, inset: number, length: number, strip = STRIP): THREE.Matrix4 {
   const step = SIDE_STEPS[side];
   const along = step.x === 0;
-  const center = ground.clone().add(new THREE.Vector3(step.x * (inset - STRIP_WIDTH / 2), 0, step.y * (inset - STRIP_WIDTH / 2)));
-  const size = new THREE.Vector3(along ? length : STRIP_WIDTH, STRIP_HEIGHT, along ? STRIP_WIDTH : length);
+  const center = ground.clone().add(new THREE.Vector3(step.x * (inset - strip.width / 2), 0, step.y * (inset - strip.width / 2)));
+  const size = new THREE.Vector3(along ? length : strip.width, strip.height, along ? strip.width : length);
   return new THREE.Matrix4().compose(center, new THREE.Quaternion(), size);
 }
 

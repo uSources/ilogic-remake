@@ -6,21 +6,28 @@ import { isOnMap } from '../util/predicates';
 import { posOf } from '../geom';
 import { addForTeam, areAllied, perTeam, teamIds } from '../teams';
 import { earn } from './funds';
-import type { ControlPoint, GameEvent, GameState, Pos, TeamId } from '../model';
+import type { ControlPoint, GameEvent, GameState, Pos, TeamId, Unit } from '../model';
+
+/** Que unidades de la zona cuentan: para las reglas, todas; para quien mira, solo las que ve. */
+type CountsInZone = (unit: Unit) => boolean;
+const EVERY_UNIT: CountsInZone = () => true;
 
 /** [CAMBIO] La casilla esta dentro de la zona del punto de control (cuadrado de rules.controlRadius). */
 export function inControlZone(s: GameState, center: Pos, pos: Pos): boolean {
   return Math.max(Math.abs(center.x - pos.x), Math.abs(center.y - pos.y)) <= s.settings.controlRadius;
 }
 
-/** [CAMBIO] Equipos con unidades dentro de la zona de un punto de control. */
-export function teamsInZone(s: GameState, center: Pos): Set<TeamId> {
-  return new Set(s.units.filter((unit) => isOnMap(unit) && inControlZone(s, center, unit)).map((unit) => unit.team));
+/** [CAMBIO] Equipos con unidades (de las que cuentan) dentro de la zona de un punto de control. */
+export function teamsInZone(s: GameState, center: Pos, counts: CountsInZone = EVERY_UNIT): Set<TeamId> {
+  return new Set(s.units.filter((unit) => isOnMap(unit) && inControlZone(s, center, unit) && counts(unit)).map((unit) => unit.team));
 }
 
-/** [CAMBIO] Hay unidades de equipos enemigos dentro de la zona: nadie la tiene ese dia. */
-export function isContested(s: GameState, center: Pos): boolean {
-  const [first, ...others] = teamsInZone(s, center);
+/**
+ * [CAMBIO] Hay unidades de equipos enemigos dentro de la zona: nadie la tiene ese dia. Con `counts`,
+ * solo cuentan esas (la vista: las que se ven, para no delatar a las escondidas).
+ */
+export function isContested(s: GameState, center: Pos, counts: CountsInZone = EVERY_UNIT): boolean {
+  const [first, ...others] = teamsInZone(s, center, counts);
   return first !== undefined && others.some((team) => !areAllied(s, team, first));
 }
 

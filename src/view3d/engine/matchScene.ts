@@ -95,7 +95,7 @@ export class MatchScene implements ScreenView {
     this.world = new World(container);
     this.terrain = buildTerrain(state, glbModels);
     this.board = new BoardView(state, viewer, this.terrain, glbModels);
-    this.highlights = new Highlights((pos) => this.board.groundOf(pos));
+    this.highlights = new Highlights(this.board);
     this.threatLines = new ThreatLinesView((pos) => this.board.groundOf(pos));
     this.preview = new MovePreviewView(this.board);
     this.intents = new IntentArrowsView((pos) => this.board.groundOf(pos));
@@ -106,6 +106,7 @@ export class MatchScene implements ScreenView {
     this.world.scene.add(
       this.terrain.object,
       this.board.object,
+      this.board.controlZones.object,
       this.highlights.object,
       this.threatLines.object,
       this.preview.object,

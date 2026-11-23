@@ -8,8 +8,9 @@
 import type { SoundName } from '../../../audio/sounds';
 import type { MovementMotion } from '../../../core/content';
 import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
-import type { GameEvent, GameState, Pos, TeamId } from '../../../core/model';
-import { buildingIncome, visibility } from '../../../core/rules';
+import { posOf } from '../../../core/geom';
+import type { GameEvent, GameState, IncomeSource, Pos, TeamId } from '../../../core/model';
+import { buildingIncome, isContested, visibility } from '../../../core/rules';
 import { t } from '../../../settings';
 import type { PieceLookup, ShownPiece, Spot } from '../../ports/stage';
 import { captureSound, hitSound, shotSound, spawnSound, stepSounds, surfaceOf, unitSounds, type Surface } from '../sound/soundCues';
@@ -41,11 +42,11 @@ const DEFAULT_SURFACE: Surface = 'grass';
 
 /**
  * Lo que hace falta saber de la partida para los sucesos del dia: quien mira (lo que cobra, solo lo
- * suyo) y lo que paga cada edificio de un equipo.
+ * suyo) y lo que paga cada sitio de un equipo por cada fuente de ingresos (edificios, puntos de control).
  */
 export interface DayLookup {
   readonly viewer: TeamId;
-  incomeSpots(team: TeamId): IncomeSpot[];
+  incomeSpots(team: TeamId, source: IncomeSource): IncomeSpot[];
 }
 
 /** Lo que hace falta saber del tablero: el suelo de cada casilla (sus pasos), si quien mira la ve y como se mueve cada clase de unidad. */
@@ -55,19 +56,35 @@ export interface BoardLookup {
   motionOf(unitType: string): MovementMotion;
 }
 
-/** Un edificio que cobra al empezar el dia: donde esta y cuanto. */
+/** Un sitio que cobra al empezar el dia (un edificio, un punto de control): donde esta y cuanto. */
 export interface IncomeSpot {
   readonly pos: Pos;
   readonly amount: number;
 }
 
 /** Los edificios de un equipo que cobran, con lo que paga cada uno. */
-export function incomeSpotsOf(s: GameState, team: TeamId): IncomeSpot[] {
+function buildingSpots(s: GameState, team: TeamId): IncomeSpot[] {
   return s.buildings
     .filter((building) => building.owner === team)
-    .map((building) => ({ pos: { x: building.x, y: building.y }, amount: buildingIncome(s, buildingTypeOf(s, building)) }))
+    .map((building) => ({ pos: posOf(building), amount: buildingIncome(s, buildingTypeOf(s, building)) }))
     .filter((spot) => spot.amount > 0);
 }
+
+/** [CAMBIO] (en 2013 no habia puntos de control) Los que le han pagado: los suyos sin disputar (se mira tras el fin de ronda). */
+function controlPointSpots(s: GameState, team: TeamId): IncomeSpot[] {
+  return (s.controlPoints ?? [])
+    .filter((point) => point.owner === team && !isContested(s, point))
+    .map((point) => ({ pos: posOf(point), amount: s.settings.controlIncome }));
+}
+
+/** De donde sale lo que cobra un equipo, por cada fuente de ingresos del fin de ronda. */
+const INCOME_SPOTS: Readonly<Record<IncomeSource, (s: GameState, team: TeamId) => IncomeSpot[]>> = {
+  buildings: buildingSpots,
+  controlPoints: controlPointSpots,
+};
+
+/** Los sitios de un equipo que cobran por esa fuente, con lo que paga cada uno. */
+export const incomeSpotsOf = (s: GameState, team: TeamId, source: IncomeSource): IncomeSpot[] => INCOME_SPOTS[source](s, team);
 
 /** El tablero de la partida tal como lo ve `viewer`. */
 export function boardLookupOf(s: GameState, viewer: TeamId): BoardLookup {
@@ -221,10 +238,13 @@ function captureSteps(event: EventOf<'capture'>, { pieces, day }: StepContext): 
   ];
 }
 
-/** Al empezar el dia, lo tuyo: sobre cada edificio que cobra, a la vez, una chapa dorada con lo que paga («+1000»). */
+/**
+ * Al empezar el dia, lo tuyo: sobre cada sitio que cobra, a la vez, una chapa dorada con lo que paga
+ * («+1000»); primero los edificios y despues los puntos de control (un suceso por fuente).
+ */
 function incomeSteps(event: EventOf<'income'>, { day }: StepContext): AnimationStep[] {
-  if (!day || event.team !== day.viewer || event.source !== 'buildings') return [];
-  const chips = day.incomeSpots(event.team).map(({ pos, amount }): AnimationStep => ({
+  if (!day || event.team !== day.viewer) return [];
+  const chips = day.incomeSpots(event.team, event.source).map(({ pos, amount }): AnimationStep => ({
     kind: 'text',
     at: { kind: 'tile', pos, lift: INCOME_LIFT },
     text: `+${amount}`,

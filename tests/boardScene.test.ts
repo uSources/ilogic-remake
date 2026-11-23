@@ -119,6 +119,40 @@ describe('los edificios del tablero', () => {
   });
 });
 
+describe('[CAMBIO] las zonas de los puntos de control', () => {
+  const withPoint = (owner: number | null): GameState => {
+    const s = blankState({ fog: true, weather: false, controlPoints: 1, controlRadius: 1 });
+    s.controlPoints = [{ x: 0, y: 10, owner }];
+    return s;
+  };
+  const zoneOf = (s: GameState) => boardScene(s, PLAYER).controlZones[0];
+
+  it('cada una, de su dueño visto por quien mira, con las casillas de su zona dentro del mapa', () => {
+    expect(zoneOf(withPoint(null))).toMatchObject({ key: '0,10', center: { x: 0, y: 10 }, side: 'neutral', isContested: false });
+    expect(zoneOf(withPoint(PLAYER))?.side).toBe('own');
+    expect(zoneOf(withPoint(ENEMY))?.side).toBe('enemy');
+    // En el borde del mapa: de las 3 x 3 casillas, solo las 2 x 3 que caen dentro.
+    expect(zoneOf(withPoint(null))?.tiles).toHaveLength(6);
+  });
+
+  it('se ve aunque la tape la niebla; sin puntos de control, ninguna', () => {
+    expect(boardScene(withPoint(ENEMY), PLAYER).seen.at({ x: 0, y: 10 })).toBe(false);
+    expect(zoneOf(withPoint(ENEMY))).toBeDefined();
+    expect(boardScene(blankState({ fog: false }), PLAYER).controlZones).toEqual([]);
+  });
+
+  it('disputada solo si quien mira ve dentro a los dos bandos: no delata a los escondidos', () => {
+    const s = blankState({ fog: true, weather: false, controlPoints: 1, controlRadius: 4 });
+    s.controlPoints = [{ x: 10, y: 10, owner: ENEMY }];
+    newUnit(s, SOLDIER, PLAYER, { x: 6, y: 6 });
+    // Dentro de la zona, pero lejos de lo que ve el soldado (a 8 casillas): no se ve disputada.
+    const hidden = newUnit(s, SOLDIER, ENEMY, { x: 14, y: 10 });
+    expect(zoneOf(s)?.isContested).toBe(false);
+    Object.assign(hidden, { x: 7, y: 7 });
+    expect(zoneOf(s)?.isContested).toBe(true);
+  });
+});
+
 describe('la letra de la orden', () => {
   it('las propias con orden llevan su letra; sin orden, ninguna', () => {
     const s = blankState({ fog: false });
