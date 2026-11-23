@@ -42,10 +42,11 @@ function probesAlong(center: number, half: number): number[] {
   return Array.from({ length: gaps + 1 }, (_, index) => center - reach + (2 * reach * index) / gaps);
 }
 
-/** Lo mas alto del suelo en ese rectangulo. */
+/** Lo mas alto del suelo en ese rectangulo (sin listas de por medio: se mira muchas veces por marca). */
 export function highestIn(ground: MarkGround, area: GroundArea): number {
   const zs = probesAlong(area.z, area.halfZ);
-  return Math.max(...probesAlong(area.x, area.halfX).flatMap((x) => zs.map((z) => ground.surfaceAt(x, z))));
+  const highestAcross = (highest: number, x: number): number => zs.reduce((top, z) => Math.max(top, ground.surfaceAt(x, z)), highest);
+  return probesAlong(area.x, area.halfX).reduce(highestAcross, -Infinity);
 }
 
 /** Lo mas alto de toda la casilla: donde va lo que la cubre entera (el cursor, el anillo, la diana). */
