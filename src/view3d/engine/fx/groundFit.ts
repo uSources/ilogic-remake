@@ -83,14 +83,17 @@ const PIECE_HEIGHT = 0.008;
 export function slabsOn(ground: MarkGround, pos: Pos, size: number, lift: number, height = SLAB_HEIGHT): THREE.Matrix4[] {
   const { offsets, size: pieceSize } = piecesOf(size);
   const half = pieceSize / 2;
-  const pieces = offsets.flatMap((dx) => offsets.map((dz) => ({ x: pos.x + dx, z: pos.y + dz })));
-  const heights = pieces.map((piece) => highestIn(ground, { ...piece, halfX: half, halfZ: half }));
-  const whole = wholeHeight(heights);
+  // Cada trozo con lo mas alto de su suelo, juntos: no se pueden desfasar.
+  const pieces = offsets.flatMap((dx) =>
+    offsets.map((dz) => {
+      const area = { x: pos.x + dx, z: pos.y + dz, halfX: half, halfZ: half };
+      return { ...area, top: highestIn(ground, area) };
+    }),
+  );
+  const whole = wholeHeight(pieces.map((piece) => piece.top));
   if (whole !== null) return [slabMatrix(new THREE.Vector3(pos.x, whole + lift, pos.y), size, height)];
   const pieceHeight = Math.min(height, PIECE_HEIGHT);
-  return pieces.map((piece, index) =>
-    slabMatrix(new THREE.Vector3(piece.x, (heights[index] ?? 0) + lift, piece.z), pieceSize, pieceHeight),
-  );
+  return pieces.map((piece) => slabMatrix(new THREE.Vector3(piece.x, piece.top + lift, piece.z), pieceSize, pieceHeight));
 }
 
 /** Donde va una tira dentro de su casilla: a `inset` del centro (0,5: el borde), su largo y lo que se levanta del suelo. */
@@ -122,14 +125,17 @@ function stripPieceArea(pos: Pos, side: TileSide, offset: number, pieceLength: n
  */
 export function stripsOn(ground: MarkGround, pos: Pos, side: TileSide, placement: StripPlacement, strip = STRIP): THREE.Matrix4[] {
   const { offsets, size } = piecesOf(placement.length);
-  const heights = offsets.map((offset) => highestIn(ground, stripPieceArea(pos, side, offset, size, placement.inset, strip)));
+  const pieces = offsets.map((offset) => ({
+    offset,
+    top: highestIn(ground, stripPieceArea(pos, side, offset, size, placement.inset, strip)),
+  }));
   const along = alongSide(side);
   // `stripMatrix` cuenta desde el centro de la casilla: cada trozo, desde su sitio a lo largo del lado.
   const pieceAt = (offset: number, height: number, length: number) => {
     const from = new THREE.Vector3(pos.x + along.x * offset, height + placement.lift, pos.y + along.y * offset);
     return stripMatrix(from, side, placement.inset, length, strip);
   };
-  const whole = wholeHeight(heights);
+  const whole = wholeHeight(pieces.map((piece) => piece.top));
   if (whole !== null) return [pieceAt(0, whole, placement.length)];
-  return offsets.map((offset, index) => pieceAt(offset, heights[index] ?? 0, size));
+  return pieces.map((piece) => pieceAt(piece.offset, piece.top, size));
 }
