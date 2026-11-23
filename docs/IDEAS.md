@@ -81,9 +81,13 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     la niebla de los sucesos y la vista del cliente); (2) el servidor, en Cloudflare Workers con un
     Durable Object por sala o en Node para alojarlo uno mismo (la misma sala, `HostedRoom`), que
     guarda la sala (`snapshot`/`restore`), lleva los tiempos y manda a cada uno solo lo que ve
-    (hecho: `server/`); (3) la pantalla: crear una sala, el enlace de
-    invitación y jugar desde la vista y los sucesos que llegan (hecho: `src/net`, «Jugar en línea»;
-    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"; en la vista 3D, `OnlinePlay`). Queda: la cuenta
+    (hecho: `server/`); (3) la pantalla: crear una partida, unirse con su
+    código o su enlace, «Mis partidas» con el estado de cada una (te toca, turno del rival,
+    esperando, acabada) y jugar desde la vista y los sucesos que llegan (hecho: `src/net`, «Jugar en línea»;
+    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"; en la vista 3D, `OnlinePlay`). Queda: «Buscar rival» (emparejar
+    con quien busque partida con las mismas reglas: un objeto del servidor que junta peticiones y
+    crea la sala; como habrá poca gente, que se pueda dejar buscando y la partida salga en «Mis
+    partidas»), la cuenta
     atrás del reloj por turno en la pantalla, avisos fuera de la pestaña (notificaciones del
     navegador) y que el final sepa las cuentas de todos: cada uno solo ve las suyas
     (`withoutBooks`, `core/playerView.ts`), así que en la pantalla final las del rival salen a 0 y
