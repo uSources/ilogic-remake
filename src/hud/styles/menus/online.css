@@ -1,4 +1,4 @@
-/* Jugar en línea: el menu (crear, unirse y mis partidas), crear partida y el vestibulo */
+/* Jugar en línea: el menu (buscar rival, con amigos y mis partidas), crear partida y el vestibulo */
 .on-menu {
   display: flex;
   flex-direction: column;
@@ -27,6 +27,10 @@
 }
 .on-box .ng-code {
   font-size: 15px;
+}
+/* Los dos ritmos de «Buscar rival», como los ajustes de «Nueva partida» pero de dos en dos */
+.on-box .presets {
+  grid-template-columns: repeat(2, 1fr);
 }
 .on-rooms {
   display: flex;
@@ -129,6 +133,33 @@
 }
 .on-link {
   word-break: break-all;
+}
+/* Buscando rival: el ritmo, con un punto que late mientras se espera */
+.on-searching {
+  font-family: var(--display);
+  font-size: 22px;
+  color: var(--gold);
+}
+.on-pulse {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: on-pulse 1.4s ease-in-out infinite;
+}
+@keyframes on-pulse {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.7);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .on-pulse {
+    animation: none;
+  }
+}
+.on-cancel {
+  align-self: flex-start;
 }
 .on-error {
   word-break: break-all;

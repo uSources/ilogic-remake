@@ -128,7 +128,8 @@ export const initialState: UIState = {
   },
   online: {
     mode: 'menu',
-    focus: 'create',
+    focus: 'search',
+    search: { paces: [], pace: 'daily', note: '' },
     rooms: [],
     code: { text: '', error: null },
     create: { seats: [], presets: [], preset: 'normal', presetNote: '', options: [], timers: [], thumb: '', mapInfo: '' },

@@ -177,6 +177,8 @@ export interface OnlineRoomVM {
   detail: string;
   /** El boton para entrar («Jugar» si le toca, «Entrar» si no), o null si la sala ya no existe. */
   enter: string | null;
+  /** El de quitarla de la lista: «Quitar», o «Cancelar» si es la propia busqueda de rival (la cierra en el servidor). */
+  forget: string;
 }
 
 /** El vestibulo de una sala: el codigo y el enlace para invitar, quien hay y la conexion. */
@@ -188,15 +190,33 @@ export interface OnlineLobbyVM {
   canInvite: boolean;
   /** El sistema sabe compartir (movil): se ofrece ademas de copiar. */
   canShare: boolean;
+  /** Si es la propia busqueda de rival, aun esperando: su ritmo («Por turnos · 1 día por turno»); se puede cancelar. Si no, null. */
+  searching: string | null;
   seats: OnlineSeatVM[];
+  /** El boton de dar un asiento a la IA: «Sustituir por IA», o «Jugar contra la IA» si se busca rival. */
+  handToAiLabel: string;
   note: string;
   connection: string;
 }
 
-/** La pantalla de «Jugar en línea»: el menu (crear, entrar con el codigo y mis partidas), crear una partida o el vestibulo. */
+/** Un ritmo de «Buscar rival»: «Por turnos» o «En vivo». */
+export interface OnlinePaceVM {
+  id: string;
+  label: string;
+}
+
+/** «Buscar rival»: los ritmos, el elegido y lo que trae («1 día por turno · Juega cuando puedas…»). */
+export interface OnlineSearchVM {
+  paces: OnlinePaceVM[];
+  pace: string;
+  note: string;
+}
+
+/** La pantalla de «Jugar en línea»: el menu (buscar rival, crear, entrar con el codigo y mis partidas), crear una partida o el vestibulo. */
 export interface OnlineVM {
   mode: 'menu' | 'create' | 'lobby';
   focus: string;
+  search: OnlineSearchVM;
   rooms: OnlineRoomVM[];
   /** El cuadro del codigo (o el enlace) de una sala, y por que no vale lo escrito. */
   code: { text: string; error: string | null };

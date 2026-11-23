@@ -1,11 +1,12 @@
 /**
  * «Mis partidas en línea»: las salas en las que este navegador tiene asiento, en localStorage, para
  * volver a entrar (la partida vive en el servidor; aqui solo el codigo, la ficha del asiento y lo
- * ultimo que se supo de ella). Funciones puras sobre la lista mas leer y guardar, y los enlaces de
- * sala (`#/sala/CODIGO`, el que se reparte; `#/sala/CODIGO/FICHA`, el de un asiento: `parseRoomLink`).
+ * ultimo que se supo de ella; la sala que abrio una busqueda de rival, con su ritmo). Funciones puras
+ * sobre la lista mas leer y guardar, y los enlaces de sala (`#/sala/CODIGO`, el que se reparte;
+ * `#/sala/CODIGO/FICHA`, el de un asiento: `parseRoomLink`).
  * Lo usan el menu de «Jugar en línea» (src/menu/online/) y el menu de la vista (un enlace al cargar).
  */
-import { isRoomCode, type RoomStatus, type SeatId } from '../core/net';
+import { isRoomCode, isSearchPace, type RoomStatus, type SearchPace, type SeatId } from '../core/net';
 import type { TeamId } from '../core/model';
 import { isInt, isObject } from '../core/util/validation';
 
@@ -19,6 +20,8 @@ export interface OnlineRoomEntry {
   status: RoomStatus;
   /** Cuando se toco por ultima vez (ms desde 1970). */
   at: number;
+  /** Si es la sala que abrio una busqueda de rival, su ritmo: mientras espera, se esta buscando rival (se puede cancelar). */
+  search?: SearchPace;
 }
 
 const STORAGE_KEY = 'ilogic.online.rooms';
@@ -35,7 +38,8 @@ const isEntry = (value: unknown): value is OnlineRoomEntry =>
   isInt(value.team, 0, MAX_SEATS) &&
   isInt(value.teams, 2, MAX_SEATS) &&
   ROOM_STATUSES.includes(value.status as RoomStatus) &&
-  typeof value.at === 'number';
+  typeof value.at === 'number' &&
+  (value.search === undefined || isSearchPace(value.search));
 
 /** La lista con esta sala puesta al dia (o añadida), la mas reciente primero. */
 export function withRoom(list: readonly OnlineRoomEntry[], entry: OnlineRoomEntry): OnlineRoomEntry[] {

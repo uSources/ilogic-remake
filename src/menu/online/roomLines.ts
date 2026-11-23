@@ -1,15 +1,15 @@
 /**
  * Como se enseña cada sala de «Mis partidas en línea»: lo que se sabe de ella (lo apuntado en este
  * navegador y lo que dice el servidor, `LobbyInfo`) en una linea con su estado (te toca, le toca a
- * otro, esperando a que entren, acabada, ya no existe), y en que orden van (lo que pide hacer algo,
- * arriba). Funciones puras: las usa menuScreen.ts y las prueba tests/onlineMenu.test.ts.
+ * otro, esperando a que entren o buscando rival, acabada, ya no existe), y en que orden van (lo que
+ * pide hacer algo, arriba). Funciones puras: las usa menuScreen.ts y las prueba tests/onlineMenu.test.ts.
  */
 import { shownTeamNumber } from '../../core/teams';
 import type { OnlineRoomState, OnlineRoomVM } from '../../hud/store';
 import type { OnlineRoomEntry } from '../../net/onlineRooms';
 import type { LobbyInfo } from '../../net/roomApi';
 import { t } from '../../settings';
-import { statusText } from './shared';
+import { paceLabel, paceTurnText, statusText } from './shared';
 
 /** Lo que el servidor dijo de una sala: como esta, que ya no existe, o nada (aun no ha contestado, o no se le alcanza). */
 export type RoomLook = { kind: 'info'; info: LobbyInfo } | { kind: 'gone' } | { kind: 'unknown' };
@@ -20,6 +20,16 @@ export type RoomLook = { kind: 'info'; info: LobbyInfo } | { kind: 'gone' } | { 
  * se apuntan, `MAX_ENTRIES` en net/onlineRooms.ts).
  */
 export const isSettled = (look: RoomLook): boolean => look.kind === 'gone' || (look.kind === 'info' && look.info.status === 'ended');
+
+/**
+ * La sala es la de la propia busqueda de rival y aun espera: quitarla es cancelar la busqueda (se
+ * cierra en el servidor; si no, seguiria en la cola y le tocaria a alguien).
+ */
+export function isSearching(entry: OnlineRoomEntry, look: RoomLook): boolean {
+  if (entry.search === undefined) return false;
+  if (look.kind === 'info') return look.info.status === 'waiting';
+  return look.kind === 'unknown' && entry.status === 'waiting';
+}
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -53,7 +63,7 @@ function titleOf(entry: OnlineRoomEntry, look: RoomLook, state: OnlineRoomState)
     case 'theirTurn':
       return theirTurnTitle(look);
     case 'waiting':
-      return t('onlineWaitingPlayers');
+      return t(entry.search ? 'onlineSearching' : 'onlineWaitingPlayers');
     case 'ended':
       return t('onlineStatusEnded');
     case 'gone':
@@ -73,17 +83,23 @@ function theirTurnTitle(look: RoomLook): string {
   return team === undefined ? t('onlineAiPlaying') : t('onlineTurnOf').replace('{n}', String(shownTeamNumber(team)));
 }
 
-/** Lo de debajo del titulo: el dia y lo que le queda al turno, cuantos han entrado, cuantos equipos. */
+/** Lo de debajo del titulo: el dia y lo que le queda al turno, cuantos han entrado (o el ritmo que se busca), cuantos equipos. */
 function detailOf(entry: OnlineRoomEntry, look: RoomLook, now: number): string {
   const teams = `${entry.teams} ${t('onlineTeams').toLowerCase()}`;
   if (look.kind !== 'info') return teams;
   const { info } = look;
-  if (info.status === 'waiting') return `${joinedCount(info)}/${personCount(info)} ${t('onlineIn')} · ${teams}`;
+  if (info.status === 'waiting') return waitingDetail(entry, info, teams);
   const turn = info.turn;
   if (!turn) return teams;
   const day = t('onlineDay').replace('{n}', String(turn.day));
   const left = turn.endsAt === null ? null : `${t('onlineLeft')} ${timeLeftText(Math.max(0, turn.endsAt - now))}`;
   return [day, left, teams].filter((part): part is string => part !== null).join(' · ');
+}
+
+/** Mientras espera: el ritmo que se busca («Por turnos · 1 día por turno») o cuantos han entrado («1/2 dentro · 2 equipos»). */
+function waitingDetail(entry: OnlineRoomEntry, info: LobbyInfo, teams: string): string {
+  if (entry.search) return `${paceLabel(entry.search)} · ${paceTurnText(entry.search)}`;
+  return `${joinedCount(info)}/${personCount(info)} ${t('onlineIn')} · ${teams}`;
 }
 
 const personCount = (info: LobbyInfo): number => info.seats.filter((seat) => seat.kind === 'person').length;
@@ -98,7 +114,15 @@ function enterLabel(state: OnlineRoomState): string | null {
 /** La linea de una sala en la lista. */
 export function roomLineOf(entry: OnlineRoomEntry, look: RoomLook, now: number): OnlineRoomVM {
   const state = roomStateOf(entry, look);
-  return { code: entry.code, state, title: titleOf(entry, look, state), detail: detailOf(entry, look, now), enter: enterLabel(state) };
+  const forget = t(isSearching(entry, look) ? 'onlineCancel' : 'onlineForget');
+  return {
+    code: entry.code,
+    state,
+    title: titleOf(entry, look, state),
+    detail: detailOf(entry, look, now),
+    enter: enterLabel(state),
+    forget,
+  };
 }
 
 /** Las lineas de todas las salas, con lo que pide hacer algo arriba (en cada grupo, la mas reciente primero, como estan apuntadas). */

@@ -1,11 +1,12 @@
 /**
  * «Mis partidas en línea»: como se enseña cada sala segun lo que dice el servidor (roomLines.ts):
- * te toca, le toca a otro (o a la IA), esperando a que entren, acabada o ya no existe; lo que queda
- * del turno con reloj; que lo que pide hacer algo va arriba, y por que salas se deja de preguntar.
+ * te toca, le toca a otro (o a la IA), esperando a que entren o buscando rival, acabada o ya no
+ * existe; lo que queda del turno con reloj; que lo que pide hacer algo va arriba, y por que salas se
+ * deja de preguntar.
  */
 import { describe, expect, it } from 'vitest';
 import { CURRENT_PROTOCOL } from '@core/net';
-import { isSettled, roomLineOf, roomLines, timeLeftText, type RoomLook } from '../src/menu/online/roomLines';
+import { isSearching, isSettled, roomLineOf, roomLines, timeLeftText, type RoomLook } from '../src/menu/online/roomLines';
 import type { OnlineRoomEntry } from '../src/net/onlineRooms';
 import type { LobbyInfo, LobbyTurn } from '../src/net/roomApi';
 import { t } from '../src/settings';
@@ -49,6 +50,22 @@ describe('las salas de «Mis partidas»', () => {
     const gone = roomLineOf(entry('AAAAAA'), { kind: 'gone' }, NOW);
     expect(gone.state).toBe('gone');
     expect(gone.enter).toBeNull();
+  });
+
+  it('la propia busqueda de rival: «Buscando rival» con su ritmo, y quitarla es cancelarla (solo mientras espera)', () => {
+    const searching = { ...entry('AAAAAA'), status: 'waiting' as const, search: 'daily' as const };
+    const line = roomLineOf(searching, info('waiting', null, [false, false]), NOW);
+    expect(line.state).toBe('waiting');
+    expect(line.title).toBe(t('onlineSearching'));
+    expect(line.detail).toBe(`${t('onlinePaceDaily')} · ${t('onlinePerTurn').replace('{time}', t('onlineOneDay'))}`);
+    expect(line.forget).toBe(t('onlineCancel'));
+    expect(isSearching(searching, { kind: 'unknown' })).toBe(true);
+    // Ya con rival, o sin sala, es una mas.
+    expect(roomLineOf(searching, info('playing', { seat: 0, day: 1, endsAt: null }), NOW).forget).toBe(t('onlineForget'));
+    expect(isSearching(searching, { kind: 'gone' })).toBe(false);
+    // La sala de quien invita, esperando, no es una busqueda.
+    const invited = roomLineOf({ ...entry('BBBBBB'), status: 'waiting' }, info('waiting', null, [true, false]), NOW);
+    expect([invited.title, invited.forget]).toEqual([t('onlineWaitingPlayers'), t('onlineForget')]);
   });
 
   it('sin respuesta del servidor, lo ultimo que se supo', () => {
