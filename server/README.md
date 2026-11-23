@@ -25,7 +25,7 @@ Se puede alojar en dos sitios, con la misma sala (`src/hostedRoom.ts`) y las mis
 
 Errores de las rutas: `{ error }` con `400` (`badRequest`, `badCode`), `403` (`badOrigin`), `404`
 (`noSuchRoom`, `notFound`), `413` (`tooBig`), `503` (`noFreeCode`). Una conexion que el servidor
-cierra lo dice con un codigo propio (`CLOSE_CODES`, `src/roomObject.ts`): 4400 no era un saludo,
+cierra lo dice con un codigo propio (`CLOSE_CODES`, `src/hostedRoom.ts`): 4400 no era un saludo,
 4401 ficha mala, 4409 otra pestaña entro con la misma ficha, 4410 la sala ya no existe, 4413
 mensaje demasiado grande, 4426 otra version del protocolo, 4429 demasiados mensajes rechazados.
 

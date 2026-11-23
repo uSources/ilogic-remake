@@ -7,7 +7,7 @@
  * espejo cambia con cada vista, asi que los sistemas la piden siempre a `runner`.
  */
 import { mapGrid } from '../../core/mapGrid';
-import type { Pos, TeamId, Unit } from '../../core/model';
+import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isOnMap, unitAt } from '../../core/rules';
 import { screenEnd } from '../../core/session';
 import { ui } from '../../hud/store';
@@ -69,13 +69,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   const runner: MatchRunner = online ?? localRunner(session, viewer);
   const scene = new MatchScene(document.getElementById('game')!, state, viewer, glbModels, images);
   const { board } = scene;
-  const grid = mapGrid(state);
-  const bounds = { minX: 0, maxX: grid.width - 1, minZ: 0, maxZ: grid.height - 1 };
-  /** La camara empieza mirando a la Base (o la primera unidad) de la persona. */
-  const home = state.buildings.find((building) => building.owner === viewer) ?? state.units.find((unit) => unit.team === viewer);
-  const startTarget = home ? scene.groundOf(home) : scene.center;
-  const camera = new StrategyCamera({ target: startTarget, distance: START_DISTANCE, yaw: START_YAW }, bounds, scene.verticalFov);
-  scene.placeCamera(camera.pose);
+  const camera = startingCamera(scene, state, viewer);
   const anchorOf = (pos: Pos) => scene.anchorOf(pos);
   const minimap = new MinimapBridge(viewer);
 
@@ -127,14 +121,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   /** Los sucesos se ven con las piezas y los efectos del motor (systems/events dice que pasos lleva cada uno). */
   const day = { viewer, incomeSpots: (team: TeamId) => incomeSpotsOf(state, team) };
   /** El ambiente: el fondo del tema, el clima y lo que suena cerca de donde mira la camara (y los truenos). */
-  const ambience = new AmbiencePlayer({
-    loops: audio.loops,
-    playAt: (sound, at) => audio.playAt(sound, at),
-    later: (seconds, run) => void setTimeout(run, seconds * MS_PER_SECOND),
-    random: Math.random,
-  });
-  ambience.load(state);
-  scene.weather.onLightning(() => ambience.lightning());
+  const ambience = startAmbience(scene, state, audio);
   /** Los sonidos del tablero suenan desde su sitio, respecto a la camara. */
   const sounds = scene.soundStage(audio);
   const stages = { ...scene.stages, sounds, day, board: boardLookupOf(state, viewer) };
@@ -295,18 +282,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     help: () => helpPanel.open(),
     options: () => options.open(),
   });
-  /** El oyente sigue a la camara: el audio solo se toca cuando ella se mueve. */
-  const hearing = new CameraListener();
-  scene.onFrame((seconds) => {
-    camera.update(seconds);
-    if (hearing.follow(camera.pose)) {
-      audio.moveListener(hearing.pose);
-      audio.setBoardLevel(zoomLevel(camera.pose.distance));
-      ambience.setZoomLevel(ambienceZoomLevel(camera.pose.distance));
-    }
-    ambience.update(seconds, hearing.pose.position);
-    scene.render(seconds, camera.pose);
-    minimap.publishView(scene.viewedArea(camera.pose.target.y));
+  playEachFrame({ scene, camera, audio, ambience, minimap }, () => {
     // Los bocadillos (menu, prevision) siguen a su casilla mientras la camara se mueve.
     if (controls.menu() || (cursor && controls.forecastAt(cursor))) publish();
   });
@@ -318,8 +294,8 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   online?.listen();
   void controls.runUntilInput();
 
-  // Para mirar y probar desde la consola (y los agentes): la sesion y las piezas (y la sala, por la red).
-  (window as unknown as { ilogic3d: object }).ilogic3d = {
+  // La sesion se pide a `runner`: por la red, su sesion espejo cambia con cada vista (y `online` es la sala).
+  exposeForConsole({
     get session() {
       return runner.session;
     },
@@ -337,5 +313,60 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     wrecks: scene.wrecks,
     ui,
     pause,
-  };
+  });
+}
+
+/** La camara de estrategia, empezando mirando a la Base (o la primera unidad) de quien mira. */
+function startingCamera(scene: MatchScene, state: GameState, viewer: TeamId): StrategyCamera {
+  const grid = mapGrid(state);
+  const bounds = { minX: 0, maxX: grid.width - 1, minZ: 0, maxZ: grid.height - 1 };
+  const home = state.buildings.find((building) => building.owner === viewer) ?? state.units.find((unit) => unit.team === viewer);
+  const startTarget = home ? scene.groundOf(home) : scene.center;
+  const camera = new StrategyCamera({ target: startTarget, distance: START_DISTANCE, yaw: START_YAW }, bounds, scene.verticalFov);
+  scene.placeCamera(camera.pose);
+  return camera;
+}
+
+/** El ambiente: el fondo del tema, el clima y lo que suena cerca de donde mira la camara (y los truenos). */
+function startAmbience(scene: MatchScene, state: GameState, audio: GameAudio): AmbiencePlayer {
+  const ambience = new AmbiencePlayer({
+    loops: audio.loops,
+    playAt: (sound, at) => audio.playAt(sound, at),
+    later: (seconds, run) => void setTimeout(run, seconds * MS_PER_SECOND),
+    random: Math.random,
+  });
+  ambience.load(state);
+  scene.weather.onLightning(() => ambience.lightning());
+  return ambience;
+}
+
+/** Lo que se mueve con cada fotograma: la camara, el oido que la sigue, el ambiente, la escena y el minimapa. */
+interface FrameParts {
+  scene: MatchScene;
+  camera: StrategyCamera;
+  audio: GameAudio;
+  ambience: AmbiencePlayer;
+  minimap: MinimapBridge;
+}
+
+/** Cada fotograma mueve la camara y dibuja; el audio solo se toca cuando la camara se mueve. `afterRender`, lo de la interfaz. */
+function playEachFrame({ scene, camera, audio, ambience, minimap }: FrameParts, afterRender: () => void): void {
+  const hearing = new CameraListener();
+  scene.onFrame((seconds) => {
+    camera.update(seconds);
+    if (hearing.follow(camera.pose)) {
+      audio.moveListener(hearing.pose);
+      audio.setBoardLevel(zoomLevel(camera.pose.distance));
+      ambience.setZoomLevel(ambienceZoomLevel(camera.pose.distance));
+    }
+    ambience.update(seconds, hearing.pose.position);
+    scene.render(seconds, camera.pose);
+    minimap.publishView(scene.viewedArea(camera.pose.target.y));
+    afterRender();
+  });
+}
+
+/** Para mirar y probar desde la consola (y los agentes, docs/AGENTES.md): `window.ilogic3d`. */
+function exposeForConsole(pieces: object): void {
+  (window as unknown as { ilogic3d: object }).ilogic3d = pieces;
 }

@@ -24,10 +24,15 @@ function triangleMates(geometry: THREE.BufferGeometry): Map<number, Set<number>>
   for (const corners of triangles(geometry))
     for (const vertex of corners) {
       const known = mates.get(vertex) ?? new Set<number>();
-      for (const other of corners) if (other !== vertex) known.add(other);
+      addOtherCorners(known, corners, vertex);
       mates.set(vertex, known);
     }
   return mates;
+}
+
+/** Las otras esquinas del triangulo, a los vecinos de `vertex` (sin lista nueva: se llama una vez por vertice). */
+function addOtherCorners(known: Set<number>, corners: readonly number[], vertex: number): void {
+  for (const other of corners) if (other !== vertex) known.add(other);
 }
 
 /** Si `mate` esta en la misma vertical que `vertex` y por encima del corte: el otro extremo de su lado de la cara. */

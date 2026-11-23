@@ -128,6 +128,20 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
 11. **Tab en la pantalla final.** Mirar si Tab funciona (en la pantalla final no mueve la selección, ni antes del cambio).
 12. **Mando (gamepad).** Un adaptador más en `src/controls`; el hueco queda preparado en la PR #50
     (`docs/ARQUITECTURA.md`, «Mandos»).
+31. **Migrar las partidas guardadas al publicar.** Hoy un cambio de formato sube `SAVE_VERSION` y las
+    partidas de antes se descartan (`core/saveVersion.ts`): vale mientras el juego no ha salido. Con
+    jugadores, perder su partida al actualizar es un fallo; antes de la 1.0, decidir si se migra
+    (una función por versión, probada con `tests/fixtures/saves`) o se avisa.
+32. **La partida 3D como clase.** `playMatch` (`view3d/app/match3d.ts`) aún tiene unas 260 líneas: lo
+    que queda se conecta entre sí (publicar, la sesión, las órdenes, la pausa, la entrada). Una clase
+    `Match3d` con un método por cosa lo partiría sin parámetros enormes; hay que probarla jugando.
+33. **Un solo puntero.** `controls/pointer.ts` (`PointerGestures`, puro y con test) y
+    `view3d/systems/input/pointerInput.ts` hacen lo mismo dos veces; pasar la vista 3D al primero
+    (y con él, el pellizco de la idea 21).
+34. **Funciones largas que quedan** (más de 40 líneas, todas de la interfaz): `Minimap`, `Help`,
+    `CreateRoom`, `RenameSquad`, `showEndIfOver`, `buildTerrain` y dos de `menuFlow.ts` y
+    `matchScene.ts`. Cuando se toquen, partirlas; luego se puede poner `max-lines-per-function` en
+    ESLint como ya está `max-depth`.
 
 ## Descartado (y por qué)
 
