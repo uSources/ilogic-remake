@@ -3,7 +3,7 @@
  * se le dice que es el del Worker, wrangler.toml) y `exports.default` es el Worker de src/cloudflare/index.ts.
  */
 import type * as WorkerModule from '../../src/cloudflare/index';
-import type { Env as WorkerEnv } from '../../src/cloudflare/roomObject';
+import type { Env as WorkerEnv } from '../../src/cloudflare/env';
 
 declare global {
   namespace Cloudflare {

@@ -9,7 +9,8 @@ import type { Duplex } from 'node:stream';
 import { WebSocketServer } from 'ws';
 import { isOriginAllowed } from '../../src/cors';
 import { MAX_MESSAGE_BYTES } from '../../src/limits';
-import { isRoomsPath, respond, socketRoomCode, type ServerSetup } from '../../src/routes';
+import { Matchmaker } from '../../src/matchmaker';
+import { isApiPath, respond, socketRoomCode, type ServerSetup } from '../../src/routes';
 import { requestOf, send } from './httpBridge';
 import { NodeRooms } from './nodeRooms';
 import { RoomFiles } from './roomFiles';
@@ -49,10 +50,10 @@ const MAX_FRAME_BYTES = 4 * MAX_MESSAGE_BYTES;
 
 const pathOf = (incoming: IncomingMessage): string => new URL(incoming.url ?? '/', 'http://servidor').pathname;
 
-/** Una peticion: el juego si es un fichero suyo; si no, las rutas de las salas. */
+/** Una peticion: el juego si es un fichero suyo; si no, las rutas del servidor de partidas. */
 async function answer(incoming: IncomingMessage, outgoing: ServerResponse, setup: ServerSetup, webDir: string | null): Promise<void> {
   const path = pathOf(incoming);
-  const isGameFile = webDir !== null && incoming.method === 'GET' && !isRoomsPath(path);
+  const isGameFile = webDir !== null && incoming.method === 'GET' && !isApiPath(path);
   if (isGameFile && (await serveFile(webDir, path, outgoing))) return;
   await send(await respond(await requestOf(incoming, MAX_MESSAGE_BYTES), setup), outgoing);
 }
@@ -101,8 +102,10 @@ async function stop(server: Server, rooms: NodeRooms): Promise<void> {
 
 /** Arranca el servidor con las salas guardadas en `dataDir` (ya con sus alarmas puestas). */
 export async function startServer(options: NodeServerOptions): Promise<RunningServer> {
-  const rooms = await NodeRooms.open(await RoomFiles.open(options.dataDir), options.maxRooms, options.now);
-  const setup: ServerSetup = { rooms, allowedOrigins: options.allowedOrigins };
+  const files = await RoomFiles.open(options.dataDir);
+  const rooms = await NodeRooms.open(files, options.maxRooms, options.now);
+  const matchmaker = new Matchmaker(rooms, files.matchQueue(), options.now);
+  const setup: ServerSetup = { rooms, matchmaker, allowedOrigins: options.allowedOrigins };
   const server = createServer((incoming, outgoing) => {
     answer(incoming, outgoing, setup, options.webDir).catch((error: unknown) => failRequest(outgoing, error));
   });

@@ -7,15 +7,11 @@
  */
 import { DurableObject } from 'cloudflare:workers';
 import type { SeatId } from '@core/net';
-import { HostedRoom, type ClaimResult, type CreateResult, type HandToAiResult } from '../hostedRoom';
+import { HostedRoom, type ClaimResult, type CloseResult, type CreateResult, type HandToAiResult } from '../hostedRoom';
 import type { LobbyInfo } from '../roomAdapter';
 import type { Attachment, RoomHost, RoomMeta, RoomSocket, StoredRoom } from '../roomHost';
 import type { RoomRequest } from '../roomRequest';
-
-export interface Env {
-  ROOMS: DurableObjectNamespace<RoomObject>;
-  ALLOWED_ORIGINS: string;
-}
+import type { Env } from './env';
 
 const KEYS = { room: 'room', meta: 'meta' } as const;
 
@@ -89,6 +85,10 @@ export class RoomObject extends DurableObject<Env> {
 
   handToAi(token: string, seat: SeatId): Promise<HandToAiResult> {
     return this.room.handToAi(token, seat);
+  }
+
+  close(token: string): Promise<CloseResult> {
+    return this.room.close(token);
   }
 
   /** La subida a WebSocket (lo unico que llega por fetch: lo demas va por RPC). El saludo viene despues, como primer mensaje. */

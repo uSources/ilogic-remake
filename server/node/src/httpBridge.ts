@@ -2,9 +2,11 @@
  * De `node:http` a las rutas y vuelta: una peticion de Node como `Request`, que es lo que entienden
  * las rutas (routes.ts, las mismas que en Cloudflare), y su `Response` de vuelta. Del cuerpo se
  * guarda como mucho el tope y un byte mas (para que las rutas vean que se pasa): lo grande no se
- * queda en memoria.
+ * queda en memoria. La direccion de quien pide va en la cabecera que en Cloudflare pone Cloudflare
+ * (`CLIENT_ADDRESS_HEADER`), escrita aqui con la del socket: la que traiga la peticion no cuenta.
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { CLIENT_ADDRESS_HEADER } from '../../src/routes';
 
 const hasBody = (method: string): boolean => method !== 'GET' && method !== 'HEAD';
 
@@ -13,6 +15,7 @@ function headersOf(incoming: IncomingMessage): Headers {
   for (const [name, value] of Object.entries(incoming.headers)) {
     if (value !== undefined) headers.set(name, Array.isArray(value) ? value.join(', ') : value);
   }
+  headers.set(CLIENT_ADDRESS_HEADER, incoming.socket.remoteAddress ?? '');
   return headers;
 }
 

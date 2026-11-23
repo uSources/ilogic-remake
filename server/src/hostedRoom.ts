@@ -10,11 +10,11 @@
  * Por los sockets solo pasa lo que la sala devuelve para cada asiento (`Outgoing`): el servidor no
  * mira la partida ni la manda nunca.
  */
-import type { JoinResult, NetError, Outgoing, SeatId } from '@core/net';
+import type { ClaimError, JoinResult, NetError, Outgoing, SeatId } from '@core/net';
 import { isObject } from '@core/util/validation';
 import { MAX_MESSAGE_BYTES } from './limits';
 import { watchRejections, type RejectionWindow } from './rateLimit';
-import { RoomAdapter, type ClaimSeatResult, type HandToAiError, type Invitation, type LobbyInfo } from './roomAdapter';
+import { RoomAdapter, type CloseError, type HandToAiError, type Invitation, type LobbyInfo } from './roomAdapter';
 import type { Attachment, RoomHost, RoomMeta, RoomSocket } from './roomHost';
 import type { RoomRequest } from './roomRequest';
 import {
@@ -54,7 +54,8 @@ const CLOSE_CODE_OF_ERROR: Partial<Record<NetError, number>> = {
 
 /** La sala creada da su primer asiento a quien la crea; si ya habia una con ese codigo, `exists` (se prueba otro). */
 export type CreateResult = { ok: true; seat: Invitation } | { ok: false; error: 'exists' };
-export type ClaimResult = ClaimSeatResult | { ok: false; error: 'noSuchRoom' };
+export type ClaimResult = { ok: true; seat: Invitation } | { ok: false; error: ClaimError | 'noSuchRoom' };
+export type CloseResult = { ok: true } | { ok: false; error: CloseError | 'noSuchRoom' };
 export type HandToAiResult = { ok: true } | { ok: false; error: HandToAiError | 'noSuchRoom' };
 
 /** Lo que llega por un socket: texto (los mensajes son JSON) o bytes (que no son un mensaje). */
@@ -96,8 +97,10 @@ export class HostedRoom {
     const creator = adapter.claimSeat();
     if (!creator.ok) throw new Error(`Una sala nueva no tiene asiento para quien la crea: ${creator.error}`);
     this.adapter = adapter;
-    this.meta = { settings, timers: initialTimers(settings, this.host.now()) };
-    await this.save(adapter, this.meta);
+    const now = this.host.now();
+    this.meta = { settings, timers: initialTimers(settings, now) };
+    // Con sus relojes segun como queda: una sala que empieza con los asientos dados ya puede estar jugando.
+    await this.sync(adapter, creator.outgoing, now);
     return { ok: true, seat: creator.seat };
   }
 
@@ -117,8 +120,19 @@ export class HostedRoom {
     const adapter = await this.load();
     if (!adapter) return { ok: false, error: 'noSuchRoom' };
     const claimed = adapter.claimSeat();
-    if (claimed.ok) await this.afterActivity(adapter, []);
-    return claimed;
+    if (!claimed.ok) return claimed;
+    await this.afterActivity(adapter, claimed.outgoing);
+    return { ok: true, seat: claimed.seat };
+  }
+
+  /** Quien la creo cierra la sala antes de que empiece (cancela la busqueda de rival): se borra y quien este dentro sale. */
+  async close(token: string): Promise<CloseResult> {
+    const adapter = await this.load();
+    if (!adapter) return { ok: false, error: 'noSuchRoom' };
+    const allowed = adapter.canClose(token);
+    if (!allowed.ok) return allowed;
+    await this.expire('La sala se ha cerrado');
+    return { ok: true };
   }
 
   /** Quien creo la sala da un asiento vacio a la IA (si con el ya estan todos, la partida empieza). */
@@ -290,10 +304,11 @@ export class HostedRoom {
    * La sala se borra entera; quien este dentro se entera por el cierre. Sale de memoria antes de
    * borrarla: lo que llegue mientras (el cierre de esas mismas conexiones) ya no la encuentra y no la vuelve a guardar.
    */
-  private async expire(): Promise<void> {
+  /** La sala deja de existir: se borra y quien este dentro sale (con 'gone': su pantalla la quita de «Mis partidas»). */
+  private async expire(reason = 'La sala ha caducado'): Promise<void> {
     this.adapter = null;
     this.meta = null;
-    for (const socket of this.host.sockets()) socket.close(CLOSE_CODES.gone, 'La sala ha caducado');
+    for (const socket of this.host.sockets()) socket.close(CLOSE_CODES.gone, reason);
     await this.host.erase();
   }
 }

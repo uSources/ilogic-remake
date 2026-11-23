@@ -8,23 +8,27 @@ en `docs/ARQUITECTURA.md`, "Red" → "Servidor".
 Se puede alojar en dos sitios, con la misma sala (`src/hostedRoom.ts`) y las mismas rutas
 (`src/routes.ts`):
 
-- **En Cloudflare** (`src/cloudflare/`): un Worker con un Durable Object por sala. Es el de la web
-  publica: ver "Publicar en Cloudflare".
-- **En Node** (`node/`): un proceso con todas las salas, guardadas en disco, que sirve tambien el
-  juego. Para alojarlo uno mismo, en casa o en un servidor propio: ver "Alojarlo uno mismo".
+- **En Cloudflare** (`src/cloudflare/`): un Worker con un Durable Object por sala y otro para el
+  emparejador de «Buscar rival». Es el de la web publica: ver "Publicar en Cloudflare".
+- **En Node** (`node/`): un proceso con todas las salas y el emparejador, guardados en disco, que
+  sirve tambien el juego. Para alojarlo uno mismo, en casa o en un servidor propio: ver "Alojarlo
+  uno mismo".
 
 ## Rutas
 
 | Ruta                  | Que hace                                                                                                                                                                                                                                                                              |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /rooms`         | Crea una sala. Cuerpo: `{ match, turnSeconds?, waitingSeconds? }` (`match` es lo que elige la pantalla de escaramuza, `SkirmishChoices`: `seed`, `size`, `theme`, `settingChanges`, `teams`, `firstTeam`). Responde `201 { code, seat, team, token }`: el codigo de la sala (6 letras) y el asiento de quien crea (el primero de persona) con su ficha. Para invitar se reparte el codigo o el enlace de la sala (`#/sala/CODIGO`) |
+| `POST /rooms`         | Crea una sala. Cuerpo: `{ match, turnSeconds?, waitingSeconds?, start? }` (`match` es lo que elige la pantalla de escaramuza, `SkirmishChoices`: `seed`, `size`, `theme`, `settingChanges`, `teams`, `firstTeam`; `start`, cuando empieza: `everyoneIn`, cuando entren todos, o `everyoneSeated`, en cuanto cada asiento sea de alguien). Responde `201 { code, seat, team, token }`: el codigo de la sala (6 letras) y el asiento de quien crea (el primero de persona) con su ficha. Para invitar se reparte el codigo o el enlace de la sala (`#/sala/CODIGO`) |
 | `POST /rooms/:code/seat` | Pide un asiento con el codigo: da el primer asiento de persona libre, con su ficha, mientras la sala espera. Responde `{ code, seat, team, token }`; si no, `404` (`noSuchRoom`) o `409` (`notWaiting`, `noFreeSeat`). Cada asiento se da una sola vez |
 | `GET /rooms/:code`    | Lo que puede saber cualquiera: `{ status, protocol, save, seats: [{ seat, team, kind, joined }], turn }`, con `turn` a quien se espera (`{ seat, day, endsAt }`: `endsAt` cuando vence su reloj, o `null`) o `null`. Nada de la partida ni de las fichas                                                                                                                                                 |
 | `POST /rooms/:code/ai` | Quien creo la sala (cuerpo `{ token, seat }`: la ficha de su asiento, el primero) da a la IA un asiento de persona que no ha entrado, mientras la sala espera. Responde `{ ok: true }`; si no, `403` (`badToken`), `409` (`notWaiting`, `seatTaken`) o `404` (`noSeat`)                                                                              |
+| `POST /rooms/:code/close` | Quien creo la sala (cuerpo `{ token }`) la cierra antes de que empiece: se borra y quien este dentro sale (4410). Es cancelar una busqueda de rival. Responde `{ ok: true }`; si no, `403` (`badToken`), `409` (`notWaiting`) o `404` (`noSuchRoom`) |
+| `POST /match`         | Buscar rival (`src/matchmaker.ts`). Cuerpo: `{ pace, avoid? }`: el ritmo (`daily`, un dia por turno; `live`, dos minutos) y como mucho 16 codigos de salas propias que no deben tocarle. Da el asiento libre de la primera sala de ese ritmo que espera rival (y la partida empieza) o, si no hay, abre una sala nueva que espera (1 contra 1, reglas normales, mapa al azar). En `live` solo se empareja con quien esta en su sala. Responde `{ code, seat, team, token, matched }`; si no, `429` (`tooManySearches`) o `503` (`serverFull`, `noFreeCode`) |
 | `GET /rooms/:code/ws` | La conexion de la partida (subida a WebSocket). El primer mensaje es el saludo (`hello`, con la ficha y la version del protocolo); desde ahi, los mensajes de `src/core/net/protocol.ts` como texto JSON, uno por trama                                                                 |
 
-Errores de las rutas: `{ error }` con `400` (`badRequest`, `badCode`), `403` (`badOrigin`), `404`
-(`noSuchRoom`, `notFound`), `413` (`tooBig`), `503` (`noFreeCode`). Una conexion que el servidor
+Errores de las rutas: `{ error }` con `400` (`badRequest`, `badCode`), `403` (`badOrigin`,
+`badToken`), `404` (`noSuchRoom`, `notFound`, `noSeat`), `409` (`notWaiting`, `noFreeSeat`,
+`seatTaken`), `413` (`tooBig`), `429` (`tooManySearches`), `503` (`noFreeCode`, `serverFull`). Una conexion que el servidor
 cierra lo dice con un codigo propio (`CLOSE_CODES`, `src/hostedRoom.ts`): 4400 no era un saludo,
 4401 ficha mala, 4409 otra pestaña entro con la misma ficha, 4410 la sala ya no existe, 4413
 mensaje demasiado grande, 4426 otra version del protocolo, 4429 demasiados mensajes rechazados.
@@ -39,6 +43,11 @@ mensaje demasiado grande, 4426 otra version del protocolo, 4429 demasiados mensa
 - Reloj por turno (`turnSeconds`) y espera a los que faltan (`waitingSeconds`), si el creador los
   pide: de 30 segundos a 7 dias.
 - Salas de 2 a 4 equipos, al menos uno de una persona.
+- Buscar rival: 20 busquedas por direccion cada 10 minutos (la direccion la pone Cloudflare,
+  `CF-Connecting-IP`, o en Node la del socket: la que mande el cliente no vale). La cola guarda
+  como mucho 100 salas por ritmo (sale la mas vieja) y en cada busqueda se miran como mucho 20. En
+  vivo, una sala cuyo creador no esta sigue en la cola 5 minutos desde que se ve (puede estar
+  recargando) y despues sale.
 
 ## Desarrollo
 
@@ -74,8 +83,9 @@ Lo que hay que hacer una vez:
 3. En GitHub, Settings → Secrets and variables → Actions → **Secrets**: `CLOUDFLARE_API_TOKEN` y
    `CLOUDFLARE_ACCOUNT_ID`. Con los dos, `.github/workflows/server.yml` publica el servidor con
    cada push a `main` que toque `server/` o `src/core/` (sin ellos, no hace nada y lo dice). La
-   primera publicacion crea el Worker `ilogic-servidor` y su migracion `v1` (la clase
-   `RoomObject`).
+   primera publicacion crea el Worker `ilogic-servidor` y sus migraciones: `v1`, la clase
+   `RoomObject`, y `v2`, `MatchmakerObject` (una clase nueva de Durable Object va siempre en una
+   migracion nueva; `wrangler deploy` aplica las que falten).
 4. La URL del Worker es `https://ilogic-servidor.<subdominio de la cuenta>.workers.dev` (la dice
    `wrangler deploy` y el panel). En GitHub, en el mismo sitio pero en **Variables**:
    `VITE_SERVER_URL` con esa URL. Los workflows de la web (`pages.yml`) y de las previews
@@ -105,8 +115,8 @@ npm run selfhost      # compila el juego con VITE_SERVER_URL=/ (.env.selfhost) y
 Se juega en `http://<la direccion del equipo>:8787` (en el mismo equipo, `http://localhost:8787`), y
 los enlaces de las salas llevan esa direccion. Con el juego ya compilado basta `npm run server:node`.
 Las salas se guardan en `server/data/`, un JSON por sala (se pueden copiar o borrar a mano con el
-servidor parado); al arrancar otra vez siguen donde estaban y sus relojes tambien (una sala caducada
-se borra sola). Se para con Ctrl+C (o `SIGTERM`): cierra las conexiones y acaba de guardar.
+servidor parado), y la cola de «Buscar rival» en `server/data/emparejador.json`; al arrancar otra
+vez siguen donde estaban y sus relojes tambien (una sala caducada se borra sola). Se para con Ctrl+C (o `SIGTERM`): cierra las conexiones y acaba de guardar.
 
 Variables de entorno (todas opcionales):
 
@@ -122,7 +132,9 @@ Variables de entorno (todas opcionales):
 
 Los dos topes estan para que nadie llene el disco ni la memoria creando salas o abriendo conexiones
 sin parar (todas las salas viven en memoria). No miran de donde viene cada uno: abierto a internet,
-mejor detras de un proxy que limite las peticiones por IP (como `limit_req` de nginx).
+mejor detras de un proxy que limite las peticiones por IP (como `limit_req` de nginx). El tope de
+busquedas de rival si mira la direccion, pero la de la conexion: detras de un proxy todos llegan
+desde la suya y lo comparten.
 
 Abierto por su IP (`http://192.168.1.20:8787`), el juego que sirve ya puede hablar con el servidor.
 Con un nombre (`https://ilogic.mi-dominio.net`) no: ese nombre va en `ALLOWED_ORIGINS`, porque si
@@ -141,20 +153,23 @@ Lo comun (`src/`):
 
 | Fichero          | Que va                                                                                                                                                              |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `routes.ts`      | las rutas (`ROUTES`), CORS, el tope del cuerpo; las salas por su codigo las da quien aloja el servidor (`RoomDirectory`)                                             |
+| `routes.ts`      | las rutas (`ROUTES`), CORS, el tope del cuerpo y la direccion de quien pide (`CLIENT_ADDRESS_HEADER`)                                                                |
+| `roomDirectory.ts` | las salas por su codigo, que las da quien aloja el servidor (`RoomDirectory`), y crear una con un codigo libre                                                    |
+| `matchmaker.ts`  | el emparejador de «Buscar rival»: una cola por ritmo, de una busqueda en una, guardada tras cada una (`MatchQueueStore`)                                              |
 | `hostedRoom.ts`  | una sala del servidor, se aloje donde se aloje: conexiones, guardar y recuperar, la alarma, frenar a quien insiste                                                   |
 | `roomHost.ts`    | lo que la sala pide a quien la aloja (`RoomHost`): guardar con su alarma, cargar, borrar, sus conexiones (`RoomSocket`) y la hora                                    |
 | `roomAdapter.ts` | el unico que toca la `Room` del nucleo: lo que el objeto necesita de ella, con nombres del servidor; el vestibulo (`lobby`) y pedir asiento (`claimSeat`)                       |
 | `roomRequest.ts` | la forma de lo que se pide al crear una sala, comprobada campo a campo contra el contenido del juego                                                                 |
 | `timers.ts`      | los relojes como datos puros: caducar, el turno, la espera, seguir una partida a medias; `nextAlarm` elige la unica alarma                                           |
 | `limits.ts`      | todos los topes y tiempos, con nombre                                                                                                                               |
-| `rateLimit.ts`   | la ventana de rechazos por asiento                                                                                                                                   |
+| `rateLimit.ts`   | la ventana de rechazos por asiento y el tope de peticiones por direccion (`RequestLimit`)                                                                            |
 | `codes.ts`       | codigos de sala al azar (sin letras que se confundan; su forma, `isRoomCode`, es del nucleo: `src/core/net/roomCode.ts`), fichas (192 bits de `crypto.getRandomValues`) y su comparacion en tiempo constante                                   |
 | `cors.ts`        | que origenes pueden hablar con el servidor                                                                                                                          |
 
-En Cloudflare (`src/cloudflare/`): `index.ts`, el Worker (las rutas, con un Durable Object por
-codigo), y `roomObject.ts`, el Durable Object de una sala (su almacen, su alarma y sus conexiones por
-el Hibernation API).
+En Cloudflare (`src/cloudflare/`): `index.ts`, el Worker (las rutas); `rooms.ts`, las salas como un
+Durable Object por codigo; `roomObject.ts`, el Durable Object de una sala (su almacen, su alarma y
+sus conexiones por el Hibernation API); `matchmakerObject.ts`, el unico Durable Object del
+emparejador (su cola, en su almacen), y `env.ts`, lo que da Cloudflare (`wrangler.toml`).
 
 En Node (`node/src/`, con su propio `tsconfig.json`: los tipos de Node y los de workerd chocan):
 
@@ -164,14 +179,15 @@ En Node (`node/src/`, con su propio `tsconfig.json`: los tipos de Node y los de 
 | `config.ts`      | las variables de entorno                                                                     |
 | `nodeServer.ts`  | HTTP (`node:http`), la subida a WebSocket (`ws`) y el juego compilado                        |
 | `nodeRooms.ts`   | las salas del proceso: cada una con su fichero, sus conexiones y un `setTimeout` como alarma |
-| `roomFiles.ts`   | un JSON por sala; cada escritura entera o nada, y las de una sala en fila                    |
-| `httpBridge.ts`  | de una peticion de Node a `Request` (lo que entienden las rutas) y vuelta                    |
+| `roomFiles.ts`   | un JSON por sala y el de la cola del emparejador; cada escritura entera o nada, y las de una sala en fila |
+| `httpBridge.ts`  | de una peticion de Node a `Request` (lo que entienden las rutas, con la direccion del socket) y vuelta |
 | `staticFiles.ts` | los ficheros del juego, sin salir de su carpeta                                              |
 | `nodeSocket.ts`  | una conexion de `ws` como conexion de la sala                                                |
 
-Tests: `test/unit` (las piezas puras, con la sala del nucleo de verdad) y, de integracion, las
-pruebas de `test/shared` (crear una sala, dos personas y la IA jugando varios dias por WebSocket,
-volver a entrar, mensajes repetidos, lo que no entra), que pasan los dos: `test/workers` (el Worker y
+Tests: `test/unit` (las piezas puras, con la sala del nucleo de verdad; el emparejador, con salas de
+verdad en memoria) y, de integracion, las pruebas de `test/shared` (crear una sala, dos personas y
+la IA jugando varios dias por WebSocket, volver a entrar, mensajes repetidos, buscar rival y cerrar
+una sala, lo que no entra), que pasan los dos: `test/workers` (el Worker y
 el objeto de verdad en workerd, con `@cloudflare/vitest-plugin`; ademas despertar el objeto y las
 alarmas adelantando los relojes guardados) y `node/test` (el servidor de Node en un puerto; ademas
 sus alarmas con la hora adelantada a mano, arrancar otra vez con las salas guardadas y servir el
