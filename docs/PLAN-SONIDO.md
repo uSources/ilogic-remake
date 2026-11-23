@@ -64,7 +64,9 @@ y el helicóptero a avión. Pedirlos por unidad (o por arma) es un cambio peque�
 | `shot_bomb` | Bombardero (silbido y caída) | A |
 | `shot_rocket_salvo` | Lanzamisiles | B |
 | `step_tracks` | Tanques (orugas) | B |
-| `step_wheels` | Jeep, Transporte, Suministros (ruedas) | B |
+| `step_jeep` / `step_truck` | Jeep; Transporte, Suministros y Lanzamisiles (camiones) | B |
+| `engine_start_jeep` / `engine_start_truck` | Arranque de los de ruedas al echar a andar | B |
+| `horn_jeep` / `horn_truck` | Bocina de los de ruedas al elegirlos (en vez de la voz) | B |
 | `step_heli` | Helicóptero (rotor) | B |
 | `step_jet` | Cazas y Bombardero | B |
 | `step_splash` | Tanque anfibio en el agua | C |
@@ -151,9 +153,12 @@ Descargados (21-11-2026) en `~/ComfyUI-Shared/models`:
   escuchando los primeros candidatos.
 - **Elegidos (21-11-2026)**: las armas que faltaban (pistola, bazuca, mortero, ametralladora, cañon
   pesado, antiaereo, lanzamisiles, bomba), las orugas, las 7 voces y los 18 ambientes (9 de zona, 5 de
-  fondo y 4 de clima). **Faltan por generar y elegir**: los otros 111 efectos (motores de ruedas, helices
-  y helicoptero, pasos por suelo, impactos, caidas, interfaz, sucesos), `thunder`, la musica de cada tema,
-  `briefing`, `enemy_turn` y los jingles; `npm run sonidos -- lista` dice cuales tienen candidatos.
+  fondo y 4 de clima). **Elegidos (23-11-2026)**, a ojo por medidas (el usuario lo delego): el trueno,
+  los 9 de los animales, el motor del jeep y el de los camiones, sus arranques y sus bocinas, y las 7
+  voces otra vez (un balbuceo menos chillon; el piloto, por radio). **Faltan por generar y elegir**: los
+  otros efectos (helices y helicoptero, pasos por suelo, impactos, caidas, interfaz, sucesos), la musica
+  de cada tema, `briefing`, `enemy_turn` y los jingles; `npm run sonidos -- lista` dice cuales tienen
+  candidatos.
 - **Que suenen en la partida (hecho, 21-11-2026)**, con sonido 3D (`docs/ARQUITECTURA.md`, "Sonido 3D"):
   - cada efecto del tablero suena desde su sitio respecto a la camara (a un lado, mas flojo lejos);
   - por unidad: disparo, motor y caida (`UNIT_SOUNDS`, `soundCues.ts`); los pasos de la infanteria
@@ -168,6 +173,10 @@ Descargados (21-11-2026) en `~/ComfyUI-Shared/models`:
     (`ambienceZoomLevel`); el clima, siempre. Cada ambiente tiene su volumen (`AMBIENT_VOLUMES`): el agua,
     un murmullo de orilla (ni el hielo ni el borde del tablero suenan a agua);
   - musica de batalla por tema (si aun no esta, la de siempre).
+  - (23-11-2026) con mal tiempo los animales se callan: los ambientes de pajaros, grillos y ranas bajan
+    con lluvia o nevada y se apagan con tormenta o arena (`weatherLevelOf`, `ambience.ts`); los
+    animalitos del tablero dicen lo suyo al moverse cerca de la camara (`animal_*`, `animalCalls.ts`);
+    el jeep y los camiones, con su motor, su arranque y su bocina al elegirlos (`soundCues.ts`).
   - Todo se pide por nombre aunque no haya WAV (`src/audio/soundNames.ts`): hasta que se elija, suena su
     sustituto o nada. Lo que falta es **generar y elegir** los sonidos; lo que queda por enchufar, en
     `docs/IDEAS.md` ("Sonido").
