@@ -10,7 +10,7 @@ import { forgetRoom, parseRoomLink, readOnlineRooms } from '../../net/onlineRoom
 import { lobbyOf, type ApiResult, type LobbyInfo } from '../../net/roomApi';
 import { serverUrl } from '../../net/serverUrl';
 import { t } from '../../settings';
-import { roomLines, type RoomLook } from './roomLines';
+import { isSettled, roomLines, type RoomLook } from './roomLines';
 import type { OnlineScreens } from './shared';
 
 const ROOM_PREFIX = 'room-';
@@ -68,7 +68,7 @@ export class MenuScreen {
 
   /** Las salas, con lo que pide hacer algo arriba, y el cuadro del codigo. */
   vm(): Pick<OnlineVM, 'rooms' | 'code'> {
-    const rooms = roomLines(readOnlineRooms(), (code) => this.looks.get(code) ?? UNKNOWN, Date.now());
+    const rooms = roomLines(readOnlineRooms(), (code) => this.lookOf(code), Date.now());
     return { rooms, code: { text: this.codeText, error: this.codeError } };
   }
 
@@ -122,13 +122,21 @@ export class MenuScreen {
     this.screens.publish();
   }
 
-  /** Pregunta al servidor por cada sala apuntada (a la vez) y, mientras se mire la lista, vuelve a preguntar. */
+  private lookOf(code: string): RoomLook {
+    return this.looks.get(code) ?? UNKNOWN;
+  }
+
+  /**
+   * Pregunta al servidor por cada sala apuntada que sigue en marcha (a la vez; las acabadas o que ya
+   * no existen no cambian: `isSettled`) y, mientras se mire la lista, vuelve a preguntar.
+   */
   private async refresh(watch: number): Promise<void> {
     const base = serverUrl();
     if (!base || watch !== this.watch) return;
     const ask = async (code: string) => ({ code, result: await lobbyOf(base, code) });
-    const answers = await Promise.all(readOnlineRooms().map((entry) => ask(entry.code)));
-    for (const { code, result } of answers) this.looks.set(code, lookAfter(result, this.looks.get(code) ?? UNKNOWN));
+    const live = readOnlineRooms().filter((entry) => !isSettled(this.lookOf(entry.code)));
+    const answers = await Promise.all(live.map((entry) => ask(entry.code)));
+    for (const { code, result } of answers) this.looks.set(code, lookAfter(result, this.lookOf(code)));
     if (watch !== this.watch) return;
     this.screens.publish();
     this.pollHandle = setTimeout(() => void this.refresh(watch), ROOMS_POLL_MS);

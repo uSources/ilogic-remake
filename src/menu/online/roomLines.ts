@@ -14,6 +14,13 @@ import { statusText } from './shared';
 /** Lo que el servidor dijo de una sala: como esta, que ya no existe, o nada (aun no ha contestado, o no se le alcanza). */
 export type RoomLook = { kind: 'info'; info: LobbyInfo } | { kind: 'gone' } | { kind: 'unknown' };
 
+/**
+ * La sala ya no va a cambiar (acabo, o ya no existe): no hace falta volver a preguntar por ella. Asi
+ * cada vuelta de «Mis partidas» pregunta solo por las que siguen en marcha (y nunca mas de las que
+ * se apuntan, `MAX_ENTRIES` en net/onlineRooms.ts).
+ */
+export const isSettled = (look: RoomLook): boolean => look.kind === 'gone' || (look.kind === 'info' && look.info.status === 'ended');
+
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;

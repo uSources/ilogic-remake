@@ -1,11 +1,11 @@
 /**
  * «Mis partidas en línea»: como se enseña cada sala segun lo que dice el servidor (roomLines.ts):
  * te toca, le toca a otro (o a la IA), esperando a que entren, acabada o ya no existe; lo que queda
- * del turno con reloj; y que lo que pide hacer algo va arriba.
+ * del turno con reloj; que lo que pide hacer algo va arriba, y por que salas se deja de preguntar.
  */
 import { describe, expect, it } from 'vitest';
 import { CURRENT_PROTOCOL } from '@core/net';
-import { roomLineOf, roomLines, timeLeftText, type RoomLook } from '../src/menu/online/roomLines';
+import { isSettled, roomLineOf, roomLines, timeLeftText, type RoomLook } from '../src/menu/online/roomLines';
 import type { OnlineRoomEntry } from '../src/net/onlineRooms';
 import type { LobbyInfo, LobbyTurn } from '../src/net/roomApi';
 import { t } from '../src/settings';
@@ -68,6 +68,14 @@ describe('las salas de «Mis partidas»', () => {
     const entries = Object.keys(looks).map((code) => entry(code));
     const order = roomLines(entries, (code) => looks[code] ?? { kind: 'unknown' }, NOW).map((line) => line.code);
     expect(order).toEqual(['MINE11', 'THEIRS', 'WAITS1', 'ENDED1', 'GONE11']);
+  });
+
+  it('solo se vuelve a preguntar por las salas que pueden cambiar: las acabadas y las que ya no existen, no', () => {
+    expect(isSettled(info('ended'))).toBe(true);
+    expect(isSettled({ kind: 'gone' })).toBe(true);
+    expect(isSettled(info('playing', { seat: 0, day: 1, endsAt: null }))).toBe(false);
+    expect(isSettled(info('waiting', null, [true, false]))).toBe(false);
+    expect(isSettled({ kind: 'unknown' })).toBe(false);
   });
 
   it('lo que queda de un turno, en la unidad mas grande que cabe', () => {
