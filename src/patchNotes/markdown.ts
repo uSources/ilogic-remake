@@ -156,6 +156,7 @@ class MarkdownReader {
     return taken;
   }
 
+  /** La linea de antes de la que se lee; tras un bloque de codigo, su cierre (```). */
   previousLine(): string | undefined {
     return this.lines[this.index - 1];
   }

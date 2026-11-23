@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseInline, parseMarkdown } from '../src/patchNotes/markdown';
+import { parseInline, parseMarkdown, type Block } from '../src/patchNotes/markdown';
 import { compareVersions, fromRelease, mergeNotes, parseChangelog, splitLangs } from '../src/patchNotes/notes';
 
 describe('notas de parche', () => {
@@ -66,5 +66,20 @@ describe('notas de parche', () => {
     expect(paragraph).not.toContain('javascript');
     expect(paragraph).toContain('"href":"https://github.com/a/b"');
     expect(parseInline('a *b* _c_ **d**').map((part) => part.kind)).toEqual(['text', 'em', 'text', 'em', 'text', 'strong']);
+  });
+
+  it('markdown: una cita sigue en la linea de debajo, pero no salta una linea en blanco ni un bloque de codigo', () => {
+    const blocks = parseMarkdown('> uno\n> dos\n\n> tres\n```\nx\n> dentro\n```\n> cuatro');
+    const textOf = (block: Block): string => {
+      if (block.kind === 'code') return block.text;
+      if (block.kind !== 'quote') return '';
+      return block.children.map((part) => (part.kind === 'text' ? part.text : '')).join('');
+    };
+    expect(blocks.map((block) => [block.kind, textOf(block)])).toEqual([
+      ['quote', 'uno dos'],
+      ['quote', 'tres'],
+      ['code', 'x\n> dentro'],
+      ['quote', 'cuatro'],
+    ]);
   });
 });
