@@ -3,7 +3,7 @@
  * sitio del mapa (la costa, un bosque), asi que van en mono; los de fondo (uno por tema y otro por clima,
  * encima) no tienen sitio y van en estereo.
  */
-import { ambient, effect, zone, type SoundSpec } from './spec';
+import { ambient, nature, zone, type SoundSpec } from './spec';
 
 const ZONES: SoundSpec[] = [
   zone('amb_sea', 'Gentle waves lapping on a sandy shore close by, soft splashes and a seagull now and then'),
@@ -31,7 +31,7 @@ const WEATHER: SoundSpec[] = [
   ambient('amb_storm', 'Heavy rainstorm with strong gusty wind, no thunder'),
   ambient('amb_snowfall', 'Soft snowfall with a light hushed wind, very quiet'),
   ambient('amb_sandstorm', 'Sandstorm: strong gusting wind carrying sand that hisses against rocks'),
-  effect('thunder', 4, 'often', 'Thunder clap followed by a long rolling rumble in the distance'),
+  nature('thunder', 4, 'often', 'Thunder in the distance: a sharp crack, then a long deep rolling rumble fading away'),
 ];
 
 export const AMBIENCE_SOUNDS: readonly SoundSpec[] = [...ZONES, ...THEME_BEDS, ...WEATHER];

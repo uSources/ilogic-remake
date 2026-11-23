@@ -28,8 +28,9 @@ npm run sonidos -- elegir amb_sea 3               # ambientes y musica: uno
 npm run sonidos -- grafo shot_flak                # el grafo para abrirlo a mano en ComfyUI
 ```
 
-- **Catalogo** (`tools/audio/catalog.ts`): id, clase (`sfx`, `ambient`, `music`, `jingle`), texto en
-  ingles (solo lo que suena), segundos y variantes. El estilo comun de cada clase y como se recorta
+- **Catalogo** (`tools/audio/catalog/`): id, clase (`sfx`; `voice`, las de los muñecos; `nature`, los
+  animales y el trueno, sin el estilo de guerra de juguete; `zone` y `ambient`; `music`, `jingle`), texto
+  en ingles (solo lo que suena), segundos y variantes. El estilo comun de cada clase y como se recorta
   estan en `soundKinds.ts`: cambiar el estilo de todo es tocar `style` alli.
 - **Escuchar**: la pagina (`tools/audio/out/index.html`) abierta como fichero (doble clic, o desde la
   app de Claude) no suena: el navegador no carga los audios de al lado. Por eso `escuchar` la sirve
@@ -67,5 +68,12 @@ npm run sonidos -- grafo shot_flak                # el grafo para abrirlo a mano
   y gusta). Para descartar sin oir: contar subidas bruscas por segundo (crujido) y buscar un pico que
   destaque mucho en el espectro (silbido).
 - No oye por ti: mirar el espectrograma ayuda a descartar basura (ruido sin ataque ni cola), pero
-  quien elige es el usuario escuchando la pagina de candidatos.
+  quien elige es el usuario escuchando la pagina de candidatos. Si lo delega, se elige por medidas: que
+  acabe solo y no cortado por el limite de duracion (la cola de los ultimos 0,1 s muy por debajo del
+  pico), tonal donde debe (bocinas, voces, llamadas: autocorrelacion alta y tono estable), las rafagas
+  que pide el texto (la rana croa dos veces) y el tono de cada uno frente a los suyos (el camion mas
+  grave que el jeep).
+- Voces: "squeaky high-pitched" salia de pito y no gusto; un balbuceo "warm mid-pitched" sale mas tonal
+  (unos 350 Hz). Por walkie-talkie sale apagado y con el tono inestable: solo para el piloto. Lo que
+  dura mas de lo pedido se corta con el fundido: pedir la duracion que de verdad tiene la frase.
 - Licencia (Stability AI Community): lo generado es del usuario y se puede usar gratis por debajo de 1 M$ al año.

@@ -7,6 +7,7 @@
  * no estan aqui; para rehacer uno con IA, se quita de alli y se pone aqui.
  */
 import { AMBIENCE_SOUNDS } from './ambience';
+import { ANIMAL_SOUNDS } from './animals';
 import { BOARD_SOUNDS } from './board';
 import { INTERFACE_SOUNDS } from './interface';
 import { MUSIC_SOUNDS } from './music';
@@ -22,6 +23,7 @@ export const CATALOG: readonly SoundSpec[] = [
   ...INTERFACE_SOUNDS,
   ...VOICE_SOUNDS,
   ...AMBIENCE_SOUNDS,
+  ...ANIMAL_SOUNDS,
   ...MUSIC_SOUNDS,
 ];
 
