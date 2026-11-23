@@ -7,6 +7,22 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [0.17.0] - 2026-11-23 — A jugar en línea
+
+### Novedades
+- **Jugar en línea**: vuelve, ya en 3D. Desde el menú, «Jugar en línea» crea una sala con el mapa, el terreno y las opciones de una escaramuza, de 2 a 4 equipos y cada asiento para una persona o para la IA, y da un enlace de invitación por asiento para copiarlo o compartirlo. Quien crea la sala puede poner tiempo por turno y cuánto se espera a los que faltan, y sustituir por la IA a quien no llegue. Cada uno juega desde su navegador: si se recarga la página o se corta la conexión, se vuelve a la partida, y «Mis partidas en línea» guarda las salas en las que estás.
+- **El desierto cobra vida**: cerca de la cámara se levantan remolinos de polvo, hay lagartijas que toman el sol en las losas y hacen flexiones, bolas rodadoras que cruzan las dunas dando botes con el viento y buitres que dan vueltas en lo alto con su sombra en la arena.
+- **La nieve cobra vida**: caen copos que de vez en cuando brillan al sol y, en el hielo de la orilla, hay grupitos de pingüinos que andan como patos y a veces se tiran de barriga al agua y vuelven de un salto, y focas que levantan la cabeza y miran alrededor.
+- Con «Reducir el movimiento» no salen remolinos, copos, bolas rodadoras ni buitres, y los demás animales se quedan quietos.
+
+<!-- en -->
+
+### New
+- **Play online**: it's back, now in 3D. From the menu, “Play online” creates a room with the map, terrain and options of a skirmish, 2 to 4 teams and each seat for a person or the AI, and gives one invite link per seat to copy or share. Whoever creates the room can set a time per turn and how long to wait for missing players, and replace with the AI anyone who doesn't show up. Everyone plays in their own browser: if the page reloads or the connection drops, you go back to the game, and “My online games” keeps the rooms you are in.
+- **The desert comes alive**: near the camera, dust devils rise, lizards bask on the slabs and do push-ups, tumbleweeds bounce across the dunes with the wind and vultures circle high above with their shadow on the sand.
+- **The snow comes alive**: snowflakes fall and now and then glint in the sun, and on the ice by the shore there are little groups of penguins that waddle and sometimes belly-slide into the water and hop back out, and seals that raise their heads and look around.
+- With “Reduce motion”, no dust devils, snowflakes, tumbleweeds or vultures appear, and the other animals stay still.
+
 ## [0.16.0] - 2026-11-22 — El bosque cobra vida
 
 ### Novedades
