@@ -44,10 +44,11 @@ mensaje demasiado grande, 4426 otra version del protocolo, 4429 demasiados mensa
   pide: de 30 segundos a 7 dias.
 - Salas de 2 a 4 equipos, al menos uno de una persona.
 - Buscar rival: 20 busquedas por direccion cada 10 minutos (la direccion la pone Cloudflare,
-  `CF-Connecting-IP`, o en Node la del socket: la que mande el cliente no vale). La cola guarda
-  como mucho 100 salas por ritmo (sale la mas vieja) y en cada busqueda se miran como mucho 20. En
-  vivo, una sala cuyo creador no esta sigue en la cola 5 minutos desde que se ve (puede estar
-  recargando) y despues sale.
+  `CF-Connecting-IP`, o en Node la del socket: la que mande el cliente no vale). Es un freno, no
+  una cuenta exacta: se lleva en memoria, y empieza de cero si Cloudflare saca de memoria al
+  emparejador o si se reinicia el servidor de Node. La cola guarda como mucho 100 salas por ritmo
+  (sale la mas vieja) y en cada busqueda se miran como mucho 20. En vivo, una sala cuyo creador no
+  esta sigue en la cola 5 minutos desde que se ve (puede estar recargando) y despues sale.
 
 ## Desarrollo
 
@@ -134,7 +135,8 @@ Los dos topes estan para que nadie llene el disco ni la memoria creando salas o 
 sin parar (todas las salas viven en memoria). No miran de donde viene cada uno: abierto a internet,
 mejor detras de un proxy que limite las peticiones por IP (como `limit_req` de nginx). El tope de
 busquedas de rival si mira la direccion, pero la de la conexion: detras de un proxy todos llegan
-desde la suya y lo comparten.
+desde la suya, y las 20 busquedas cada 10 minutos son entonces para todos juntos (con mucha gente,
+mejor que el proxy ponga su propio limite por IP).
 
 Abierto por su IP (`http://192.168.1.20:8787`), el juego que sirve ya puede hablar con el servidor.
 Con un nombre (`https://ilogic.mi-dominio.net`) no: ese nombre va en `ALLOWED_ORIGINS`, porque si

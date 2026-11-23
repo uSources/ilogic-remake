@@ -38,7 +38,8 @@ export const MAX_CODE_TRIES = 5;
 /**
  * Cuantas busquedas de rival se atienden de una misma direccion en una ventana: una persona busca
  * unas pocas veces; quien pide sin parar se quedaria los asientos de los que esperan (y llenaria
- * el servidor de salas). Pasado el tope, 'tooManySearches' hasta que pase la ventana.
+ * el servidor de salas). Pasado el tope, 'tooManySearches' hasta que pase la ventana. Es un freno:
+ * se cuenta en memoria y empieza de cero si el emparejador sale de memoria o se reinicia.
  */
 export const MAX_SEARCHES_PER_WINDOW = 20;
 export const SEARCH_WINDOW_MS = 10 * MINUTE;
