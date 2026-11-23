@@ -150,10 +150,6 @@ export class Critters {
   private readonly lifted = new THREE.Vector3();
   private readonly ahead = new THREE.Vector3();
 
-  /** Alrededor de que se cuenta lo que hacen (lo que se mira) y hasta donde: lo de lejos no se oiria. */
-  private center: Readonly<THREE.Vector3> | null = null;
-  private radius = 0;
-
   constructor(
     library: GlbLibrary,
     private readonly kind: CritterKind,
@@ -178,10 +174,8 @@ export class Critters {
     );
   }
 
-  /** Los mueve; lo que hacen los que quedan cerca de `center` (en un radio `radius`) lo cuentan. */
-  update(seconds: number, center: Readonly<THREE.Vector3>, radius: number): void {
-    this.center = center;
-    this.radius = radius;
+  /** Los mueve y cuenta lo que hacen; quien lo oye lo decide quien escucha (systems/sound/animalCalls.ts). */
+  update(seconds: number): void {
     if (reducedMotion()) {
       this.critters.forEach((critter, index) => this.settle(critter, index));
       return;
@@ -218,11 +212,8 @@ export class Critters {
     this.told(critter, critter.move === this.kind.move ? 'move' : 'other');
   }
 
-  /** Cuenta lo que hace un animal, si esta cerca de lo que se mira. */
   private told(critter: Critter, act: AnimalAct): void {
     const { at } = critter.spot;
-    const center = this.center;
-    if (!center || Math.abs(at.x - center.x) > this.radius || Math.abs(at.z - center.z) > this.radius) return;
     this.tell({ animal: this.kind.model, act, at: { x: at.x, y: at.y, z: at.z } });
   }
 

@@ -1200,10 +1200,10 @@ de la interfaz suena sin sitio (`SoundPort`). El ambiente tambien decide puro: q
 del mapa (`systems/sound/ambience.ts`: costa, bosque, cumbres, cienaga, fabricas...) y cuales quedan
 cerca del oyente; `ambiencePlayer.ts` los enciende y apaga con un `LoopPort` (`src/audio/loops.ts`) y
 les baja el volumen al alejar la camara (`ambienceZoomLevel`, `listener.ts`) y, a los de animales, con
-mal tiempo (`weatherLevelOf`). Los animalitos del tablero cuentan lo que hacen cerca de lo que se mira
+mal tiempo (`weatherLevelOf`). Los animalitos del tablero cuentan lo que hacen
 (`BiomeLife.onAnimal`, un `AnimalMoment` de `ports/life.ts`: la rana que salta, el pajaro que sale de una
-copa) y un sistema decide si dicen algo y que (`systems/sound/animalCalls.ts`: cerca, uno cada poco, con
-la camara baja y buen tiempo); suenan por el canal del ambiente (los efectos `animal_*`, `sfx.ts`).
+copa) y un sistema decide si dicen algo y que (`systems/sound/animalCalls.ts`: cerca del oyente, que el
+motor no filtra; uno cada poco, con la camara baja y buen tiempo); suenan por el canal del ambiente (los efectos `animal_*`, `sfx.ts`).
 Los efectos se piden por nombre aunque aun no haya WAV (`src/audio/soundNames.ts`): mientras, suena
 su sustituto.
 

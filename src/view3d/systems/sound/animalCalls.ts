@@ -37,7 +37,7 @@ const ANIMAL_CALLS: Readonly<Record<string, Partial<Record<AnimalAct, AnimalCall
   fish: { leave: { sound: 'animal_splash', share: 0.3 } },
 };
 
-/** Se oye lo que pasa a menos de esto del oyente (casillas, por el suelo). */
+/** Se oye lo que pasa a menos de esto del oyente (casillas, por el suelo); el motor cuenta todo, el filtro es este. */
 const HEAR_RADIUS = 10;
 /** Entre dos animales, al menos esto (segundos): uno cada vez, no un coro. */
 const CALL_GAP = 1.2;

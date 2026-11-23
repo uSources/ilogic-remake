@@ -156,7 +156,7 @@ export class BiomeLife {
     if (parts.length) this.object.add(...parts);
   }
 
-  /** Quien oye lo que hacen los animales cerca de lo que se mira (para que suene: systems/sound/animalCalls.ts). */
+  /** Quien oye lo que hacen los animales (que suena y desde lo cerca que se oye: systems/sound/animalCalls.ts). */
   onAnimal(listener: AnimalListener): void {
     this.listeners.push(listener);
   }
@@ -164,7 +164,7 @@ export class BiomeLife {
   /** Mueve lo que vive cerca de `center` (lo que mira la camara), en un radio `radius`. */
   update(seconds: number, center: THREE.Vector3, radius: number, camera: THREE.PerspectiveCamera, viewportHeight: number): void {
     for (const swarm of this.swarms) swarm.update(seconds, center, radius, camera, viewportHeight);
-    for (const group of this.critters) group.update(seconds, center, radius);
+    for (const group of this.critters) group.update(seconds);
     for (const flock of this.travellers) flock.update(seconds, center, radius);
   }
 
