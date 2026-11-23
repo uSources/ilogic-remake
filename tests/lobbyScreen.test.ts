@@ -7,11 +7,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CURRENT_PROTOCOL, type ServerMessage } from '@core/net';
 import { LobbyScreen } from '../src/menu/online/lobbyScreen';
 import type { OnlineHost, OnlineScreens } from '../src/menu/online/shared';
+import { readOnlineRooms } from '../src/net/onlineRooms';
 import type { LobbyInfo } from '../src/net/roomApi';
 
 const PAGE = 'http://localhost/';
 const CODE = 'ABCDEF';
-const INVITE = `#/sala/${CODE}/ficha-1`;
 const POLL_MS = 3000;
 
 class FakeStorage {
@@ -58,6 +58,7 @@ const waitingRoom: LobbyInfo = {
     { seat: 0, team: 0, kind: 'person', joined: true },
     { seat: 1, team: 1, kind: 'person', joined: false },
   ],
+  turn: null,
 };
 
 /** Con su tipo y no `ServerMessage`: un `...` dentro de un objeto con el tipo de toda la union agota la memoria de tsc. */
@@ -72,6 +73,7 @@ const screens = (): OnlineScreens => ({
   busy: false,
   show: () => {},
   joinRoom: () => {},
+  enterRoom: () => {},
   publish: () => {},
 });
 
@@ -98,16 +100,27 @@ describe('LobbyScreen', () => {
   });
 
   it('con la bienvenida antes que la respuesta del vestibulo, enseña los asientos y sigue preguntando', async () => {
-    lobby.join(CODE, 'ficha-0', 2, { seat: 0, team: 0, invites: [{ seat: 1, team: 1, token: 'ficha-1', invite: INVITE }] });
+    lobby.join(CODE, 'ficha-0', 2, { seat: 0, team: 0 });
     expect(unanswered).toHaveLength(1);
 
     FakeSocket.last?.reply(welcome);
     unanswered.shift()?.(waitingRoom);
     await settle();
 
-    expect(lobby.vm()?.seats.map((seat) => seat.invite)).toEqual([null, `${PAGE}${INVITE}`]);
+    const vm = lobby.vm();
+    expect(vm?.seats.map((seat) => [seat.presence, seat.canHandToAi])).toEqual([
+      ['in', false],
+      ['out', true],
+    ]);
+    expect(vm?.link).toBe(`${PAGE}#/sala/${CODE}`);
+    expect(vm?.canInvite).toBe(true);
     await settle(POLL_MS);
     expect(unanswered).toHaveLength(1);
+  });
+
+  it('el asiento que acaba de dar el servidor apunta la sala en «Mis partidas» ya, antes de entrar', () => {
+    lobby.join(CODE, 'ficha-1', 2, { seat: 1, team: 1 });
+    expect(readOnlineRooms()).toMatchObject([{ code: CODE, token: 'ficha-1', seat: 1, team: 1, status: 'waiting' }]);
   });
 
   it('una respuesta que llega despues de salir de la sala no la enseña ni vuelve a preguntar', async () => {

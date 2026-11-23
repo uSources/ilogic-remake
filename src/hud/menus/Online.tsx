@@ -1,16 +1,16 @@
 /**
  * El HTML de «Jugar en línea» (Preact): dibuja `OnlineVM` tal como lo publica OnlineScreen
  * (src/menu/online/) y le devuelve lo que se toca por `ui.actions` (onlineHover, onlinePick,
- * onlineSet, onlineText). Cuatro vistas, una por modo: el menu con «Mis partidas», crear sala,
- * entrar con enlace y el vestibulo. Sin logica: lo que se puede pulsar y lo que dice cada fila ya
- * viene decidido en el VM.
+ * onlineSet, onlineText). Tres vistas, una por modo: el menu (crear, unirse con el codigo y «Mis
+ * partidas» con su estado), crear partida y el vestibulo. Sin logica: lo que se puede pulsar y lo que
+ * dice cada fila ya viene decidido en el VM.
  */
 import { t } from '../../settings';
 import { Btn } from '../common/buttons';
 import { Seg } from '../common/Seg';
 import type { UIState } from '../state';
 import { ui } from '../store';
-import type { OnlineSeatVM, OnlineVM, OptionRowVM } from '../vm/menus';
+import type { OnlineLobbyVM, OnlineRoomVM, OnlineSeatVM, OnlineVM, OptionRowVM } from '../vm/menus';
 
 const hover = (id: string) => () => ui.actions.onlineHover(id);
 const pick = (id: string) => () => ui.actions.onlinePick(id);
@@ -19,44 +19,112 @@ function Row({ row, focus }: { row: OptionRowVM; focus: string }) {
   return <Seg row={row} sel={focus === row.id} onHover={hover(row.id)} onSet={(i) => ui.actions.onlineSet(row.id, i)} />;
 }
 
-/** El menu: crear, entrar y las salas apuntadas. */
-function OnlineMenu({ online }: { online: OnlineVM }) {
-  const focus = online.focus;
+/** Crear partida y unirse con el codigo, uno al lado del otro (uno encima del otro en el movil). */
+function StartBoxes({ online }: { online: OnlineVM }) {
+  const { focus, code } = online;
   return (
-    <div class="on-menu">
-      <p class="ng-note">{t('onlineNote')}</p>
-      <div class="card-btns on-main">
+    <div class="on-start">
+      <div class="on-box">
+        <span class="label">{t('onlineCreate')}</span>
+        <p class="ng-note">{t('onlineCreateNote')}</p>
         <Btn sel={focus === 'create'} cls="px-btn start" onHover={hover('create')} onPick={pick('create')}>
-          {t('onlineCreate')}
-        </Btn>
-        <Btn sel={focus === 'join'} onHover={hover('join')} onPick={pick('join')}>
-          {t('onlineJoin')}
+          {t('onlineCreate')} ▸
         </Btn>
       </div>
-      <span class="label">{t('onlineMyRooms')}</span>
-      {online.rooms.length === 0 && <span class="muted small">{t('onlineNoRooms')}</span>}
-      {online.rooms.map((room) => (
-        <div class="on-room" key={room.code}>
-          <span class="on-code">{room.code}</span>
-          <span class="muted small">{room.summary}</span>
-          <Btn
-            sel={focus === `room-${room.code}`}
-            cls="px-btn plain"
-            onHover={hover(`room-${room.code}`)}
-            onPick={pick(`room-${room.code}`)}
-          >
-            {t('onlineRejoin')}
-          </Btn>
-          <Btn sel={focus === `forget-${room.code}`} cls="link" onHover={hover(`forget-${room.code}`)} onPick={pick(`forget-${room.code}`)}>
-            {t('onlineForget')}
+      <div class="on-box">
+        <span class="label">{t('onlineJoin')}</span>
+        <p class="ng-note">{t('onlineJoinNote')}</p>
+        <div class="ng-coderow">
+          <input
+            class={`ng-code on-code-input ${code.error ? 'bad' : ''} ${focus === 'codeText' ? 'focus' : ''}`}
+            value={code.text}
+            placeholder={t('onlineJoinHint')}
+            spellcheck={false}
+            autocomplete="off"
+            aria-label={t('onlineJoin')}
+            onFocus={hover('codeText')}
+            onMouseEnter={hover('codeText')}
+            onInput={(event) => ui.actions.onlineText(event.currentTarget.value)}
+          />
+          <Btn sel={focus === 'codeGo'} disabled={online.busy} onHover={hover('codeGo')} onPick={pick('codeGo')}>
+            {t('onlineJoinGo')}
           </Btn>
         </div>
-      ))}
+        {code.error && <span class="bad-note">{code.error}</span>}
+      </div>
     </div>
   );
 }
 
-/** Crear sala: la vista previa del mapa, las opciones, los asientos y los relojes. */
+function RoomRow({ room, focus }: { room: OnlineRoomVM; focus: string }) {
+  const enterId = `room-${room.code}`;
+  const forgetId = `forget-${room.code}`;
+  return (
+    <div class={`on-room ${room.state}`}>
+      <span class={`on-state ${room.state}`}>{room.title}</span>
+      <div class="on-room-info">
+        <span class="on-code">{room.code}</span>
+        <span class="muted small">{room.detail}</span>
+      </div>
+      <div class="on-room-actions">
+        {room.enter && (
+          <Btn
+            sel={focus === enterId}
+            cls={room.state === 'yourTurn' ? 'px-btn' : 'px-btn plain'}
+            onHover={hover(enterId)}
+            onPick={pick(enterId)}
+          >
+            {room.enter}
+          </Btn>
+        )}
+        <Btn sel={focus === forgetId} cls="link" onHover={hover(forgetId)} onPick={pick(forgetId)}>
+          {t('onlineForget')}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+/** El menu: crear, unirse y las salas apuntadas, con lo que pide hacer algo arriba. */
+function OnlineMenu({ online }: { online: OnlineVM }) {
+  return (
+    <div class="on-menu">
+      <StartBoxes online={online} />
+      <span class="label">{t('onlineMyRooms')}</span>
+      {online.rooms.length === 0 && <span class="muted small">{t('onlineNoRooms')}</span>}
+      <div class="on-rooms">
+        {online.rooms.map((room) => (
+          <RoomRow key={room.code} room={room} focus={online.focus} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Los ajustes de las reglas (los de «Nueva partida»). */
+function Presets({ online }: { online: OnlineVM }) {
+  const { create, focus } = online;
+  return (
+    <div class="presets">
+      {create.presets.map((preset) => {
+        const id = `preset-${preset.id}`;
+        return (
+          <Btn
+            key={preset.id}
+            sel={focus === id}
+            cls={`preset ${create.preset === preset.id ? 'on' : ''}`}
+            onHover={hover(id)}
+            onPick={pick(id)}
+          >
+            {preset.label}
+          </Btn>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Crear partida: el mapa a un lado; al otro, quien juega, las reglas y los relojes. */
 function CreateRoom({ online }: { online: OnlineVM }) {
   const { create, focus } = online;
   return (
@@ -71,83 +139,39 @@ function CreateRoom({ online }: { online: OnlineVM }) {
         </Btn>
       </div>
       <div class="ng-side">
-        <div class="ng-groups">
-          {create.groups.map((group) => (
-            <div class="ng-group" key={group.title}>
-              <span class="label">{group.title}</span>
-              {group.rows.map((row) => (
-                <Row key={row.id} row={row} focus={focus} />
-              ))}
-            </div>
+        <div class="ng-group">
+          <span class="label">{t('onlinePlayers')}</span>
+          {create.seats.map((row) => (
+            <Row key={row.id} row={row} focus={focus} />
           ))}
-          <div class="ng-group">
-            <span class="label">{t('onlineTeams')}</span>
-            {create.seats.map((rows, index) => (
-              <div class="on-seat" key={index}>
-                {rows.map((row) => (
-                  <Row key={row.id} row={row} focus={focus} />
-                ))}
-              </div>
-            ))}
-          </div>
-          <div class="ng-group">
-            {create.timers.map((row) => (
-              <Row key={row.id} row={row} focus={focus} />
-            ))}
-          </div>
+        </div>
+        <div class="ng-group">
+          <span class="label">{t('onlineRules')}</span>
+          <Presets online={online} />
+          {create.options.length === 0 && <p class="ng-note">{create.presetNote}</p>}
+          {create.options.map((row) => (
+            <Row key={row.id} row={row} focus={focus} />
+          ))}
+        </div>
+        <div class="ng-group">
+          <span class="label">{t('onlineTime')}</span>
+          {create.timers.map((row) => (
+            <Row key={row.id} row={row} focus={focus} />
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-function JoinRoom({ online }: { online: OnlineVM }) {
-  const { join, focus } = online;
-  return (
-    <div class="on-join">
-      <input
-        class={`ng-code on-invite ${join.error ? 'bad' : ''} ${focus === 'joinText' ? 'focus' : ''}`}
-        value={join.text}
-        placeholder={t('onlineJoinHint')}
-        spellcheck={false}
-        autocomplete="off"
-        aria-label={t('onlineJoin')}
-        onFocus={hover('joinText')}
-        onMouseEnter={hover('joinText')}
-        onInput={(event) => ui.actions.onlineText(event.currentTarget.value)}
-      />
-      {join.error && <span class="bad-note">{join.error}</span>}
-    </div>
-  );
-}
-
 function SeatRow({ seat, focus }: { seat: OnlineSeatVM; focus: string }) {
-  const who = seat.kind === 'ai' ? t('onlineSeatAi') : seat.isMe ? t('onlineYou') : t('onlineSeatPerson');
-  const presence = seat.kind === 'ai' ? '' : seat.joined ? t('onlineIn') : t('onlineOut');
+  const id = `ai-${seat.seat}`;
   return (
-    <div class={`on-lobby-seat ${seat.joined || seat.kind === 'ai' ? 'in' : 'out'}`}>
+    <div class={`on-lobby-seat ${seat.presence}`}>
       <span class="on-seat-name">{seat.label}</span>
-      <span class="muted small">
-        {who}
-        {presence && ` · ${presence}`}
-      </span>
-      {seat.invite && (
-        <Btn sel={focus === `copy-${seat.seat}`} cls="px-btn plain" onHover={hover(`copy-${seat.seat}`)} onPick={pick(`copy-${seat.seat}`)}>
-          {t('onlineCopy')}
-        </Btn>
-      )}
-      {seat.invite && typeof navigator.share === 'function' && (
-        <Btn
-          sel={focus === `share-${seat.seat}`}
-          cls="px-btn plain"
-          onHover={hover(`share-${seat.seat}`)}
-          onPick={pick(`share-${seat.seat}`)}
-        >
-          {t('onlineShare')}
-        </Btn>
-      )}
+      <span class="muted small">{seat.detail}</span>
       {seat.canHandToAi && (
-        <Btn sel={focus === `ai-${seat.seat}`} cls="px-btn plain" onHover={hover(`ai-${seat.seat}`)} onPick={pick(`ai-${seat.seat}`)}>
+        <Btn sel={focus === id} cls="px-btn plain" onHover={hover(id)} onPick={pick(id)}>
           {t('onlineHandToAi')}
         </Btn>
       )}
@@ -155,24 +179,42 @@ function SeatRow({ seat, focus }: { seat: OnlineSeatVM; focus: string }) {
   );
 }
 
-/** El vestibulo: el codigo, quien esta y los enlaces. */
+/** El codigo de la sala, grande, y copiar o compartir su enlace (mientras se espera a alguien). */
+function Invite({ lobby, focus }: { lobby: OnlineLobbyVM; focus: string }) {
+  return (
+    <div class="on-invite">
+      <span class="label">{lobby.canInvite ? t('onlineInvite') : t('onlineCode')}</span>
+      <div class="on-invite-row">
+        <span class="on-code big">{lobby.code}</span>
+        {lobby.canInvite && (
+          <Btn sel={focus === 'copy'} cls="px-btn" onHover={hover('copy')} onPick={pick('copy')}>
+            {t('onlineCopy')}
+          </Btn>
+        )}
+        {lobby.canInvite && lobby.canShare && (
+          <Btn sel={focus === 'share'} cls="px-btn plain" onHover={hover('share')} onPick={pick('share')}>
+            {t('onlineShare')}
+          </Btn>
+        )}
+      </div>
+      {lobby.canInvite && <span class="muted small on-link">{lobby.link}</span>}
+    </div>
+  );
+}
+
+/** El vestibulo: el codigo y el enlace para invitar, quien hay y la conexion. */
 function Lobby({ online }: { online: OnlineVM }) {
   const lobby = online.lobby;
   if (!lobby) return null;
   return (
     <div class="on-lobby">
-      <div class="on-lobby-head">
-        <span class="label">{t('onlineCode')}</span>
-        <span class="on-code big">{lobby.code}</span>
-        <span class="muted small">
-          {lobby.status} · {lobby.connection}
-        </span>
-      </div>
-      {lobby.seats.some((seat) => seat.invite) && <span class="label">{t('onlineInvites')}</span>}
+      <Invite lobby={lobby} focus={online.focus} />
+      <span class="label">{t('onlinePlayers')}</span>
       {lobby.seats.map((seat) => (
         <SeatRow key={seat.seat} seat={seat} focus={online.focus} />
       ))}
       <p class="ng-note">{lobby.note}</p>
+      <span class="muted small">{lobby.connection}</span>
     </div>
   );
 }
@@ -180,20 +222,20 @@ function Lobby({ online }: { online: OnlineVM }) {
 const BODY: Record<OnlineVM['mode'], (online: OnlineVM) => preact.JSX.Element | null> = {
   menu: (online) => <OnlineMenu online={online} />,
   create: (online) => <CreateRoom online={online} />,
-  join: (online) => <JoinRoom online={online} />,
   lobby: (online) => <Lobby online={online} />,
 };
 
-/** Jugar en línea: el menu, crear sala, entrar con enlace o el vestibulo de una sala. */
+/** Jugar en línea: el menu, crear partida o el vestibulo de una sala. */
 export function Online({ s }: { s: UIState }) {
   const online = s.online;
   const focus = online.focus;
   const isLobby = online.mode === 'lobby';
+  const isCreate = online.mode === 'create';
   return (
     <div class="px newgame2 online" role="dialog" aria-label={t('online')}>
-      <span class="htitle">{isLobby && online.lobby ? `${t('onlineRoom')} ${online.lobby.code}` : t('online')}</span>
+      <span class="htitle">{isCreate ? t('onlineCreate') : t('online')}</span>
       {online.error && <span class="bad-note on-error">{online.error}</span>}
-      {online.busy && <span class="muted small">{online.mode === 'create' ? t('onlineCreating') : t('onlineConnecting')}</span>}
+      {online.busy && <span class="muted small">{isCreate ? t('onlineCreating') : t('onlineConnecting')}</span>}
       {BODY[online.mode](online)}
       <div class="ng-foot">
         <Btn
@@ -205,14 +247,9 @@ export function Online({ s }: { s: UIState }) {
         >
           {isLobby ? t('onlineLeave') : t('back')} <span class="key">Esc</span>
         </Btn>
-        {online.mode === 'create' && (
+        {isCreate && (
           <Btn sel={focus === 'start'} cls="px-btn start" disabled={online.busy} onHover={hover('start')} onPick={pick('start')}>
             {t('onlineCreate')}
-          </Btn>
-        )}
-        {online.mode === 'join' && (
-          <Btn sel={focus === 'joinGo'} cls="px-btn start" disabled={online.busy} onHover={hover('joinGo')} onPick={pick('joinGo')}>
-            {t('onlineJoinGo')}
           </Btn>
         )}
       </div>

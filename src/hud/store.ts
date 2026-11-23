@@ -23,6 +23,8 @@ export type {
   MenuItemVM,
   MenuVM,
   NetVM,
+  OnlineLobbyVM,
+  OnlineRoomState,
   OnlineRoomVM,
   OnlineSeatVM,
   OnlineVM,

@@ -1,8 +1,9 @@
 /* global window, document, localStorage, setTimeout, fetch, AbortSignal */
 // Una partida por la red de punta a punta en la vista 3D: arranca el servidor de Node (con las salas
 // en una carpeta temporal) y uno de desarrollo (vite), y juegan dos personas en dos navegadores de
-// verdad: A crea la sala, B entra por el enlace, juegan turnos (los dos tienen que ver lo mismo), B
-// recarga la pagina a mitad (vuelve a la sala sola) y A se rinde (los dos ven el final).
+// verdad: A crea la sala, B entra por el enlace de la sala (pide un asiento con el codigo), juegan
+// turnos (los dos tienen que ver lo mismo), «Mis partidas» de A dice que le toca, B recarga la pagina a
+// mitad (vuelve a la sala sola) y A se rinde (los dos ven el final, y «Mis partidas», que acabo).
 //
 //   npm run online
 //   ILOGIC_SERVER_URL=https://ilogic-servidor.<cuenta>.workers.dev npm run online   # contra el publicado
@@ -232,35 +233,57 @@ const surrenderFromPause = () => {
 
 const endOutcome = () => window.ilogic3d?.ui.get().screen === 'end' && window.ilogic3d.ui.get().end.outcome;
 
-/** El vestibulo, cuando ya tiene el enlace de invitacion del asiento 2. */
-async function lobbyWithInvite() {
+/** El vestibulo, cuando ya sabe quien hay en la sala (y tiene su enlace). */
+async function lobbyWithSeats() {
   const lobby = (await import('/src/hud/store.ts')).ui.get().online?.lobby;
-  return lobby?.seats[1]?.invite ? lobby : null;
+  return lobby?.link && lobby.seats.length > 0 ? lobby : null;
+}
+
+/** La linea de la sala `code` en «Mis partidas», cuando ya se sabe lo que dice el servidor de ella. */
+async function knownRoomLine(code) {
+  const rooms = (await import('/src/hud/store.ts')).ui.get().online?.rooms ?? [];
+  const line = rooms.find((room) => room.code === code);
+  return line && line.state !== 'unknown' ? line : null;
 }
 
 // --- El guion ------------------------------------------------------------------------------------
 
-/** A crea una sala de dos personas y espera en el vestibulo: devuelve el enlace del asiento 2. */
+/** A crea una partida de dos personas y espera en el vestibulo: devuelve el vestibulo (con el enlace de la sala). */
 async function createRoom(a) {
   await until(a, () => document.querySelector('button') !== null, null, 'el menu en A');
   check((await menuState(a)).screen === 'menu', 'A esta en el menu de inicio');
   await menuAction(a, 'homePick', 'online');
   const online = (await menuState(a)).online;
   check(online?.error === null, 'con servidor, «Jugar en línea» se abre sin aviso');
+  await shot(a, 'menu');
   await menuAction(a, 'onlinePick', 'create');
-  await menuAction(a, 'onlineSet', 'seat-1-kind', 0);
+  const create = (await menuState(a)).online.create;
+  check(create.seats[1]?.index === 0, 'sin tocar nada, el otro asiento es de una persona (no de la IA)');
+  await shot(a, 'crear');
   await menuAction(a, 'onlinePick', 'start');
-  const lobby = await until(a, lobbyWithInvite, null, 'el vestibulo con el enlace del asiento 2');
+  const lobby = await until(a, lobbyWithSeats, null, 'el vestibulo con el enlace de la sala');
   await shot(a, 'vestibulo');
   check(/^[A-Z2-9]{6}$/.test(lobby.code), `la sala tiene codigo (${lobby.code})`);
-  check(lobby.seats[1].invite.includes(`#/sala/${lobby.code}/`), 'el enlace de invitacion lleva el codigo');
+  check(lobby.link.endsWith(`#/sala/${lobby.code}`), 'el enlace de la sala lleva el codigo y ninguna ficha');
   return lobby;
+}
+
+/** «Mis partidas» de A en otra pestaña (sin entrar en la sala): la linea de la sala dice `state`. */
+async function checkMyRooms(a, gameUrl, code, state, name) {
+  const page = await a.context().newPage();
+  await page.goto(gameUrl);
+  await until(page, () => document.querySelector('button') !== null, null, 'el menu en otra pestaña de A');
+  await menuAction(page, 'homePick', 'online');
+  const line = await until(page, knownRoomLine, code, `la sala en «Mis partidas» (${state})`);
+  check(line.state === state, `«Mis partidas» de A dice «${line.title}» (${line.detail})`);
+  await shot(page, name);
+  await page.close();
 }
 
 async function playOnline(browser, gameUrl, server) {
   const a = await openPlayer(browser, 'A', gameUrl, server);
   const lobby = await createRoom(a);
-  const b = await openPlayer(browser, 'B', lobby.seats[1].invite, server);
+  const b = await openPlayer(browser, 'B', lobby.link, server);
   await until(b, inMatch, null, 'la partida en B', MATCH_START_MS);
   await until(a, inMatch, null, 'la partida en A', MATCH_START_MS);
   check(true, 'con los dos dentro, la partida empieza en las dos pantallas');
@@ -270,6 +293,7 @@ async function playOnline(browser, gameUrl, server) {
   check(/1/.test(waiting), `B espera al equipo 1 («${waiting}»)`);
   await until(a, ownTurnReady, null, 'el primer turno de A');
   await Promise.all([shot(a, 'a-su-turno'), shot(b, 'b-espera')]);
+  await checkMyRooms(a, gameUrl, lobby.code, 'yourTurn', 'mis-partidas-te-toca');
   await b.setViewportSize(PHONE);
   await shot(b, 'b-espera-movil');
   await b.setViewportSize(VIEWPORT);
@@ -298,6 +322,7 @@ async function playOnline(browser, gameUrl, server) {
   check((await until(a, endOutcome, null, 'el final en A')) === 'lost', 'A ve que ha perdido');
   check((await until(b, endOutcome, null, 'el final en B')) === 'won', 'B ve que ha ganado');
   await Promise.all([shot(a, 'a-final'), shot(b, 'b-final')]);
+  await checkMyRooms(a, gameUrl, lobby.code, 'ended', 'mis-partidas-acabada');
 }
 
 const roomServer = await roomServerToUse();

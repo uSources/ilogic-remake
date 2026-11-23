@@ -156,37 +156,62 @@ export interface OnlineSeatVM {
   seat: number;
   /** "Equipo 1". */
   label: string;
-  kind: 'person' | 'ai';
-  joined: boolean;
-  isMe: boolean;
-  /** Su enlace de invitacion (solo los sabe quien creo la sala). */
-  invite: string | null;
+  /** «Tú · dentro», «Persona · sin entrar», «La IA». */
+  detail: string;
+  /** Si la persona esta dentro, aun no ha entrado, o es la IA. */
+  presence: 'in' | 'out' | 'ai';
   /** Quien creo la sala puede darlo a la IA (una persona que no ha entrado, mientras se espera). */
   canHandToAi: boolean;
 }
 
+/** En que esta una sala para quien la mira: le toca, le toca a otro, esperan a que entren, acabada, ya no existe, o no se sabe. */
+export type OnlineRoomState = 'yourTurn' | 'theirTurn' | 'waiting' | 'ended' | 'gone' | 'unknown';
+
 /** Una sala apuntada en «Mis partidas en línea». */
 export interface OnlineRoomVM {
   code: string;
-  /** "3 equipos · En juego". */
-  summary: string;
+  state: OnlineRoomState;
+  /** «Te toca», «Turno del equipo 2», «Esperando jugadores»... */
+  title: string;
+  /** «Día 4 · quedan 3 h · 2 equipos». */
+  detail: string;
+  /** El boton para entrar («Jugar» si le toca, «Entrar» si no), o null si la sala ya no existe. */
+  enter: string | null;
 }
 
-/** La pantalla de «Jugar en línea»: el menu, crear una sala, entrar con un enlace o el vestibulo. */
+/** El vestibulo de una sala: el codigo y el enlace para invitar, quien hay y la conexion. */
+export interface OnlineLobbyVM {
+  code: string;
+  /** El enlace de la sala (quien lo abre se queda con un asiento libre). */
+  link: string;
+  /** Se puede invitar (la sala aun espera a alguien). */
+  canInvite: boolean;
+  /** El sistema sabe compartir (movil): se ofrece ademas de copiar. */
+  canShare: boolean;
+  seats: OnlineSeatVM[];
+  note: string;
+  connection: string;
+}
+
+/** La pantalla de «Jugar en línea»: el menu (crear, entrar con el codigo y mis partidas), crear una partida o el vestibulo. */
 export interface OnlineVM {
-  mode: 'menu' | 'create' | 'join' | 'lobby';
+  mode: 'menu' | 'create' | 'lobby';
   focus: string;
   rooms: OnlineRoomVM[];
-  /** Crear sala: las opciones de la partida, los asientos (quien juega cada uno) y los relojes. */
+  /** El cuadro del codigo (o el enlace) de una sala, y por que no vale lo escrito. */
+  code: { text: string; error: string | null };
+  /** Crear partida: quien juega cada asiento, las reglas (ajustes y, en «Personalizada», sus opciones), los relojes y el mapa. */
   create: {
-    groups: { title: string; rows: OptionRowVM[] }[];
-    seats: OptionRowVM[][];
+    seats: OptionRowVM[];
+    presets: PresetVM[];
+    preset: string;
+    presetNote: string;
+    options: OptionRowVM[];
     timers: OptionRowVM[];
     thumb: string;
     mapInfo: string;
   };
-  join: { text: string; error: string | null };
-  lobby: { code: string; status: string; seats: OnlineSeatVM[]; note: string; connection: string } | null;
+  lobby: OnlineLobbyVM | null;
   /** Algo que ha fallado (se enseña arriba). */
   error: string | null;
   /** Esperando al servidor (crear, entrar). */

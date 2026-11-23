@@ -1,17 +1,29 @@
 /**
- * «Crear sala»: las opciones de una partida nueva (las de "Personalizada" que valen por la red),
- * cuantos equipos y quien juega cada asiento (el primero es siempre quien crea),
- * los relojes (por turno y de espera a los que faltan) y la miniatura del mapa. «Empezar» pide la
- * sala al servidor (`createRoom`) y entra en ella con el primer asiento.
+ * «Crear partida»: quien juega cada asiento (el primero es siempre quien crea; los demas, otra
+ * persona salvo que se elija la IA), las reglas (los ajustes de «Nueva partida»: Normal, Rápida o
+ * Personalizada, que abre sus opciones), los relojes (por turno y de espera a los que faltan) y la
+ * miniatura del mapa. «Crear partida» pide la sala al servidor (`createRoom`) y entra en ella con el
+ * primer asiento; los demas llegan con el enlace o el codigo de la sala.
  */
 import { createMatch } from '../../core/defaultGames';
 import { themeOf } from '../../core/gameContent';
 import { skirmishConfig, type SkirmishChoices } from '../../core/match';
 import type { ControllerKind } from '../../core/model';
-import type { OnlineVM, OptionRowVM } from '../../hud/store';
+import type { OnlineVM, OptionRowVM, PresetVM } from '../../hud/store';
 import { createRoom } from '../../net/roomApi';
 import { serverUrl } from '../../net/serverUrl';
-import { CHOICES, choiceLabel, loadOptions, randomSeed, settingChangesFor, type ChoiceKey, type NewGameOptions } from '../../setup';
+import {
+  applyPreset,
+  CHOICES,
+  choiceLabel,
+  loadOptions,
+  PRESET_IDS,
+  randomSeed,
+  settingChangesFor,
+  type ChoiceKey,
+  type NewGameOptions,
+  type PresetId,
+} from '../../setup';
 import { nameOf, settings, t, type TextKey } from '../../settings';
 import { mapThumb } from '../thumb';
 import type { OnlineScreens } from './shared';
@@ -21,7 +33,7 @@ interface SeatChoice {
   kind: ControllerKind;
 }
 
-/** Las opciones de la partida que se piden al servidor (las de "Personalizada" que valen por la red). */
+/** Las opciones de «Personalizada» que valen por la red (las que se piden al servidor). */
 const MATCH_KEYS: { k: ChoiceKey; label: TextKey }[] = [
   { k: 'size', label: 'optSize' },
   { k: 'theme', label: 'optTheme' },
@@ -35,6 +47,7 @@ const MATCH_KEYS: { k: ChoiceKey; label: TextKey }[] = [
 ];
 
 const TEAM_COUNTS = [2, 3, 4] as const;
+/** Persona primero: por la red se juega contra personas; la IA es para completar. */
 const SEAT_KINDS: readonly ControllerKind[] = ['human', 'ai'];
 /** Segundos por turno (null: sin reloj) y de espera a los que faltan. */
 const TURN_SECONDS = [null, 60, 180, 600, 86400] as const;
@@ -42,8 +55,20 @@ const WAITING_SECONDS = [null, 300, 3600, 86400] as const;
 
 const OPTION_PREFIX = 'opt-';
 const SEAT_PREFIX = 'seat-';
+const PRESET_PREFIX = 'preset-';
 
 const thumbTileSize = (mapSize: number) => (mapSize <= 20 ? 10 : mapSize <= 32 ? 7 : 6);
+
+const capitalized = (id: string) => `${id[0]!.toUpperCase()}${id.slice(1)}`;
+
+/** Los ajustes, con los mismos nombres y notas que en «Nueva partida». */
+const presetVM = (id: PresetId): PresetVM => ({
+  id,
+  label: t(`preset${capitalized(id)}` as TextKey),
+  note: t(`preset${capitalized(id)}Note` as TextKey),
+});
+
+const isPresetId = (value: string): value is PresetId => (PRESET_IDS as readonly string[]).includes(value);
 
 /** "3 min", "1 h", "1 día" o sin límite. */
 function secondsLabel(seconds: number | null): string {
@@ -86,14 +111,25 @@ export class CreateScreen {
   }
 
   vm(): OnlineVM['create'] {
-    return { groups: this.createGroups(), seats: this.seatRows(), timers: this.timerRows(), thumb: this.thumb, mapInfo: this.mapInfo };
+    const preset = presetVM(this.options.preset);
+    return {
+      seats: this.seatRows(),
+      presets: PRESET_IDS.map(presetVM),
+      preset: preset.id,
+      presetNote: preset.note,
+      options: this.isCustom() ? MATCH_KEYS.map(({ k: key, label }) => this.optionRow(key, label)) : [],
+      timers: this.timerRows(),
+      thumb: this.thumb,
+      mapInfo: this.mapInfo,
+    };
   }
 
-  /** Las filas del foco: cada opcion, los equipos y sus asientos, los relojes, otro mapa, volver y empezar. */
+  /** Las filas del foco: los equipos y sus asientos, los ajustes (y sus opciones, en «Personalizada»), los relojes, otro mapa, volver y crear. */
   rows(): string[][] {
-    const options = MATCH_KEYS.map(({ k }) => [`${OPTION_PREFIX}${k}`]);
     const seats = this.seats.flatMap((_, index) => (index === 0 ? [] : [[`${SEAT_PREFIX}${index}-kind`]]));
-    return [...options, ['teams'], ...seats, ['turn'], ['wait'], ['reroll'], ['back', 'start']];
+    const presets = PRESET_IDS.map((preset) => `${PRESET_PREFIX}${preset}`);
+    const options = this.isCustom() ? MATCH_KEYS.map(({ k }) => [`${OPTION_PREFIX}${k}`]) : [];
+    return [['teams'], ...seats, presets, ...options, ['turn'], ['wait'], ['reroll'], ['back', 'start']];
   }
 
   /** El id es de una fila de opciones (izquierda y derecha cambian su valor). */
@@ -101,14 +137,13 @@ export class CreateScreen {
     return id.startsWith(OPTION_PREFIX) || id.startsWith(SEAT_PREFIX) || id === 'teams' || id === 'turn' || id === 'wait';
   }
 
-  /** Lo que se ha pulsado, si es de esta pantalla (otro mapa, empezar): true si se ha atendido. */
+  /** Lo que se ha pulsado, si es de esta pantalla (un ajuste, otro mapa, crear): true si se ha atendido. */
   pick(focus: string): boolean {
-    if (focus === 'start') {
-      void this.create();
-      return true;
-    }
-    if (focus !== 'reroll') return false;
-    this.reroll();
+    const preset = focus.slice(PRESET_PREFIX.length);
+    if (focus.startsWith(PRESET_PREFIX) && isPresetId(preset)) this.pickPreset(preset);
+    else if (focus === 'start') void this.create();
+    else if (focus === 'reroll') this.reroll();
+    else return false;
     return true;
   }
 
@@ -125,13 +160,8 @@ export class CreateScreen {
 
   setChoice(id: string, index: number): void {
     const wrap = (length: number) => ((index % length) + length) % length;
-    if (id.startsWith(OPTION_PREFIX)) {
-      const key = id.slice(OPTION_PREFIX.length) as ChoiceKey;
-      if (!(key in CHOICES)) return;
-      const list = CHOICES[key] as readonly unknown[];
-      (this.options as unknown as Record<string, unknown>)[key] = list[wrap(list.length)];
-      if (key === 'size' || key === 'theme') this.refreshPreview();
-    } else if (id === 'teams') this.setTeams(TEAM_COUNTS[wrap(TEAM_COUNTS.length)]!);
+    if (id.startsWith(OPTION_PREFIX)) this.setOption(id.slice(OPTION_PREFIX.length), wrap);
+    else if (id === 'teams') this.setTeams(TEAM_COUNTS[wrap(TEAM_COUNTS.length)]!);
     else if (id === 'turn') this.turnSeconds = TURN_SECONDS[wrap(TURN_SECONDS.length)]!;
     else if (id === 'wait') this.waitingSeconds = WAITING_SECONDS[wrap(WAITING_SECONDS.length)]!;
     else if (id.startsWith(SEAT_PREFIX)) this.setSeatChoice(id, wrap);
@@ -140,9 +170,8 @@ export class CreateScreen {
 
   // --- Lo que se ve ----------------------------------------------------------------------------
 
-  private createGroups(): OnlineVM['create']['groups'] {
-    const rows = MATCH_KEYS.map(({ k: key, label }) => this.optionRow(key, label));
-    return [{ title: t('newGame'), rows }];
+  private isCustom(): boolean {
+    return this.options.preset === 'custom';
   }
 
   private optionRow(key: ChoiceKey, label: TextKey): OptionRowVM {
@@ -156,7 +185,8 @@ export class CreateScreen {
     };
   }
 
-  private seatRows(): OptionRowVM[][] {
+  /** Cuantos equipos y, de cada asiento menos el primero (el de quien crea), quien lo juega. */
+  private seatRows(): OptionRowVM[] {
     const teamsRow: OptionRowVM = {
       id: 'teams',
       group: '',
@@ -164,20 +194,14 @@ export class CreateScreen {
       choices: TEAM_COUNTS.map(String),
       index: TEAM_COUNTS.indexOf(this.teams as (typeof TEAM_COUNTS)[number]),
     };
-    // El primer asiento es siempre quien crea: no tiene fila que elegir.
-    const seatRows = this.seats.map((seat, index): OptionRowVM[] => {
-      if (index === 0) return [];
-      return [
-        {
-          id: `${SEAT_PREFIX}${index}-kind`,
-          group: '',
-          label: `${t('onlineSeat')} ${index + 1}`,
-          choices: SEAT_KINDS.map((candidate) => t(candidate === 'human' ? 'onlineSeatPerson' : 'onlineSeatAi')),
-          index: SEAT_KINDS.indexOf(seat.kind),
-        },
-      ];
-    });
-    return [[teamsRow], ...seatRows];
+    const seatRows = this.seats.slice(1).map((seat, index): OptionRowVM => ({
+      id: `${SEAT_PREFIX}${index + 1}-kind`,
+      group: '',
+      label: `${t('onlineSeat')} ${index + 2}`,
+      choices: SEAT_KINDS.map((candidate) => t(candidate === 'human' ? 'onlineSeatPerson' : 'onlineSeatAi')),
+      index: SEAT_KINDS.indexOf(seat.kind),
+    }));
+    return [teamsRow, ...seatRows];
   }
 
   private timerRows(): OptionRowVM[] {
@@ -202,10 +226,24 @@ export class CreateScreen {
   // --- Las opciones ------------------------------------------------------------------------------
 
   private choiceIndex(id: string): number {
-    const row = [...this.createGroups().flatMap((group) => group.rows), ...this.seatRows().flat(), ...this.timerRows()].find(
-      (candidate) => candidate.id === id,
-    );
+    const vm = this.vm();
+    const row = [...vm.seats, ...vm.options, ...vm.timers].find((candidate) => candidate.id === id);
     return row?.index ?? 0;
+  }
+
+  private setOption(key: string, wrap: (length: number) => number): void {
+    if (!(key in CHOICES)) return;
+    const choiceKey = key as ChoiceKey;
+    const list = CHOICES[choiceKey] as readonly unknown[];
+    (this.options as unknown as Record<string, unknown>)[choiceKey] = list[wrap(list.length)];
+    if (choiceKey === 'size' || choiceKey === 'theme') this.refreshPreview();
+  }
+
+  private pickPreset(preset: PresetId): void {
+    const sizeBefore = this.options.size;
+    this.options = applyPreset(this.options, preset);
+    if (this.options.size !== sizeBefore) this.refreshPreview();
+    this.screens.publish();
   }
 
   private setSeatChoice(id: string, wrap: (length: number) => number): void {
@@ -216,7 +254,7 @@ export class CreateScreen {
   private setTeams(count: number): void {
     this.teams = count;
     const kept = this.seats.slice(0, count);
-    while (kept.length < count) kept.push({ kind: kept.length === 0 ? 'human' : 'ai' });
+    while (kept.length < count) kept.push({ kind: 'human' });
     this.seats = kept;
   }
 
@@ -258,12 +296,7 @@ export class CreateScreen {
       screens.error = t(created.error === 'serverFull' ? 'onlineServerFull' : 'onlineFailed');
       return screens.publish();
     }
-    const mine = created.value.seats[0];
-    if (!mine) {
-      screens.error = t('onlineFailed');
-      return screens.publish();
-    }
-    const invites = created.value.seats.filter((seat) => seat.seat !== mine.seat);
-    screens.joinRoom(created.value.code, mine.token, { seat: mine.seat, team: mine.team, invites });
+    const { code, token, seat, team } = created.value;
+    screens.joinRoom(code, token, { seat, team });
   }
 }

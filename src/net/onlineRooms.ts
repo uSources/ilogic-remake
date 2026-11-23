@@ -1,8 +1,9 @@
 /**
  * «Mis partidas en línea»: las salas en las que este navegador tiene asiento, en localStorage, para
  * volver a entrar (la partida vive en el servidor; aqui solo el codigo, la ficha del asiento y lo
- * ultimo que se supo de ella). Funciones puras sobre la lista mas leer y guardar. Lo usan el menu de
- * «Jugar en línea» (src/menu/online/) y MenuScene (un enlace `#/sala/...` al cargar: `parseInvite`).
+ * ultimo que se supo de ella). Funciones puras sobre la lista mas leer y guardar, y los enlaces de
+ * sala (`#/sala/CODIGO`, el que se reparte; `#/sala/CODIGO/FICHA`, el de un asiento: `parseRoomLink`).
+ * Lo usan el menu de «Jugar en línea» (src/menu/online/) y el menu de la vista (un enlace al cargar).
  */
 import type { RoomStatus, SeatId } from '../core/net';
 import type { TeamId } from '../core/model';
@@ -18,8 +19,6 @@ export interface OnlineRoomEntry {
   status: RoomStatus;
   /** Cuando se toco por ultima vez (ms desde 1970). */
   at: number;
-  /** Los enlaces de los demas asientos (solo quien creo la sala los tiene: para volver a repartirlos). */
-  invites?: { seat: SeatId; team: TeamId; token: string; invite: string }[];
 }
 
 const STORAGE_KEY = 'ilogic.online.rooms';
@@ -36,11 +35,7 @@ const isEntry = (value: unknown): value is OnlineRoomEntry =>
   isInt(value.team, 0, MAX_SEATS) &&
   isInt(value.teams, 2, MAX_SEATS) &&
   ROOM_STATUSES.includes(value.status as RoomStatus) &&
-  typeof value.at === 'number' &&
-  (value.invites === undefined || (Array.isArray(value.invites) && value.invites.every(isInvite)));
-
-const isInvite = (value: unknown): boolean =>
-  isObject(value) && isInt(value.seat, 0, MAX_SEATS) && typeof value.token === 'string' && typeof value.invite === 'string';
+  typeof value.at === 'number';
 
 /** La lista con esta sala puesta al dia (o añadida), la mas reciente primero. */
 export function withRoom(list: readonly OnlineRoomEntry[], entry: OnlineRoomEntry): OnlineRoomEntry[] {
@@ -73,13 +68,27 @@ export const rememberRoom = (entry: OnlineRoomEntry): void => writeOnlineRooms(w
 
 export const forgetRoom = (code: string): void => writeOnlineRooms(withoutRoom(readOnlineRooms(), code));
 
-/** El codigo y la ficha de un enlace de invitacion (`#/sala/CODIGO/FICHA`, con o sin la URL delante), o null. */
-export function parseInvite(text: string): { code: string; token: string } | null {
-  const match = /#\/sala\/([A-Za-z0-9]+)\/([A-Za-z0-9_-]+)/.exec(text.trim());
-  if (match) return { code: match[1]!.toUpperCase(), token: match[2]! };
-  const bare = /^([A-Za-z0-9]{4,8})[/ ]([A-Za-z0-9_-]{16,})$/.exec(text.trim());
-  return bare ? { code: bare[1]!.toUpperCase(), token: bare[2]! } : null;
+/** Una sala por su codigo y, si se sabe, la ficha del asiento con el que se entra (null: hay que pedir uno). */
+export interface RoomLink {
+  code: string;
+  token: string | null;
 }
 
-/** El enlace de invitacion completo a partir de su parte tras el # (la URL de esta pagina, sin su hash). */
-export const inviteUrl = (invite: string, pageUrl: string): string => `${pageUrl.split('#')[0]}${invite}`;
+/** Los patrones que se entienden: el enlace de la sala o de un asiento (con o sin la URL delante), y el codigo a mano (con su ficha o sin ella). */
+const ROOM_LINK_PATTERNS: readonly RegExp[] = [
+  /#\/sala\/([A-Za-z0-9]+)(?:\/([A-Za-z0-9_-]+))?\/?$/,
+  /^([A-Za-z0-9]{4,8})(?:[/ ]([A-Za-z0-9_-]{16,}))?$/,
+];
+
+/** La sala de un enlace (`#/sala/CODIGO`, o el de un asiento con `/FICHA`) o de un codigo escrito, o null si no lo es. */
+export function parseRoomLink(text: string): RoomLink | null {
+  const trimmed = text.trim();
+  for (const pattern of ROOM_LINK_PATTERNS) {
+    const match = pattern.exec(trimmed);
+    if (match) return { code: match[1]!.toUpperCase(), token: match[2] ?? null };
+  }
+  return null;
+}
+
+/** El enlace de la sala para repartir (la URL de esta pagina, sin su hash): quien lo abre pide un asiento libre. */
+export const roomLinkUrl = (code: string, pageUrl: string): string => `${pageUrl.split('#')[0]}#/sala/${code}`;
