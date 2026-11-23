@@ -8,7 +8,9 @@
 //   ILOGIC_SERVER_URL=https://ilogic-servidor.<cuenta>.workers.dev npm run online   # contra el publicado
 //
 // Con ILOGIC_SERVER_URL no arranca el de Node: juega contra ese servidor (para comprobar el de
-// Cloudflare tras publicarlo; el juego en localhost entra siempre por CORS). Deja capturas de cada pantalla en tests/visual/out/online-*.png, para mirar como se ve.
+// Cloudflare tras publicarlo; el juego en localhost entra siempre por CORS).
+//
+// Deja capturas de cada pantalla en tests/visual/out/online-*.png, para mirar como se ve.
 //
 // Sin niebla, para poder comparar lo que ve cada uno. Lo que mira de la partida, por `window.ilogic3d`
 // (docs/AGENTES.md); en el menu, el estado de la interfaz (el store, importado de vite: es su propio
