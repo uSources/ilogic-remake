@@ -79,6 +79,29 @@ describe('la sala: una partida por la red como logica pura', () => {
     expect(welcome).toMatchObject({ kind: 'welcome', seat: 1, team: 1, status: 'waiting', lastSeq: 0 });
   });
 
+  it('con el codigo se da el primer asiento de persona que no es de nadie; quien ya entro con su ficha cuenta como dado', () => {
+    const room = newRoom([{ controller: 'human' }, { controller: 'human' }, { controller: 'human' }]);
+    const [, second, third] = tokensOf(room);
+    expect(room.claimSeat()).toEqual({ ok: true, seat: 0, team: 0, token: tokensOf(room)[0] });
+    expect(room.join({ kind: 'hello', token: second!, ...CURRENT_PROTOCOL }).ok).toBe(true);
+    expect(room.claimSeat()).toEqual({ ok: true, seat: 2, team: 2, token: third });
+    expect(room.claimSeat()).toEqual({ ok: false, error: 'noFreeSeat' });
+    // Lo dado se guarda con la sala.
+    const restored = Room.restore(JSON.parse(JSON.stringify(newRoom().snapshot())) as unknown, context());
+    expect(restored.ok && restored.room.claimSeat()).toMatchObject({ ok: true, seat: 0 });
+    const afterClaim = newRoom();
+    afterClaim.claimSeat();
+    const again = Room.restore(JSON.parse(JSON.stringify(afterClaim.snapshot())) as unknown, context());
+    expect(again.ok && again.room.claimSeat()).toMatchObject({ ok: true, seat: 1 });
+  });
+
+  it('una sala que ya juega no da asientos con el codigo', () => {
+    const room = newRoom();
+    new Table(room, tokensOf(room)).joinAll();
+    expect(room.status).toBe('playing');
+    expect(room.claimSeat()).toEqual({ ok: false, error: 'notWaiting' });
+  });
+
   it('una ficha inventada o robada no entra; otra version tampoco; lo que no es un mensaje, menos', () => {
     const room = newRoom();
     const [first] = tokensOf(room);

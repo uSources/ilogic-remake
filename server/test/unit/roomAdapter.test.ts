@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CURRENT_PROTOCOL, type Outgoing, type SeatId } from '@core/net';
-import { RoomAdapter } from '../../src/roomAdapter';
+import { RoomAdapter, type Invitation } from '../../src/roomAdapter';
 import type { RoomRequest } from '../../src/roomRequest';
 
 /** Dos personas y la IA, en un mapa pequeño con niebla. */
@@ -18,10 +18,19 @@ const kindsTo = (outgoing: readonly Outgoing[], seat: SeatId): string[] =>
 
 const hello = (token: string) => ({ kind: 'hello', token, ...CURRENT_PROTOCOL });
 
+/** Cada asiento de persona, pedido como con el codigo (el primero es el de quien crea la sala). */
+function claimAll(adapter: RoomAdapter): Invitation[] {
+  const seats: Invitation[] = [];
+  for (let claimed = adapter.claimSeat(); claimed.ok; claimed = adapter.claimSeat()) seats.push(claimed.seat);
+  return seats;
+}
+
+const tokensOf = (adapter: RoomAdapter): string[] => claimAll(adapter).map((seat) => seat.token);
+
 /** La sala con las dos personas dentro. */
 function joinedRoom(): { adapter: RoomAdapter; tokens: string[] } {
   const adapter = RoomAdapter.create(request());
-  const tokens = adapter.invitations().map((seat) => seat.token);
+  const tokens = tokensOf(adapter);
   for (const token of tokens) expect(adapter.join(hello(token)).ok).toBe(true);
   return { adapter, tokens };
 }
@@ -30,12 +39,13 @@ describe('el adaptador de la sala', () => {
   it('crea la sala esperando, con una ficha de 32 letras por persona, y el vestibulo no cuenta nada de la partida', () => {
     const adapter = RoomAdapter.create(request());
     expect(adapter.status).toBe('waiting');
-    expect(adapter.invitations().map((seat) => [seat.seat, seat.team])).toEqual([
+    const seats = claimAll(adapter);
+    expect(seats.map((seat) => [seat.seat, seat.team])).toEqual([
       [0, 0],
       [1, 1],
     ]);
-    for (const seat of adapter.invitations()) expect(seat.token).toMatch(/^[A-Za-z0-9_-]{32}$/);
-    expect(adapter.lobby()).toEqual({
+    for (const seat of seats) expect(seat.token).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(adapter.lobby(null)).toEqual({
       status: 'waiting',
       ...CURRENT_PROTOCOL,
       seats: [
@@ -43,8 +53,9 @@ describe('el adaptador de la sala', () => {
         { seat: 1, team: 1, kind: 'person', joined: false },
         { seat: 2, team: 2, kind: 'ai', joined: false },
       ],
+      turn: null,
     });
-    expect(Object.keys(adapter.lobby())).toEqual(['status', 'protocol', 'save', 'seats']);
+    expect(Object.keys(adapter.lobby(null))).toEqual(['status', 'protocol', 'save', 'seats', 'turn']);
     expect(adapter.awaiting()).toBeNull();
     expect(adapter.absentSeats()).toEqual([0, 1]);
   });
@@ -53,7 +64,8 @@ describe('el adaptador de la sala', () => {
     const { adapter, tokens } = joinedRoom();
     expect(adapter.status).toBe('playing');
     expect(adapter.awaiting()).toEqual({ seat: 0, day: 1 });
-    expect(adapter.lobby().seats.map((seat) => seat.joined)).toEqual([true, true, false]);
+    expect(adapter.lobby(null).seats.map((seat) => seat.joined)).toEqual([true, true, false]);
+    expect(adapter.lobby(1234).turn).toEqual({ seat: 0, day: 1, endsAt: 1234 });
     const first = adapter.join(hello(tokens[0]!));
     expect(first.ok && first.connection).toBe(3);
     adapter.leave(0, 3);
@@ -77,7 +89,7 @@ describe('el adaptador de la sala', () => {
 
   it('si la IA se queda a medias (presupuesto de pasos), lo dice y se sigue hasta que toca a una persona', () => {
     const adapter = RoomAdapter.create(request(), 1);
-    for (const seat of adapter.invitations()) expect(adapter.join(hello(seat.token)).ok).toBe(true);
+    for (const token of tokensOf(adapter)) expect(adapter.join(hello(token)).ok).toBe(true);
     const finish = (): Outgoing[] => {
       const outgoing: Outgoing[] = [];
       while (adapter.isMidway()) outgoing.push(...adapter.continueMatch());
@@ -98,11 +110,11 @@ describe('el adaptador de la sala', () => {
 
   it('un asiento que no llega pasa a la IA y la partida empieza sin el', () => {
     const adapter = RoomAdapter.create(request());
-    const [first] = adapter.invitations();
-    adapter.join(hello(first!.token));
+    const [first] = tokensOf(adapter);
+    adapter.join(hello(first!));
     for (const seat of adapter.absentSeats()) adapter.replaceWithAi(seat);
     expect(adapter.status).toBe('playing');
-    expect(adapter.lobby().seats.map((seat) => seat.kind)).toEqual(['person', 'ai', 'ai']);
+    expect(adapter.lobby(null).seats.map((seat) => seat.kind)).toEqual(['person', 'ai', 'ai']);
   });
 
   it('guardada y recuperada es la misma sala, con nadie dentro; lo que no es una sala no se recupera', () => {
@@ -120,7 +132,7 @@ describe('el adaptador de la sala', () => {
 describe('dar un asiento vacio a la IA (quien creo la sala)', () => {
   it('solo con la ficha del creador, solo mientras espera y solo un asiento de otra persona que no ha entrado', () => {
     const adapter = RoomAdapter.create(request());
-    const [creator, other] = adapter.invitations().map((seat) => seat.token) as [string, string];
+    const [creator, other] = tokensOf(adapter) as [string, string];
     expect(adapter.handToAi(other, 0)).toEqual({ ok: false, error: 'badToken' });
     expect(adapter.handToAi('otra-ficha', 1)).toEqual({ ok: false, error: 'badToken' });
     expect(adapter.handToAi(creator, 0)).toEqual({ ok: false, error: 'noSeat' });
@@ -130,15 +142,45 @@ describe('dar un asiento vacio a la IA (quien creo la sala)', () => {
     expect(handed.ok).toBe(true);
     // Con el asiento 1 en la IA ya estan todos: la partida empieza y el creador recibe su turno.
     expect(adapter.status).toBe('playing');
-    expect(adapter.lobby().seats[1]).toEqual({ seat: 1, team: 1, kind: 'ai', joined: false });
+    expect(adapter.lobby(null).seats[1]).toEqual({ seat: 1, team: 1, kind: 'ai', joined: false });
     if (handed.ok) expect(kindsTo(handed.outgoing, 0)).toContain('turn');
     expect(adapter.handToAi(creator, 1)).toEqual({ ok: false, error: 'notWaiting' });
   });
 
   it('un asiento cuya persona ya esta dentro no se toca', () => {
     const adapter = RoomAdapter.create(request());
-    const [creator, other] = adapter.invitations().map((seat) => seat.token) as [string, string];
+    const [creator, other] = tokensOf(adapter) as [string, string];
     expect(adapter.join(hello(other)).ok).toBe(true);
     expect(adapter.handToAi(creator, 1)).toEqual({ ok: false, error: 'seatTaken' });
+  });
+});
+
+describe('pedir un asiento con el codigo', () => {
+  it('da los asientos de persona en orden, cada uno una vez, y ninguno cuando ya no quedan', () => {
+    const adapter = RoomAdapter.create(request());
+    expect(claimAll(adapter).map((seat) => seat.seat)).toEqual([0, 1]);
+    expect(adapter.claimSeat()).toEqual({ ok: false, error: 'noFreeSeat' });
+  });
+
+  it('un asiento en el que alguien ya ha entrado con su ficha no se da', () => {
+    const adapter = RoomAdapter.create(request());
+    const second = adapter.snapshot().seats[1];
+    expect(second?.kind === 'person' && adapter.join(hello(second.token)).ok).toBe(true);
+    expect(adapter.claimSeat()).toMatchObject({ ok: true, seat: { seat: 0 } });
+    expect(adapter.claimSeat()).toEqual({ ok: false, error: 'noFreeSeat' });
+  });
+
+  it('lo que se ha dado sigue dado tras guardar y recuperar la sala', () => {
+    const adapter = RoomAdapter.create(request());
+    const creator = adapter.claimSeat();
+    expect(creator.ok && creator.seat.seat).toBe(0);
+    const restored = RoomAdapter.restore(JSON.parse(JSON.stringify(adapter.snapshot())));
+    const next = restored?.claimSeat();
+    expect(next?.ok && next.seat.seat).toBe(1);
+  });
+
+  it('una sala que ya juega no da asientos', () => {
+    const { adapter } = joinedRoom();
+    expect(adapter.claimSeat()).toEqual({ ok: false, error: 'notWaiting' });
   });
 });

@@ -7,7 +7,7 @@
  */
 import type { RawData, WebSocket } from 'ws';
 import type { SeatId } from '@core/net';
-import { CLOSE_CODES, HostedRoom, type CreateResult, type HandToAiResult, type RawMessage } from '../../src/hostedRoom';
+import { CLOSE_CODES, HostedRoom, type ClaimResult, type CreateResult, type HandToAiResult, type RawMessage } from '../../src/hostedRoom';
 import type { LobbyInfo } from '../../src/roomAdapter';
 import type { RoomHost, StoredRoom } from '../../src/roomHost';
 import type { RoomRequest } from '../../src/roomRequest';
@@ -145,6 +145,10 @@ export class NodeRooms implements RoomDirectory {
 
   info(code: string): Promise<LobbyInfo | null> {
     return this.roomOf(code)?.info() ?? Promise.resolve(null);
+  }
+
+  claimSeat(code: string): Promise<ClaimResult> {
+    return this.roomOf(code)?.claimSeat() ?? Promise.resolve({ ok: false, error: 'noSuchRoom' });
   }
 
   handToAi(code: string, token: string, seat: SeatId): Promise<HandToAiResult> {

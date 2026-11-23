@@ -115,7 +115,10 @@ describe('las alarmas en Node', () => {
     await Promise.all(clients.map((client) => client.take(['turn'])));
     const first = clients.find((client) => client.net.isMyTurn)!;
     const other = clients.find((client) => client !== first)!;
-    expect((await node.server.stored(code))?.meta.timers.turn).toMatchObject({ seat: first.net.seat });
+    const timer = (await node.server.stored(code))?.meta.timers.turn;
+    expect(timer).toMatchObject({ seat: first.net.seat });
+    // El vestibulo dice cuando se le acaba el turno (lo que enseña «Mis partidas»).
+    expect((await lobbyOf(node.server, code)).info?.turn).toEqual({ seat: first.net.seat, day: 1, endsAt: timer?.at });
     node.advance(61 * SECOND);
     await node.ring(code);
     await Promise.all(clients.map((client) => client.take(['turn'])));
@@ -125,7 +128,7 @@ describe('las alarmas en Node', () => {
 
   it('si el creador lo pidio, los que no llegan a tiempo pasan a la IA y la partida empieza', async () => {
     const created = await createRoom(node.server, { waitingSeconds: 60 });
-    const client = await SocketClient.join(node.server, created.code, created.seats[0]!.token);
+    const client = await SocketClient.join(node.server, created.code, created.token);
     node.advance(61 * SECOND);
     await node.ring(created.code);
     const lobby = (await lobbyOf(node.server, created.code)).info!;
@@ -140,12 +143,12 @@ describe('arrancar otra vez', () => {
   const node = useNodeServer();
 
   it('las salas guardadas siguen: quien vuelve con su ficha sigue la partida donde estaba', async () => {
-    const { code, clients, created } = await joinedRoom(node.server);
+    const { code, clients, tokens } = await joinedRoom(node.server);
     await Promise.all(clients.map((client) => client.take(['turn'])));
     const firstSeat = clients.findIndex((client) => client.net.isMyTurn);
     await node.restart();
     for (const client of clients) expect(await client.closed).toMatchObject({ code: GOING_AWAY });
-    const back = await Promise.all(created.seats.map((seat) => SocketClient.join(node.server, code, seat.token)));
+    const back = await Promise.all(tokens.map((token) => SocketClient.join(node.server, code, token)));
     await Promise.all(back.map((client) => client.take(['turn'])));
     const first = back[firstSeat]!;
     expect(first.net.isMyTurn).toBe(true);

@@ -2,7 +2,8 @@
  * El unico sitio del servidor que habla con la sala del nucleo (`Room`, src/core/net): lo que el
  * Durable Object necesita de ella, con nombres del servidor (entrar, atender, irse, el reloj, la IA
  * por quien no vuelve, guardar y recuperar) y nada de la partida: solo salen los mensajes que la
- * sala manda a cada asiento (`Outgoing`) y lo que puede saber cualquiera (`lobby`). Asi un cambio en
+ * sala manda a cada asiento (`Outgoing`), lo que puede saber cualquiera (`lobby`) y el asiento que se
+ * da a quien llega con el codigo (`claimSeat`). Asi un cambio en
  * la sala se absorbe aqui, y el resto del servidor no sabe ni que existe una `GameSession`.
  */
 import { defaultContent } from '@core/content/default';
@@ -11,6 +12,7 @@ import type { TeamId } from '@core/model';
 import {
   CURRENT_PROTOCOL,
   Room,
+  type ClaimError,
   type JoinResult,
   type Outgoing,
   type RoomContext,
@@ -29,15 +31,31 @@ export interface LobbySeat {
   joined: boolean;
 }
 
+/** A quien se espera ahora: su asiento y el dia (otro dia del mismo asiento es otro turno). */
+export interface AwaitedSeat {
+  seat: SeatId;
+  day: number;
+}
+
+/**
+ * De quien es el turno: una persona (a la IA no se la espera), el dia y cuando se le acaba (null si
+ * la sala no tiene reloj). Lo sabe todo el mundo: la partida anuncia cada turno a todos los equipos.
+ */
+export interface LobbyTurn extends AwaitedSeat {
+  endsAt: number | null;
+}
+
 /** Lo que puede saber cualquiera de la sala (`GET /rooms/:code`): nada de la partida. */
 export interface LobbyInfo {
   status: RoomStatus;
   protocol: number;
   save: number;
   seats: LobbySeat[];
+  /** A quien se espera ahora (null si a nadie: la sala espera a que entren, juega la IA o acabo). */
+  turn: LobbyTurn | null;
 }
 
-/** La ficha de un asiento, para el enlace de invitacion (solo la ve quien crea la sala). */
+/** El asiento de quien crea la sala o llega con el codigo: su ficha es lo que le deja entrar (y volver). */
 export interface Invitation {
   seat: SeatId;
   team: TeamId;
@@ -47,11 +65,7 @@ export interface Invitation {
 /** Por que no se da un asiento a la IA: la ficha no es de quien creo la sala, la sala ya juega, el asiento no es de otra persona, o ya esta dentro. */
 export type HandToAiError = 'badToken' | 'notWaiting' | 'noSeat' | 'seatTaken';
 
-/** A quien se espera ahora: su asiento y el dia (otro dia del mismo asiento es otro turno). */
-export interface AwaitedSeat {
-  seat: SeatId;
-  day: number;
-}
+export type ClaimSeatResult = { ok: true; seat: Invitation } | { ok: false; error: ClaimError };
 
 /** Lo que el servidor le da a la sala: el contenido del juego, su azar y (en tests) cuantos pasos seguidos. */
 export const roomContext = (stepBudget?: number): RoomContext => ({ content: defaultContent(), newToken, sameToken, stepBudget });
@@ -78,19 +92,24 @@ export class RoomAdapter {
     return this.room.status;
   }
 
-  /** Las fichas de las personas (para los enlaces de invitacion, al crear la sala). */
-  invitations(): Invitation[] {
-    return this.room.personSeats().map((seat) => ({ seat: seat.id, team: seat.team, token: seat.token }));
+  /** El primer asiento de persona que no es de nadie pasa a ser de quien lo pide (quien crea la sala, o llega con el codigo). */
+  claimSeat(): ClaimSeatResult {
+    const claimed = this.room.claimSeat();
+    if (!claimed.ok) return claimed;
+    return { ok: true, seat: { seat: claimed.seat, team: claimed.team, token: claimed.token } };
   }
 
-  lobby(): LobbyInfo {
+  /** Lo que puede saber cualquiera, con la hora a la que se le acaba el turno a quien se espera (null: sin reloj). */
+  lobby(turnEndsAt: number | null): LobbyInfo {
     const seats = this.room.seats.map((seat) => ({
       seat: seat.id,
       team: seat.team,
       kind: seat.kind,
       joined: seat.kind === 'person' && seat.connection !== null,
     }));
-    return { status: this.room.status, ...CURRENT_PROTOCOL, seats };
+    const awaited = this.awaiting();
+    const turn = awaited ? { ...awaited, endsAt: turnEndsAt } : null;
+    return { status: this.room.status, ...CURRENT_PROTOCOL, seats, turn };
   }
 
   /** Los asientos de las personas que no estan dentro (para darselos a la IA si no llegan). */

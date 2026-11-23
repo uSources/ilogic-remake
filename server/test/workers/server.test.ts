@@ -106,7 +106,7 @@ describe('las alarmas', () => {
 
   it('si el creador lo pidio, los que no llegan a tiempo pasan a la IA y la partida empieza', async () => {
     const created = await createRoom(cloudflare, { waitingSeconds: 60 });
-    const client = await SocketClient.join(cloudflare, created.code, created.seats[0]!.token);
+    const client = await SocketClient.join(cloudflare, created.code, created.token);
     expect((await storedOf(created.code))?.meta.timers.waitingUntil).toBeGreaterThan(Date.now());
     await advanceTimer(created.code, (timers) => (timers.waitingUntil = Date.now() - 1));
     const lobby = (await lobbyOf(cloudflare, created.code)).info!;

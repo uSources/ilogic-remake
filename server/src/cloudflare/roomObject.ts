@@ -7,7 +7,7 @@
  */
 import { DurableObject } from 'cloudflare:workers';
 import type { SeatId } from '@core/net';
-import { HostedRoom, type CreateResult, type HandToAiResult } from '../hostedRoom';
+import { HostedRoom, type ClaimResult, type CreateResult, type HandToAiResult } from '../hostedRoom';
 import type { LobbyInfo } from '../roomAdapter';
 import type { Attachment, RoomHost, RoomMeta, RoomSocket, StoredRoom } from '../roomHost';
 import type { RoomRequest } from '../roomRequest';
@@ -81,6 +81,10 @@ export class RoomObject extends DurableObject<Env> {
 
   info(): Promise<LobbyInfo | null> {
     return this.room.info();
+  }
+
+  claimSeat(): Promise<ClaimResult> {
+    return this.room.claimSeat();
   }
 
   handToAi(token: string, seat: SeatId): Promise<HandToAiResult> {

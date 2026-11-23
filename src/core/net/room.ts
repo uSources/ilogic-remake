@@ -18,13 +18,15 @@
  * Nadie recibe la partida entera: cada persona recibe su vista (la niebla de FOG) y los sucesos que
  * su equipo ve (eventFog.ts), llevados por el `Courier` (courier.ts: los pasos de los demas van
  * juntos en un mensaje, para no contar cuantos han sido). Las fichas de los asientos (`token`) son
- * el unico secreto: el servidor las pone en los enlaces de invitacion (una por persona) y las genera
- * el (`RoomContext.newToken`: el nucleo no tira de ningun azar).
+ * el unico secreto: las genera el servidor (`RoomContext.newToken`: el nucleo no tira de ningun
+ * azar); quien crea la sala se queda con la primera y los demas piden la suya con el codigo de la
+ * sala (`claimSeat`: el primer asiento que no es de nadie).
  *
  * La maquina de estados (`RoomStatus`):
  *
- *   'waiting'  esperando a que entren todas las personas. Quien abandona antes se rinde y ya no se
- *              le espera; un asiento vacio puede pasar a la IA (`replaceWithAi`).
+ *   'waiting'  esperando a que entren todas las personas: quien llega con el codigo pide un asiento
+ *              (`claimSeat`). Quien abandona antes se rinde y ya no se le espera; un asiento vacio
+ *              puede pasar a la IA (`replaceWithAi`).
  *      │  entran todas (`join` → `startIfComplete`)
  *      ▼
  *   'playing'  la partida sigue: `advance` la lleva hasta que hay que esperar a una persona (`turn`),
@@ -68,6 +70,7 @@ import {
 } from './protocol';
 import {
   aiSeat,
+  isFree,
   isJoined,
   isSeatOf,
   personSeat,
@@ -103,7 +106,7 @@ export interface RoomContext {
 }
 
 /** La version de la sala guardada (sube cuando cambia lo que guarda; aparte del protocolo). */
-export const ROOM_SNAPSHOT_VERSION = 1;
+export const ROOM_SNAPSHOT_VERSION = 2;
 
 /** La sala entera como JSON, para guardarla (`restore` la recupera). */
 export interface RoomSnapshot {
@@ -116,6 +119,12 @@ export interface RoomSnapshot {
 }
 
 export type JoinResult = { ok: true; seat: SeatId; connection: number; messages: Outgoing[] } | { ok: false; error: NetError };
+
+/** Por que no se da un asiento con el codigo: la sala ya no espera a nadie, o todos son ya de alguien. */
+export type ClaimError = 'notWaiting' | 'noFreeSeat';
+
+/** El asiento que se da a quien llega con el codigo (con su ficha, para entrar), o por que no. */
+export type ClaimResult = { ok: true; seat: SeatId; team: TeamId; token: string } | { ok: false; error: ClaimError };
 export type RestoreResult = { ok: true; room: Room } | { ok: false; error: 'badSnapshot' | SaveError };
 
 const ROOM_STATUSES: readonly RoomStatus[] = ['waiting', 'playing', 'ended'];
@@ -260,10 +269,23 @@ export class Room {
     if (!seat) return { ok: false, error: 'badToken' };
     const connection = this.nextConnection++;
     seat.connection = connection;
+    seat.claimed = true;
     this.outbox.send(seat.id, this.welcome(seat));
     this.sendSituation(seat);
     if (this.roomStatus === 'waiting') this.startIfComplete();
     return { ok: true, seat: seat.id, connection, messages: this.outbox.flush() };
+  }
+
+  /**
+   * Alguien llega con el codigo de la sala, sin ficha: se le da el primer asiento de persona que no
+   * es de nadie, que desde ahora es suyo (entra con esa ficha). Solo mientras la sala espera.
+   */
+  claimSeat(): ClaimResult {
+    if (this.roomStatus !== 'waiting') return { ok: false, error: 'notWaiting' };
+    const seat = this.personSeats().find(isFree);
+    if (!seat) return { ok: false, error: 'noFreeSeat' };
+    seat.claimed = true;
+    return { ok: true, seat: seat.id, team: seat.team, token: seat.token };
   }
 
   /** El saludo de vuelta: su asiento, su equipo, la version del servidor, como esta la sala y su ultimo `seq` atendido. */
