@@ -87,7 +87,9 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"; en la vista 3D, `OnlinePlay`). Queda: «Buscar rival» (emparejar
     con quien busque partida con las mismas reglas: un objeto del servidor que junta peticiones y
     crea la sala; como habrá poca gente, que se pueda dejar buscando y la partida salga en «Mis
-    partidas»), la cuenta
+    partidas»; si con eso las salas se hacen públicas, pedir asiento, `POST /rooms/:code/seat`,
+    necesita un tope por IP o asientos reservados: hoy quien sabe el código puede gastar los
+    asientos libres de una sala que espera, y el código es el único secreto), la cuenta
     atrás del reloj por turno en la pantalla, avisos fuera de la pestaña (notificaciones del
     navegador) y que el final sepa las cuentas de todos: cada uno solo ve las suyas
     (`withoutBooks`, `core/playerView.ts`), así que en la pantalla final las del rival salen a 0 y
