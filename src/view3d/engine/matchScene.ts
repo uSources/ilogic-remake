@@ -106,6 +106,7 @@ export class MatchScene implements ScreenView {
     this.world.scene.add(
       this.terrain.object,
       this.board.object,
+      this.board.controlZones.object,
       this.highlights.object,
       this.threatLines.object,
       this.preview.object,

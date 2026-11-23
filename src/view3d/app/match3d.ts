@@ -23,7 +23,7 @@ import type { GlbLibrary } from '../engine/pieces/glbModels';
 import { hitLookOf } from '../systems/board/boardScene';
 import { EndTurnGuard } from '../systems/turn/endTurnGuard';
 import { StrategyCamera } from '../systems/camera/strategyCamera';
-import { boardLookupOf, incomeSpotsOf } from '../systems/events/eventSteps';
+import { boardLookupOf, incomeSpotsOf, type DayLookup } from '../systems/events/eventSteps';
 import { playEvents } from '../systems/events/timeline';
 import { installHudActions, publishHud } from '../systems/hud/hudBridge';
 import { MinimapBridge, toggleMinimap } from '../systems/hud/minimapBridge';
@@ -119,7 +119,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   }
 
   /** Los sucesos se ven con las piezas y los efectos del motor (systems/events dice que pasos lleva cada uno). */
-  const day = { viewer, incomeSpots: (team: TeamId) => incomeSpotsOf(state, team) };
+  const day: DayLookup = { viewer, incomeSpots: (team, source) => incomeSpotsOf(state, team, source) };
   /** El ambiente: el fondo del tema, el clima y lo que suena cerca de donde mira la camara (y los truenos). */
   const ambience = startAmbience(scene, state, audio);
   /** Los sonidos del tablero suenan desde su sitio, respecto a la camara. */

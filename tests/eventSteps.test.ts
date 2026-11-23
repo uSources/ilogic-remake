@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newUnit } from '@core/measure';
-import type { GameEvent, GameEventOf, Pos } from '@core/model';
+import type { GameEvent, GameEventOf, IncomeSource, Pos } from '@core/model';
 import { seededRng } from '@core/util/random';
 import type { SoundName } from '../src/audio/sounds';
 import type { EffectStage, PieceClip, PieceLookup, PieceStage, PuffKind, ShownPiece, SoundStage, Spot } from '../src/view3d/ports/stage';
@@ -295,7 +295,13 @@ describe('lo que se cobra al empezar el dia', () => {
     { pos: { x: 3, y: 2 }, amount: 500 },
   ];
   const day = { viewer: PLAYER, incomeSpots: () => spots };
-  const income = (team: number): GameEvent => ({ kind: 'income', actor: null, team, amount: 1500, source: 'buildings' });
+  const income = (team: number, source: IncomeSource = 'buildings'): GameEvent => ({
+    kind: 'income',
+    actor: null,
+    team,
+    amount: 1500,
+    source,
+  });
 
   it('lo tuyo: una chapa «+N» sobre cada edificio que cobra, todas a la vez', () => {
     const steps = stepsOf(income(PLAYER), lookup, day);
@@ -311,10 +317,28 @@ describe('lo que se cobra al empezar el dia', () => {
   it('cada edificio propio que paga, con lo suyo', () => {
     const s = blankState({ fog: false });
     s.buildings.push({ type: 'City', owner: PLAYER, x: 4, y: 4, capture: null }, { type: 'City', owner: ENEMY, x: 8, y: 8, capture: null });
-    const mine = incomeSpotsOf(s, PLAYER);
+    const mine = incomeSpotsOf(s, PLAYER, 'buildings');
     expect(mine).toContainEqual(expect.objectContaining({ pos: { x: 4, y: 4 } }));
     expect(mine).not.toContainEqual(expect.objectContaining({ pos: { x: 8, y: 8 } }));
     expect(mine.every((spot) => spot.amount > 0)).toBe(true);
+  });
+
+  it('[CAMBIO] lo de los puntos de control, aparte: una chapa sobre cada uno que te ha pagado', () => {
+    const steps = stepsOf(income(PLAYER, 'controlPoints'), lookup, day);
+    expect(kindsOf(steps)).toEqual(['sound', 'together(text,text)']);
+  });
+
+  it('[CAMBIO] pagan los puntos propios sin disputar (los del rival y los disputados, no)', () => {
+    const s = blankState({ fog: false, controlPoints: 3, controlRadius: 1, controlIncome: 1000 });
+    s.controlPoints = [
+      { x: 4, y: 4, owner: PLAYER },
+      { x: 12, y: 4, owner: PLAYER },
+      { x: 4, y: 12, owner: ENEMY },
+    ];
+    newUnit(s, unitTypeNamed('Soldier'), PLAYER, { x: 12, y: 5 });
+    newUnit(s, unitTypeNamed('Soldier'), ENEMY, { x: 13, y: 4 });
+    expect(incomeSpotsOf(s, PLAYER, 'controlPoints')).toEqual([{ pos: { x: 4, y: 4 }, amount: 1000 }]);
+    expect(incomeSpotsOf(s, ENEMY, 'controlPoints')).toEqual([{ pos: { x: 4, y: 12 }, amount: 1000 }]);
   });
 });
 

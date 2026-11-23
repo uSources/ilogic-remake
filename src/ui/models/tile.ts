@@ -8,6 +8,7 @@ import { unitTypeOf, buildingTypeOf, terrainAt } from '../../core/gameContent';
 import {
   canMoveOn,
   inControlZone,
+  isContested,
   isShownTo,
   buildingAt,
   buildingIncome,
@@ -24,7 +25,6 @@ import {
   isRuleOn,
 } from '../../core/rules';
 import type { Building, GameState, Pos, TeamId, Unit } from '../../core/model';
-import { isHostile } from '../../core/teams';
 import type { Grid } from '../../core/util/grid';
 import { turnEndOrderOf, isDetached, squadById } from '../../core/squads';
 import type { AbilityVM, BuildingVM, StatChipVM, TileVM, UnitVM } from '../../hud/store';
@@ -173,12 +173,11 @@ function controlPointVM(s: GameState, pos: Pos, view: TileViewer): TileVM['point
   const controlPoint = s.controlPoints?.find((candidate) => inControlZone(s, candidate, pos));
   if (!controlPoint) return null;
   const isSeen = (at: Pos) => view.vis.at(at);
-  const inside = s.units.filter((unit) => inControlZone(s, controlPoint, unit) && isShownTo(view.viewer, unit, isSeen));
   const owner = ownerSideOf(s, view.viewer, controlPoint.owner);
   return {
     owner,
     income: s.settings.controlIncome,
-    contested: inside.some((unit) => inside.some((other) => isHostile(s, unit.team, other.team))),
+    contested: isContested(s, controlPoint, (unit) => isShownTo(view.viewer, unit, isSeen)),
     icon: `ui/zona_${sideLetter(owner)}`,
   };
 }

@@ -156,7 +156,7 @@ export {
   type ArmyLimit,
   type BuyOption,
 } from './rules/economy';
-export { inControlZone, teamsInZone } from './rules/control';
+export { inControlZone, isContested, teamsInZone } from './rules/control';
 export type { RoundReport, RoundReportParts } from './model';
 export type { ControlReport } from './ruleModules/controlPoints';
 export type { WeatherChange } from './weather';
