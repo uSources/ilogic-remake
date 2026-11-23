@@ -126,6 +126,18 @@ export class Matchmaker implements RivalSearch {
   private async searchNow(client: string, request: SearchRequest): Promise<SearchResult> {
     if (!this.searches.allows(client, this.now())) return { ok: false, error: 'tooManySearches' };
     const queue = await this.loadedQueue();
+    try {
+      return await this.searchIn(queue, request);
+    } catch (error) {
+      // La cola en memoria puede haber cambiado sin guardarse (una sala que salio antes de darle el
+      // asiento a nadie): la siguiente busqueda parte de la guardada.
+      this.queue = null;
+      throw error;
+    }
+  }
+
+  /** Un asiento de la cola o, si no vale ninguno, una sala nueva; y la cola, guardada. */
+  private async searchIn(queue: MatchQueue, request: SearchRequest): Promise<SearchResult> {
     const waiting = queue[request.pace];
     const result = (await this.takeWaitingSeat(waiting, request)) ?? (await this.openRoom(waiting, request.pace));
     await this.store.save(queue);

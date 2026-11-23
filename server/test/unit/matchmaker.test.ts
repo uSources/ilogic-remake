@@ -62,6 +62,8 @@ class MemoryHost implements RoomHost {
 
 /** Las salas de verdad (`HostedRoom`), en memoria, con una forma de entrar en ellas como por el WebSocket. */
 class MemoryRooms implements RoomDirectory {
+  /** Pedir asiento falla (como si se cayera la sala a media peticion). */
+  failClaims = false;
   private readonly rooms = new Map<string, { host: MemoryHost; room: HostedRoom }>();
 
   constructor(private readonly now: () => number) {}
@@ -79,6 +81,7 @@ class MemoryRooms implements RoomDirectory {
   }
 
   claimSeat(code: string) {
+    if (this.failClaims) return Promise.reject(new Error('La sala no contesta'));
     return this.entryOf(code).room.claimSeat();
   }
 
@@ -207,6 +210,15 @@ describe('el emparejador', () => {
     const [first, second] = (await Promise.all([matchmaker.search('a', DAILY), matchmaker.search('b', DAILY)])).map(ticketOf);
     expect(first?.matched).toBe(false);
     expect(second).toMatchObject({ code: first?.code, matched: true });
+  });
+
+  it('si una busqueda falla a medias, la cola no se queda cambiada: la siguiente parte de la guardada', async () => {
+    const { rooms, matchmaker } = setUp();
+    const opener = ticketOf(await matchmaker.search('a', DAILY));
+    rooms.failClaims = true;
+    await expect(matchmaker.search('b', DAILY)).rejects.toThrow();
+    rooms.failClaims = false;
+    expect(ticketOf(await matchmaker.search('c', DAILY))).toMatchObject({ code: opener.code, matched: true });
   });
 
   it('la cola se guarda: otro emparejador con el mismo almacen la sigue', async () => {
