@@ -220,7 +220,9 @@ describe('KeyRouter con la pausa de verdad', () => {
     const pause = new PauseMenu({
       session: new GameSession(blankState(), [humanController(), passiveController()]),
       viewer: PLAYER,
+      savesHere: true,
       endTurn: ask('endTurn'),
+      surrender: ask('surrender'),
       openOptions: ask('options'),
       toggleThreat: ask('threat'),
       toggleIntents: ask('intents'),

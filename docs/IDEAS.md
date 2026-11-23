@@ -22,10 +22,6 @@ El juego pasó de 2D (Phaser) a 3D (three.js, `src/view3d/`). Las reglas, la IA 
 son las mismas, pero la vista 3D aún no deja hacer todo. La ayuda de la partida solo cuenta lo que
 ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`).
 
-16. **Jugar en línea en 3D.** El servidor y la parte de red del navegador (`server/`, `src/net/`,
-    las pantallas de salas, `src/menu/online/`) ya están, pero el cliente iba enganchado a la
-    escena 2D, que se quitó. Falta que la partida 3D juegue con la conexión (`OnlineMatch`) y dar al
-    menú 3D su `openOnline`; hasta entonces la tarjeta «Jugar en línea» no sale.
 19. **Tutorial y paneles de misión.**
 20. **Varias personas en la misma pantalla** (el aviso de cambio de jugador), repetir el turno
     enemigo y guardado automático.
@@ -87,8 +83,12 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     guarda la sala (`snapshot`/`restore`), lleva los tiempos y manda a cada uno solo lo que ve
     (hecho: `server/`); (3) la pantalla: crear una sala, el enlace de
     invitación y jugar desde la vista y los sucesos que llegan (hecho: `src/net`, «Jugar en línea»;
-    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"). Queda: la cuenta atrás del reloj por turno en la pantalla y avisos fuera de la pestaña (notificaciones
-    del navegador). Decidido: el servidor manda (las acciones pasan por la sesión
+    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"; en la vista 3D, `OnlinePlay`). Queda: la cuenta
+    atrás del reloj por turno en la pantalla, avisos fuera de la pestaña (notificaciones del
+    navegador) y que el final sepa las cuentas de todos: cada uno solo ve las suyas
+    (`withoutBooks`, `core/playerView.ts`), así que en la pantalla final las del rival salen a 0 y
+    su gráfica del valor del ejército solo tiene el último día; al acabar ya no hay nada que
+    esconder y la sala podría mandar la partida entera. Decidido: el servidor manda (las acciones pasan por la sesión
     como las de cualquiera, la IA rival y los dados juegan allí) y un cliente nunca recibe más que la
     vista de su equipo (si no, se puede mirar a través de la niebla). Las clasificatorias, después.
 17. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
@@ -128,7 +128,7 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
     partidas de antes se descartan (`core/saveVersion.ts`): vale mientras el juego no ha salido. Con
     jugadores, perder su partida al actualizar es un fallo; antes de la 1.0, decidir si se migra
     (una función por versión, probada con `tests/fixtures/saves`) o se avisa.
-32. **La partida 3D como clase.** `playMatch` (`view3d/app/match3d.ts`) aún tiene unas 215 líneas: lo
+32. **La partida 3D como clase.** `playMatch` (`view3d/app/match3d.ts`) aún tiene unas 260 líneas: lo
     que queda se conecta entre sí (publicar, la sesión, las órdenes, la pausa, la entrada). Una clase
     `Match3d` con un método por cosa lo partiría sin parámetros enormes; hay que probarla jugando.
 33. **Un solo puntero.** `controls/pointer.ts` (`PointerGestures`, puro y con test) y

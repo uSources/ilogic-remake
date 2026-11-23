@@ -85,6 +85,11 @@ Lo que hay que hacer una vez:
 
 Publicar a mano: `cd server && npx wrangler login && npx wrangler deploy`.
 
+Comprobar el publicado con una partida entera (dos navegadores, el juego en local):
+`ILOGIC_SERVER_URL=https://ilogic-servidor.<cuenta>.workers.dev npm run online`. Con un servidor
+lejano la bienvenida del WebSocket suele llegar antes que la respuesta de `GET /rooms/:code`, cosa
+que en local casi nunca pasa: por eso vale la pena probarlo contra el de verdad.
+
 ## Alojarlo uno mismo (Node)
 
 Sin cuenta en ningun sitio: un proceso de Node 22 que sirve el juego y las salas en la misma

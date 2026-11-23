@@ -9,7 +9,8 @@ import type { RoomStatus, SeatId } from '../../core/net';
 import type { OnlineVM } from '../../hud/store';
 import type { OnlineMatch } from '../../net/onlineMatch';
 import type { CreatedSeat } from '../../net/roomApi';
-import { t } from '../../settings';
+import type { FatalClose } from '../../net/serverLink';
+import { t, type TextKey } from '../../settings';
 import type { TerrainPalette } from '../../ui/terrainColors';
 
 export interface OnlineHost {
@@ -48,3 +49,14 @@ export interface OnlineScreens {
 /** «Esperando a los demás», «En juego» o «Acabada». */
 export const statusText = (status: RoomStatus): string =>
   t(status === 'waiting' ? 'onlineStatusWaiting' : status === 'playing' ? 'onlineStatusPlaying' : 'onlineStatusEnded');
+
+const CLOSE_TEXT: Record<FatalClose, TextKey> = {
+  badToken: 'onlineBadToken',
+  replaced: 'onlineReplaced',
+  gone: 'onlineGone',
+  badVersion: 'onlineBadVersion',
+  other: 'onlineFailed',
+};
+
+/** Por que la sala no deja seguir (un cierre sin arreglo), para enseñarlo: en el vestibulo y en la partida. */
+export const closeText = (reason: FatalClose): string => t(CLOSE_TEXT[reason]);

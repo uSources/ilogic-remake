@@ -1,75 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { newUnit } from '@core/measure';
 import { GameSession, humanController, passiveController } from '@core/session';
-import type { GameEvent, Pos } from '@core/model';
-import type { SoundName, SoundPort } from '../src/audio/sounds';
+import type { GameEvent } from '@core/model';
+import { localRunner } from '../src/view3d/systems/turn/matchRunner';
 import { TurnControls } from '../src/view3d/systems/turn/turnControls';
-import type { EventPlayer, MoveLook, MovePreview, ShotLook, TileMarks } from '../src/view3d/ports/turn';
 import { blankState, ENEMY, PLAYER, unitTypeNamed } from './helpers';
+import { FakeEvents, FakeMarks, FakePreview, FakeSounds } from './sim/turnPorts';
 
 /** El turno 3D sin navegador: las marcas, los sucesos y los sonidos son puertos falsos que apuntan lo que se les pide. */
 
 const SOLDIER = unitTypeNamed('Soldier');
 const TANK = unitTypeNamed('Tank');
-
-/** Lo ultimo que se ha pedido enseñar en el tablero. */
-class FakeMarks implements TileMarks {
-  reach: readonly Pos[] = [];
-  attackReach: readonly Pos[] = [];
-  targets: readonly Pos[] = [];
-  selected: Pos | null = null;
-  group: readonly Pos[] = [];
-  showReach(tiles: readonly Pos[]): void {
-    this.reach = tiles;
-  }
-  showAttackReach(tiles: readonly Pos[]): void {
-    this.attackReach = tiles;
-  }
-  showTargets(tiles: readonly Pos[]): void {
-    this.targets = tiles;
-  }
-  select(pos: Pos | null): void {
-    this.selected = pos;
-  }
-  showGroup(tiles: readonly Pos[]): void {
-    this.group = tiles;
-  }
-}
-
-/** Apunta cada tanda de sucesos; si `hold`, no acaba hasta `release()` (para ver el turno ocupado). */
-class FakeEvents implements EventPlayer {
-  readonly played: (readonly GameEvent[])[] = [];
-  hold = false;
-  private pending: (() => void) | null = null;
-  play(events: readonly GameEvent[]): Promise<void> {
-    this.played.push(events);
-    if (!this.hold) return Promise.resolve();
-    return new Promise((resolve) => (this.pending = resolve));
-  }
-  release(): void {
-    this.pending?.();
-    this.pending = null;
-  }
-}
-
-/** Lo ultimo que se ha pedido enseñar de a donde llegaria la unidad (null: nada). */
-class FakePreview implements MovePreview {
-  look: MoveLook | null = null;
-  shot: ShotLook | null = null;
-  show(look: MoveLook | null): void {
-    this.look = look;
-  }
-  aim(shot: ShotLook | null): void {
-    this.shot = shot;
-  }
-}
-
-class FakeSounds implements SoundPort {
-  readonly heard: SoundName[] = [];
-  play(sound: SoundName): void {
-    this.heard.push(sound);
-  }
-}
 
 const kindsOf = (events: readonly GameEvent[]): string[] => events.map((event) => event.kind);
 /** Deja acabar lo que el turno lanza sin esperar (esperar implicito, deshacer). */
@@ -85,7 +26,7 @@ async function myTurn() {
   const preview = new FakePreview();
   const session = new GameSession(s, [humanController(), passiveController()]);
   const controls = new TurnControls({
-    session,
+    runner: localRunner(session, PLAYER),
     viewer: PLAYER,
     marks,
     preview,

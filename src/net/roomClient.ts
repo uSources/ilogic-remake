@@ -2,19 +2,21 @@
  * El cliente de una sala: convierte los mensajes del servidor (`ServerMessage`) en lo que entiende la
  * pantalla. Su partida es la vista de su equipo (`loadView` de la vista entera; `mergeView` con lo
  * que cambia en cada `events`), y lo que pasa mientras juegan los demas sale en una cola de jugadas
- * (`RoomPlay`) que la escena anima en orden: cada `events` es un lote de pasos (varios turnos de la
+ * (`RoomPlay`) que la partida anima en orden: cada `events` es un lote de pasos (varios turnos de la
  * IA pueden venir juntos) que se anima contra la vista de antes (`before`: una unidad que se metio
  * en la niebla por el camino ya no esta en la de despues) y deja la de despues (`after`).
  *
- * En el turno propio, la escena hace cada accion en su copia de la partida (la vista) y la manda; el
- * `result` del servidor contesta a esa accion (`act` devuelve una promesa con el) y el `events` que
- * viene detras es su eco: la vista al dia, que se da a quien la espera (`nextEcho`) y no se anima
- * otra vez. Lo que llega sin ser eco de nada (otro que se rinde, el servidor que acaba el turno por
- * tiempo) va a la cola como lo de cualquier paso.
+ * En el turno propio, la partida manda cada accion (las decide todas el servidor) y `act` la
+ * contesta con su `result` y su eco juntos: el `events` que viene detras de un `result` que vale es
+ * la vista al dia tras ella, que no se anima otra vez. Lo que llega sin ser eco de nada (otro que se
+ * rinde, el servidor que acaba el turno por tiempo) va a la cola como lo de cualquier paso. Una vista
+ * entera solo hace de eco a lo que ya valio (su eco se perdio con un hueco) o a lo que el servidor
+ * atendio sin que llegase su respuesta (se perdio en un corte: se da por bueno sin sucesos); nunca a
+ * una accion aun sin respuesta, porque esa vista puede ser de antes de ella (la de un `resync`).
  *
- * Sin red ni Phaser: habla con el enlace por `send`/`resync` (ServerLink, o uno falso en los tests).
- * Lo crea `OnlineMatch` (onlineMatch.ts); lo lee el vestibulo (src/menu/online/lobbyScreen.ts). La
- * partida en 3D aun no lo usa (docs/IDEAS.md, «Jugar en línea en 3D»).
+ * Sin red ni navegador: habla con el enlace por `send`/`resync` (ServerLink, o uno falso en los tests).
+ * Lo crea `OnlineMatch` (onlineMatch.ts); lo leen el vestibulo (src/menu/online/lobbyScreen.ts) y,
+ * en la partida, `OnlinePlay` (src/view3d/systems/net/onlinePlay.ts).
  */
 import type { GameContent } from '../core/content';
 import { loadView, mergeView, type RoomStatus, type SeatId, type ServerMessage, type ViewChange, type ViewSnapshot } from '../core/net';
@@ -37,8 +39,11 @@ export type RoomPlay =
   | { kind: 'turn'; team: TeamId; day: number }
   | { kind: 'ended'; result: MatchResult; abandoned: boolean };
 
-/** Lo que dice el servidor de una accion: lo que diria la partida, o por que la sala no la atendio. */
-export type RoomReply = { ok: true; events: GameEvent[] } | { ok: false; reason: string };
+/**
+ * Lo que dice el servidor de una accion: sus sucesos tal como los ve el equipo y la vista al dia tras
+ * ella (su eco), o por que la sala no la atendio.
+ */
+export type RoomReply = { ok: true; events: GameEvent[]; state: GameState } | { ok: false; reason: string };
 
 export interface RoomClientListener {
   /** Hay una jugada nueva en la cola (la escena la saca con `next` cuando le toca). */
@@ -59,15 +64,22 @@ export class RoomClient {
   private readonly replies = new Map<number, (reply: RoomReply) => void>();
   /** Respuestas que llegaron antes de que nadie las esperase (el enlace contesta en el acto en los tests). */
   private readonly unclaimed = new Map<number, RoomReply>();
-  /** Un `result` que valio deja un eco por llegar (el `events` con la vista al dia). */
-  private echoDue = false;
-  private echoWaiters: ((state: GameState) => void)[] = [];
+  /**
+   * Las acciones que valieron y esperan su eco, con sus sucesos (por su `seq`): las contesta el
+   * `events` que llega detras o, si se perdio, la siguiente vista entera.
+   */
+  private readonly echoDue = new Map<number, GameEvent[]>();
 
   constructor(
     private readonly sender: RoomSender,
     private readonly content: GameContent,
     private readonly listener: RoomClientListener = {},
   ) {}
+
+  /** Ya se puede jugar: hay vista y se sabe a quien se espera (o que la partida ha acabado). */
+  get isInPlay(): boolean {
+    return this.state !== null && (this.turn !== null || this.ended !== null);
+  }
 
   /** La sala espera a este equipo. */
   get isMyTurn(): boolean {
@@ -82,7 +94,6 @@ export class RoomClient {
 
   /** Acaba el turno (la sala no contesta con un `result`: lo que sigue llega como jugadas). */
   endTurn(): void {
-    this.echoDue = false;
     this.sender.send({ kind: 'endTurn' });
   }
 
@@ -97,11 +108,6 @@ export class RoomClient {
     return new Promise((resolve) => (this.waiting = resolve));
   }
 
-  /** La vista al dia tras la ultima accion propia (su eco), cuando llegue. */
-  nextEcho(): Promise<GameState> {
-    return new Promise((resolve) => this.echoWaiters.push(resolve));
-  }
-
   /** Hay jugadas sin atender. */
   get hasPending(): boolean {
     return this.queue.length > 0;
@@ -114,7 +120,7 @@ export class RoomClient {
         this.seat = message.seat;
         this.team = message.team;
         this.status = message.status;
-        return;
+        return this.answerLost(message.lastSeq);
       case 'view':
         return this.viewArrived(message.view);
       case 'events':
@@ -124,7 +130,6 @@ export class RoomClient {
       case 'turn':
         this.turn = { team: message.team, day: message.day };
         this.status = 'playing';
-        this.echoDue = false;
         return this.enqueue({ kind: 'turn', team: message.team, day: message.day });
       case 'ended':
         this.ended = { result: message.result, abandoned: message.abandoned };
@@ -153,9 +158,20 @@ export class RoomClient {
     else this.unclaimed.set(seq, reply);
   }
 
+  /** Si no vale, se contesta ya; si vale, cuando llegue su eco. */
   private resultArrived(seq: number, result: ActionResult): void {
-    this.echoDue = result.ok;
-    this.reply(seq, result.ok ? { ok: true, events: result.events } : { ok: false, reason: result.reason });
+    if (result.ok) this.echoDue.set(seq, result.events);
+    else this.reply(seq, { ok: false, reason: result.reason });
+  }
+
+  /**
+   * Lo que el servidor ya atendio (hasta `lastSeq`, al volver a entrar) y sigue sin respuesta: se perdio
+   * en el corte y el enlace no lo reenvia. Se da por bueno sin sucesos que animar; lo que hizo lo trae
+   * la vista que llega detras del saludo, que hace de eco.
+   */
+  private answerLost(lastSeq: number): void {
+    const lost = [...this.replies.keys()].filter((seq) => seq <= lastSeq && !this.echoDue.has(seq));
+    for (const seq of lost) this.echoDue.set(seq, []);
   }
 
   private viewArrived(view: ViewSnapshot): void {
@@ -163,7 +179,8 @@ export class RoomClient {
     if (!state) return;
     this.fullView = view;
     this.state = state;
-    this.echoDue = false;
+    // Tras un corte o un hueco el eco que se esperaba ya no llega: la vista entera lo sustituye.
+    this.answerEchoes(state);
     this.enqueue({ kind: 'view', state });
   }
 
@@ -173,14 +190,14 @@ export class RoomClient {
     if (!after) return;
     const before = this.state;
     this.state = after;
-    if (this.echoDue) {
-      this.echoDue = false;
-      const waiters = this.echoWaiters;
-      this.echoWaiters = [];
-      for (const waiter of waiters) waiter(after);
-      return;
-    }
+    if (this.echoDue.size > 0) return this.answerEchoes(after);
     this.enqueue({ kind: 'events', events, actor, before, after });
+  }
+
+  /** Las acciones que esperaban su eco quedan contestadas, con la vista al dia. */
+  private answerEchoes(state: GameState): void {
+    for (const [seq, events] of this.echoDue) this.reply(seq, { ok: true, events, state });
+    this.echoDue.clear();
   }
 
   /** La partida de una vista; si no se puede leer (otra version, algo roto), se pide otra vez. */
@@ -209,14 +226,4 @@ export function animationView(before: GameState, after: GameState): GameState {
   const kept = new Set(after.units.map((unit) => unit.uid));
   const gone = before.units.filter((unit) => !kept.has(unit.uid));
   return gone.length ? { ...after, units: [...after.units, ...gone] } : after;
-}
-
-/** Las jugadas de un lote por turnos: los sucesos de cada turno que empieza, con su equipo (lo de antes del primero, sin equipo). */
-export function splitByTurn(events: GameEvent[]): { team: TeamId | null; events: GameEvent[] }[] {
-  const chunks: { team: TeamId | null; events: GameEvent[] }[] = [{ team: null, events: [] }];
-  for (const event of events) {
-    if (event.kind === 'turnStart') chunks.push({ team: event.actor, events: [] });
-    chunks[chunks.length - 1]!.events.push(event);
-  }
-  return chunks.filter((chunk) => chunk.events.length > 0);
 }

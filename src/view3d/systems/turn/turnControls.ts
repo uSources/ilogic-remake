@@ -7,15 +7,17 @@
  * puede hacer nada espera sola, y la que se deja (eligiendo otra o tocando fuera) tambien. Lo poco
  * frecuente (ordenes, escuadras, esperar alli, deshacer, disolver) va en la rueda: clic derecho o
  * mantener pulsado sobre ella; el clic derecho en otra casilla le da la orden que tiene sentido alli.
- * Tocar una fabrica propia abre la compra. Las reglas las dice siempre el nucleo: aqui solo se mandan acciones por la sesion
- * (`session.act`) y se animan sus sucesos. Tambien lleva los turnos de los demas (la IA), animando
- * cada cosa que hacen.
+ * Tocar una fabrica propia abre la compra. Las reglas las dice siempre el nucleo: aqui solo se mandan
+ * acciones a quien lleva la partida (`MatchRunner`: la sesion de esta pantalla o la sala del servidor)
+ * y se animan sus sucesos. Tambien enseña los turnos de los demas (la IA, otras personas por la red),
+ * animando cada cosa que hacen. Por la red cada vista trae unidades nuevas: lo elegido se vuelve a
+ * buscar por su uid (`onBoardNow`) despues de cada accion.
  */
 import type { SoundStage } from '../../ports/stage';
 import { availableActions, groupMoveOrder, groupMoveStep } from '../../../core/actions';
 import { boxSelect, clickSelect, type ClickMods, type Selection } from '../../../controls/selection';
 import { samePos } from '../../../core/geom';
-import type { Building, GameAction, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
+import type { Building, GameAction, GameEvent, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
 import type { GroupMode } from '../../../controls/inputCommands';
 import { exactSquad, squadById, squadByKey, squadUnits, SQUAD_NAME_MAX } from '../../../core/squads';
 import {
@@ -35,7 +37,6 @@ import {
   type BuyOption,
   type MoveRange,
 } from '../../../core/rules';
-import type { GameSession } from '../../../core/session';
 import { showBanner, showToast, ui, type MenuItemVM } from '../../../hud/store';
 import { buyItem, optionItems } from './menuItems';
 import { fmtNum, nameOf, settings, t } from '../../../settings';
@@ -51,6 +52,7 @@ import { attackReachTiles } from './attackReach';
 import { clickIntent, travelOrder, type ClickIntent } from './clickIntent';
 import { chipOptions, groupRadialOptions, optionAction, orderForTile, ORDER_KINDS, radialOptions, type UnitOption } from './unitOptions';
 import { isSelectable, pickedFrom } from './selection';
+import type { MatchRunner } from './matchRunner';
 
 /** Un clic sin teclas. */
 const PLAIN_CLICK: ClickMods = { shift: false, ctrl: false, count: 1 };
@@ -93,7 +95,8 @@ export interface MenuView {
 }
 
 export interface TurnHost {
-  session: GameSession;
+  /** Quien lleva la partida: hace las acciones de quien mira y los turnos de los demas. */
+  runner: MatchRunner;
   viewer: TeamId;
   /** Las marcas del tablero (alcance, objetivos, lo elegido). */
   marks: TileMarks;
@@ -123,11 +126,15 @@ export class TurnControls {
   private isAdding = false;
   /** La ultima tecla de grupo que eligio uno, y cuando: dos seguidas llevan la camara. */
   private lastGroupKey: { n: number; at: number } | null = null;
+  /** Se esta llevando la partida hasta el turno propio (`runUntilInput`): no se empieza otra vez. */
+  private isRunning = false;
+  /** La partida ha seguido sin quien mira mientras se animaba algo: al acabar, a mirar a los demas. */
+  private isOthersDue = false;
 
   constructor(private readonly host: TurnHost) {}
 
   private get s() {
-    return this.host.session.state;
+    return this.host.runner.session.state;
   }
 
   get busy(): boolean {
@@ -135,33 +142,56 @@ export class TurnControls {
   }
 
   private get isMyTurn(): boolean {
-    return !this.isBusy && this.host.session.awaitingInput === this.host.viewer;
+    return !this.isBusy && this.host.runner.session.awaitingInput === this.host.viewer;
   }
 
   // ---- Turnos ----
 
   /** Lleva la partida (los turnos de los demas, animados) hasta que le toca a la persona o se acaba. */
   async runUntilInput(): Promise<void> {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    this.isOthersDue = false;
     this.isBusy = true;
     this.host.refresh();
-    for (;;) {
-      const step = this.host.session.step();
-      if (step.kind === 'over') return this.finish(step.result.winners.some((team) => team === this.host.viewer));
-      if (step.kind !== 'acted') break;
-      await this.host.events.play(step.events);
-      this.host.refresh();
-    }
+    const stop = await this.host.runner.untilInput((events) => this.showOthers(events));
+    this.isRunning = false;
+    if (stop.kind === 'over') return this.finish(stop.result.winners.some((team) => team === this.host.viewer));
     this.isBusy = false;
     showBanner(t('yourTurn'), `${t('day')} ${this.s.day}`, 'blue', this.weatherIfChanged());
     this.host.sounds.play('turn_start');
     this.host.refresh();
   }
 
+  private async showOthers(events: GameEvent[]): Promise<void> {
+    await this.host.events.play(events);
+    this.host.refresh();
+  }
+
   endTurn(): void {
     if (!this.isMyTurn) return;
     this.setMode({ kind: 'idle' });
-    this.host.session.finishInput(this.host.viewer);
+    this.host.runner.finishTurn();
     void this.runUntilInput();
+  }
+
+  /**
+   * La partida ha seguido sin que quien mira acabara su turno (por la red: se le acabo el tiempo, o
+   * ha acabado): se suelta lo elegido y se mira a los demas, en cuanto acabe lo que se esta animando.
+   */
+  othersGoOn(): void {
+    if (this.isBusy) {
+      this.isOthersDue = true;
+      return;
+    }
+    this.setMode({ kind: 'idle' });
+    void this.runUntilInput();
+  }
+
+  /** La partida que se ve ha cambiado desde fuera (por la red, una vista nueva): lo elegido ya no vale. */
+  viewReplaced(): void {
+    if (this.isBusy) return this.host.refresh();
+    this.setMode({ kind: 'idle' });
   }
 
   /** El clima de hoy si no es el del ultimo cartel (el primero, siempre): va grande en la banderola. */
@@ -357,15 +387,23 @@ export class TurnControls {
   }
 
   private async attackTogether(attackers: readonly Unit[], pos: Pos): Promise<void> {
-    for (const attacker of attackers) {
-      const plan = this.planAt(attacker, this.rangeOf(attacker), pos);
-      if (plan) await this.moveAndAttack(plan, this.rangeOf(attacker), []);
+    for (const chosen of attackers) {
+      const attacker = this.onBoardNow(chosen);
+      if (attacker) await this.attackAt(attacker, pos);
     }
   }
 
+  /** Ataca al enemigo de `pos` desde donde llegue ahora (si aun puede). */
+  private async attackAt(attacker: Unit, pos: Pos): Promise<void> {
+    const range = this.rangeOf(attacker);
+    const plan = this.planAt(attacker, range, pos);
+    if (plan) await this.moveAndAttack(plan, range, []);
+  }
+
   private async moveTogether(units: readonly Unit[], goal: Pos): Promise<void> {
-    for (const unit of groupMoveOrder(units, goal)) {
-      const step = groupMoveStep(this.s, unit, goal);
+    for (const chosen of groupMoveOrder(units, goal)) {
+      const unit = this.onBoardNow(chosen);
+      const step = unit && groupMoveStep(this.s, unit, goal);
       if (step) await this.perform(step);
     }
   }
@@ -397,8 +435,9 @@ export class TurnControls {
    * subido a un transporte, se ha unido a otra, ha caido) o no puede hacer nada mas, nada elegido. Si
    * se ha movido y ya no le queda nada que hacer (ni fichas ni a quien atacar), espera sola.
    */
-  private select(unit: Unit): void {
-    if (!this.isStillHere(unit) || !canStillAct(unit)) return this.setMode({ kind: 'idle' });
+  private select(chosen: Unit): void {
+    const unit = this.onBoardNow(chosen);
+    if (!unit || !canStillAct(unit)) return this.setMode({ kind: 'idle' });
     const range = this.rangeOf(unit);
     const chips = chipOptions(this.s, this.host.viewer, unit);
     if (this.hasNothingLeft(unit, range, chips)) return void this.waitThere(unit);
@@ -407,8 +446,10 @@ export class TurnControls {
     this.setMode({ kind: 'unit', unit, range, trail: [{ x: unit.x, y: unit.y }], chips, radial: null, selected });
   }
 
-  private isStillHere(unit: Unit): boolean {
-    return this.s.units.includes(unit) && isOnMap(unit);
+  /** La unidad tal como esta ahora en la partida, si sigue en el tablero (por la red, cada vista trae unidades nuevas). */
+  private onBoardNow(unit: Unit): Unit | null {
+    const now = this.s.units.find((candidate) => candidate.uid === unit.uid);
+    return now && isOnMap(now) ? now : null;
   }
 
   /**
@@ -432,8 +473,10 @@ export class TurnControls {
   private async leavingMovedUnit(next: () => void | Promise<void>): Promise<void> {
     const before = this.mode.kind === 'unit' ? this.mode.unit : null;
     await next();
-    const isLeft = settings.autoWait && !!before && !this.selectedUnits().includes(before) && before.turnState === 'moved';
-    if (isLeft && this.isStillHere(before) && this.isMyTurn) await this.perform({ kind: 'wait', uid: before.uid });
+    const left = before && this.onBoardNow(before);
+    const isStillChosen = this.selectedUnits().some((unit) => unit.uid === left?.uid);
+    const isLeft = settings.autoWait && !!left && !isStillChosen && left.turnState === 'moved';
+    if (isLeft && this.isMyTurn) await this.perform({ kind: 'wait', uid: left.uid });
   }
 
   private async tapWithUnit(mode: UnitMode, pos: Pos): Promise<void> {
@@ -490,20 +533,25 @@ export class TurnControls {
 
   // ---- Acciones ----
 
-  /** Manda la accion y anima lo que ha pasado. false si el nucleo no la acepta (y dice por que). */
+  /**
+   * Manda la accion y anima lo que ha pasado. false si no vale (y dice por que). Mientras contesta
+   * quien lleva la partida (por la red, el servidor) no se atiende la entrada.
+   */
   private async perform(action: GameAction): Promise<boolean> {
-    const result = this.host.session.act(this.host.viewer, action);
-    if (!result.ok) {
-      showToast(result.reason);
+    this.isBusy = true;
+    const reply = await this.host.runner.act(action);
+    if (!reply.ok) {
+      this.isBusy = false;
+      showToast(reply.notice);
       this.host.sounds.play('ui_error');
       return false;
     }
-    this.isBusy = true;
     this.host.refresh();
-    await this.host.events.play(result.events);
+    await this.host.events.play(reply.events);
     this.isBusy = false;
     this.host.refresh();
-    if (this.host.session.result.status !== 'playing') void this.runUntilInput();
+    const isOver = this.host.runner.session.result.status !== 'playing';
+    if (isOver || this.isOthersDue) void this.runUntilInput();
     return true;
   }
 
@@ -518,8 +566,9 @@ export class TurnControls {
     if (!range) return;
     this.setMode({ kind: 'idle' });
     if (!(await this.perform({ kind: 'move', uid: unit.uid, to, path: pathFor(range, trail, to) }))) return;
-    const canCapture = thenCapture && availableActions(this.s, this.host.viewer, unit).includes('capture');
-    if (canCapture) return this.actThenSelect(unit, { kind: 'capture', uid: unit.uid });
+    const moved = this.onBoardNow(unit);
+    const canCapture = thenCapture && !!moved && availableActions(this.s, this.host.viewer, moved).includes('capture');
+    if (moved && canCapture) return this.actThenSelect(moved, { kind: 'capture', uid: moved.uid });
     this.select(unit);
   }
 
