@@ -47,9 +47,9 @@ const ZONE_PAINT: Readonly<Record<OwnerSide, TeamPaint>> = {
 /** La parte del banderin que ondea (gira sobre el mastil). */
 const CLOTH = 'cloth';
 
-/** Un banderin algo menor que el de destino (fx/destinationFlags.ts): mastil, pomo y tela con su franja. */
 /** Lo que mide de lado la peana del banderin. */
 const PENNANT_BASE = 0.14;
+/** Un banderin algo menor que el de destino (fx/destinationFlags.ts): mastil, pomo y tela con su franja. */
 const PENNANT: BlockModel = {
   blocks: [
     { size: [PENNANT_BASE, 0.04, PENNANT_BASE], at: [0, 0, 0], paint: 'stone' },
