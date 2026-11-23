@@ -11,6 +11,7 @@
  * | `net/protocol` | `ClientMessage`, `ServerMessage`, `PROTOCOL_VERSION`, `isValidMessage`, lo que cambia de una vista (`viewChangeOf`, `mergeView`) |
  * | `net/room` | `Room`: asientos con ficha, `join`, `claimSeat`, `handle`, `snapshot`/`restore`, `abandon`, `replaceWithAi`, `endTurnOf`, `isMidway`/`continueMatch` |
  * | `net/seats` | los asientos (`Seat`): quien los ocupa y lo que se apunta de cada persona |
+ * | `net/roomCode` | la forma del codigo de una sala (`isRoomCode`), la misma en el servidor y en la pantalla |
  * | `net/courier` | `Courier`: lo que se lleva a cada persona, por lotes, con su numero; `Outbox` |
  * | `net/eventFog` | `eventsSeenBy`: los sucesos de un paso tal como los ve un equipo (`Knowledge`, `Vantage`) |
  * | `net/clientState` | `viewSnapshotOf` (lo que se manda), `loadView` (lo que lee el cliente) y `fillWith` (meter la vista nueva en la misma partida) |
@@ -60,5 +61,6 @@ export {
   type Seat,
 } from './net/room';
 export { type TokenCompare } from './net/seats';
+export { isRoomCode, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from './net/roomCode';
 export { eventsSeenBy, knowledgeOf, type Knowledge, type Vantage } from './net/eventFog';
 export { fillWith, loadView, viewSnapshotOf } from './net/clientState';

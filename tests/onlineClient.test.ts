@@ -473,4 +473,11 @@ describe('Mis partidas en línea', () => {
     expect(parseRoomLink('https://usources.github.io/ilogic/')).toBeNull();
     expect(parseRoomLink('esto no es un codigo')).toBeNull();
   });
+
+  it('un codigo que el servidor no puede haber dado no es una sala (no se pregunta por el)', () => {
+    expect(parseRoomLink('hola')).toBeNull();
+    expect(parseRoomLink('ABC2345')).toBeNull();
+    expect(parseRoomLink('ABC12O')).toBeNull();
+    expect(parseRoomLink('#/sala/HOLA')).toBeNull();
+  });
 });

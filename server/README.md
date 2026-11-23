@@ -149,7 +149,7 @@ Lo comun (`src/`):
 | `timers.ts`      | los relojes como datos puros: caducar, el turno, la espera, seguir una partida a medias; `nextAlarm` elige la unica alarma                                           |
 | `limits.ts`      | todos los topes y tiempos, con nombre                                                                                                                               |
 | `rateLimit.ts`   | la ventana de rechazos por asiento                                                                                                                                   |
-| `codes.ts`       | codigos de sala (sin letras que se confundan), fichas (192 bits de `crypto.getRandomValues`) y su comparacion en tiempo constante                                   |
+| `codes.ts`       | codigos de sala al azar (sin letras que se confundan; su forma, `isRoomCode`, es del nucleo: `src/core/net/roomCode.ts`), fichas (192 bits de `crypto.getRandomValues`) y su comparacion en tiempo constante                                   |
 | `cors.ts`        | que origenes pueden hablar con el servidor                                                                                                                          |
 
 En Cloudflare (`src/cloudflare/`): `index.ts`, el Worker (las rutas, con un Durable Object por

@@ -5,8 +5,7 @@
  * (despertar un Durable Object, arrancar Node otra vez) esta en el suyo.
  */
 import { describe, expect, it } from 'vitest';
-import { CURRENT_PROTOCOL, type SeatId } from '@core/net';
-import { isRoomCode } from '../../src/codes';
+import { CURRENT_PROTOCOL, isRoomCode, type SeatId } from '@core/net';
 import { CLOSE_CODES } from '../../src/hostedRoom';
 import { MAX_MESSAGE_BYTES } from '../../src/limits';
 import type { LobbyInfo } from '../../src/roomAdapter';

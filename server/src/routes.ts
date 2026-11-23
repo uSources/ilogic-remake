@@ -9,9 +9,9 @@
  * del proceso. Las rutas son una lista (`ROUTES`); una ruta nueva es una entrada mas.
  */
 import { defaultContent } from '@core/content/default';
-import { isToken, type SeatId } from '@core/net';
+import { isRoomCode, isToken, type SeatId } from '@core/net';
 import { isInt, isObject } from '@core/util/validation';
-import { isRoomCode, newRoomCode } from './codes';
+import { newRoomCode } from './codes';
 import { corsHeaders, isOriginAllowed } from './cors';
 import type { ClaimResult, CreateResult, HandToAiResult } from './hostedRoom';
 import { MAX_CODE_TRIES, MAX_MESSAGE_BYTES, MAX_ROOM_TEAMS } from './limits';

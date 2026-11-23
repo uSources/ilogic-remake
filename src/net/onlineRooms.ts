@@ -5,7 +5,7 @@
  * sala (`#/sala/CODIGO`, el que se reparte; `#/sala/CODIGO/FICHA`, el de un asiento: `parseRoomLink`).
  * Lo usan el menu de «Jugar en línea» (src/menu/online/) y el menu de la vista (un enlace al cargar).
  */
-import type { RoomStatus, SeatId } from '../core/net';
+import { isRoomCode, type RoomStatus, type SeatId } from '../core/net';
 import type { TeamId } from '../core/model';
 import { isInt, isObject } from '../core/util/validation';
 
@@ -74,20 +74,26 @@ export interface RoomLink {
   token: string | null;
 }
 
-/** Los patrones que se entienden: el enlace de la sala o de un asiento (con o sin la URL delante), y el codigo a mano (con su ficha o sin ella). */
+/**
+ * Los patrones que se entienden: el enlace de la sala o de un asiento (con o sin la URL delante), y
+ * el codigo a mano (con su ficha o sin ella). Si el codigo es de verdad lo dice despues `isRoomCode`.
+ */
 const ROOM_LINK_PATTERNS: readonly RegExp[] = [
   /#\/sala\/([A-Za-z0-9]+)(?:\/([A-Za-z0-9_-]+))?\/?$/,
-  /^([A-Za-z0-9]{4,8})(?:[/ ]([A-Za-z0-9_-]{16,}))?$/,
+  /^([A-Za-z0-9]+)(?:[/ ]([A-Za-z0-9_-]{16,}))?$/,
 ];
 
-/** La sala de un enlace (`#/sala/CODIGO`, o el de un asiento con `/FICHA`) o de un codigo escrito, o null si no lo es. */
+/**
+ * La sala de un enlace (`#/sala/CODIGO`, o el de un asiento con `/FICHA`) o de un codigo escrito, o
+ * null si no lo es. El codigo se comprueba como en el servidor (en minusculas tambien vale): lo que
+ * no puede ser un codigo no llega a preguntarse.
+ */
 export function parseRoomLink(text: string): RoomLink | null {
   const trimmed = text.trim();
-  for (const pattern of ROOM_LINK_PATTERNS) {
-    const match = pattern.exec(trimmed);
-    if (match) return { code: match[1]!.toUpperCase(), token: match[2] ?? null };
-  }
-  return null;
+  const match = ROOM_LINK_PATTERNS.map((pattern) => pattern.exec(trimmed)).find((found) => found !== null);
+  const code = match?.[1]?.toUpperCase();
+  if (!match || !isRoomCode(code)) return null;
+  return { code, token: match[2] ?? null };
 }
 
 /** El enlace de la sala para repartir (la URL de esta pagina, sin su hash): quien lo abre pide un asiento libre. */
