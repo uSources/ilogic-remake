@@ -70,7 +70,7 @@ function buildingSpots(s: GameState, team: TeamId): IncomeSpot[] {
     .filter((spot) => spot.amount > 0);
 }
 
-/** [CAMBIO] Los puntos de control que le han pagado: los suyos sin disputar (se mira tras el fin de ronda). */
+/** [CAMBIO] (en 2013 no habia puntos de control) Los que le han pagado: los suyos sin disputar (se mira tras el fin de ronda). */
 function controlPointSpots(s: GameState, team: TeamId): IncomeSpot[] {
   return (s.controlPoints ?? [])
     .filter((point) => point.owner === team && !isContested(s, point))
