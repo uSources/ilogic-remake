@@ -5,10 +5,11 @@
 
 /**
  * De que clase es un sonido: decide el estilo del texto, como se recorta y donde acaba (soundKinds.ts).
- * `voice` es un efecto de voz de muñeco; `zone`, un ambiente que suena desde un sitio del mapa (mono);
- * `ambient`, el fondo del tema o del clima (estereo); `jingle`, musica corta que no se repite.
+ * `voice` es un efecto de voz de muñeco; `nature`, un efecto del campo (un animal, un trueno), sin el
+ * estilo de guerra de juguete; `zone`, un ambiente que suena desde un sitio del mapa (mono); `ambient`,
+ * el fondo del tema o del clima (estereo); `jingle`, musica corta que no se repite.
  */
-export type SoundKind = 'sfx' | 'voice' | 'zone' | 'ambient' | 'music' | 'jingle';
+export type SoundKind = 'sfx' | 'voice' | 'nature' | 'zone' | 'ambient' | 'music' | 'jingle';
 
 export interface SoundSpec {
   /** Su nombre en el juego: el de los efectos (src/audio/soundNames.ts) o el de la pista. */
@@ -43,6 +44,11 @@ export const effect = (id: string, seconds: number, frequency: Frequency, prompt
   prompt,
   seconds,
   variants: VARIANTS_BY_FREQUENCY[frequency],
+});
+
+export const nature = (id: string, seconds: number, frequency: Frequency, prompt: string): SoundSpec => ({
+  ...effect(id, seconds, frequency, prompt),
+  kind: 'nature',
 });
 
 export const voice = (id: string, seconds: number, prompt: string): SoundSpec => ({

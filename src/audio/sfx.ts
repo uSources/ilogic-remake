@@ -12,7 +12,7 @@ import { audioMixer, runningMixer, unlockOnGesture, whenUnlocked, type Channel, 
 import { SOUND_NAMES, resolveSound, type SoundId, type SoundName } from './soundNames';
 import { SOUND_IDS, type SoundPort } from './sounds';
 import { SOUND_VARIANTS } from './soundList';
-import { pannerAt, type Point3 } from './spatial';
+import { AMBIENT_FALLOFF, EFFECT_FALLOFF, pannerAt, type Falloff, type Point3 } from './spatial';
 import { isAudible, type VolumeChannel } from './volumes';
 
 /** Un mismo sonido no se repite antes de esto (segundos): dos a la vez solo suenan mas fuerte. */
@@ -82,13 +82,26 @@ function bufferOf(audio: AudioContext, path: string): Promise<AudioBuffer | null
 
 const randomVariant = (sound: SoundId): number => 1 + Math.floor(Math.random() * SOUND_VARIANTS[sound]);
 
-/** Las voces van por su canal; lo que tiene sitio es del tablero, y lo que no, de la interfaz. */
-const channelOf = (name: SoundName, at: Point3 | null): Channel => (name.startsWith('voice_') ? 'voices' : at ? 'effects' : 'interface');
+/** Los que van por su propio canal, por como empieza su nombre: las voces y lo que dicen los animales (el ambiente). */
+const CHANNEL_PREFIXES: readonly (readonly [prefix: string, channel: Channel])[] = [
+  ['voice_', 'voices'],
+  ['animal_', 'ambience'],
+];
+
+const ownChannelOf = (sound: string): Channel | undefined => CHANNEL_PREFIXES.find(([prefix]) => sound.startsWith(prefix))?.[1];
+
+const isVoice = (sound: string): boolean => ownChannelOf(sound) === 'voices';
+
+/**
+ * Por donde suena un efecto (lo que suena de verdad: la bocina que aun no esta y habla el conductor va
+ * con las voces): su canal propio o, si no, lo que tiene sitio es del tablero, y lo que no, de la interfaz.
+ */
+const channelOf = (sound: string, at: Point3 | null): Channel => ownChannelOf(sound) ?? (at ? 'effects' : 'interface');
 
 /** Que suene `name` (una de sus variantes) en `at`, o sin sitio con null. Con su canal callado en Opciones, nada. */
 export function playSoundAt(name: SoundName, at: Point3 | null): void {
-  if (!isAudible(settings.volumes, channelOf(name, at))) return;
   const played = resolveSound(name);
+  if (!isAudible(settings.volumes, channelOf(played ?? name, at))) return;
   remember({ name, played, at });
   const mixer = runningMixer();
   if (mixer) playNow(mixer, name, played, at);
@@ -98,7 +111,7 @@ export function playSoundAt(name: SoundName, at: Point3 | null): void {
 /** Suena ya `played` (lo que sale de `name`), salvo que acabe de sonar. */
 function playNow(mixer: Mixer, name: SoundName, played: SoundId | null, at: Point3 | null): void {
   if (!played || tooSoon(name, played, mixer.context.currentTime)) return;
-  playVariant(mixer, played, channelOf(name, at), at);
+  playVariant(mixer, played, channelOf(played, at), at);
 }
 
 /** Una variante de `sound` al azar, por `channel` (en cuanto este bajada). */
@@ -122,20 +135,22 @@ export function previewVolume(volume: VolumeChannel): void {
 
 /** Si `name` acaba de sonar (o, si es una voz, otra voz); si no, apunta que suena ahora. */
 function tooSoon(name: SoundName, sound: SoundId, now: number): boolean {
-  const isVoice = name.startsWith('voice_');
   const last = lastPlayed.get(sound);
   const isRepeat = last !== undefined && now - last < (MIN_GAPS[name] ?? MIN_GAP);
-  if (isRepeat || (isVoice && now - lastVoiceAt < VOICE_GAP)) return true;
+  if (isRepeat || (isVoice(sound) && now - lastVoiceAt < VOICE_GAP)) return true;
   lastPlayed.set(sound, now);
-  if (isVoice) lastVoiceAt = now;
+  if (isVoice(sound)) lastVoiceAt = now;
   return false;
 }
+
+/** Lo del ambiente (los animales) se apaga antes con la distancia, como sus bucles. */
+const falloffOf = (channel: Output): Falloff => (channel === 'ambience' ? AMBIENT_FALLOFF : EFFECT_FALLOFF);
 
 function start(mixer: Mixer, buffer: AudioBuffer, channel: Output, at: Point3 | null): void {
   const source = mixer.context.createBufferSource();
   source.buffer = buffer;
   const output = outputOf(mixer, channel);
-  if (at) source.connect(pannerAt(mixer.context, at)).connect(output);
+  if (at) source.connect(pannerAt(mixer.context, at, falloffOf(channel))).connect(output);
   else source.connect(output);
   source.start();
 }

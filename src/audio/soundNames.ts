@@ -22,12 +22,19 @@ export const SOUND_FALLBACKS = {
   shot_bomb: 'shot_missile',
   // Motores
   step_tracks: 'step_drive',
-  step_wheels: 'step_drive',
-  step_motorbike: 'step_wheels',
+  step_jeep: 'step_drive',
+  step_truck: 'step_jeep',
+  step_motorbike: 'step_jeep',
   step_hover: 'step_drive',
   step_prop: 'step_fly',
   step_jet: 'step_fly',
   step_heli: 'step_fly',
+  // Los vehiculos de ruedas: arrancan al echar a andar y, al elegirlos, tocan la bocina (mientras no la
+  // haya, habla el conductor)
+  engine_start_jeep: null,
+  engine_start_truck: 'engine_start_jeep',
+  horn_jeep: 'voice_ack_driver',
+  horn_truck: 'horn_jeep',
   // Pasos por suelo (infanteria) y la capa de los vehiculos
   step_grass: 'step_march',
   step_sand: 'step_march',
@@ -53,7 +60,6 @@ export const SOUND_FALLBACKS = {
   launcher_raise: 'turret_turn',
   shell_incoming: null,
   missile_flight: null,
-  thunder: null,
   // Edificios
   spawn_infantry: 'spawn',
   spawn_vehicle: 'spawn',
@@ -141,6 +147,17 @@ export const SOUND_FALLBACKS = {
   net_reconnecting: 'ui_error',
   net_lost: 'ui_error',
   match_begins: 'turn_start',
+  // El campo: el trueno de la tormenta y lo que dicen los animalitos del tablero (sin los suyos, nada)
+  thunder: null,
+  animal_frog: null,
+  animal_squirrel: null,
+  animal_deer: null,
+  animal_bird: null,
+  animal_vulture: null,
+  animal_penguin: null,
+  animal_seal: null,
+  animal_goose: null,
+  animal_splash: null,
   // Voces de juguete: sin las suyas, nada (otro efecto encima de la orden sobraria)
   voice_ack_infantry: null,
   voice_ack_driver: null,

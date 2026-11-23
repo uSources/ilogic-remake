@@ -1,6 +1,7 @@
 /**
- * La pagina para oir los candidatos y elegir (tools/audio/out/index.html): por sonido, su texto, un
- * reproductor por candidato y la orden para pasar los buenos al juego. Se abre tal cual en el navegador.
+ * La pagina para oir los candidatos y elegir (tools/audio/out/index.html): por sonido, sus textos (si
+ * cambiaron entre tandas, cada uno con los suyos), un reproductor por candidato y la orden para pasar
+ * los buenos al juego. Se abre tal cual en el navegador.
  */
 import type { Candidate } from './candidates';
 import type { SoundSpec } from './catalog';
@@ -21,12 +22,27 @@ function candidateHtml(id: string, candidate: Candidate): string {
 /** Cuantos se eligen: los efectos y las voces, tantos como variantes; el resto, uno. */
 const howManyToPick = (spec: SoundSpec): number => (isEffect(spec) ? (spec.variants ?? 1) : 1);
 
+/**
+ * Los candidatos juntos por el texto con que se hicieron, del primero al ultimo: si el texto o el estilo
+ * cambian entre tandas (las voces de antes y las de ahora), se oye cual iba mejor.
+ */
+function byPrompt(candidates: readonly Candidate[]): [prompt: string, candidates: Candidate[]][] {
+  const groups = new Map<string, Candidate[]>();
+  for (const candidate of candidates) groups.set(candidate.prompt, [...(groups.get(candidate.prompt) ?? []), candidate]);
+  return [...groups];
+}
+
+function promptGroupHtml(id: string, [prompt, candidates]: [string, Candidate[]]): string {
+  return `<p class="prompt">${escapeHtml(prompt)}</p>
+<div class="candidates">${candidates.map((candidate) => candidateHtml(id, candidate)).join('\n')}</div>`;
+}
+
 function sectionHtml({ spec, candidates }: AuditionSection): string {
-  const prompt = candidates.at(-1)?.prompt ?? spec.prompt;
   return `<section id="${spec.id}">
 <h2>${spec.id} <small>${spec.kind} · ${spec.seconds} s · elegir ${howManyToPick(spec)} · public/assets/${KINDS[spec.kind].folder}/</small></h2>
-<p class="prompt">${escapeHtml(prompt)}</p>
-<div class="candidates">${candidates.map((candidate) => candidateHtml(spec.id, candidate)).join('\n')}</div>
+${byPrompt(candidates)
+  .map((group) => promptGroupHtml(spec.id, group))
+  .join('\n')}
 <code>npm run sonidos -- elegir ${spec.id} 1${howManyToPick(spec) > 1 ? ',2,...' : ''}</code>
 </section>`;
 }

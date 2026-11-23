@@ -21,7 +21,15 @@ export interface UnitSounds {
   readonly down: SoundName;
   /** Al apuntar: la torreta que gira, el rail del misil que sube. */
   readonly aim?: SoundName;
+  /** Al echar a andar, antes de la primera casilla: el motor que arranca. */
+  readonly start?: SoundName;
+  /** Al elegirla, en vez de la voz de su forma de moverse: la bocina del jeep. */
+  readonly select?: SoundName;
 }
+
+/** Los vehiculos de ruedas: el jeep, ligero, y los camiones, graves; arrancan y tocan la bocina. */
+const JEEP = { step: 'step_jeep', start: 'engine_start_jeep', select: 'horn_jeep' } as const satisfies Partial<UnitSounds>;
+const TRUCK = { step: 'step_truck', start: 'engine_start_truck', select: 'horn_truck' } as const satisfies Partial<UnitSounds>;
 
 /** Cada unidad (id de units.json), segun su modelo: el arma que lleva y como se mueve. */
 const UNIT_SOUNDS: Readonly<Record<string, UnitSounds>> = {
@@ -36,10 +44,10 @@ const UNIT_SOUNDS: Readonly<Record<string, UnitSounds>> = {
   Antiair: { shot: 'shot_flak', step: 'step_tracks', down: 'explosion', aim: 'turret_turn' },
   Blocker: { shot: null, step: 'step_tracks', down: 'explosion' },
   WTank: { shot: 'shot_cannon', step: 'step_hover', down: 'explosion', aim: 'turret_turn' },
-  Car: { shot: 'shot_machinegun', step: 'step_wheels', down: 'explosion' },
-  Transport: { shot: null, step: 'step_wheels', down: 'explosion' },
-  Supplier: { shot: null, step: 'step_wheels', down: 'explosion' },
-  Missile_truck: { shot: 'shot_missile_launch', step: 'step_wheels', down: 'explosion', aim: 'launcher_raise' },
+  Car: { ...JEEP, shot: 'shot_machinegun', down: 'explosion' },
+  Transport: { ...TRUCK, shot: null, down: 'explosion' },
+  Supplier: { ...TRUCK, shot: null, down: 'explosion' },
+  Missile_truck: { ...TRUCK, shot: 'shot_missile_launch', down: 'explosion', aim: 'launcher_raise' },
   LFighter: { shot: 'shot_machinegun', step: 'step_prop', down: 'plane_crash' },
   Fighter: { shot: 'shot_missile', step: 'step_jet', down: 'plane_crash' },
   Bomber: { shot: 'shot_bomb', step: 'step_prop', down: 'plane_crash' },
@@ -138,7 +146,9 @@ const ACK_VOICES: Readonly<Record<MovementMotion, SoundName>> = {
   fly: 'voice_ack_pilot',
 };
 
-export const ackVoice = (motion: MovementMotion): SoundName => ACK_VOICES[motion];
+/** Lo que dice una unidad propia al elegirla: lo suyo (la bocina) o la voz de su forma de moverse. */
+export const selectSound = (unitType: string, motion: MovementMotion): SoundName =>
+  unitSounds(unitType, motion).select ?? ACK_VOICES[motion];
 
 export const captureSound = (isDone: boolean): SoundName => (isDone ? 'capture_done' : 'capture');
 

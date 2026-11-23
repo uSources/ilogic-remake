@@ -59,6 +59,9 @@ cosa en su PR:
    curarse. Normal: como ahora.
 4. **Modo Escaramuza.** Mapa pequeño (12×12), menos dinero, partidas de ~10 días.
 5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar visión. Ver cómo se juegan primero (PR #47).
+6. **Puntos de control: quitarlos o marcarlos mejor.** Hoy son zonas con un borde y un banderín
+   (`src/core/rules/control.ts`), pero no se distinguen bien en la partida. O se quitan (al menos en
+   línea) o se marcan de forma clara: de quién son, si están disputadas y cuánto pagan.
 
 ## Equilibrio
 
@@ -92,6 +95,8 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     como las de cualquiera, la IA rival y los dados juegan allí) y un cliente nunca recibe más que la
     vista de su equipo (si no, se puede mirar a través de la niebla). Las clasificatorias, después.
 17. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
+18. **Repensar la interfaz del juego en línea** (`src/menu/online/`: crear, unirse, sala): darle una
+    vuelta al aspecto y al recorrido de las pantallas, para que encajen con el menú 3D.
 
 Para competir hará falta: equilibrio estricto, mapas simétricos o probados (los de azar
 dan algo de ventaja a una salida) y quizá una opción "sin azar" en el daño. El PvE se queda: enseña a
@@ -118,6 +123,19 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   falta que la partida en linea llegue a 3D.
 - **Mas momentos con sonido**: subir de rango, el botin, la torreta del aerodeslizador... (inventario en
   `docs/PLAN-SONIDO.md`).
+- **El trueno de las tormentas.** El relampago ya pide su trueno, lejos y algo despues
+  (`ambiencePlayer.lightning`), pero `thunder` sigue sin sonido elegido (`null` en `soundNames.ts`):
+  generar varios (cercano seco, lejano que retumba) y que se note la tormenta.
+- **Los animales se callan con el mal tiempo.** Con lluvia, tormenta, nevada o tormenta de arena, los
+  ambientes de zona con animales (pajaros del bosque, ranas del pantano...) bajan o se apagan, y vuelven
+  poco a poco al despejar; con un trueno cerca, silencio de golpe unos segundos. Lo decide el sistema de
+  sonido (`systems/sound/ambience.ts`) con el clima del dia, sin que el motor sepa de reglas.
+- **Sonidos de los animales.** Dar a la vida de los biomas (`engine/life/`) sus propios sonidos sueltos
+  y con sitio: el croar de la rana, el graznido del buitre, el aleteo de la bandada, la foca... que
+  suenen de vez en cuando desde donde esta el animal, ademas del bucle de la zona.
+- **Repensar los sonidos de las personas y los coches.** Las voces (`voice_ack_*`, `voice_hurt`...) y
+  los motores de los vehiculos: revisar cuales faltan, cuales cansan al repetirse y si piden variantes o
+  menos volumen.
 
 ## Técnico
 

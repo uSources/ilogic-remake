@@ -3,11 +3,13 @@
  * entre los juncos, la ardilla en el arbol, el ciervo en el borde del bosque) y de vez en cuando hacen
  * algo sin irse de ahi (unos saltitos y se giran, asoman y vuelven, el pingüino se tira al agua y
  * vuelve a su sitio). Cada clase es un dato (`CritterKind`, en kinds.ts: su modelo de Ashfox, lo que
- * mide, cada cuanto se mueve y como); aqui solo se mueven sus copias. Con «reducir el movimiento» se
+ * mide, cada cuanto se mueve y como); aqui solo se mueven sus copias. Lo que hacen cerca de lo que se
+ * mira lo cuentan (`AnimalListener`, ports/life.ts), para que suene. Con «reducir el movimiento» se
  * quedan quietos.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
+import type { AnimalAct, AnimalListener } from '../../ports/life';
 import { reducedMotion } from '../../../ui/motion';
 import type { GlbLibrary } from '../pieces/glbModels';
 import { instanced, moveCopy, type PlacedMesh } from '../terrain/placed';
@@ -45,6 +47,8 @@ export interface CritterMove {
   seconds: number;
   turn: Range;
   pose: PoseAlong;
+  /** Cuando toca el agua en medio del movimiento (de 0 a 1): el pingüino que se tira y el que sale. */
+  splashes?: readonly number[];
 }
 
 /** La postura a esa altura de un movimiento (se escribe siempre en el mismo objeto: se pide en cada fotograma). */
@@ -150,6 +154,7 @@ export class Critters {
     library: GlbLibrary,
     private readonly kind: CritterKind,
     spots: readonly CritterSpot[],
+    private readonly tell: AnimalListener,
   ) {
     this.size = new THREE.Vector3().setScalar(kind.size);
     this.critters = spots.map((spot) => ({
@@ -169,6 +174,7 @@ export class Critters {
     );
   }
 
+  /** Los mueve y cuenta lo que hacen; quien lo oye lo decide quien escucha (systems/sound/animalCalls.ts). */
   update(seconds: number): void {
     if (reducedMotion()) {
       this.critters.forEach((critter, index) => this.settle(critter, index));
@@ -190,8 +196,10 @@ export class Critters {
       if (critter.wait <= 0) this.start(critter);
       return;
     }
+    const before = critter.moving / critter.move.seconds;
     critter.moving += seconds;
     const progress = Math.min(critter.moving / critter.move.seconds, 1);
+    if (critter.move.splashes?.some((splash) => before < splash && progress >= splash)) this.told(critter, 'splash');
     const heading = critter.heading + critter.turn * progress;
     this.moveCopies(index, this.placeOf(critter.spot.at, heading, poseAt(critter.move, progress, critter.spot.drop)));
     if (progress === 1) this.stop(critter);
@@ -201,6 +209,12 @@ export class Critters {
     critter.moving = 0;
     critter.move = nextMove(this.kind);
     critter.turn = randomBetween(critter.move.turn) * (Math.random() < 0.5 ? -1 : 1);
+    this.told(critter, critter.move === this.kind.move ? 'move' : 'other');
+  }
+
+  private told(critter: Critter, act: AnimalAct): void {
+    const { at } = critter.spot;
+    this.tell({ animal: this.kind.model, act, at: { x: at.x, y: at.y, z: at.z } });
   }
 
   private stop(critter: Critter): void {

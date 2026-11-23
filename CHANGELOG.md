@@ -9,10 +9,22 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ## [Sin publicar]
 
+### Novedades
+- **El campo suena**: los animalitos del tablero dicen lo suyo cuando hacen algo cerca de la cámara (la rana croa al saltar, el pájaro pía al salir de la copa, los gansos graznan al pasar, el pingüino chapotea al tirarse al agua, y la ardilla, el ciervo, el buitre y la foca también), uno cada poco y casi nunca con la cámara alta. Con lluvia o nieve se oyen mucho menos, y con tormenta o tormenta de arena se callan, igual que sus ambientes.
+- Las tormentas tienen trueno: un chasquido y un retumbar que se aleja después de cada relámpago.
+- El jeep y los camiones (transporte, suministros y lanzamisiles) tienen cada uno su motor: arrancan al moverse y tocan la bocina al elegirlos.
+- Las voces de las unidades son otras: un balbuceo de juguete menos chillón, y el piloto contesta por radio.
+
 ### Interfaz
 - En Novedades ya se leen el código, que salía como un recuadro oscuro vacío, la negrita, que salía blanca sobre la crema, y los enlaces.
 
 <!-- en -->
+
+### New
+- **The countryside comes alive with sound**: the little animals on the board call out when they do something near the camera (the frog croaks as it hops, the bird chirps as it leaves a treetop, geese honk as they fly by, the penguin splashes as it dives, and the squirrel, deer, vulture and seal have their own calls), one every so often and hardly ever with the camera up high. In rain or snow they're much quieter, and in a storm or sandstorm they fall silent, like their ambiences.
+- Storms have thunder: a crack and a rumble rolling away after each lightning flash.
+- The jeep and the trucks (transport, supplier and missile truck) each have their own engine: they start up when they move and honk when selected.
+- Unit voices are new: a less squeaky toy babble, and the pilot answers over the radio.
 
 ### Interface
 - In “What's new”, code no longer shows as an empty dark box, and bold text and links no longer fade into the cream background.
