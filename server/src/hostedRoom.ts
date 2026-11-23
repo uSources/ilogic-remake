@@ -301,10 +301,10 @@ export class HostedRoom {
   }
 
   /**
-   * La sala se borra entera; quien este dentro se entera por el cierre. Sale de memoria antes de
-   * borrarla: lo que llegue mientras (el cierre de esas mismas conexiones) ya no la encuentra y no la vuelve a guardar.
+   * La sala deja de existir: se borra y quien este dentro sale (con 'gone': su pantalla la quita de
+   * «Mis partidas»). Sale de memoria antes de borrarla: lo que llegue mientras (el cierre de esas
+   * mismas conexiones) ya no la encuentra y no la vuelve a guardar.
    */
-  /** La sala deja de existir: se borra y quien este dentro sale (con 'gone': su pantalla la quita de «Mis partidas»). */
   private async expire(reason = 'La sala ha caducado'): Promise<void> {
     this.adapter = null;
     this.meta = null;
