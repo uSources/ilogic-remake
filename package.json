@@ -34,6 +34,7 @@
     "check:server": "npm run check -w server",
     "shots": "node tests/visual/shots.mjs",
     "shots:update": "node tests/visual/shots.mjs --update",
+    "online": "node tests/visual/online.mjs",
     "perf": "node tools/perf/measure.mjs",
     "retratos": "node tools/art/retratos3d.mjs",
     "sonidos": "tsx tools/audio/cli.ts"

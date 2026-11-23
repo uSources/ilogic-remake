@@ -15,7 +15,7 @@ import type { RoomPlay } from '../../net/roomClient';
 import type { FatalClose, LinkStatus } from '../../net/serverLink';
 import { serverUrl } from '../../net/serverUrl';
 import { t, type TextKey } from '../../settings';
-import { statusText, type KnownSeat, type OnlineScreens } from './shared';
+import { closeText, statusText, type KnownSeat, type OnlineScreens } from './shared';
 
 /** Cada cuanto se pregunta al servidor quien esta en la sala mientras se espera. */
 const LOBBY_POLL_MS = 3000;
@@ -23,14 +23,6 @@ const LOBBY_POLL_MS = 3000;
 const COPY_PREFIX = 'copy-';
 const SHARE_PREFIX = 'share-';
 const AI_PREFIX = 'ai-';
-
-const CLOSE_TEXT: Record<FatalClose, TextKey> = {
-  badToken: 'onlineBadToken',
-  replaced: 'onlineReplaced',
-  gone: 'onlineGone',
-  badVersion: 'onlineBadVersion',
-  other: 'onlineFailed',
-};
 
 const API_ERROR_TEXT: Partial<Record<string, TextKey>> = { noSuchRoom: 'onlineNoSuchRoom', badToken: 'onlineBadToken' };
 
@@ -168,7 +160,7 @@ export class LobbyScreen {
   }
 
   private closedByServer(reason: FatalClose): void {
-    this.screens.error = t(CLOSE_TEXT[reason]);
+    this.screens.error = closeText(reason);
     if (reason === 'gone' && this.entry) forgetRoom(this.entry.code);
     this.screens.publish();
   }
@@ -178,8 +170,7 @@ export class LobbyScreen {
     const match = this.match;
     if (!match || this.isLeaving) return;
     if (play.kind === 'view') this.remember();
-    const isInPlay = match.client.state && (match.client.turn || match.client.ended);
-    if (!isInPlay || play.kind === 'events') return;
+    if (!match.client.isInPlay || play.kind === 'events') return;
     this.isLeaving = true;
     this.stopPolling();
     match.listener = {};
@@ -190,12 +181,17 @@ export class LobbyScreen {
 
   // --- El vestibulo ------------------------------------------------------------------------------
 
+  /**
+   * Pregunta quien esta en la sala y vuelve a preguntar mientras espera. Si se ha salido mientras
+   * llegaba la respuesta, lo dice la conexion (`match`, una por cada vez que se entra), no `entry`: la
+   * bienvenida y la vista lo rehacen, y con un servidor lejano llegan antes que esta respuesta.
+   */
   private async pollLobby(): Promise<void> {
     const base = serverUrl();
-    const entry = this.entry;
-    if (!base || !entry || this.isLeaving) return;
-    const info = await lobbyOf(base, entry.code);
-    if (this.entry !== entry) return;
+    const match = this.match;
+    if (!base || !match || this.isLeaving) return;
+    const info = await lobbyOf(base, match.code);
+    if (this.match !== match) return;
     if (info.ok) {
       this.lobby = info.value;
       this.remember();

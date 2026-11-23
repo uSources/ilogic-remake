@@ -1,13 +1,17 @@
 /**
  * Una partida por la red desde el navegador: el enlace con la sala (`ServerLink`) y el cliente que
  * entiende sus mensajes (`RoomClient`), juntos. La pantalla de «Jugar en línea» lo crea al entrar
- * en una sala y se lo pasa a la escena de la partida cuando empieza; la escena lo cierra al salir.
+ * en una sala; cuando la sala juega, la partida empieza en su propia carga de la pagina, que vuelve
+ * a entrar con el mismo codigo y ficha (`inPlay`) y se lo da a la partida 3D.
  */
 import { defaultContent } from '../core/content/default';
 import type { ServerMessage } from '../core/net';
 import { RoomClient, type RoomPlay } from './roomClient';
 import { browserLinkDeps, ServerLink, type FatalClose, type LinkDeps, type LinkStatus } from './serverLink';
 import { roomSocketUrl } from './serverUrl';
+
+/** Lo que se espera, como mucho, a que la sala mande la partida al entrar desde la partida (sin red, se vuelve al menu). */
+const IN_PLAY_TIMEOUT_MS = 15000;
 
 export interface OnlineListener {
   onStatus?(status: LinkStatus): void;
@@ -47,6 +51,24 @@ export class OnlineMatch {
 
   connect(): void {
     this.link.connect();
+  }
+
+  /**
+   * Entra y espera a que la sala juegue (su vista y a quien se espera, o su final): null cuando ya se
+   * puede jugar, o por que no (un cierre sin arreglo; 'other' si no llega a tiempo). Lo que llega
+   * queda en la cola del cliente para la partida.
+   */
+  inPlay(timeoutMs = IN_PLAY_TIMEOUT_MS): Promise<FatalClose | null> {
+    return new Promise((resolve) => {
+      const finish = (reason: FatalClose | null): void => {
+        clearTimeout(timer);
+        this.listener = {};
+        resolve(reason);
+      };
+      const timer = setTimeout(() => finish('other'), timeoutMs);
+      this.listener = { onPlay: () => this.client.isInPlay && finish(null), onClosed: finish };
+      this.connect();
+    });
   }
 
   close(): void {

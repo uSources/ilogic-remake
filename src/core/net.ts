@@ -13,7 +13,7 @@
  * | `net/seats` | los asientos (`Seat`): quien los ocupa y lo que se apunta de cada persona |
  * | `net/courier` | `Courier`: lo que se lleva a cada persona, por lotes, con su numero; `Outbox` |
  * | `net/eventFog` | `eventsSeenBy`: los sucesos de un paso tal como los ve un equipo (`Knowledge`, `Vantage`) |
- * | `net/clientState` | `viewSnapshotOf` (lo que se manda) y `loadView` (lo que lee el cliente) |
+ * | `net/clientState` | `viewSnapshotOf` (lo que se manda), `loadView` (lo que lee el cliente) y `fillWith` (meter la vista nueva en la misma partida) |
  */
 export {
   CLIENT_MESSAGE_SHAPES,
@@ -59,4 +59,4 @@ export {
 } from './net/room';
 export { type TokenCompare } from './net/seats';
 export { eventsSeenBy, knowledgeOf, type Knowledge, type Vantage } from './net/eventFog';
-export { loadView, viewSnapshotOf } from './net/clientState';
+export { fillWith, loadView, viewSnapshotOf } from './net/clientState';

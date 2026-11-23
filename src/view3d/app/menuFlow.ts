@@ -1,7 +1,8 @@
 /**
- * El menu principal del juego 3D: reparte las ordenes entre sus pantallas (inicio, partida nueva y
- * campaña, cada una en `src/menu/` con su `...Host`), las opciones, las notas y la ayuda, y empieza
- * la partida elegida (gameStart.ts). Detras, la imagen del menu de siempre.
+ * El menu principal del juego 3D: reparte las ordenes entre sus pantallas (inicio, partida nueva,
+ * campaña y «Jugar en línea», cada una en `src/menu/` con su `...Host`), las opciones, las notas y la
+ * ayuda, y empieza la partida elegida (gameStart.ts). Un enlace de invitacion en la direccion
+ * (`#/sala/CODIGO/FICHA`) entra directo en esa sala. Detras, la imagen del menu de siempre.
  */
 import { defaultContent } from '../../core/content/default';
 import { loadGame } from '../../core/defaultGames';
@@ -18,7 +19,10 @@ import { CampaignScreen } from '../../menu/campaignScreen';
 import { helpPanel } from '../../menu/helpPanel';
 import { HomeScreen } from '../../menu/homeScreen';
 import { OptionsPanel } from '../../menu/optionsPanel';
+import { isTypingInvite, OnlineScreen } from '../../menu/online/onlineScreen';
 import { isTypingCode, SetupScreen } from '../../menu/setupScreen';
+import type { OnlineMatch } from '../../net/onlineMatch';
+import { parseInvite } from '../../net/onlineRooms';
 import { checkNotes, notesCommand, notesOpen } from '../../patchNotes';
 import { matchConfigFor, randomSeed } from '../../setup';
 import { readSave } from '../../storage';
@@ -26,7 +30,7 @@ import { terrainPalette, type TerrainPalette } from '../../ui/terrainColors';
 import { startGame } from './gameStart';
 import { menuSound } from '../systems/sound/soundCues';
 
-type Mode = 'home' | 'setup' | 'campaign';
+type Mode = 'home' | 'setup' | 'campaign' | 'online';
 
 const blurFocusedElement = (): void => (document.activeElement as HTMLElement | null)?.blur?.();
 
@@ -40,6 +44,7 @@ export class MenuFlow {
   private readonly home: HomeScreen;
   private readonly setup: SetupScreen;
   private readonly campaign: CampaignScreen;
+  private readonly online: OnlineScreen;
 
   constructor(private readonly sounds: SoundPort) {
     const raw = readSave();
@@ -64,6 +69,11 @@ export class MenuFlow {
       toHome: () => this.toHome(),
       startMission: (mission) => this.startMission(mission),
     });
+    this.online = new OnlineScreen({
+      palette: this.palette,
+      toHome: () => this.toHome(),
+      startOnline: (match) => this.startOnline(match),
+    });
     const setup = this.setup;
     this.home = new HomeScreen({
       save: this.save,
@@ -79,6 +89,7 @@ export class MenuFlow {
       startNew: (seed) => this.startNew(seed),
       openSetup: () => this.openSetup(),
       openCampaign: () => this.openCampaign(),
+      openOnline: () => this.openOnline(),
       openOptions: () => this.options.open(),
     });
   }
@@ -88,7 +99,7 @@ export class MenuFlow {
     showMenuBackground();
     this.setup.loadOptions();
     this.home.focus = this.save ? 'continue' : 'quick';
-    Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions());
+    Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions(), this.online.actions());
     // La ayuda del menu cuenta las reglas de una partida nueva de las de siempre.
     ui.set({
       screen: 'menu',
@@ -98,6 +109,7 @@ export class MenuFlow {
       helpRules: helpRulesForSettingsOnly(settingsWith(defaultContent())),
     });
     this.home.publish();
+    this.openInviteFromHash();
     window.addEventListener('keydown', (event) => this.onKey(event));
     playMusic('menu');
     // Notas de parche nuevas en GitHub (marca en "Novedades"); sin conexion no pasa nada.
@@ -111,6 +123,7 @@ export class MenuFlow {
     if (this.options.isOpen) return this.options.context();
     if (this.mode === 'setup') return isTypingCode() ? 'typing' : 'setup';
     if (this.mode === 'campaign') return 'campaign';
+    if (this.mode === 'online') return isTypingInvite() ? 'typing' : 'online';
     return 'home';
   }
 
@@ -124,6 +137,7 @@ export class MenuFlow {
     if (this.options.isOpen) return this.options.command(command);
     if (this.mode === 'setup') return isTypingCode() ? this.setup.typingCommand(command) : this.setup.command(command);
     if (this.mode === 'campaign') return this.campaign.command(command);
+    if (this.mode === 'online') return isTypingInvite() ? this.online.typingCommand(command) : this.online.command(command);
     this.home.command(command);
   }
 
@@ -132,13 +146,19 @@ export class MenuFlow {
     const command = menuKeyCommand(event, this.context());
     if (!command) return;
     // La tecla que el jugador elige para una orden es para el juego, no para el navegador (Tab, F5...).
-    if (command.kind === 'key' || !isTypingCode()) event.preventDefault();
+    if (command.kind === 'key' || !this.isTyping()) event.preventDefault();
     this.command(command);
+  }
+
+  /** Se escribe en un cuadro de texto (el codigo del mapa, el enlace de una sala): sus teclas son suyas. */
+  private isTyping(): boolean {
+    return isTypingCode() || isTypingInvite();
   }
 
   private publish(): void {
     if (this.mode === 'home') this.home.publish();
     else if (this.mode === 'setup') this.setup.publish();
+    else if (this.mode === 'online') this.online.publish();
     else this.campaign.publish();
   }
 
@@ -157,6 +177,26 @@ export class MenuFlow {
   private openCampaign(): void {
     this.mode = 'campaign';
     this.campaign.open();
+  }
+
+  private openOnline(): void {
+    this.mode = 'online';
+    this.online.open();
+  }
+
+  /** Un enlace de invitacion en la direccion (`#/sala/CODIGO/FICHA`): directo a esa sala (y se quita de la direccion). */
+  private openInviteFromHash(): void {
+    const invite = parseInvite(location.hash);
+    if (!invite) return;
+    history.replaceState(null, '', location.pathname + location.search);
+    this.mode = 'online';
+    this.online.openRoom(invite.code, invite.token);
+  }
+
+  /** La sala ya juega: la partida empieza en su carga de la pagina, que vuelve a entrar con el mismo codigo y ficha. */
+  private startOnline(match: OnlineMatch): void {
+    match.close();
+    this.leave({ start: 'online', code: match.code, token: match.token });
   }
 
   private startNew(seed: number): void {

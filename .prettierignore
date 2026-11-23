@@ -11,3 +11,6 @@ src/ui/wangSets.ts
 src/ui/sheets.ts
 # Partidas guardadas tal cual las escribio el juego (no se formatean)
 tests/fixtures/saves
+# Lo local de Claude (fuera de git, .git/info/exclude): los worktrees de otras sesiones y su launch.json
+.claude/worktrees
+.claude/launch.json

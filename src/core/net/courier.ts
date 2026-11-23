@@ -5,7 +5,8 @@
  * siguiente paso, para la niebla de los sucesos) y junta en un solo `events` los pasos de los demas
  * equipos hasta que algo lo saca (una accion de su alianza, que se espere a alguien, el final):
  * asi no se le cuenta cuantas cosas han hecho los enemigos donde no ve (un mensaje por paso, aunque
- * fuera vacio, lo diria). Si de un lote no ve nada (ni sucesos ni cambio en su vista), no se manda.
+ * fuera vacio, lo diria). Si de un lote no ve nada (ni sucesos ni cambio en su vista), no se manda,
+ * salvo a quien acaba de actuar: su accion siempre tiene eco (el cliente lo espera tras el `result`).
  * Cada mensaje que se le manda lleva su numero (`step`, el del asiento): si le falta uno, pide la vista.
  */
 import { savedPart } from '../gameContent';
@@ -87,9 +88,10 @@ export class Courier {
 
   /**
    * Un paso de la partida: lo que ve de el cada persona a la que se le lleva (lo que devuelve, por
-   * asiento) se junta a lo pendiente; lo de su propia alianza se le manda ya (su resultado llega con ello).
+   * asiento) se junta a lo pendiente; lo de su propia alianza se le manda ya (su resultado llega con
+   * ello). `echoTo`, el asiento de quien acaba de actuar: a el se le manda aunque no cambie nada.
    */
-  carry(step: ActedStep, seats: readonly PersonSeat[]): Map<SeatId, GameEvent[]> {
+  carry(step: ActedStep, seats: readonly PersonSeat[], echoTo: SeatId | null = null): Map<SeatId, GameEvent[]> {
     const seenBy = new Map<SeatId, GameEvent[]>();
     for (const seat of seats) {
       const before = this.known.get(seat.id);
@@ -100,19 +102,19 @@ export class Courier {
       seenBy.set(seat.id, events);
       const batch = this.pending.get(seat.id);
       this.pending.set(seat.id, { actor: step.team, events: [...(batch?.events ?? []), ...events], after });
-      if (areAllied(this.state, seat.team, step.team)) this.deliver(seat);
+      if (areAllied(this.state, seat.team, step.team)) this.deliver(seat, seat.id === echoTo);
     }
     return seenBy;
   }
 
-  /** Lo pendiente de esta persona, si hay algo que ver (sucesos, o un cambio en su vista). */
-  deliver(seat: PersonSeat): void {
+  /** Lo pendiente de esta persona, si hay algo que ver (sucesos, o un cambio en su vista) o si es el eco de su accion (`isEcho`). */
+  deliver(seat: PersonSeat, isEcho = false): void {
     const batch = this.pending.get(seat.id);
     if (!batch) return;
     this.pending.delete(seat.id);
     const view = viewChangeOf(savedPart(batch.after.state));
     const json = JSON.stringify(view);
-    if (batch.events.length === 0 && json === this.lastSent.get(seat.id)) return;
+    if (!isEcho && batch.events.length === 0 && json === this.lastSent.get(seat.id)) return;
     this.lastSent.set(seat.id, json);
     this.outbox.send(seat.id, { kind: 'events', step: this.nextStep(seat), actor: batch.actor, events: batch.events, view });
   }

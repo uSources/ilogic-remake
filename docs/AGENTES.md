@@ -12,6 +12,7 @@ codigo estan en la skill `ilogic-code`; la arquitectura en `docs/ARQUITECTURA.md
 | Equilibrio | `npm run balance -- run ...` | Cambios de numeros o de IA (skill `equilibrar`) |
 | Jugarlo en un navegador | `npm run dev` y abrir `http://localhost:5173/` | Interfaz, menus, vista 3D, sonido |
 | Ver los modelos 3D y sus animaciones | `npm run dev` y abrir `/units3d.html` | Modelos de Ashfox (skill `ashfox`) |
+| Una partida por la red, de punta a punta | `npm run online` (servidor de Node, vite y dos navegadores; capturas en `tests/visual/out/online-*.png`). Con `ILOGIC_SERVER_URL=<url del Worker>`, contra el servidor publicado en Cloudflare | Red, salas, la partida en linea; tras publicar el servidor |
 
 No hay capturas de referencia: lo que cambia a la vista se comprueba mirandolo (captura del
 navegador) y se dice en el commit.
@@ -48,7 +49,8 @@ linea empieza por `error:` y el programa sale con 1.
 - `/units3d.html`: el playground de modelos (todas las unidades y edificios, sus animaciones, luz por
   clima; `?model=Tank&side=enemy`). Desde la consola, `window.ilogicPlayground`.
 
-En la partida, `window.ilogic3d` da `session` (la partida: `session.state`), `board` (las piezas),
+En la partida, `window.ilogic3d` da `session` (la partida: `session.state`), `viewer` (el equipo de quien
+mira), `online` (por la red, `OnlinePlay`; si no, null), `board` (las piezas),
 `controls` (la entrada del turno: `tap(pos)`, `endTurn()`, `focusUnit(uid)`), `camera` (la camara de
 estrategia como logica: `lookAt({ x, y, z })`, `pose`), `world` (escena, `setWeather(id)`), `weather`, `stages` (los puertos con los que se
 anima un suceso: `stages.pieces.walk(uid, de, a)`, `stages.effects.sparks(sitio, 1)`...; los pasos de cada
@@ -71,7 +73,8 @@ se comparan los datos que devuelve o se le dan puertos falsos (`ports/`) que apu
 
 | Sistema | Como se prueba | Ejemplo |
 |---|---|---|
-| El turno (`systems/turn/`) | puertos falsos (`TileMarks`, `MovePreview`, `EventPlayer`, `ScreenView`) y tocar casillas, recuadros, teclas de grupo y la barra | `tests/turnControls.test.ts`, `tests/clickIntent.test.ts` |
+| El turno (`systems/turn/`) | puertos falsos (`TileMarks`, `MovePreview`, `EventPlayer`, `ScreenView`; en `tests/sim/turnPorts.ts`) y tocar casillas, recuadros, teclas de grupo y la barra | `tests/turnControls.test.ts`, `tests/clickIntent.test.ts` |
+| La partida por la red (`systems/net/`) | la sala de verdad del nucleo (`Room`), el cliente con los mensajes directos y el turno con puertos falsos | `tests/onlinePlay.test.ts` |
 | Las ordenes (`systems/orders/`) | `OrderIntents` con una sesion de verdad y un `IntentMarks` falso | `tests/orderIntents.test.ts` |
 | Los sucesos animados (`systems/events/`) | `stepsOf(suceso, piezas)` da los pasos como datos; `runSteps` con un motor falso que apunta las llamadas | `tests/eventSteps.test.ts` |
 | El tablero (`systems/board/`) | `boardScene(s, viewer)`: niebla, lados, vida, capturas | `tests/boardScene.test.ts` |
