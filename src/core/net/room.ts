@@ -278,7 +278,9 @@ export class Room {
 
   /**
    * Alguien llega con el codigo de la sala, sin ficha: se le da el primer asiento de persona que no
-   * es de nadie, que desde ahora es suyo (entra con esa ficha). Solo mientras la sala espera.
+   * es de nadie, que desde ahora es suyo (entra con esa ficha). Solo mientras la sala espera. Un
+   * asiento dado no se libera: si quien lo pidio no llega a entrar, lo pasa a la IA la espera o
+   * quien creo la sala (`replaceWithAi`), como a cualquiera que falta.
    */
   claimSeat(): ClaimResult {
     if (this.roomStatus !== 'waiting') return { ok: false, error: 'notWaiting' };

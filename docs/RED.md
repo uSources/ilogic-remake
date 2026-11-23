@@ -57,7 +57,7 @@ Tres piezas, en tres sitios:
 | Asiento | `Seat` = `PersonSeat` \| `AiSeat`; su numero, `SeatId` | Un puesto de la partida: hoy uno por equipo (`seat.team`), en el orden de los equipos. El 0 es siempre quien creo la sala |
 | Persona / IA | `PersonSeat` (`kind: 'person'`) / `AiSeat` (`kind: 'ai'`) | Quien juega el asiento. En la partida, el `controller` del equipo es `'human'` o `'ai'` (nombres del nucleo del juego, no de la red): la red solo cambia **quien** mueve a la persona (un `remoteController` en el servidor, un `humanController` en la pantalla) |
 | Ficha | `token` (`PersonSeat.token`) | El secreto con el que una persona entra en su asiento. La pone el servidor (`server/src/codes.ts`) |
-| Codigo | `code` (`isRoomCode`, `newRoomCode`) | Las 6 letras de una sala (sin 0/O/1/I/L). Es publico: con el se pregunta el vestibulo (`GET /rooms/:code`) |
+| Codigo | `code` (`isRoomCode`, `newRoomCode`) | Las 6 letras de una sala (sin 0/O/1/I/L). Es publico: con el se pregunta el vestibulo (`GET /rooms/:code`) y se pide asiento. Su forma (`isRoomCode`) es del nucleo: la comprueban igual el servidor y la pantalla, que no pregunta por lo que no puede ser un codigo |
 | Enlace de la sala | `#/sala/CODIGO`, `parseRoomLink`, `roomLinkUrl` | Lo que se reparte (el mismo para todos): la pagina del juego con el codigo tras el `#`. Quien lo abre entra en su asiento si ya lo tiene; si no, pide uno libre. `#/sala/CODIGO/FICHA` entra en un asiento concreto |
 | Pedir asiento | `claimSeat` (`Room`, `RoomAdapter`, `HostedRoom`; `POST /rooms/:code/seat`), `PersonSeat.claimed` | Con el codigo, el servidor da la ficha del primer asiento de persona libre mientras la sala espera. Un asiento dado ya no se da a nadie mas (`claimed` va en el snapshot) |
 | Paso | `SessionStep`, `ActedStep` | Un paso de la `GameSession`: una accion hecha (con su equipo y sus sucesos), o que la sesion espera a alguien, o el final |
@@ -300,6 +300,11 @@ nota. Mientras, el turno esta ocupado (`TurnControls.busy`) y no se puede pulsar
 - **Rendirse** (menu de pausa, dos pulsaciones; `match3d.surrender` → `runner.act`): `surrender` por la red (`RoomClient.act` lo manda
   como mensaje `surrender`; vale fuera de turno: `isAnyTime`). La sesion lo apunta, el `Courier` lo
   cuenta a todos (es publico) y, si ya no juega ninguna persona, la sala acaba (`ended.abandoned`).
+- **Un asiento pedido no se libera.** Quien pide asiento con el codigo se lo queda aunque no llegue
+  a entrar: si cierra la pestaña justo tras la respuesta, antes de apuntar la sala en «Mis partidas»,
+  el asiento sigue dado (`claimed`) y nadie mas lo recibe. Es a proposito: soltarlo pediria saber
+  cuando se ha ido alguien que nunca se conecto, y la carrera es muy estrecha. Ese asiento sale como
+  «sin entrar» en el vestibulo y se arregla como el de cualquiera que no llega (lo siguiente).
 - **Los que no llegan**: si quien creo pidio una espera (`waitingSeconds`), al vencer
   (`HostedRoom.ring`, 'waiting') cada asiento vacio pasa a la IA (`adapter.absentSeats` →
   `replaceWithAi`) y la partida empieza. Quien creo puede hacerlo antes, asiento a asiento, desde el
@@ -404,6 +409,7 @@ snapshot; las conexiones no (al recuperar, nadie esta dentro).
 | Archivo | Que hay |
 |---|---|
 | `protocol.ts` | Los mensajes como tipos (`ClientMessage`, `ServerMessage`, `NetError`), las versiones, `isValidMessage` con sus topes, y la vista por trozos (`FIXED_VIEW_KEYS`, `viewChangeOf`, `mergeView`) |
+| `roomCode.ts` | La forma del codigo de una sala (`isRoomCode`, `ROOM_CODE_ALPHABET`), la misma en el servidor y en la pantalla |
 | `seats.ts` | `PersonSeat`, `AiSeat`; buscar una persona por ficha (`personWithToken`), si un asiento esta libre (`isFree`), los asientos de una partida nueva (`seatsFor`), un asiento guardado bien formado (`isSeatOf`) |
 | `eventFog.ts` | La niebla de los sucesos: `knowledgeOf`, `eventsSeenBy` y la tabla `EVENT_FOG` (que ve un equipo de cada tipo de suceso) |
 | `courier.ts` | `Outbox` (lo que sale en esta llamada) y `Courier` (lo que se lleva a cada persona: vista, lotes, turno; los `step`) |
@@ -428,7 +434,7 @@ servidor).
 | `roomAdapter.ts` | `RoomAdapter`: lo unico que toca `Room`, con nombres del servidor; el vestibulo (`lobby`, con a quien se espera), pedir un asiento con el codigo (`claimSeat`) y dar un asiento a la IA (`handToAi`) |
 | `timers.ts` | Los relojes como datos puros (caducar, el turno, la espera, seguir a medias) y cuando suena la alarma |
 | `roomRequest.ts` | La forma de lo que se pide al crear una sala (`isRoomRequest`) |
-| `codes.ts` | El codigo de sala, las fichas (`newToken`) y `sameToken` |
+| `codes.ts` | El codigo de sala al azar (`newRoomCode`; su forma es del nucleo), las fichas (`newToken`) y `sameToken` |
 | `limits.ts`, `rateLimit.ts`, `cors.ts` | Topes y tiempos; frenar a quien insiste; desde que paginas se puede hablar |
 
 Pruebas: `server/test/unit/` (las piezas puras con la sala de verdad), `server/test/shared/` (lo que
