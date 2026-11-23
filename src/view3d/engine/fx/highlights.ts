@@ -10,8 +10,8 @@
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
 import type { TileMarks } from '../../ports/turn';
-import { PIECES_PER_SIDE, slabsOn, stripsOn, tileTop, type MarkGround } from './groundFit';
-import { bullseyeMesh, cornerCursor, flatMaterial, frameSides, instanced, unitBox } from './markParts';
+import { slabsOn, stripsOn, tileTop, type MarkGround } from './groundFit';
+import { bullseyeMesh, cornerCursor, flatMaterial, frameSides, instanced, makeRoomFor, unitBox } from './markParts';
 import { outlineSides } from './tileOutline';
 
 /** Lo justo por encima del suelo para no parpadear con el (z-fighting). */
@@ -33,10 +33,11 @@ const SLAB_INSET = 0.92;
 /** El marco rojo, un poco hacia dentro del borde de la casilla. */
 const FRAME_INSET = 0.44;
 const FRAME_LENGTH = 0.88;
-/** Un mapa no tiene mas casillas que esto a la vez en el alcance (40 x 40). */
+/**
+ * Un mapa no tiene mas casillas que esto a la vez en el alcance (40 x 40). Las mallas empiezan con
+ * sitio para una pieza por casilla (lo que hace falta en llano) y crecen si van en trozos (`place`).
+ */
 const MAX_TILES = 1600;
-/** Las piezas de una marca: sobre el relieve, cada losa o tira va en trozos (groundFit.ts). */
-const MAX_PIECES = MAX_TILES * PIECES_PER_SIDE;
 /** Un grupo elegido, o los enemigos a tiro, no son mas que esto. */
 const MAX_RINGS = 64;
 const RING_PULSE_SPEED = 4;
@@ -51,12 +52,12 @@ const FLAT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0),
 
 export class Highlights implements TileMarks {
   readonly object = new THREE.Group();
-  private readonly reach = instanced(unitBox(), flatMaterial(REACH_COLOR, REACH_OPACITY), MAX_PIECES);
-  private readonly reachEdges = instanced(unitBox(), flatMaterial(REACH_EDGE_COLOR, 1), MAX_PIECES);
-  private readonly attackFill = instanced(unitBox(), flatMaterial(ATTACK_COLOR, ATTACK_FILL_OPACITY), MAX_PIECES);
-  private readonly attackFrames = instanced(unitBox(), flatMaterial(ATTACK_COLOR, 1), MAX_PIECES);
-  private readonly threat = instanced(unitBox(), flatMaterial(THREAT_COLOR, THREAT_OPACITY), MAX_PIECES);
-  private readonly threatEdges = instanced(unitBox(), flatMaterial(THREAT_COLOR, 1), MAX_PIECES);
+  private readonly reach = instanced(unitBox(), flatMaterial(REACH_COLOR, REACH_OPACITY), MAX_TILES);
+  private readonly reachEdges = instanced(unitBox(), flatMaterial(REACH_EDGE_COLOR, 1), MAX_TILES);
+  private readonly attackFill = instanced(unitBox(), flatMaterial(ATTACK_COLOR, ATTACK_FILL_OPACITY), MAX_TILES);
+  private readonly attackFrames = instanced(unitBox(), flatMaterial(ATTACK_COLOR, 1), MAX_TILES * frameSides.length);
+  private readonly threat = instanced(unitBox(), flatMaterial(THREAT_COLOR, THREAT_OPACITY), MAX_TILES);
+  private readonly threatEdges = instanced(unitBox(), flatMaterial(THREAT_COLOR, 1), MAX_TILES);
   private readonly targets = bullseyeMesh(MAX_RINGS);
   private readonly cursor = cornerCursor(CURSOR_COLOR);
   private readonly ring: THREE.Mesh;
@@ -160,11 +161,11 @@ export class Highlights implements TileMarks {
   }
 }
 
-/** Pone una pieza por matriz y esconde las demas. */
+/** Pone una pieza por matriz, todas (si no caben, la malla crece: no se cortan), y esconde las demas. */
 function place(mesh: THREE.InstancedMesh, matrices: readonly THREE.Matrix4[]): void {
-  const shown = matrices.slice(0, mesh.instanceMatrix.count);
-  shown.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
-  mesh.count = shown.length;
+  makeRoomFor(mesh, matrices.length);
+  matrices.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
+  mesh.count = matrices.length;
   mesh.instanceMatrix.needsUpdate = true;
 }
 

@@ -25,6 +25,23 @@ export function instanced(geometry: THREE.BufferGeometry, material: THREE.Materi
   return mesh;
 }
 
+/** Los numeros de la matriz de cada pieza (4 x 4). */
+const MATRIX_SIZE = 16;
+
+/**
+ * Hace sitio en la malla para `needed` piezas si no caben (sobre el relieve una marca va en trozos, y
+ * no se sabe cuantos hasta verla). Crece su bufer, no la malla: sigue en su sitio de la escena y se
+ * pinta en el mismo orden (las translucidas a la misma distancia van por orden de creacion). `dispose`
+ * suelta el bufer de antes en la tarjeta grafica.
+ */
+export function makeRoomFor(mesh: THREE.InstancedMesh, needed: number): void {
+  const capacity = mesh.instanceMatrix.count;
+  if (needed <= capacity) return;
+  mesh.dispose();
+  const grown = Math.max(needed, capacity * 2);
+  mesh.instanceMatrix = new THREE.InstancedBufferAttribute(new Float32Array(grown * MATRIX_SIZE), MATRIX_SIZE);
+}
+
 /**
  * Un color plano (sin luz, como la interfaz). Los translucidos no escriben profundidad (no tapan lo que
  * hay detras); los opacos si, para que una losa translucida no se pinte encima de un borde que esta
