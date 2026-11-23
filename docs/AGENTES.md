@@ -12,7 +12,7 @@ codigo estan en la skill `ilogic-code`; la arquitectura en `docs/ARQUITECTURA.md
 | Equilibrio | `npm run balance -- run ...` | Cambios de numeros o de IA (skill `equilibrar`) |
 | Jugarlo en un navegador | `npm run dev` y abrir `http://localhost:5173/` | Interfaz, menus, vista 3D, sonido |
 | Ver los modelos 3D y sus animaciones | `npm run dev` y abrir `/units3d.html` | Modelos de Ashfox (skill `ashfox`) |
-| Una partida por la red, de punta a punta | `npm run online` (servidor de Node, vite y dos navegadores; capturas en `tests/visual/out/online-*.png`) | Red, salas, la partida en linea |
+| Una partida por la red, de punta a punta | `npm run online` (servidor de Node, vite y dos navegadores; capturas en `tests/visual/out/online-*.png`). Con `ILOGIC_SERVER_URL=<url del Worker>`, contra el servidor publicado en Cloudflare | Red, salas, la partida en linea; tras publicar el servidor |
 
 No hay capturas de referencia: lo que cambia a la vista se comprueba mirandolo (captura del
 navegador) y se dice en el commit.

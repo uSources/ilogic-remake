@@ -5,8 +5,10 @@
 // recarga la pagina a mitad (vuelve a la sala sola) y A se rinde (los dos ven el final).
 //
 //   npm run online
+//   ILOGIC_SERVER_URL=https://ilogic-servidor.<cuenta>.workers.dev npm run online   # contra el publicado
 //
-// Deja capturas de cada pantalla en tests/visual/out/online-*.png, para mirar como se ve.
+// Con ILOGIC_SERVER_URL no arranca el de Node: juega contra ese servidor (para comprobar el de
+// Cloudflare tras publicarlo; el juego en localhost entra siempre por CORS). Deja capturas de cada pantalla en tests/visual/out/online-*.png, para mirar como se ve.
 //
 // Sin niebla, para poder comparar lo que ve cada uno. Lo que mira de la partida, por `window.ilogic3d`
 // (docs/AGENTES.md); en el menu, el estado de la interfaz (el store, importado de vite: es su propio
@@ -60,6 +62,12 @@ async function startRoomServer() {
   }
   stop();
   throw new Error(`El servidor de Node no ha arrancado en ${url}:\n${log}`);
+}
+
+/** El servidor que diga ILOGIC_SERVER_URL (ya publicado: no hay nada que parar) o uno de Node. */
+function roomServerToUse() {
+  const published = process.env.ILOGIC_SERVER_URL;
+  return published ? { url: published, stop: () => {} } : startRoomServer();
 }
 
 /** Contesta algo (sin el juego, la raiz es un 404: basta con que escuche). */
@@ -290,7 +298,7 @@ async function playOnline(browser, gameUrl, server) {
   await Promise.all([shot(a, 'a-final'), shot(b, 'b-final')]);
 }
 
-const roomServer = await startRoomServer();
+const roomServer = await roomServerToUse();
 console.log(`salas en ${roomServer.url}`);
 const dev = await startDevServer();
 console.log(`juego en ${dev.url}`);
