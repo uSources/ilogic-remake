@@ -3,7 +3,7 @@
 Fuentes `.ashfox` de los modelos 3D del juego (`index.html`; para verlos, `units3d.html`). [Ashfox](https://ashfox.io) describe
 un modelo como datos: cubos colgados de huesos, una textura de pixel art hecha con paleta, manchas y
 «stamps», y animaciones por fotogramas clave. Sale un GLB con su textura y sus animaciones, que carga
-`src/view3d/glbModels.ts`.
+`src/view3d/engine/pieces/glbModels.ts`.
 
 Los `.ashfox` no se escriben a mano: los genera `generate.mjs` a partir de descripciones cortas en
 `models/` (cada modelo son sus cubos con su pintura y, si se mueve, sus huesos y sus animaciones),
@@ -12,7 +12,7 @@ cada cubo, que Ashfox no coloca solo.
 
 | Fichero | Que describe | Salida |
 |---|---|---|
-| `models/terrain.mjs` | casillas (con variantes de detalles) y decorado; las montañas y la arena no: son relieve (`src/view3d/relief.ts`) | `terrain/` → `public/assets/models/terrain/` |
+| `models/terrain.mjs` | casillas (con variantes de detalles) y decorado; las montañas y la arena no: son relieve (`src/view3d/engine/terrain/relief.ts`) | `terrain/` → `public/assets/models/terrain/` |
 | `models/buildings.mjs` | los edificios, uno por lado (`blue`, `red`, `neutral`) | `buildings/` → `.../buildings/` |
 | `models/units.mjs` | las unidades, una por equipo (`blue`, `red`), con huesos y animaciones `idle`, `drive` y `fire` | `units/` → `.../units/` |
 

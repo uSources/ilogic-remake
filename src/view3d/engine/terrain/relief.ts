@@ -17,7 +17,19 @@ import { WIND_DIRECTION } from '../core/space';
 import { toonMaterial } from '../core/toon';
 import { massifRises } from './massif';
 import { reliefPalette } from './reliefColors';
-import { noise, PIXEL, type ReliefMap, type Rise, SUBCELLS, subcellAt, subcellCenter, tileKey, tileOfSubcell } from './reliefGrid';
+import {
+  aroundAndSelf,
+  noise,
+  PIXEL,
+  type ReliefMap,
+  type Rise,
+  SUBCELLS,
+  subcellAt,
+  subcellCenter,
+  subcellsOf,
+  tileKey,
+  tileOfSubcell,
+} from './reliefGrid';
 
 export type { ReliefShape, ReliefStyle } from './reliefGrid';
 
@@ -48,14 +60,23 @@ function duneRises(map: ReliefMap, rises: Grid<Rise | null>): void {
   const isDune = new Set(dunes.map((tile) => tileKey(tile.pos)));
   const edge = distanceToEdge(rises, (sub) => isDune.has(tileKey(tileOfSubcell(sub))));
   for (const tile of dunes)
-    for (let dx = 0; dx < SUBCELLS; dx++)
-      for (let dy = 0; dy < SUBCELLS; dy++) {
-        const sub = { x: tile.pos.x * SUBCELLS + dx, y: tile.pos.y * SUBCELLS + dy };
-        if (rises.at(sub)) continue;
-        const along = ((sub.x * WIND_DIRECTION.x + sub.y * WIND_DIRECTION.z) / SUBCELLS / DUNE_WAVELENGTH) * Math.PI * 2;
-        const wave = 0.5 + 0.5 * Math.sin(along + noise(Math.floor(sub.x / 12), Math.floor(sub.y / 12), 2) * 2.5);
-        rises.set(sub, { height: DUNE_HEIGHT * wave * Math.min(1, edge.at(sub) / DUNE_FADE), style: tile.style });
-      }
+    for (const sub of subcellsOf(tile.pos)) {
+      if (rises.at(sub)) continue;
+      rises.set(sub, { height: DUNE_HEIGHT * duneWave(sub) * Math.min(1, edge.at(sub) / DUNE_FADE), style: tile.style });
+    }
+}
+
+/** Las subcasillas de una mancha de ruido (las crestas se tuercen a trozos de este tamaño). */
+const DUNE_NOISE_PATCH = 12;
+const DUNE_NOISE_SALT = 2;
+/** Cuanto tuerce el ruido la cresta (radianes). */
+const DUNE_NOISE_TWIST = 2.5;
+
+/** De 0 (valle) a 1 (cresta): una ola a lo largo del viento, torcida por el ruido. */
+function duneWave(sub: Pos): number {
+  const along = ((sub.x * WIND_DIRECTION.x + sub.y * WIND_DIRECTION.z) / SUBCELLS / DUNE_WAVELENGTH) * Math.PI * 2;
+  const twist = noise(Math.floor(sub.x / DUNE_NOISE_PATCH), Math.floor(sub.y / DUNE_NOISE_PATCH), DUNE_NOISE_SALT) * DUNE_NOISE_TWIST;
+  return 0.5 + 0.5 * Math.sin(along + twist);
 }
 
 /** Cuantas subcasillas hay de cada una (de las que cumplen `isInside`) a la primera que no, en las ocho direcciones. */
@@ -64,7 +85,7 @@ function distanceToEdge(size: Grid<unknown>, isInside: (sub: Pos) => boolean): G
   let frontier: Pos[] = [];
   distance.forEach((_, sub) => {
     if (!isInside(sub)) return;
-    const touchesEdge = [-1, 0, 1].some((dx) => [-1, 0, 1].some((dy) => !isInside({ x: sub.x + dx, y: sub.y + dy })));
+    const touchesEdge = aroundAndSelf(sub).some((near) => !isInside(near));
     if (touchesEdge) frontier.push(sub);
     distance.set(sub, touchesEdge ? 1 : Infinity);
   });
@@ -75,13 +96,11 @@ function distanceToEdge(size: Grid<unknown>, isInside: (sub: Pos) => boolean): G
 function growInward(distance: Grid<number>, frontier: readonly Pos[], step: number): Pos[] {
   const next: Pos[] = [];
   for (const sub of frontier)
-    for (const dx of [-1, 0, 1])
-      for (const dy of [-1, 0, 1]) {
-        const near = { x: sub.x + dx, y: sub.y + dy };
-        if (!distance.contains(near) || distance.at(near) !== Infinity) continue;
-        distance.set(near, step);
-        next.push(near);
-      }
+    for (const near of aroundAndSelf(sub)) {
+      if (!distance.contains(near) || distance.at(near) !== Infinity) continue;
+      distance.set(near, step);
+      next.push(near);
+    }
   return next;
 }
 

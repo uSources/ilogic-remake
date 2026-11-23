@@ -32,32 +32,41 @@ function readSeen(): string | null {
   }
 }
 
-function newest(): string | null {
-  return notes.find((n) => !n.prerelease)?.version ?? notes[0]?.version ?? null;
+/** Apunta esa version como la ultima vista (sin almacenamiento, no se apunta). */
+function rememberSeen(version: string | null): void {
+  try {
+    if (version) localStorage.setItem(SEEN_KEY, version);
+  } catch {
+    // sin almacenamiento
+  }
 }
 
-/** Version publicada mas nueva que la que se juega (o null). */
-function update(): PatchNote | null {
-  const n = notes.find((x) => !x.prerelease && x.url);
-  return n && compareVersions(n.version, APP_VERSION) > 0 ? n : null;
+function newest(): string | null {
+  return notes.find((note) => !note.prerelease)?.version ?? notes[0]?.version ?? null;
+}
+
+/** Version publicada mas nueva que la que se juega, con su pagina en GitHub (o null). */
+function newerRelease(): (PatchNote & { url: string }) | null {
+  const release = notes.find((note): note is PatchNote & { url: string } => !note.prerelease && !!note.url);
+  return release && compareVersions(release.version, APP_VERSION) > 0 ? release : null;
 }
 
 function publishBadge(): void {
   const top = newest();
   const seen = readSeen();
-  const up = update();
+  const newer = newerRelease();
   ui.set({
     newsBadge: !!top && (!seen || compareVersions(top, seen) > 0),
-    updateAvailable: up ? up.version : null,
+    updateAvailable: newer ? newer.version : null,
   });
 }
 
 /** Mira en GitHub si hay notas nuevas (una vez; se puede volver a llamar sin gastar). */
 export function checkNotes(force = false): Promise<void> {
   if (checking && !force) return checking;
-  checking = fetchReleases(NOTES_REPO, force).then((r) => {
-    notes = mergeNotes(local, r.notes);
-    status = r.status;
+  checking = fetchReleases(NOTES_REPO, force).then((fetched) => {
+    notes = mergeNotes(local, fetched.notes);
+    status = fetched.status;
     publishBadge();
     if (ui.get().notes) publish();
   });
@@ -66,25 +75,25 @@ export function checkNotes(force = false): Promise<void> {
 
 function publish(): void {
   const lang = settings.lang;
-  const n = notes[selected];
-  const up = update();
+  const note = notes[selected];
+  const newer = newerRelease();
   ui.set({
     notes: {
       status,
       current: APP_VERSION,
       repoUrl: `https://github.com/${NOTES_REPO}/releases`,
-      update: up ? { version: up.version, url: up.download ?? up.url! } : null,
-      items: notes.map((x) => ({
-        version: x.version,
-        title: x.title,
-        date: x.date,
-        isNew: !seenBefore || compareVersions(x.version, seenBefore) > 0,
-        current: x.version === APP_VERSION,
-        prerelease: x.prerelease,
+      update: newer ? { version: newer.version, url: newer.download ?? newer.url } : null,
+      items: notes.map((item) => ({
+        version: item.version,
+        title: item.title,
+        date: item.date,
+        isNew: !seenBefore || compareVersions(item.version, seenBefore) > 0,
+        current: item.version === APP_VERSION,
+        prerelease: item.prerelease,
       })),
       selected,
-      blocks: n ? parseMarkdown(n.body[lang]) : [],
-      url: n?.url ?? null,
+      blocks: note ? parseMarkdown(note.body[lang]) : [],
+      url: note?.url ?? null,
     },
   });
 }
@@ -92,22 +101,12 @@ function publish(): void {
 export function openNotes(): void {
   seenBefore = readSeen();
   selected = 0;
-  const top = newest();
-  try {
-    if (top) localStorage.setItem(SEEN_KEY, top);
-  } catch {
-    // sin almacenamiento
-  }
+  rememberSeen(newest());
   publish();
   publishBadge();
   void checkNotes().then(() => {
-    // Lo que llega de GitHub tambien cuenta como visto.
-    const t = newest();
-    try {
-      if (t && ui.get().notes) localStorage.setItem(SEEN_KEY, t);
-    } catch {
-      // sin almacenamiento
-    }
+    // Lo que llega de GitHub tambien cuenta como visto (si el panel sigue abierto).
+    if (ui.get().notes) rememberSeen(newest());
     publishBadge();
   });
 }
@@ -116,9 +115,9 @@ export function closeNotes(): void {
   ui.set({ notes: null });
 }
 
-export function selectNote(i: number): void {
-  if (i < 0 || i >= notes.length) return;
-  selected = i;
+export function selectNote(index: number): void {
+  if (index < 0 || index >= notes.length) return;
+  selected = index;
   publish();
 }
 

@@ -28,9 +28,10 @@ npm run sonidos -- elegir amb_sea 3               # ambientes y musica: uno
 npm run sonidos -- grafo shot_flak                # el grafo para abrirlo a mano en ComfyUI
 ```
 
-- **Catalogo** (`tools/audio/catalog/`): id, clase (`sfx`; `voice`, las de los muñecos; `nature`, los
-  animales y el trueno, sin el estilo de guerra de juguete; `zone` y `ambient`; `music`, `jingle`), texto
-  en ingles (solo lo que suena), segundos y variantes. El estilo comun de cada clase y como se recorta
+- **Catalogo** (`tools/audio/catalog/`, un fichero por grupo y `index.ts` que los junta): id, clase
+  (`sfx`; `voice`, las de los muñecos; `nature`, los animales y el trueno, sin el estilo de guerra de
+  juguete; `zone` y `ambient`; `music`, `jingle`), texto en ingles (solo lo que suena), segundos y
+  variantes. El estilo comun de cada clase y como se recorta
   estan en `soundKinds.ts`: cambiar el estilo de todo es tocar `style` alli.
 - **Escuchar**: la pagina (`tools/audio/out/index.html`) abierta como fichero (doble clic, o desde la
   app de Claude) no suena: el navegador no carga los audios de al lado. Por eso `escuchar` la sirve

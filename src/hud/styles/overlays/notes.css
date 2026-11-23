@@ -163,11 +163,14 @@
   margin-left: 18px;
   list-style: circle;
 }
+/* El codigo, como las teclas (.key en base/panel.css): amarillo sobre tinta. */
 .notes-text code,
 .notes-text pre {
   font-family: var(--display);
   font-size: 13px;
   background: var(--ink);
+  color: #ffd76a;
+  border-radius: 6px;
   padding: 1px 4px;
 }
 .notes-text pre {
@@ -185,11 +188,13 @@
   border-top: 3px solid var(--panel);
   margin: 10px 0;
 }
+/* Sobre la crema, el azul oscuro: el claro (--blue-hi) apenas se distingue del fondo. */
 .notes-text a {
-  color: var(--blue-hi);
+  color: var(--blue-lo);
 }
+/* Lo resaltado, en dorado como en los demas paneles (docs/ESTETICA.md, "Interfaz"). */
 .notes-text strong {
-  color: #fff;
+  color: var(--gold);
 }
 .notes-foot {
   display: flex;

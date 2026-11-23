@@ -127,17 +127,20 @@ function insideAnyPuff(point: THREE.Vector3, puffs: readonly Puff[]): boolean {
 function cloudVoxels(random: () => number): CloudVoxel[] {
   const puffs = cloudPuffs(random);
   const voxels: CloudVoxel[] = [];
-  for (let x = -12; x < 12; x++) {
-    for (let y = 0; y < 9; y++) {
-      for (let z = -6; z < 6; z++) {
-        const center = new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5);
-        if (insideAnyPuff(center, puffs)) {
-          voxels.push({ at: center.multiplyScalar(CLOUD_VOXEL), belly: y === 0 });
-        }
-      }
-    }
-  }
+  for (const { center, isBottom } of cloudBoxCells())
+    if (insideAnyPuff(center, puffs)) voxels.push({ at: center.multiplyScalar(CLOUD_VOXEL), belly: isBottom });
   return voxels;
+}
+
+/** La caja (en voxels, desde el centro de la nube y su suelo) en la que caben todos sus bultos. */
+const CLOUD_BOX = { minX: -12, maxX: 12, height: 9, minZ: -6, maxZ: 6 };
+
+/** El centro de cada voxel de la caja de una nube, y si es de la fila de abajo (el fondo plano). */
+function* cloudBoxCells(): Generator<{ center: THREE.Vector3; isBottom: boolean }> {
+  for (let x = CLOUD_BOX.minX; x < CLOUD_BOX.maxX; x++)
+    for (let y = 0; y < CLOUD_BOX.height; y++)
+      for (let z = CLOUD_BOX.minZ; z < CLOUD_BOX.maxZ; z++)
+        yield { center: new THREE.Vector3(x + 0.5, y + 0.5, z + 0.5), isBottom: y === 0 };
 }
 
 /** Un sitio de partida para una nube: repartidas en un anillo alrededor del mapa. */

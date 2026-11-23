@@ -7,6 +7,16 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Interfaz
+- En Novedades ya se leen el código, que salía como un recuadro oscuro vacío, la negrita, que salía blanca sobre la crema, y los enlaces.
+
+<!-- en -->
+
+### Interface
+- In “What's new”, code no longer shows as an empty dark box, and bold text and links no longer fade into the cream background.
+
 ## [0.16.0] - 2026-11-22 — El bosque cobra vida
 
 ### Novedades
