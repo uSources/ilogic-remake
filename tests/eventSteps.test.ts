@@ -8,7 +8,7 @@ import { incomeSpotsOf, stepsOf, type BoardLookup } from '../src/view3d/systems/
 import type { Surface } from '../src/view3d/systems/sound/soundCues';
 import type { AnimationStep } from '../src/view3d/systems/events/steps';
 import { playEvents, runSteps } from '../src/view3d/systems/events/timeline';
-import { blankState, diceFrom, ENEMY, fight, PLAYER, unitTypeNamed } from './helpers';
+import { act, blankState, diceFrom, ENEMY, fight, PLAYER, unitTypeNamed } from './helpers';
 
 /** Los sucesos animados sin navegador: que pasos lleva cada uno (datos) y que se pide a los puertos al cumplirlos. */
 
@@ -339,6 +339,23 @@ describe('lo que se cobra al empezar el dia', () => {
     newUnit(s, unitTypeNamed('Soldier'), ENEMY, { x: 13, y: 4 });
     expect(incomeSpotsOf(s, PLAYER, 'controlPoints')).toEqual([{ pos: { x: 4, y: 4 }, amount: 1000 }]);
     expect(incomeSpotsOf(s, ENEMY, 'controlPoints')).toEqual([{ pos: { x: 4, y: 12 }, amount: 1000 }]);
+  });
+
+  it('[CAMBIO] con la partida como queda tras el fin de ronda (la que se anima), las chapas suman lo cobrado', () => {
+    const s = blankState({ fog: false, controlPoints: 2, controlRadius: 1, controlIncome: 1000 });
+    s.controlPoints = [
+      { x: 4, y: 4, owner: null },
+      { x: 12, y: 4, owner: PLAYER },
+    ];
+    // El de nadie se gana al acabar la ronda y ya paga; el propio, disputado, no.
+    newUnit(s, unitTypeNamed('Soldier'), PLAYER, { x: 4, y: 4 });
+    newUnit(s, unitTypeNamed('Soldier'), PLAYER, { x: 12, y: 5 });
+    newUnit(s, unitTypeNamed('Soldier'), ENEMY, { x: 13, y: 4 });
+    const events = act(s, ENEMY, { kind: 'endTurn' });
+    const paid = events.find((event) => event.kind === 'income' && event.team === PLAYER && event.source === 'controlPoints');
+    const spots = incomeSpotsOf(s, PLAYER, 'controlPoints');
+    expect(spots.map((spot) => spot.pos)).toEqual([{ x: 4, y: 4 }]);
+    expect(paid).toMatchObject({ amount: spots.reduce((total, spot) => total + spot.amount, 0) });
   });
 });
 
