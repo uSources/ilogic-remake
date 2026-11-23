@@ -104,10 +104,8 @@ describe('puntos de control', () => {
         expect(Math.abs(da.at(point) - db.at(point))).toBeLessThanOrEqual(8);
       }
       // Las zonas no se tocan.
-      for (const firstPoint of points)
-        for (const secondPoint of points)
-          if (firstPoint !== secondPoint)
-            expect(manhattan(firstPoint, secondPoint)).toBeGreaterThanOrEqual(3 + 2 * defaultContent().defaultSettings.controlRadius);
+      const apart = points.flatMap((first) => points.filter((second) => second !== first).map((second) => manhattan(first, second)));
+      for (const distance of apart) expect(distance).toBeGreaterThanOrEqual(3 + 2 * defaultContent().defaultSettings.controlRadius);
     }
     expect(total).toBeGreaterThan(20 * 2);
   });

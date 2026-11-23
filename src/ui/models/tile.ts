@@ -1,6 +1,8 @@
 import type { GameImages } from '../../atlas';
 import type { AbilityDef, MoveType, UnitAttack, UnitType } from '../../core/content';
 import { defaultContent } from '../../core/content/default';
+import { MAX_LIFE } from '../../core/data';
+import { samePos } from '../../core/geom';
 import type { DeepReadonly } from '../../core/util/freeze';
 import { unitTypeOf, buildingTypeOf, terrainAt } from '../../core/gameContent';
 import {
@@ -21,11 +23,11 @@ import {
   abilitiesOf,
   isRuleOn,
 } from '../../core/rules';
-import type { GameState, Pos, TeamId, Unit } from '../../core/model';
+import type { Building, GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isHostile } from '../../core/teams';
 import type { Grid } from '../../core/util/grid';
 import { turnEndOrderOf, isDetached, squadById } from '../../core/squads';
-import type { AbilityVM, StatChipVM, TileVM } from '../../hud/store';
+import type { AbilityVM, BuildingVM, StatChipVM, TileVM, UnitVM } from '../../hud/store';
 import { nameOf, t, type TextKey } from '../../settings';
 import { isFriendly, ownerSideOf, sideLetter, sideOf } from '../sides';
 import { AS_ACTIVE, buildingKey, terrainKey, unitKey } from '../sprites';
@@ -52,7 +54,9 @@ export function unitStatsText(unitType: UnitType): string {
   return `${t('move')} ${unitType.move} · ${range}`;
 }
 
-const pct = (factor: number): string => String(Math.round(factor * 100));
+/** 0.25 → 25: la parte de uno como porcentaje entero. */
+const percent = (factor: number): number => Math.round(factor * 100);
+const pct = (factor: number): string => String(percent(factor));
 
 /** Como se dice cada tipo de movimiento dentro de una frase ("a pie, vehículos"); uno nuevo, por su nombre en movements.json. */
 const MOVEMENT_PHRASES: Readonly<Partial<Record<MoveType, TextKey>>> = {
@@ -111,79 +115,116 @@ export function captureHintText(s: GameState, unit: Unit): string | undefined {
 }
 
 /**
- * Ficha de la casilla `p` para el equipo que mira (`view.viewer`): terreno, edificio y unidad (si se
- * ve). `selected` es la unidad que se esta moviendo, que se enseña aunque su sprite este oculto.
+ * Lo que necesita la ficha de quien mira: su equipo, que casillas ve, que unidades no se enseñan
+ * (su pieza esta escondida) y la que se esta moviendo, que se enseña aunque su pieza este oculta.
  */
-export function tileVM(
-  textures: GameImages,
-  s: GameState,
-  pos: Pos,
-  view: { viewer: TeamId; vis: Grid<boolean>; hidden: ReadonlySet<number>; selected?: Unit | null },
-): TileVM {
-  const terr = terrainAt(s, pos);
+export interface TileViewer {
+  viewer: TeamId;
+  vis: Grid<boolean>;
+  hidden: ReadonlySet<number>;
+  selected?: Unit | null;
+}
+
+/** Ficha de la casilla `pos` para el equipo que mira: terreno, edificio, punto de control y unidad (si se ve). */
+export function tileVM(textures: GameImages, s: GameState, pos: Pos, view: TileViewer): TileVM {
+  const isVisible = view.vis.at(pos);
+  const info: TileVM = { terrain: terrainVM(s, pos) };
   const building = buildingAt(s, pos);
-  const vis = view.vis.at(pos);
-  const viewer = view.viewer;
-  const info: TileVM = {
-    terrain: { key: terrainKey(terr), name: nameOf(terr), defense: Math.round((1 - tileProtection(s, pos)) * 100) },
-  };
-  if (isRuleOn(s, 'terrainCost')) {
-    // Coste de paso: a pie y en vehiculo (null = no se puede pasar).
-    const cost = (moveType: MoveType) => (canMoveOn(moveType, terr) ? terrainAccess(s, moveType).enterCost(pos) : null);
-    info.terrain.cost = { foot: cost('foot'), vehicle: cost('vehicle') };
-  }
-  if (building) {
-    const owner = ownerSideOf(s, viewer, building.owner);
-    const known = vis || isFriendly(owner);
-    const capture = captureProgress(s, building);
-    info.building = {
-      name: nameOf(buildingTypeOf(s, building)),
-      owner: known ? owner : 'unknown',
-      income: buildingIncome(s, buildingTypeOf(s, building)),
-      icon: buildingKey(textures, s, building, vis, viewer),
-      ...(capture && known
-        ? { capture: { left: capture.left, total: capturePointsOf(s, building), side: sideOf(s, viewer, capture.team) } }
-        : {}),
-    };
-  }
-  // [CAMBIO] Zona de un punto de control (se ve aunque haya niebla: esta marcada en el mapa).
-  // Disputada solo si se ven dentro unidades de alianzas enemigas (no delata a los escondidos).
-  const controlPoint = s.controlPoints?.find((controlPoint) => inControlZone(s, controlPoint, pos));
-  if (controlPoint) {
-    const inside = s.units.filter((unit) => inControlZone(s, controlPoint, unit) && isShownTo(viewer, unit, (at) => view.vis.at(at)));
-    const owner = ownerSideOf(s, viewer, controlPoint.owner);
-    info.point = {
-      owner,
-      income: s.settings.controlIncome,
-      contested: inside.some((unit) => inside.some((other) => isHostile(s, unit.team, other.team))),
-      icon: `ui/zona_${sideLetter(owner)}`,
-    };
-  }
-  const unit = unitAt(s, pos);
-  const selected = view.selected;
-  const shown =
-    unit && vis && !view.hidden.has(unit.uid) ? unit : selected && selected.x === pos.x && selected.y === pos.y ? selected : undefined;
-  if (shown) {
-    const shownType = unitTypeOf(s, shown);
-    const cargo = cargoUnits(s, shown).map((unit) => nameOf(unitTypeOf(s, unit)));
-    const side = sideOf(s, viewer, shown.team);
-    const own = side === 'own';
-    info.unit = {
-      // Las ajenas se ven siempre como activas (no se enseña si ya han jugado).
-      icon: unitKey(textures, s, shown, viewer, own ? {} : AS_ACTIVE),
-      name: nameOf(shownType),
-      rank: isRuleOn(s, 'veterancy') ? rank(shown) : 0,
-      side,
-      life: shown.life,
-      stats: unitStatsText(shownType),
-      chips: unitStatChips(shownType),
-      abilities: abilitiesVM(s, shownType),
-      cargo: shownType.cargoSlots > 0 ? `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}` : undefined,
-      ...(shown.life < 100 && unhealable(s, shown) ? { noHeal: true } : {}),
-      ...(own && turnEndOrderOf(s, shown) ? { order: standingOrderLabel(turnEndOrderOf(s, shown)!.kind) } : {}),
-      ...(own && isDetached(s, shown) ? { detached: true } : {}),
-      ...(own && squadById(s, shown.squad) ? { squad: squadById(s, shown.squad)!.name } : {}),
-    };
-  }
+  if (building) info.building = buildingVM(textures, s, building, view.viewer, isVisible);
+  const point = controlPointVM(s, pos, view);
+  if (point) info.point = point;
+  const shown = shownUnitAt(s, pos, view, isVisible);
+  if (shown) info.unit = unitVM(textures, s, shown, view.viewer);
   return info;
+}
+
+/** El terreno: su defensa y, con la regla de coste de paso, lo que cuesta entrar a pie y en vehiculo (null = no se pasa). */
+function terrainVM(s: GameState, pos: Pos): TileVM['terrain'] {
+  const terrain = terrainAt(s, pos);
+  const vm: TileVM['terrain'] = { key: terrainKey(terrain), name: nameOf(terrain), defense: percent(1 - tileProtection(s, pos)) };
+  if (!isRuleOn(s, 'terrainCost')) return vm;
+  const enterCost = (moveType: MoveType) => (canMoveOn(moveType, terrain) ? terrainAccess(s, moveType).enterCost(pos) : null);
+  vm.cost = { foot: enterCost('foot'), vehicle: enterCost('vehicle') };
+  return vm;
+}
+
+/** El edificio: de quien es y su captura a medias solo si se ve o es de un aliado. */
+function buildingVM(textures: GameImages, s: GameState, building: Building, viewer: TeamId, isVisible: boolean): BuildingVM {
+  const owner = ownerSideOf(s, viewer, building.owner);
+  const isKnown = isVisible || isFriendly(owner);
+  const capture = captureProgress(s, building);
+  const buildingType = buildingTypeOf(s, building);
+  return {
+    name: nameOf(buildingType),
+    owner: isKnown ? owner : 'unknown',
+    income: buildingIncome(s, buildingType),
+    icon: buildingKey(textures, s, building, isVisible, viewer),
+    ...(capture && isKnown
+      ? { capture: { left: capture.left, total: capturePointsOf(s, building), side: sideOf(s, viewer, capture.team) } }
+      : {}),
+  };
+}
+
+/**
+ * [CAMBIO] La zona de un punto de control (se ve aunque haya niebla: esta marcada en el mapa).
+ * Disputada solo si se ven dentro unidades de alianzas enemigas (no delata a los escondidos).
+ */
+function controlPointVM(s: GameState, pos: Pos, view: TileViewer): TileVM['point'] | null {
+  const controlPoint = s.controlPoints?.find((candidate) => inControlZone(s, candidate, pos));
+  if (!controlPoint) return null;
+  const isSeen = (at: Pos) => view.vis.at(at);
+  const inside = s.units.filter((unit) => inControlZone(s, controlPoint, unit) && isShownTo(view.viewer, unit, isSeen));
+  const owner = ownerSideOf(s, view.viewer, controlPoint.owner);
+  return {
+    owner,
+    income: s.settings.controlIncome,
+    contested: inside.some((unit) => inside.some((other) => isHostile(s, unit.team, other.team))),
+    icon: `ui/zona_${sideLetter(owner)}`,
+  };
+}
+
+/** La unidad que enseña la ficha: la de la casilla si se ve, o la que se esta moviendo hasta alli. */
+function shownUnitAt(s: GameState, pos: Pos, view: TileViewer, isVisible: boolean): Unit | undefined {
+  const unit = unitAt(s, pos);
+  if (unit && isVisible && !view.hidden.has(unit.uid)) return unit;
+  const selected = view.selected;
+  return selected && samePos(selected, pos) ? selected : undefined;
+}
+
+function unitVM(textures: GameImages, s: GameState, unit: Unit, viewer: TeamId): UnitVM {
+  const unitType = unitTypeOf(s, unit);
+  const side = sideOf(s, viewer, unit.team);
+  const isOwn = side === 'own';
+  return {
+    // Las ajenas se ven siempre como activas (no se enseña si ya han jugado).
+    icon: unitKey(textures, s, unit, viewer, isOwn ? {} : AS_ACTIVE),
+    name: nameOf(unitType),
+    rank: isRuleOn(s, 'veterancy') ? rank(unit) : 0,
+    side,
+    life: unit.life,
+    stats: unitStatsText(unitType),
+    chips: unitStatChips(unitType),
+    abilities: abilitiesVM(s, unitType),
+    cargo: cargoText(s, unit, unitType),
+    ...(unit.life < MAX_LIFE && unhealable(s, unit) ? { noHeal: true } : {}),
+    ...(isOwn ? ownUnitDetails(s, unit) : {}),
+  };
+}
+
+/** "Carga: Soldado, Soldado" (o "Carga: vacío") en los que llevan carga; undefined en el resto. */
+function cargoText(s: GameState, transport: Unit, transportType: UnitType): string | undefined {
+  if (transportType.cargoSlots <= 0) return undefined;
+  const cargo = cargoUnits(s, transport).map((passenger) => nameOf(unitTypeOf(s, passenger)));
+  return `${t('cargo')}: ${cargo.length ? cargo.join(', ') : t('empty')}`;
+}
+
+/** Lo que solo se enseña de las propias: la orden que cumplira al acabar el turno, si va suelta y su escuadra. */
+function ownUnitDetails(s: GameState, unit: Unit): Pick<UnitVM, 'order' | 'detached' | 'squad'> {
+  const order = turnEndOrderOf(s, unit);
+  const squad = squadById(s, unit.squad);
+  return {
+    ...(order ? { order: standingOrderLabel(order.kind) } : {}),
+    ...(isDetached(s, unit) ? { detached: true } : {}),
+    ...(squad ? { squad: squad.name } : {}),
+  };
 }

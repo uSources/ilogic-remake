@@ -64,6 +64,19 @@ export function noise(x: number, y: number, salt: number): number {
 }
 
 export const tileOfSubcell = (sub: Pos): Pos => ({ x: Math.floor(sub.x / SUBCELLS), y: Math.floor(sub.y / SUBCELLS) });
+/** Las subcasillas de una casilla, columna a columna (x y luego y), como los bucles de siempre. */
+export function subcellsOf(tile: Pos): Pos[] {
+  const subs: Pos[] = [];
+  for (let dx = 0; dx < SUBCELLS; dx++)
+    for (let dy = 0; dy < SUBCELLS; dy++) subs.push({ x: tile.x * SUBCELLS + dx, y: tile.y * SUBCELLS + dy });
+  return subs;
+}
+/** La subcasilla y sus ocho vecinas, columna a columna (de x - 1 a x + 1 y, en cada una, de y - 1 a y + 1). */
+export function aroundAndSelf(sub: Pos): Pos[] {
+  const around: Pos[] = [];
+  for (const dx of [-1, 0, 1]) for (const dy of [-1, 0, 1]) around.push({ x: sub.x + dx, y: sub.y + dy });
+  return around;
+}
 /** El centro de una subcasilla, en casillas (el de la casilla (x, y) es (x, y)). */
 export const subcellCenter = (sub: Pos): Pos => ({ x: (sub.x + 0.5) / SUBCELLS - 0.5, y: (sub.y + 0.5) / SUBCELLS - 0.5 });
 /** La subcasilla en la que cae un punto del suelo (en casillas, como `subcellCenter`). La escribe en `out`: se pide en cada fotograma. */

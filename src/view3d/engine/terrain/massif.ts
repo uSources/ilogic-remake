@@ -9,7 +9,7 @@ import type { Pos } from '../../../core/model';
 import { Grid } from '../../../core/util/grid';
 import { seededRng } from '../../../core/util/random';
 import { valueNoise } from '../../../core/util/valueNoise';
-import { type ReliefMap, type ReliefShape, type ReliefStyle, type Rise, SUBCELLS, subcellCenter, tileKey } from './reliefGrid';
+import { type ReliefMap, type ReliefShape, type ReliefStyle, type Rise, subcellCenter, subcellsOf, tileKey } from './reliefGrid';
 
 /** Lo que se mira dentro de una sierra: mas adentro ya no sube mas (casillas). */
 const DEPTH_LIMIT = 2;
@@ -133,12 +133,10 @@ interface MassifContext {
 /** Las subcasillas de una casilla, subidas por el macizo (si llega y sube mas que lo que ya hay). */
 function raiseTile(map: ReliefMap, rises: Grid<Rise | null>, tile: Pos, massif: MassifContext): void {
   const inside = massif.isMassif(tile);
-  for (let dx = 0; dx < SUBCELLS; dx++)
-    for (let dy = 0; dy < SUBCELLS; dy++) {
-      const sub = { x: tile.x * SUBCELLS + dx, y: tile.y * SUBCELLS + dy };
-      const depth = depthIn(map, massif.isMassif, subcellCenter(sub), inside);
-      if (depth <= -massif.shape.skirt) continue;
-      const height = massif.shape.rise(depth, massif.summits.at(sub), massif.rough.at(sub));
-      if (height > (rises.at(sub)?.height ?? 0)) rises.set(sub, { height, style: massif.style });
-    }
+  for (const sub of subcellsOf(tile)) {
+    const depth = depthIn(map, massif.isMassif, subcellCenter(sub), inside);
+    if (depth <= -massif.shape.skirt) continue;
+    const height = massif.shape.rise(depth, massif.summits.at(sub), massif.rough.at(sub));
+    if (height > (rises.at(sub)?.height ?? 0)) rises.set(sub, { height, style: massif.style });
+  }
 }

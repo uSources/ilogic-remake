@@ -10,6 +10,7 @@
  */
 import type { ControllerKind, MatchSettings, Pos, TeamId } from '../model';
 import { MAX_LIFE } from '../data';
+import { isInt, isPos } from '../util/validation';
 import { uniqueIds, type Checker, type Scope } from './check';
 import type { ContentContext, Texts } from './types';
 
@@ -76,14 +77,11 @@ interface MissionContext extends ContentContext {
   teamCount: number;
 }
 
-const isTeamIn = (context: MissionContext, team: unknown): boolean =>
-  Number.isInteger(team) && (team as number) >= 0 && (team as number) < context.teamCount;
+/** Si `team` es el puesto de un equipo de la mision (sin guarda de tipo: `TeamId` podria ser mas que un entero). */
+const isTeamIn = (context: MissionContext, team: unknown): boolean => isInt(team, 0, context.teamCount - 1);
 
 /** Una casilla de la lista: dos enteros no negativos (que este dentro del mapa lo mira checkMission). */
-const isTile = (at: unknown): boolean =>
-  typeof at === 'object' &&
-  at !== null &&
-  [(at as Partial<Pos>).x, (at as Partial<Pos>).y].every((value) => Number.isInteger(value) && (value as number) >= 0);
+const isTile = (at: unknown): at is Pos => isPos(at) && at.x >= 0 && at.y >= 0;
 
 function validateBuildingsOf(scope: Scope, context: MissionContext, buildings: unknown): void {
   if (!scope.expect(Array.isArray(buildings), 'buildings tiene que ser una lista')) return;
