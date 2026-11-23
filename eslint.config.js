@@ -234,7 +234,17 @@ const NET_FILES = ['src/core/net/**/*.ts', 'src/core/net.ts'];
 
 export default tseslint.config(
   {
-    ignores: ['dist/', 'dist-single/', 'node_modules/', 'src/assetList.ts', 'src/atlasPages.ts', 'src/ui/*Sets.ts', 'src/ui/sheets.ts'],
+    // Los worktrees de otras sesiones de Claude (copias enteras del proyecto) agotan la memoria.
+    ignores: [
+      'dist/',
+      'dist-single/',
+      'node_modules/',
+      '.claude/worktrees/',
+      'src/assetList.ts',
+      'src/atlasPages.ts',
+      'src/ui/*Sets.ts',
+      'src/ui/sheets.ts',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
