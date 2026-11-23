@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { defaultContent } from '@core/content/default';
+import type { MatchTeam } from '@core/match';
 import { CURRENT_PROTOCOL, type Outgoing, type SeatId } from '@core/net';
 import { RoomAdapter, type Invitation } from '../../src/roomAdapter';
-import type { RoomRequest } from '../../src/roomRequest';
+import { isRoomRequest, type RoomRequest } from '../../src/roomRequest';
 
 /** Dos personas y la IA, en un mapa pequeño con niebla. */
 const request = (): RoomRequest => ({
@@ -182,5 +184,17 @@ describe('pedir un asiento con el codigo', () => {
   it('una sala que ya juega no da asientos', () => {
     const { adapter } = joinedRoom();
     expect(adapter.claimSeat()).toEqual({ ok: false, error: 'notWaiting' });
+  });
+
+  it('toda sala que se puede pedir deja un asiento a quien la crea (si no, crearla daria un 500 y no un 400)', () => {
+    const withTeams = (...controllers: MatchTeam['controller'][]): RoomRequest => ({
+      match: { seed: 3, size: 20, teams: controllers.map((controller) => ({ controller })) },
+    });
+    const content = defaultContent();
+    for (const accepted of [withTeams('human', 'ai'), withTeams('ai', 'human'), withTeams('ai', 'ai', 'human')]) {
+      expect(isRoomRequest(accepted, content)).toBe(true);
+      expect(RoomAdapter.create(accepted).claimSeat()).toMatchObject({ ok: true });
+    }
+    expect(isRoomRequest(withTeams('ai', 'ai'), content)).toBe(false);
   });
 });
