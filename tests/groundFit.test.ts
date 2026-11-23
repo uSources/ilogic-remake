@@ -70,4 +70,14 @@ describe('las mallas de las marcas', () => {
     // Cada vez suelta el bufer de antes en la tarjeta grafica.
     expect(released).toBe(2);
   });
+
+  it('al crecer, las piezas que ya estaban puestas se quedan donde estaban', () => {
+    const mesh = instanced(unitBox(), flatMaterial(0xffffff, 1), 2);
+    const placed = new THREE.Matrix4().makeTranslation(3, 0.5, 7);
+    mesh.setMatrixAt(1, placed);
+    makeRoomFor(mesh, 3);
+    const kept = new THREE.Matrix4();
+    mesh.getMatrixAt(1, kept);
+    expect(kept.equals(placed)).toBe(true);
+  });
 });

@@ -31,15 +31,16 @@ const MATRIX_SIZE = 16;
 /**
  * Hace sitio en la malla para `needed` piezas si no caben (sobre el relieve una marca va en trozos, y
  * no se sabe cuantos hasta verla). Crece su bufer, no la malla: sigue en su sitio de la escena y se
- * pinta en el mismo orden (las translucidas a la misma distancia van por orden de creacion). `dispose`
- * suelta el bufer de antes en la tarjeta grafica.
+ * pinta en el mismo orden (las translucidas a la misma distancia van por orden de creacion). Las
+ * piezas que ya tenia se copian al bufer nuevo, y `dispose` suelta el de antes en la tarjeta grafica.
  */
 export function makeRoomFor(mesh: THREE.InstancedMesh, needed: number): void {
   const capacity = mesh.instanceMatrix.count;
   if (needed <= capacity) return;
+  const matrices = new Float32Array(Math.max(needed, capacity * 2) * MATRIX_SIZE);
+  matrices.set(mesh.instanceMatrix.array);
   mesh.dispose();
-  const grown = Math.max(needed, capacity * 2);
-  mesh.instanceMatrix = new THREE.InstancedBufferAttribute(new Float32Array(grown * MATRIX_SIZE), MATRIX_SIZE);
+  mesh.instanceMatrix = new THREE.InstancedBufferAttribute(matrices, MATRIX_SIZE);
 }
 
 /**
