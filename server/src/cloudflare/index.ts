@@ -13,6 +13,7 @@ const roomOf = (env: Env, code: string): DurableObjectStub<RoomObject> => env.RO
 const roomsOf = (env: Env): RoomDirectory => ({
   create: (code, request) => roomOf(env, code).create(request),
   info: (code) => roomOf(env, code).info(),
+  claimSeat: (code) => roomOf(env, code).claimSeat(),
   handToAi: (code, token, seat) => roomOf(env, code).handToAi(token, seat),
   connect: (code, request) => roomOf(env, code).fetch(request),
 });

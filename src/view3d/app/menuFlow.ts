@@ -1,8 +1,9 @@
 /**
  * El menu principal del juego 3D: reparte las ordenes entre sus pantallas (inicio, partida nueva,
  * campaña y «Jugar en línea», cada una en `src/menu/` con su `...Host`), las opciones, las notas y la
- * ayuda, y empieza la partida elegida (gameStart.ts). Un enlace de invitacion en la direccion
- * (`#/sala/CODIGO/FICHA`) entra directo en esa sala. Detras, la imagen del menu de siempre.
+ * ayuda, y empieza la partida elegida (gameStart.ts). Un enlace de sala en la direccion
+ * (`#/sala/CODIGO`, o el de un asiento con su ficha) entra directo en esa sala. Detras, la imagen del
+ * menu de siempre.
  */
 import { defaultContent } from '../../core/content/default';
 import { loadGame } from '../../core/defaultGames';
@@ -19,10 +20,10 @@ import { CampaignScreen } from '../../menu/campaignScreen';
 import { helpPanel } from '../../menu/helpPanel';
 import { HomeScreen } from '../../menu/homeScreen';
 import { OptionsPanel } from '../../menu/optionsPanel';
-import { isTypingInvite, OnlineScreen } from '../../menu/online/onlineScreen';
+import { isTypingRoomCode, OnlineScreen } from '../../menu/online/onlineScreen';
 import { isTypingCode, SetupScreen } from '../../menu/setupScreen';
 import type { OnlineMatch } from '../../net/onlineMatch';
-import { parseInvite } from '../../net/onlineRooms';
+import { parseRoomLink } from '../../net/onlineRooms';
 import { checkNotes, notesCommand, notesOpen } from '../../patchNotes';
 import { matchConfigFor, randomSeed } from '../../setup';
 import { readSave } from '../../storage';
@@ -109,7 +110,7 @@ export class MenuFlow {
       helpRules: helpRulesForSettingsOnly(settingsWith(defaultContent())),
     });
     this.home.publish();
-    this.openInviteFromHash();
+    this.openRoomFromHash();
     window.addEventListener('keydown', (event) => this.onKey(event));
     playMusic('menu');
     // Notas de parche nuevas en GitHub (marca en "Novedades"); sin conexion no pasa nada.
@@ -123,7 +124,7 @@ export class MenuFlow {
     if (this.options.isOpen) return this.options.context();
     if (this.mode === 'setup') return isTypingCode() ? 'typing' : 'setup';
     if (this.mode === 'campaign') return 'campaign';
-    if (this.mode === 'online') return isTypingInvite() ? 'typing' : 'online';
+    if (this.mode === 'online') return isTypingRoomCode() ? 'typing' : 'online';
     return 'home';
   }
 
@@ -137,7 +138,7 @@ export class MenuFlow {
     if (this.options.isOpen) return this.options.command(command);
     if (this.mode === 'setup') return isTypingCode() ? this.setup.typingCommand(command) : this.setup.command(command);
     if (this.mode === 'campaign') return this.campaign.command(command);
-    if (this.mode === 'online') return isTypingInvite() ? this.online.typingCommand(command) : this.online.command(command);
+    if (this.mode === 'online') return isTypingRoomCode() ? this.online.typingCommand(command) : this.online.command(command);
     this.home.command(command);
   }
 
@@ -150,9 +151,9 @@ export class MenuFlow {
     this.command(command);
   }
 
-  /** Se escribe en un cuadro de texto (el codigo del mapa, el enlace de una sala): sus teclas son suyas. */
+  /** Se escribe en un cuadro de texto (el codigo del mapa, el codigo o el enlace de una sala): sus teclas son suyas. */
   private isTyping(): boolean {
-    return isTypingCode() || isTypingInvite();
+    return isTypingCode() || isTypingRoomCode();
   }
 
   private publish(): void {
@@ -184,13 +185,16 @@ export class MenuFlow {
     this.online.open();
   }
 
-  /** Un enlace de invitacion en la direccion (`#/sala/CODIGO/FICHA`): directo a esa sala (y se quita de la direccion). */
-  private openInviteFromHash(): void {
-    const invite = parseInvite(location.hash);
-    if (!invite) return;
+  /**
+   * Un enlace de sala en la direccion (`#/sala/CODIGO`, el que se reparte, o el de un asiento,
+   * `#/sala/CODIGO/FICHA`): directo a esa sala (y se quita de la direccion: recargar no pide otro asiento).
+   */
+  private openRoomFromHash(): void {
+    const link = parseRoomLink(location.hash);
+    if (!link) return;
     history.replaceState(null, '', location.pathname + location.search);
     this.mode = 'online';
-    this.online.openRoom(invite.code, invite.token);
+    this.online.openRoom(link.code, link.token);
   }
 
   /** La sala ya juega: la partida empieza en su carga de la pagina, que vuelve a entrar con el mismo codigo y ficha. */

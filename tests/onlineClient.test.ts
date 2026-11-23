@@ -5,7 +5,7 @@ import { CURRENT_PROTOCOL, Room, viewChangeOf, viewSnapshotOf, type Outgoing, ty
 import { unitById } from '@core/rules';
 import { RoomClient, animationView, type RoomPlay, type RoomReply } from '../src/net/roomClient';
 import { RECONNECT_MS, ServerLink, seqStorageKey, type LinkDeps, type LinkStatus, type SocketLike } from '../src/net/serverLink';
-import { parseInvite, withRoom, withoutRoom, type OnlineRoomEntry } from '../src/net/onlineRooms';
+import { parseRoomLink, roomLinkUrl, withRoom, withoutRoom, type OnlineRoomEntry } from '../src/net/onlineRooms';
 import { tokenCounter } from './sim/netClient';
 
 // ---------------------------------------------------------------------------------------------
@@ -456,12 +456,28 @@ describe('Mis partidas en línea', () => {
     expect(withoutRoom(list, 'BBBBBB').map((room) => room.code)).toEqual(['AAAAAA']);
   });
 
-  it('entiende un enlace de invitacion entero, su parte tras el # o "CODIGO/FICHA"', () => {
+  it('entiende el enlace de un asiento entero, su parte tras el # o "CODIGO/FICHA": con su ficha', () => {
     const token = 'AbC_-123456789012345';
-    expect(parseInvite(`https://usources.github.io/ilogic/#/sala/ABC234/${token}`)).toEqual({ code: 'ABC234', token });
-    expect(parseInvite(`#/sala/abc234/${token}`)).toEqual({ code: 'ABC234', token });
-    expect(parseInvite(`ABC234/${token}`)).toEqual({ code: 'ABC234', token });
-    expect(parseInvite('ABC234')).toBeNull();
-    expect(parseInvite('')).toBeNull();
+    expect(parseRoomLink(`https://usources.github.io/ilogic/#/sala/ABC234/${token}`)).toEqual({ code: 'ABC234', token });
+    expect(parseRoomLink(`#/sala/abc234/${token}`)).toEqual({ code: 'ABC234', token });
+    expect(parseRoomLink(`ABC234/${token}`)).toEqual({ code: 'ABC234', token });
+  });
+
+  it('el enlace de la sala y el codigo escrito a mano no llevan ficha (se pide un asiento); lo demas no es una sala', () => {
+    const link = roomLinkUrl('ABC234', 'https://usources.github.io/ilogic/#/otra-cosa');
+    expect(link).toBe('https://usources.github.io/ilogic/#/sala/ABC234');
+    expect(parseRoomLink(link)).toEqual({ code: 'ABC234', token: null });
+    expect(parseRoomLink('#/sala/abc234/')).toEqual({ code: 'ABC234', token: null });
+    expect(parseRoomLink('  abc234 ')).toEqual({ code: 'ABC234', token: null });
+    expect(parseRoomLink('')).toBeNull();
+    expect(parseRoomLink('https://usources.github.io/ilogic/')).toBeNull();
+    expect(parseRoomLink('esto no es un codigo')).toBeNull();
+  });
+
+  it('un codigo que el servidor no puede haber dado no es una sala (no se pregunta por el)', () => {
+    expect(parseRoomLink('hola')).toBeNull();
+    expect(parseRoomLink('ABC2345')).toBeNull();
+    expect(parseRoomLink('ABC12O')).toBeNull();
+    expect(parseRoomLink('#/sala/HOLA')).toBeNull();
   });
 });

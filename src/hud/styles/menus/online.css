@@ -1,11 +1,37 @@
-/* Jugar en línea: el menu, crear sala, entrar con enlace y el vestibulo */
-.online .on-main {
-  justify-content: center;
-}
+/* Jugar en línea: el menu (crear, unirse y mis partidas), crear partida y el vestibulo */
 .on-menu {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+.on-start {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.on-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--lo);
+  border-radius: var(--radius-sm);
+}
+.on-box .ng-note {
+  min-height: 0;
+  flex: 1;
+}
+.on-box .px-btn.start {
+  font-size: 18px;
+  padding: 10px 20px;
+}
+.on-box .ng-code {
+  font-size: 15px;
+}
+.on-rooms {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 .on-room,
 .on-lobby-seat {
@@ -14,9 +40,56 @@
   gap: 10px;
   flex-wrap: wrap;
   padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--slot);
+  border-radius: var(--radius-sm);
 }
-.on-room .muted,
+.on-room.yourTurn {
+  box-shadow: inset 4px 0 0 var(--gold);
+}
+.on-room.ended,
+.on-room.gone {
+  opacity: 0.7;
+}
+/* «Quitar»: el enlace del menu de inicio, sin la sombra que pide su fondo oscuro */
+.on-room .link {
+  text-shadow: none;
+}
+/* El codigo y el detalle no bajan de su ancho: en el movil, los botones pasan a la linea de abajo */
+.on-room-info {
+  flex: 1 1 140px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.on-room-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.on-state {
+  min-width: 124px;
+  padding: 3px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 13px;
+  text-align: center;
+  white-space: nowrap;
+}
+.on-state.yourTurn {
+  background: var(--gold);
+  color: #fff;
+}
+.on-state.waiting {
+  background: var(--blue-btn);
+  color: #fff;
+}
+.on-state.gone {
+  color: var(--red);
+}
 .on-seat-name {
   flex: 1;
   min-width: 0;
@@ -30,36 +103,43 @@
   color: var(--gold);
 }
 .on-code.big {
-  font-size: 28px;
+  font-size: 32px;
 }
 .on-lobby {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.on-lobby-head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.on-join {
+.on-invite {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 10px 12px;
+  background: var(--lo);
+  border-radius: var(--radius-sm);
 }
-.on-join .ng-code {
-  width: 100%;
-  letter-spacing: 0;
-}
-.on-seat {
+.on-invite-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-bottom: 6px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.on-invite-row .on-code {
+  margin-right: auto;
+}
+.on-link {
+  word-break: break-all;
 }
 .on-error {
   word-break: break-all;
+}
+@media (max-width: 720px) {
+  .on-start {
+    grid-template-columns: 1fr;
+  }
+  .on-state {
+    min-width: 0;
+  }
 }
 
 /* En la partida: la conexion y a quien se espera; una pastilla pequeña bajo la del dia (topbar.css). */

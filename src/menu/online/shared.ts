@@ -2,13 +2,12 @@
  * Lo que comparten las pantallas de «Jugar en línea» (src/menu/online/): lo que piden a la escena
  * del menu (`OnlineHost`), lo que piden al conjunto que las enlaza (`OnlineScreens`: el foco, el
  * aviso, pasar a otra pantalla, entrar en una sala) y los textos que usan varias. Cada pantalla esta
- * en su modulo: menuScreen (crear, entrar, mis partidas), createScreen, joinScreen y lobbyScreen;
- * onlineScreen.ts las enlaza. Sin Phaser.
+ * en su modulo: menuScreen (crear, entrar con el codigo, mis partidas), createScreen y lobbyScreen;
+ * onlineScreen.ts las enlaza.
  */
 import type { RoomStatus, SeatId } from '../../core/net';
 import type { OnlineVM } from '../../hud/store';
 import type { OnlineMatch } from '../../net/onlineMatch';
-import type { CreatedSeat } from '../../net/roomApi';
 import type { FatalClose } from '../../net/serverLink';
 import { t, type TextKey } from '../../settings';
 import type { TerrainPalette } from '../../ui/terrainColors';
@@ -20,14 +19,13 @@ export interface OnlineHost {
   startOnline(match: OnlineMatch): void;
 }
 
-/** Cual de las cuatro pantallas se ve. */
+/** Cual de las pantallas se ve. */
 export type Mode = OnlineVM['mode'];
 
-/** Lo que se sabe de un asiento al entrar en una sala recien creada (quien crea lo sabe; quien entra con un enlace, no). */
+/** El asiento que el servidor acaba de dar (al crear la sala, o con su codigo): con el, la sala se apunta en «Mis partidas» ya. */
 export interface KnownSeat {
   seat: SeatId;
   team: number;
-  invites: CreatedSeat[];
 }
 
 /** Lo que cada pantalla pide al conjunto (onlineScreen.ts): lo que es de todas y pasar de una a otra. */
@@ -41,8 +39,10 @@ export interface OnlineScreens {
   busy: boolean;
   /** Pasa a esa pantalla con ese foco (sin publicar). */
   show(mode: Mode, focus: string): void;
-  /** Entra en una sala: el vestibulo (y, cuando la sala juega, la escena). */
+  /** Entra en una sala con la ficha de su asiento: el vestibulo (y, cuando la sala juega, la escena). */
   joinRoom(code: string, token: string, known?: KnownSeat): void;
+  /** Entra en una sala por su codigo: con el asiento que ya se tiene en ella o, si no, pidiendo uno libre. */
+  enterRoom(code: string): void;
   publish(): void;
 }
 

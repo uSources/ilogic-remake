@@ -52,14 +52,17 @@ jugar con un servidor propio sin recompilar). Sin servidor, Inicio no ofrece «J
 Para tenerlo todo en casa: `npm run selfhost` compila el juego y arranca el servidor de Node, que
 sirve el juego y las salas en la misma direccion (`http://<tu-equipo>:8787`).
 
-- **Crear sala**: Inicio → «Jugar en línea» → «Crear sala». Las opciones de una partida nueva, de 2 a
-  4 equipos y quien juega cada asiento (una persona o la IA), y si se quiere un
-  reloj por turno (al acabarse, el turno pasa solo) y cuanto esperar a los que no entran (pasado, su
-  asiento lo juega la IA). La sala da un codigo y un enlace de invitacion por asiento de persona:
-  copialos (o compartelos desde el movil) y reparte uno a cada amigo. La partida empieza cuando han
-  entrado todos; mientras, quien creo la sala puede dar a la IA un asiento que sigue vacio.
-- **Entrar**: con el enlace (abre el juego directamente en la sala) o pegandolo en «Entrar con
-  enlace». «Mis partidas en línea» recuerda las salas de este navegador para volver a entrar.
+- **Crear partida**: Inicio → «Jugar en línea» → «Crear partida». De 2 a 4 equipos y quien juega
+  cada uno (una persona o la IA), las reglas (los ajustes de «Nueva partida» o «Personalizada»), y si
+  se quiere un reloj por turno (al acabarse, el turno pasa solo) y cuanto esperar a los que no entran
+  (pasado, su asiento lo juega la IA). La partida da un codigo de 6 letras y un enlace, el mismo para
+  todos: copialo (o compartelo desde el movil). Empieza cuando han entrado todos; mientras, quien la
+  creo puede dar a la IA un asiento que sigue vacio.
+- **Unirse**: con el enlace (abre el juego directamente en la sala) o escribiendo el codigo (o
+  pegando el enlace) en «Unirse a una partida»: el servidor da el primer asiento libre.
+- **Mis partidas en línea** recuerda las salas de este navegador y dice como va cada una: «Te toca»
+  (con el dia y lo que queda de turno, si hay reloj), el turno de otro equipo, esperando jugadores,
+  acabada o ya no existe. Lo que pide jugar va arriba.
 - **En la partida**: tu turno se juega como siempre (cada accion la confirma el servidor); en los
   demas sale «Esperando al equipo N…» y lo que hacen llega animado cuando acaban. Si cambias de
   pestaña, el titulo avisa de que te toca. La pastilla bajo la del dia dice como va la conexion: si

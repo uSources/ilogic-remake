@@ -5,8 +5,7 @@
  * (despertar un Durable Object, arrancar Node otra vez) esta en el suyo.
  */
 import { describe, expect, it } from 'vitest';
-import { CURRENT_PROTOCOL, type SeatId } from '@core/net';
-import { isRoomCode } from '../../src/codes';
+import { CURRENT_PROTOCOL, isRoomCode, type SeatId } from '@core/net';
 import { CLOSE_CODES } from '../../src/hostedRoom';
 import { MAX_MESSAGE_BYTES } from '../../src/limits';
 import type { LobbyInfo } from '../../src/roomAdapter';
@@ -26,9 +25,12 @@ export const roomRequest = (changes: Partial<RoomRequest> = {}): RoomRequest => 
   ...changes,
 });
 
-export interface Created {
+/** Lo que contesta el servidor a quien se queda con un asiento (al crear la sala, o con el codigo). */
+export interface SeatTicket {
   code: string;
-  seats: { seat: SeatId; team: number; token: string; invite: string }[];
+  seat: SeatId;
+  team: number;
+  token: string;
 }
 
 /** Lo que dice la sala guardada de si misma (lo demas de la partida no hace falta aqui). */
@@ -50,10 +52,15 @@ export async function bodyOf<Body>(response: Response): Promise<Body> {
   return body as Body;
 }
 
-export async function createRoom(server: TestServer, changes: Partial<RoomRequest> = {}): Promise<Created> {
+export async function createRoom(server: TestServer, changes: Partial<RoomRequest> = {}): Promise<SeatTicket> {
   const response = await post(server, roomRequest(changes));
   expect(response.status).toBe(201);
-  return bodyOf<Created>(response);
+  return bodyOf<SeatTicket>(response);
+}
+
+/** Pide un asiento con el codigo de la sala (lo que hace quien abre el enlace de la sala). */
+export function claimSeat(server: TestServer, code: string): Promise<Response> {
+  return server.fetch(`/rooms/${code}/seat`, { method: 'POST', headers: { Origin: GAME_ORIGIN } });
 }
 
 export async function lobbyOf(server: TestServer, code: string): Promise<{ status: number; info: LobbyInfo | null }> {
@@ -61,15 +68,17 @@ export async function lobbyOf(server: TestServer, code: string): Promise<{ statu
   return { status: response.status, info: response.ok ? await bodyOf<LobbyInfo>(response) : null };
 }
 
-/** Las dos personas dentro de una sala nueva (la partida ya ha empezado). */
+/** Las dos personas dentro de una sala nueva (la partida ya ha empezado): quien la crea y quien llega con el codigo. */
 export async function joinedRoom(
   server: TestServer,
   changes: Partial<RoomRequest> = {},
-): Promise<{ code: string; clients: SocketClient[]; created: Created }> {
+): Promise<{ code: string; clients: SocketClient[]; tokens: string[] }> {
   const created = await createRoom(server, changes);
+  const guest = await bodyOf<SeatTicket>(await claimSeat(server, created.code));
+  const tokens = [created.token, guest.token];
   const clients: SocketClient[] = [];
-  for (const seat of created.seats) clients.push(await SocketClient.join(server, created.code, seat.token));
-  return { code: created.code, clients, created };
+  for (const token of tokens) clients.push(await SocketClient.join(server, created.code, token));
+  return { code: created.code, clients, tokens };
 }
 
 /** Las pruebas comunes, contra el servidor que da `serverOf` (se pide en cada prueba: puede arrancar antes). */
@@ -81,17 +90,11 @@ export function describeServer(serverOf: () => TestServer): void {
 
 function describeRoutes(serverOf: () => TestServer): void {
   describe('las rutas del servidor', () => {
-    it('crea una sala: un codigo de 6 letras y, por persona, su ficha y su enlace; el vestibulo no cuenta las fichas', async () => {
+    it('crea una sala: un codigo de 6 letras y el primer asiento, con su ficha; el vestibulo no cuenta las fichas', async () => {
       const created = await createRoom(serverOf());
       expect(isRoomCode(created.code)).toBe(true);
-      expect(created.seats.map((seat) => [seat.seat, seat.team])).toEqual([
-        [0, 0],
-        [1, 1],
-      ]);
-      for (const seat of created.seats) {
-        expect(seat.token).toMatch(/^[A-Za-z0-9_-]{32}$/);
-        expect(seat.invite).toBe(`#/sala/${created.code}/${seat.token}`);
-      }
+      expect(created).toMatchObject({ seat: 0, team: 0 });
+      expect(created.token).toMatch(/^[A-Za-z0-9_-]{32}$/);
       const lobby = await lobbyOf(serverOf(), created.code);
       expect(lobby.status).toBe(200);
       expect(lobby.info).toEqual({
@@ -102,8 +105,23 @@ function describeRoutes(serverOf: () => TestServer): void {
           { seat: 1, team: 1, kind: 'person', joined: false },
           { seat: 2, team: 2, kind: 'ai', joined: false },
         ],
+        turn: null,
       });
-      expect(JSON.stringify(lobby.info)).not.toContain(created.seats[0]!.token);
+      expect(JSON.stringify(lobby.info)).not.toContain(created.token);
+    });
+
+    it('con el codigo se pide el siguiente asiento libre, una vez cada uno; luego, ninguno', async () => {
+      const server = serverOf();
+      const created = await createRoom(server);
+      const first = await claimSeat(server, created.code);
+      expect(first.status).toBe(200);
+      const guest = await bodyOf<SeatTicket>(first);
+      expect(guest).toMatchObject({ code: created.code, seat: 1, team: 1 });
+      expect(guest.token).not.toBe(created.token);
+      const full = await claimSeat(server, created.code);
+      expect(full.status).toBe(409);
+      expect(await bodyOf(full)).toEqual({ error: 'noFreeSeat' });
+      expect((await claimSeat(server, 'ABCDEF')).status).toBe(404);
     });
 
     it('una sala que no existe, un codigo mal escrito y una ruta que no hay', async () => {
@@ -146,6 +164,11 @@ function describeMatch(serverOf: () => TestServer): void {
       const { code, clients } = await joinedRoom(server);
       expect((await lobbyOf(server, code)).info?.status).toBe('playing');
       expect((await lobbyOf(server, code)).info?.seats.map((seat) => seat.joined)).toEqual([true, true, false]);
+      // De quien es el turno lo sabe cualquiera (la partida lo anuncia a todos); sin reloj, no acaba nunca.
+      expect((await lobbyOf(server, code)).info?.turn).toEqual({ seat: 0, day: 1, endsAt: null });
+      const busy = await claimSeat(server, code);
+      expect(busy.status).toBe(409);
+      expect(await bodyOf(busy)).toEqual({ error: 'notWaiting' });
       await play(clients, () => clients.every((client) => (client.net.state?.day ?? 0) >= 3));
       for (const client of clients) {
         expect(client.net.state?.day).toBeGreaterThanOrEqual(3);
@@ -175,9 +198,9 @@ function describeMatch(serverOf: () => TestServer): void {
 
     it('con la misma ficha se vuelve a entrar desde otra conexion, y la de antes se cierra', async () => {
       const server = serverOf();
-      const { code, clients, created } = await joinedRoom(server);
+      const { code, clients, tokens } = await joinedRoom(server);
       await Promise.all(clients.map((client) => client.take(['turn'])));
-      const again = await SocketClient.join(server, code, created.seats[0]!.token);
+      const again = await SocketClient.join(server, code, tokens[0]!);
       expect(await clients[0]!.closed).toMatchObject({ code: CLOSE_CODES.replaced });
       expect((await again.take(['turn'])).kind).toBe('turn');
       expect(again.net.isMyTurn).toBe(true);

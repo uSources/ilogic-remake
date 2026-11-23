@@ -17,8 +17,9 @@ Se puede alojar en dos sitios, con la misma sala (`src/hostedRoom.ts`) y las mis
 
 | Ruta                  | Que hace                                                                                                                                                                                                                                                                              |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /rooms`         | Crea una sala. Cuerpo: `{ match, turnSeconds?, waitingSeconds? }` (`match` es lo que elige la pantalla de escaramuza, `SkirmishChoices`: `seed`, `size`, `theme`, `settingChanges`, `teams`, `firstTeam`). Responde `201 { code, seats: [{ seat, team, token, invite }] }`: el codigo de la sala (6 letras) y, por asiento de persona, su ficha y su enlace de invitacion (`#/sala/CODIGO/FICHA`). Quien crea se queda con el primero y reparte los demas; las fichas no se vuelven a dar |
-| `GET /rooms/:code`    | Lo que puede saber cualquiera: `{ status, protocol, save, seats: [{ seat, team, kind, joined }] }`. Nada de la partida ni de las fichas                                                                                                                                                 |
+| `POST /rooms`         | Crea una sala. Cuerpo: `{ match, turnSeconds?, waitingSeconds? }` (`match` es lo que elige la pantalla de escaramuza, `SkirmishChoices`: `seed`, `size`, `theme`, `settingChanges`, `teams`, `firstTeam`). Responde `201 { code, seat, team, token }`: el codigo de la sala (6 letras) y el asiento de quien crea (el primero de persona) con su ficha. Para invitar se reparte el codigo o el enlace de la sala (`#/sala/CODIGO`) |
+| `POST /rooms/:code/seat` | Pide un asiento con el codigo: da el primer asiento de persona libre, con su ficha, mientras la sala espera. Responde `{ code, seat, team, token }`; si no, `404` (`noSuchRoom`) o `409` (`notWaiting`, `noFreeSeat`). Cada asiento se da una sola vez |
+| `GET /rooms/:code`    | Lo que puede saber cualquiera: `{ status, protocol, save, seats: [{ seat, team, kind, joined }], turn }`, con `turn` a quien se espera (`{ seat, day, endsAt }`: `endsAt` cuando vence su reloj, o `null`) o `null`. Nada de la partida ni de las fichas                                                                                                                                                 |
 | `POST /rooms/:code/ai` | Quien creo la sala (cuerpo `{ token, seat }`: la ficha de su asiento, el primero) da a la IA un asiento de persona que no ha entrado, mientras la sala espera. Responde `{ ok: true }`; si no, `403` (`badToken`), `409` (`notWaiting`, `seatTaken`) o `404` (`noSeat`)                                                                              |
 | `GET /rooms/:code/ws` | La conexion de la partida (subida a WebSocket). El primer mensaje es el saludo (`hello`, con la ficha y la version del protocolo); desde ahi, los mensajes de `src/core/net/protocol.ts` como texto JSON, uno por trama                                                                 |
 
@@ -102,7 +103,7 @@ npm run selfhost      # compila el juego con VITE_SERVER_URL=/ (.env.selfhost) y
 ```
 
 Se juega en `http://<la direccion del equipo>:8787` (en el mismo equipo, `http://localhost:8787`), y
-los enlaces de invitacion llevan esa direccion. Con el juego ya compilado basta `npm run server:node`.
+los enlaces de las salas llevan esa direccion. Con el juego ya compilado basta `npm run server:node`.
 Las salas se guardan en `server/data/`, un JSON por sala (se pueden copiar o borrar a mano con el
 servidor parado); al arrancar otra vez siguen donde estaban y sus relojes tambien (una sala caducada
 se borra sola). Se para con Ctrl+C (o `SIGTERM`): cierra las conexiones y acaba de guardar.
@@ -143,12 +144,12 @@ Lo comun (`src/`):
 | `routes.ts`      | las rutas (`ROUTES`), CORS, el tope del cuerpo; las salas por su codigo las da quien aloja el servidor (`RoomDirectory`)                                             |
 | `hostedRoom.ts`  | una sala del servidor, se aloje donde se aloje: conexiones, guardar y recuperar, la alarma, frenar a quien insiste                                                   |
 | `roomHost.ts`    | lo que la sala pide a quien la aloja (`RoomHost`): guardar con su alarma, cargar, borrar, sus conexiones (`RoomSocket`) y la hora                                    |
-| `roomAdapter.ts` | el unico que toca la `Room` del nucleo: lo que el objeto necesita de ella, con nombres del servidor; el vestibulo (`lobby`) y las invitaciones                       |
+| `roomAdapter.ts` | el unico que toca la `Room` del nucleo: lo que el objeto necesita de ella, con nombres del servidor; el vestibulo (`lobby`) y pedir asiento (`claimSeat`)                       |
 | `roomRequest.ts` | la forma de lo que se pide al crear una sala, comprobada campo a campo contra el contenido del juego                                                                 |
 | `timers.ts`      | los relojes como datos puros: caducar, el turno, la espera, seguir una partida a medias; `nextAlarm` elige la unica alarma                                           |
 | `limits.ts`      | todos los topes y tiempos, con nombre                                                                                                                               |
 | `rateLimit.ts`   | la ventana de rechazos por asiento                                                                                                                                   |
-| `codes.ts`       | codigos de sala (sin letras que se confundan), fichas (192 bits de `crypto.getRandomValues`) y su comparacion en tiempo constante                                   |
+| `codes.ts`       | codigos de sala al azar (sin letras que se confundan; su forma, `isRoomCode`, es del nucleo: `src/core/net/roomCode.ts`), fichas (192 bits de `crypto.getRandomValues`) y su comparacion en tiempo constante                                   |
 | `cors.ts`        | que origenes pueden hablar con el servidor                                                                                                                          |
 
 En Cloudflare (`src/cloudflare/`): `index.ts`, el Worker (las rutas, con un Durable Object por

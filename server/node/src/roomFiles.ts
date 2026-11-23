@@ -6,8 +6,8 @@
  */
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { isRoomCode } from '@core/net';
 import { isObject } from '@core/util/validation';
-import { isRoomCode } from '../../src/codes';
 import type { StoredRoom } from '../../src/roomHost';
 
 const EXTENSION = '.json';

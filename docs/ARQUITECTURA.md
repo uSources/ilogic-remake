@@ -887,8 +887,10 @@ deshacer y el porque:
   tampoco salen del servidor.
 - **Amigos por enlace.** Una sala (`Room`) da una ficha (`token`) por asiento de persona, que no se
   puede adivinar (192 bits de azar que pone el servidor: `RoomContext.newToken`; el nucleo no tira de
-  ningun azar; comparar fichas en tiempo constante, `sameToken`, tambien lo da el servidor). El enlace
-  de invitacion lleva la ficha; con ella se entra y se vuelve a entrar.
+  ningun azar; comparar fichas en tiempo constante, `sameToken`, tambien lo da el servidor). Quien
+  crea se queda con el primer asiento; los demas lo piden con el codigo o el enlace de la sala
+  (`Room.claimSeat`: el primer asiento de persona libre, una vez cada uno y mientras se espera) y
+  guardan su ficha; con ella se entra y se vuelve a entrar. El codigo y el enlace no llevan fichas.
 - **Orden y repeticiones.** Lo que tiene efecto (`act`, `endTurn`, `surrender`) lleva un numero de
   orden del cliente (`seq`, creciente por asiento; `welcome` dice el ultimo atendido, para seguir
   contando tras un corte): la sala contesta con el en `result` y no repite uno ya atendido

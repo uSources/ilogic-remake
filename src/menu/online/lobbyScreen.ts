@@ -1,16 +1,17 @@
 /**
- * El vestibulo de una sala: quien ha entrado (por `GET /rooms/:code` cada pocos segundos), los
- * enlaces para repartir (copiar y compartir) y «Sustituir por IA» de quien creo la sala. Es tambien
- * quien tiene la conexion con la sala (`OnlineMatch`): entra por el WebSocket al abrirse, apunta la
- * sala en «Mis partidas» y, cuando la sala juega (o ya acabo), le pasa la conexion a la escena
+ * El vestibulo de una sala: el codigo y el enlace de la sala para invitar (copiar y compartir: quien
+ * lo abre, o escribe el codigo, se queda con un asiento libre), quien ha entrado (por `GET
+ * /rooms/:code` cada pocos segundos) y «Sustituir por IA» de quien creo la sala. Es tambien quien
+ * tiene la conexion con la sala (`OnlineMatch`): entra por el WebSocket al abrirse, apunta la sala en
+ * «Mis partidas» y, cuando la sala juega (o ya acabo), le pasa la conexion a la escena
  * (`OnlineHost.startOnline`).
  */
 import type { RoomStatus, SeatId } from '../../core/net';
 import { shownTeamNumber } from '../../core/teams';
 import { ui, type OnlineSeatVM, type OnlineVM } from '../../hud/store';
 import { OnlineMatch } from '../../net/onlineMatch';
-import { forgetRoom, inviteUrl, readOnlineRooms, rememberRoom, type OnlineRoomEntry } from '../../net/onlineRooms';
-import { handToAi, lobbyOf, type CreatedSeat, type LobbyInfo } from '../../net/roomApi';
+import { forgetRoom, readOnlineRooms, rememberRoom, roomLinkUrl, type OnlineRoomEntry } from '../../net/onlineRooms';
+import { handToAi, lobbyOf, type LobbyInfo, type LobbySeat } from '../../net/roomApi';
 import type { RoomPlay } from '../../net/roomClient';
 import type { FatalClose, LinkStatus } from '../../net/serverLink';
 import { serverUrl } from '../../net/serverUrl';
@@ -20,19 +21,26 @@ import { closeText, statusText, type KnownSeat, type OnlineScreens } from './sha
 /** Cada cuanto se pregunta al servidor quien esta en la sala mientras se espera. */
 const LOBBY_POLL_MS = 3000;
 
-const COPY_PREFIX = 'copy-';
-const SHARE_PREFIX = 'share-';
 const AI_PREFIX = 'ai-';
 
 const API_ERROR_TEXT: Partial<Record<string, TextKey>> = { noSuchRoom: 'onlineNoSuchRoom', badToken: 'onlineBadToken' };
+
+const LINK_STATUS_TEXT: Record<LinkStatus, TextKey> = {
+  connecting: 'onlineConnecting',
+  online: 'onlineOnline',
+  reconnecting: 'onlineReconnecting',
+  closed: 'onlineOffline',
+};
+
+const PRESENCE_TEXT: Record<OnlineSeatVM['presence'], TextKey | null> = { in: 'onlineIn', out: 'onlineOut', ai: null };
+
+const canShare = (): boolean => typeof navigator.share === 'function';
 
 export class LobbyScreen {
   /** La sala en la que se esta, con lo que se sabe de ella. */
   private match: OnlineMatch | null = null;
   private entry: OnlineRoomEntry | null = null;
   private lobby: LobbyInfo | null = null;
-  /** Los enlaces de los demas asientos (solo quien creo la sala los tiene). */
-  private invites: CreatedSeat[] = [];
   private linkStatus: LinkStatus = 'connecting';
   private pollHandle: ReturnType<typeof setTimeout> | null = null;
   /** La conexion ya se ha pasado a la escena: lo que llegue despues no es de esta pantalla. */
@@ -53,19 +61,19 @@ export class LobbyScreen {
     this.match = null;
     this.entry = null;
     this.lobby = null;
-    this.invites = [];
   }
 
   /**
    * Entra en la sala por su WebSocket y pasa al vestibulo; cuando la sala juega, a la partida.
    * `chosenTeams`, cuantos equipos se eligieron al crearla (hasta que la sala diga los de verdad).
+   * Con el asiento que acaba de dar el servidor (`known`), la sala se apunta en «Mis partidas» ya:
+   * aunque no se llegue a entrar, se puede volver a ella.
    */
   join(code: string, token: string, chosenTeams: number, known?: KnownSeat): void {
     const base = serverUrl();
     if (!base) return;
     this.leave();
     const remembered = readOnlineRooms().find((room) => room.code === code);
-    this.invites = known?.invites ?? remembered?.invites ?? [];
     this.entry = {
       code,
       token,
@@ -74,8 +82,8 @@ export class LobbyScreen {
       teams: remembered?.teams ?? chosenTeams,
       status: remembered?.status ?? 'waiting',
       at: Date.now(),
-      invites: this.invites,
     };
+    if (known) rememberRoom(this.entry);
     this.screens.show('lobby', 'leave');
     this.screens.error = null;
     this.linkStatus = 'connecting';
@@ -95,46 +103,61 @@ export class LobbyScreen {
   }
 
   vm(): OnlineVM['lobby'] {
-    if (!this.entry) return null;
-    const status = this.lobby?.status ?? this.entry.status;
-    const isCreator = this.entry.seat === 0;
-    const seats = (this.lobby?.seats ?? []).map((seat): OnlineSeatVM => {
-      const invite = this.invites.find((candidate) => candidate.seat === seat.seat);
-      return {
-        seat: seat.seat,
-        label: `${t('onlineTeam')} ${shownTeamNumber(seat.team)}`,
-        kind: seat.kind,
-        joined: seat.joined,
-        isMe: seat.seat === this.entry?.seat,
-        invite: invite ? inviteUrl(invite.invite, location.href) : null,
-        canHandToAi: isCreator && status === 'waiting' && seat.kind === 'person' && !seat.joined && seat.seat !== 0,
-      };
-    });
-    const connection = t(
-      this.linkStatus === 'online' ? 'onlineOnline' : this.linkStatus === 'reconnecting' ? 'onlineReconnecting' : 'onlineConnecting',
-    );
-    const note = status === 'waiting' ? t('onlineWaitingAll') : statusText(status);
-    return { code: this.entry.code, status: statusText(status), seats, note, connection };
+    const entry = this.entry;
+    if (!entry) return null;
+    const status = this.lobby?.status ?? entry.status;
+    const seats = (this.lobby?.seats ?? []).map((seat) => this.seatVM(seat, entry, status));
+    return {
+      code: entry.code,
+      link: roomLinkUrl(entry.code, location.href),
+      canInvite: status === 'waiting',
+      canShare: canShare(),
+      seats,
+      note: status === 'waiting' ? this.waitingNote() : statusText(status),
+      connection: t(LINK_STATUS_TEXT[this.linkStatus]),
+    };
   }
 
-  /** Las filas del foco: por asiento, copiar su enlace y darlo a la IA (si se puede); y salir. */
+  /** Las filas del foco: copiar y compartir el enlace (mientras se espera), dar a la IA cada asiento que se pueda, y salir. */
   rows(): string[][] {
-    const seats = (this.vm()?.seats ?? []).flatMap((seat) => {
-      const row = [seat.invite ? `${COPY_PREFIX}${seat.seat}` : null, seat.canHandToAi ? `${AI_PREFIX}${seat.seat}` : null].filter(
-        (id): id is string => id !== null,
-      );
-      return row.length ? [row] : [];
-    });
-    return [...seats, ['leave']];
+    const lobby = this.vm();
+    const invite = lobby?.canInvite ? [lobby.canShare ? ['copy', 'share'] : ['copy']] : [];
+    const handToAi = (lobby?.seats ?? []).filter((seat) => seat.canHandToAi).map((seat) => [`${AI_PREFIX}${seat.seat}`]);
+    return [...invite, ...handToAi, ['leave']];
   }
 
   /** Lo que se ha pulsado, si es de esta pantalla (copiar, compartir, a la IA): true si se ha atendido. */
   pick(focus: string): boolean {
-    if (focus.startsWith(COPY_PREFIX)) void this.copyInvite(Number(focus.slice(COPY_PREFIX.length)), false);
-    else if (focus.startsWith(SHARE_PREFIX)) void this.copyInvite(Number(focus.slice(SHARE_PREFIX.length)), true);
+    if (focus === 'copy') void this.copyLink();
+    else if (focus === 'share') void this.shareLink();
     else if (focus.startsWith(AI_PREFIX)) void this.handToAi(Number(focus.slice(AI_PREFIX.length)));
     else return false;
     return true;
+  }
+
+  // --- Lo que se ve ------------------------------------------------------------------------------
+
+  private seatVM(seat: LobbySeat, entry: OnlineRoomEntry, status: RoomStatus): OnlineSeatVM {
+    const isMe = seat.seat === entry.seat;
+    const isCreator = entry.seat === 0;
+    const isPerson = seat.kind === 'person';
+    const presence = !isPerson ? 'ai' : seat.joined ? 'in' : 'out';
+    const who = t(!isPerson ? 'onlineSeatAi' : isMe ? 'onlineYou' : 'onlineSeatPerson');
+    const presenceText = PRESENCE_TEXT[presence];
+    return {
+      seat: seat.seat,
+      label: `${t('onlineTeam')} ${shownTeamNumber(seat.team)}`,
+      detail: presenceText ? `${who} · ${t(presenceText)}` : who,
+      presence,
+      canHandToAi: isCreator && status === 'waiting' && isPerson && !seat.joined && !isMe,
+    };
+  }
+
+  /** «La partida empieza cuando entren todos (1 de 2)». */
+  private waitingNote(): string {
+    const people = (this.lobby?.seats ?? []).filter((seat) => seat.kind === 'person');
+    const joined = people.filter((seat) => seat.joined).length;
+    return `${t('onlineWaitingAll')} (${joined}/${people.length})`;
   }
 
   // --- La conexion con la sala ---------------------------------------------------------------------
@@ -218,15 +241,23 @@ export class LobbyScreen {
     await this.pollLobby();
   }
 
-  private async copyInvite(seat: SeatId, share: boolean): Promise<void> {
-    const invite = this.vm()?.seats.find((candidate) => candidate.seat === seat)?.invite;
-    if (!invite) return;
-    const shared = share && (await shareLink(invite));
-    if (shared) return;
-    const copied = await copyText(invite);
-    this.screens.error = copied ? null : invite;
+  /** Copia el enlace de la sala; si no se puede, lo enseña para copiarlo a mano. */
+  private async copyLink(): Promise<void> {
+    const link = this.vm()?.link;
+    if (!link) return;
+    const copied = await copyText(link);
+    this.screens.error = copied ? null : link;
     if (copied) ui.set({ toast: { text: t('onlineCopied'), id: Date.now() } });
     this.screens.publish();
+  }
+
+  /** Comparte el enlace con lo que tenga el sistema (movil), con el codigo en el texto; si no se puede, lo copia. */
+  private async shareLink(): Promise<void> {
+    const lobby = this.vm();
+    if (!lobby) return;
+    const text = t('onlineShareText').replace('{code}', lobby.code);
+    if (await shareLink(lobby.link, text)) return;
+    await this.copyLink();
   }
 }
 
@@ -240,10 +271,10 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 /** Compartir con lo que tenga el sistema (movil); false si no se puede. */
-async function shareLink(url: string): Promise<boolean> {
-  if (typeof navigator.share !== 'function') return false;
+async function shareLink(url: string, text: string): Promise<boolean> {
+  if (!canShare()) return false;
   try {
-    await navigator.share({ url });
+    await navigator.share({ url, text });
     return true;
   } catch {
     return false;

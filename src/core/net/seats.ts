@@ -1,7 +1,7 @@
 /**
  * Los asientos de una sala: quien ocupa cada uno (una persona con su ficha, o la IA con su perfil),
  * por que equipo juega, y lo que la sala apunta de cada persona (si esta dentro y por que conexion,
- * el ultimo numero de orden suyo y el ultimo mensaje que se le mando). Aqui esta lo que los
+ * el ultimo numero de orden suyo, el ultimo mensaje que se le mando y si su ficha ya es de alguien). Aqui esta lo que los
  * comprueba: la ficha de un saludo (`personWithToken`), un asiento guardado (`isSeatOf`) y los
  * asientos de una partida nueva (`seatsFor`). La sala (room.ts) solo los usa.
  */
@@ -22,6 +22,11 @@ export interface PersonSeat {
   lastSeq: number;
   /** El numero del ultimo mensaje que se le mando (0: ninguno). */
   step: number;
+  /**
+   * Su ficha ya es de alguien: se la dio la sala a quien llego con el codigo (`Room.claimSeat`) o
+   * alguien ha entrado con ella. Un asiento asi no se le vuelve a dar a nadie por el codigo.
+   */
+  claimed: boolean;
 }
 
 /** Un asiento de la IA: juega el servidor, con ese perfil (por su nombre; si no, el del juego). */
@@ -36,6 +41,9 @@ export type Seat = PersonSeat | AiSeat;
 
 /** La persona esta dentro (tiene una conexion). */
 export const isJoined = (seat: PersonSeat): boolean => seat.connection !== null;
+
+/** Ese asiento de persona se le puede dar a quien llega con el codigo: su ficha no es de nadie. */
+export const isFree = (seat: PersonSeat): boolean => !seat.claimed;
 
 /** Los asientos de personas, en orden. */
 export const personSeats = (seats: readonly Seat[]): PersonSeat[] => seats.filter((seat): seat is PersonSeat => seat.kind === 'person');
@@ -71,7 +79,16 @@ export const aiSeat = (id: SeatId, team: TeamId, profile?: string): AiSeat => ({
 export function seatsFor(s: GameState, aiProfiles: Readonly<Partial<Record<TeamId, string>>>, newToken: (bytes: number) => string): Seat[] {
   const seats = s.teams.map((team): Seat => {
     if (team.controller === 'ai') return aiSeat(team.id, team.id, aiProfiles[team.id]);
-    return { kind: 'person', id: team.id, team: team.id, token: newToken(TOKEN_BYTES), connection: null, lastSeq: 0, step: 0 };
+    return {
+      kind: 'person',
+      id: team.id,
+      team: team.id,
+      token: newToken(TOKEN_BYTES),
+      connection: null,
+      lastSeq: 0,
+      step: 0,
+      claimed: false,
+    };
   });
   const tokens = personSeats(seats).map((seat) => seat.token);
   if (new Set(tokens).size !== tokens.length) throw new Error('Dos asientos con la misma ficha: newToken no da fichas distintas');
@@ -90,5 +107,6 @@ export function isSeatOf(s: GameState, value: unknown, id: SeatId): value is Sea
   if (value.kind === 'ai') return value.profile === undefined || typeof value.profile === 'string';
   if (value.kind !== 'person' || teamState(s, value.team).controller !== 'human') return false;
   const hasConnection = value.connection === null || isInt(value.connection, 1, MAX_COUNT);
-  return isToken(value.token) && hasConnection && isInt(value.lastSeq, 0, MAX_COUNT) && isInt(value.step, 0, MAX_COUNT);
+  const hasCounts = isInt(value.lastSeq, 0, MAX_COUNT) && isInt(value.step, 0, MAX_COUNT);
+  return isToken(value.token) && hasConnection && hasCounts && typeof value.claimed === 'boolean';
 }

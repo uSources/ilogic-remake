@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isRoomCode, newRoomCode, newToken, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, sameToken } from '../../src/codes';
+import { isRoomCode, ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH } from '@core/net';
+import { newRoomCode, newToken, sameToken } from '../../src/codes';
 
 describe('codigos de sala y fichas', () => {
   it('un codigo tiene 6 letras del alfabeto sin 0, O, 1, I ni L, y cada uno es distinto', () => {

@@ -14,7 +14,7 @@ import type { JoinResult, NetError, Outgoing, SeatId } from '@core/net';
 import { isObject } from '@core/util/validation';
 import { MAX_MESSAGE_BYTES } from './limits';
 import { watchRejections, type RejectionWindow } from './rateLimit';
-import { RoomAdapter, type HandToAiError, type Invitation, type LobbyInfo } from './roomAdapter';
+import { RoomAdapter, type ClaimSeatResult, type HandToAiError, type Invitation, type LobbyInfo } from './roomAdapter';
 import type { Attachment, RoomHost, RoomMeta, RoomSocket } from './roomHost';
 import type { RoomRequest } from './roomRequest';
 import {
@@ -52,7 +52,9 @@ const CLOSE_CODE_OF_ERROR: Partial<Record<NetError, number>> = {
   badVersion: CLOSE_CODES.badVersion,
 };
 
-export type CreateResult = { ok: true; seats: Invitation[] } | { ok: false; error: 'exists' };
+/** La sala creada da su primer asiento a quien la crea; si ya habia una con ese codigo, `exists` (se prueba otro). */
+export type CreateResult = { ok: true; seat: Invitation } | { ok: false; error: 'exists' };
+export type ClaimResult = ClaimSeatResult | { ok: false; error: 'noSuchRoom' };
 export type HandToAiResult = { ok: true } | { ok: false; error: HandToAiError | 'noSuchRoom' };
 
 /** Lo que llega por un socket: texto (los mensajes son JSON) o bytes (que no son un mensaje). */
@@ -85,14 +87,18 @@ export class HostedRoom {
 
   constructor(private readonly host: RoomHost) {}
 
-  /** Crea la sala con esa partida. Si ya hay una, no la pisa. */
+  /** Crea la sala con esa partida, con el primer asiento de persona para quien la crea. Si ya hay una, no la pisa. */
   async create(request: RoomRequest): Promise<CreateResult> {
     if (await this.load()) return { ok: false, error: 'exists' };
     const settings: TimerSettings = { turnSeconds: request.turnSeconds, waitingSeconds: request.waitingSeconds };
-    this.adapter = RoomAdapter.create(request);
+    const adapter = RoomAdapter.create(request);
+    // Una sala nueva espera y tiene al menos una persona (lo exige `isRoomRequest`): su primer asiento esta libre.
+    const creator = adapter.claimSeat();
+    if (!creator.ok) throw new Error(`Una sala nueva no tiene asiento para quien la crea: ${creator.error}`);
+    this.adapter = adapter;
     this.meta = { settings, timers: initialTimers(settings, this.host.now()) };
-    await this.save(this.adapter, this.meta);
-    return { ok: true, seats: this.adapter.invitations() };
+    await this.save(adapter, this.meta);
+    return { ok: true, seat: creator.seat };
   }
 
   /** Si la sala existe (si estaba guardada, queda en memoria y con su alarma puesta). */
@@ -103,7 +109,16 @@ export class HostedRoom {
   /** Lo que puede saber cualquiera de la sala, o null si no hay sala. */
   async info(): Promise<LobbyInfo | null> {
     const adapter = await this.load();
-    return adapter?.lobby() ?? null;
+    return adapter?.lobby(this.meta?.timers.turn?.at ?? null) ?? null;
+  }
+
+  /** Alguien llega con el codigo: el primer asiento libre es suyo (queda guardado, no se le da a otro). */
+  async claimSeat(): Promise<ClaimResult> {
+    const adapter = await this.load();
+    if (!adapter) return { ok: false, error: 'noSuchRoom' };
+    const claimed = adapter.claimSeat();
+    if (claimed.ok) await this.afterActivity(adapter, []);
+    return claimed;
   }
 
   /** Quien creo la sala da un asiento vacio a la IA (si con el ya estan todos, la partida empieza). */
