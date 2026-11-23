@@ -181,12 +181,17 @@ export class LobbyScreen {
 
   // --- El vestibulo ------------------------------------------------------------------------------
 
+  /**
+   * Pregunta quien esta en la sala y vuelve a preguntar mientras espera. Si se ha salido mientras
+   * llegaba la respuesta, lo dice la conexion (`match`, una por cada vez que se entra), no `entry`: la
+   * bienvenida y la vista lo rehacen, y con un servidor lejano llegan antes que esta respuesta.
+   */
   private async pollLobby(): Promise<void> {
     const base = serverUrl();
-    const entry = this.entry;
-    if (!base || !entry || this.isLeaving) return;
-    const info = await lobbyOf(base, entry.code);
-    if (this.entry !== entry) return;
+    const match = this.match;
+    if (!base || !match || this.isLeaving) return;
+    const info = await lobbyOf(base, match.code);
+    if (this.match !== match) return;
     if (info.ok) {
       this.lobby = info.value;
       this.remember();
