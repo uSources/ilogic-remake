@@ -88,14 +88,15 @@ const CHANNEL_PREFIXES: readonly (readonly [prefix: string, channel: Channel])[]
   ['animal_', 'ambience'],
 ];
 
-const isVoice = (sound: string): boolean => sound.startsWith('voice_');
+const ownChannelOf = (sound: string): Channel | undefined => CHANNEL_PREFIXES.find(([prefix]) => sound.startsWith(prefix))?.[1];
+
+const isVoice = (sound: string): boolean => ownChannelOf(sound) === 'voices';
 
 /**
  * Por donde suena un efecto (lo que suena de verdad: la bocina que aun no esta y habla el conductor va
  * con las voces): su canal propio o, si no, lo que tiene sitio es del tablero, y lo que no, de la interfaz.
  */
-const channelOf = (sound: string, at: Point3 | null): Channel =>
-  CHANNEL_PREFIXES.find(([prefix]) => sound.startsWith(prefix))?.[1] ?? (at ? 'effects' : 'interface');
+const channelOf = (sound: string, at: Point3 | null): Channel => ownChannelOf(sound) ?? (at ? 'effects' : 'interface');
 
 /** Que suene `name` (una de sus variantes) en `at`, o sin sitio con null. Con su canal callado en Opciones, nada. */
 export function playSoundAt(name: SoundName, at: Point3 | null): void {
