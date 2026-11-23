@@ -10,6 +10,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ## [Sin publicar]
 
 ### Novedades
+- **Jugar en línea vuelve**, ya en 3D. «Buscar rival» te empareja con otra persona: 1 contra 1, las reglas de siempre y mapa al azar, **por turnos** (un día por turno: cada uno juega cuando puede, y puedes cerrar el juego mientras esperas) o **en vivo** (2 minutos por turno, con los dos conectados a la vez). Mientras llega alguien puedes jugar contra la IA o cancelar la búsqueda. «Con amigos» crea una partida con tus reglas y te da un enlace y un código para pasarlos, y «Mis partidas en línea» dice en cuáles te toca y cuánto le queda al turno.
 - **El campo suena**: los animalitos del tablero dicen lo suyo cuando hacen algo cerca de la cámara (la rana croa al saltar, el pájaro pía al salir de la copa, los gansos graznan al pasar, el pingüino chapotea al tirarse al agua, y la ardilla, el ciervo, el buitre y la foca también), uno cada poco y casi nunca con la cámara alta. Con lluvia o nieve se oyen mucho menos, y con tormenta o tormenta de arena se callan, igual que sus ambientes.
 - Las tormentas tienen trueno: un chasquido y un retumbar que se aleja después de cada relámpago.
 - El jeep y los camiones (transporte, suministros y lanzamisiles) tienen cada uno su motor: arrancan al moverse y tocan la bocina al elegirlos.
@@ -18,9 +19,13 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Interfaz
 - En Novedades ya se leen el código, que salía como un recuadro oscuro vacío, la negrita, que salía blanca sobre la crema, y los enlaces.
 
+### Arreglos
+- El menú de la partida (☰ o Esc) también se abre mientras juegan los demás, para salir o rendirte: antes no hacía nada hasta tu turno.
+
 <!-- en -->
 
 ### New
+- **Online play is back**, now in 3D. “Find an opponent” matches you with another person: 1 vs 1, the usual rules and a random map, either **Daily** (a day per turn: each plays when they can, and you can close the game while you wait) or **Live** (2 minutes per turn, with both online at the same time). While you wait you can play against the AI or cancel the search. “With friends” creates a game with your rules and gives you a link and a code to share, and “My online games” shows where it's your turn and how long the turn has left.
 - **The countryside comes alive with sound**: the little animals on the board call out when they do something near the camera (the frog croaks as it hops, the bird chirps as it leaves a treetop, geese honk as they fly by, the penguin splashes as it dives, and the squirrel, deer, vulture and seal have their own calls), one every so often and hardly ever with the camera up high. In rain or snow they're much quieter, and in a storm or sandstorm they fall silent, like their ambiences.
 - Storms have thunder: a crack and a rumble rolling away after each lightning flash.
 - The jeep and the trucks (transport, supplier and missile truck) each have their own engine: they start up when they move and honk when selected.
@@ -28,6 +33,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### Interface
 - In “What's new”, code no longer shows as an empty dark box, and bold text and links no longer fade into the cream background.
+
+### Fixes
+- The game menu (☰ or Esc) also opens while others are playing, so you can leave or surrender: before, it did nothing until your turn.
 
 ## [0.16.0] - 2026-11-22 — El bosque cobra vida
 
