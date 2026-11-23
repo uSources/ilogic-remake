@@ -11,7 +11,8 @@ import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
 import type { OwnerSide } from '../../../ui/sides';
 import type { ControlZoneLook } from '../../systems/board/boardScene';
-import { flatMaterial, INK_COLOR, instanced, stripMatrix, unitBox, type StripSize } from '../fx/markParts';
+import { highestIn, stripsOn, type MarkGround } from '../fx/groundFit';
+import { flatMaterial, INK_COLOR, instanced, unitBox, type StripSize } from '../fx/markParts';
 import { outlineSides } from '../fx/tileOutline';
 import { buildModel, type BlockModel, type TeamPaint } from './blocks';
 import { SIDE_PAINT } from './sidePaint';
@@ -94,7 +95,7 @@ export class ControlZonesView {
   private readonly gold = new THREE.Color(GOLD);
   private readonly contested = new THREE.Color(CONTESTED_COLOR);
 
-  constructor(private readonly groundOf: (pos: Pos) => THREE.Vector3) {}
+  constructor(private readonly ground: MarkGround) {}
 
   sync(looks: readonly ControlZoneLook[]): void {
     const wanted = new Map(looks.map((look) => [look.key, look]));
@@ -144,27 +145,25 @@ export class ControlZonesView {
     return zone;
   }
 
-  /** Una tira en cada lado de fuera de la zona, a `inset` del centro de su casilla. */
+  /** Una tira en cada lado de fuera de la zona, a `inset` del centro de su casilla (en trozos sobre el relieve). */
   private stripsOf(tiles: readonly Pos[], material: THREE.Material, strip: StripSize, inset: number): THREE.InstancedMesh {
-    const sides = outlineSides(tiles);
-    const mesh = instanced(unitBox(), material, sides.length);
-    sides.forEach(({ pos, side }, index) => mesh.setMatrixAt(index, stripMatrix(this.lifted(pos), side, inset, 1, strip)));
-    mesh.count = sides.length;
+    const placement = { inset, length: 1, lift: LIFT };
+    const pieces = outlineSides(tiles).flatMap(({ pos, side }) => stripsOn(this.ground, pos, side, placement, strip));
+    const mesh = instanced(unitBox(), material, pieces.length);
+    pieces.forEach((matrix, index) => mesh.setMatrixAt(index, matrix));
+    mesh.count = pieces.length;
     return mesh;
   }
 
-  /** El banderin de una esquina, con la tela hacia fuera de la zona (no tapa lo que hay dentro). */
+  /** El banderin de una esquina, con la tela hacia fuera de la zona (no tapa lo que hay dentro), sobre lo mas alto de su peana. */
   private pennantAt(corner: ZoneCorner, paint: TeamPaint): THREE.Group {
     const pennant = buildModel(PENNANT, paint);
-    const offset = new THREE.Vector3(corner.toward.x * PENNANT_REACH, 0, corner.toward.y * PENNANT_REACH);
-    pennant.position.copy(this.groundOf(corner.tile)).add(offset);
+    const x = corner.tile.x + corner.toward.x * PENNANT_REACH;
+    const z = corner.tile.y + corner.toward.y * PENNANT_REACH;
+    pennant.position.set(x, highestIn(this.ground, { x, z, halfX: PENNANT_BASE / 2, halfZ: PENNANT_BASE / 2 }), z);
     // La tela sale hacia +x del modelo: girada, apunta en diagonal hacia fuera de la esquina.
     pennant.rotation.y = Math.atan2(-corner.toward.y, corner.toward.x);
     return pennant;
-  }
-
-  private lifted(pos: Pos): THREE.Vector3 {
-    return this.groundOf(pos).add(new THREE.Vector3(0, LIFT, 0));
   }
 
   /** Sus bloques y losas son de geometria propia, y sus materiales planos tambien. */

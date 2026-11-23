@@ -41,7 +41,10 @@ export interface TerrainView {
   readonly pickables: readonly THREE.Object3D[];
   /** La casilla de un toque sobre `pickables` (null si no es una casilla). */
   tileOfHit(hit: THREE.Intersection): Pos | null;
+  /** Lo alto del centro de la casilla (donde se pone lo que hay en ella). */
   heightAt(pos: Pos): number;
+  /** Lo alto del suelo en un punto del mundo (casillas): el del relieve (dunas, montañas) o, si no hay, el de su casilla. */
+  surfaceAt(x: number, z: number): number;
   /** Oscurece lo que no se ve (la niebla) y aclara lo que si. */
   showSeen(seen: Grid<boolean>): void;
   /** El agua, que se mueve sola. */
@@ -216,12 +219,13 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
   );
   const heights = heightsOf(s, relief);
   const heightOf = (pos: Pos) => heights.at(pos);
+  const surfaceAt = (x: number, z: number) => relief.surfaceAt(x, z) ?? heights.atClamped(tileUnder(x, z));
   const decorated = positions.filter((pos) => hasDecor(s, pos));
   const decor = decorMeshes(library, s, decorated, heightOf);
   const life = new BiomeLife(s, library, {
     positions,
     groundOf: (pos) => tileToWorld(pos, heightOf(pos)),
-    heightAt: (x, z) => relief.surfaceAt(x, z) ?? heights.atClamped(tileUnder(x, z)),
+    heightAt: surfaceAt,
     decorPlaceOf: (pos) => (hasDecor(s, pos) ? decorPlace(pos, heightOf(pos)) : null),
   });
   const copies = [...tiles, ...decor];
@@ -238,6 +242,7 @@ export function buildTerrain(s: GameState, library: GlbLibrary): TerrainView {
     pickables: [relief.mesh, ...tiles.map((placed) => placed.mesh)],
     tileOfHit,
     heightAt: (pos) => heights.at(pos),
+    surfaceAt,
     showSeen: (seen) => {
       shade(copies, seen);
       shadeRelief(relief, seen);

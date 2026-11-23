@@ -49,7 +49,7 @@ export interface StripSize {
   readonly height: number;
 }
 
-const STRIP: StripSize = { width: STRIP_WIDTH, height: STRIP_HEIGHT };
+export const STRIP: StripSize = { width: STRIP_WIDTH, height: STRIP_HEIGHT };
 
 /**
  * Una tira en el lado `side` de la casilla, a `inset` del centro (0,5: el borde de la casilla), de

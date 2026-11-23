@@ -36,7 +36,7 @@ const SAME_SPOT = 0.05;
 export class BoardView {
   readonly object = new THREE.Group();
   /** Las zonas de los puntos de control: van aparte de `object` (lo que se toca) para que el raton las atraviese. */
-  readonly controlZones = new ControlZonesView((pos) => this.groundOf(pos));
+  readonly controlZones = new ControlZonesView(this);
   private readonly units = new Map<number, UnitPiece>();
   private readonly buildings = new Map<string, BuildingPiece>();
   /** El enemigo al que se apunta ahora: su barra enseña lo que perderia (hasta que se deja de apuntar). */
@@ -60,6 +60,11 @@ export class BoardView {
   /** El punto del suelo de esa casilla (encima de su terreno). */
   groundOf(pos: Pos): THREE.Vector3 {
     return tileToWorld(pos, this.terrain.heightAt(pos));
+  }
+
+  /** Lo alto del suelo en un punto del mundo, con el relieve (donde se apoyan las marcas planas). */
+  surfaceAt(x: number, z: number): number {
+    return this.terrain.surfaceAt(x, z);
   }
 
   pieceOf(uid: number): UnitPiece | undefined {

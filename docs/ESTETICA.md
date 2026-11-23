@@ -276,7 +276,11 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   - Mover y atacar, **losas y bordes**: a donde puede ir, losas azules translúcidas con borde claro
     alrededor del área; hasta donde ataca, marcos rojos casilla a casilla con un velo muy suave y una
     diana que gira en cada enemigo a tiro; el cursor, cuatro esquinas que laten. Con «Ver amenaza»,
-    un velo rojo con borde por fuera del área.
+    un velo rojo con borde por fuera del área. Sobre el relieve, las losas y los bordes son **plástico rígido
+    apoyado en lo más alto** de lo que tienen debajo (23-11-2026; antes se enterraban a trozos en las
+    dunas): enteros en las dunas y, en una ladera empinada, en trozos de un cuarto de casilla, cada uno
+    sobre su escalón (enteros flotarían por encima de la unidad). En trozos sueltos se probó antes con
+    las dunas: se veía una cuadrícula dentro de cada casilla.
   - La vida de una unidad herida es **un número en una chapa** (verde, amarilla o roja según lo que le
     queda; número blanco con tinta), como en Wargroove. Se probó frente a la barra de antes: el número
     se lee de lejos y sin contar píxeles, y la barra se confundía con la de la captura. Entera, nada.
