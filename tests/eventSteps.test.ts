@@ -68,6 +68,19 @@ describe('pasos de cada suceso', () => {
     expect(steps[4]).toEqual({ kind: 'walk', uid: SHOOTER, from: { x: 1, y: 0 }, to: { x: 2, y: 0 } });
   });
 
+  it('el jeep arranca el motor antes de la primera casilla; el tanque no', () => {
+    const path = [
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+    ];
+    const jeep = stepsOf(moveEvent(path), new FakeLookup({ [SHOOTER]: shown('drive', 'Car') }));
+    expect(kindsOf(jeep)).toEqual(['clip', 'sound', 'sound', 'walk', 'clip']);
+    expect(jeep[1]).toEqual({ kind: 'sound', sound: 'engine_start_jeep', at: { kind: 'feet', uid: SHOOTER } });
+    expect(jeep[2]).toMatchObject({ kind: 'sound', sound: 'step_jeep' });
+    const tank = stepsOf(moveEvent(path), new FakeLookup({ [SHOOTER]: shown('drive', 'Tank') }));
+    expect(kindsOf(tank)).toEqual(['clip', 'sound', 'walk', 'clip']);
+  });
+
   it('lo que la niebla tapa no se anima', () => {
     const lookup = new FakeLookup({ [SHOOTER]: hidden('march') });
     expect(

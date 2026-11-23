@@ -11,6 +11,7 @@ import { terrainAt } from '../../../core/gameContent';
 import { mapGrid } from '../../../core/mapGrid';
 import type { GameState, Pos } from '../../../core/model';
 import type { Grid } from '../../../core/util/grid';
+import type { AnimalListener, AnimalMoment } from '../../ports/life';
 import { groupBy } from '../core/groupBy';
 import type { GlbLibrary } from '../pieces/glbModels';
 import { pieceAt, type TerrainPiece } from '../terrain/pieces';
@@ -135,11 +136,18 @@ export class BiomeLife {
   private readonly swarms: readonly MoteSwarm[];
   private readonly critters: readonly Critters[];
   private readonly travellers: readonly Travellers[];
+  private readonly listeners: AnimalListener[] = [];
+  /** Lo que hace un animal, a quien lo oiga. */
+  private readonly tell = (moment: AnimalMoment): void => {
+    for (const listener of this.listeners) listener(moment);
+  };
 
   constructor(s: GameState, library: GlbLibrary, ground: LifeGround) {
     this.swarms = [...tilesByMote(s, ground.positions)].map(([kind, tiles]) => new MoteSwarm(kind, tiles, ground.groundOf));
-    this.critters = [...spotsByCritter(s, ground)].map(([kind, spots]) => new Critters(library, kind, spots));
-    this.travellers = [...tilesByTraveller(s, ground.positions)].map(([kind, tiles]) => new Travellers(library, kind, tiles, ground));
+    this.critters = [...spotsByCritter(s, ground)].map(([kind, spots]) => new Critters(library, kind, spots, this.tell));
+    this.travellers = [...tilesByTraveller(s, ground.positions)].map(
+      ([kind, tiles]) => new Travellers(library, kind, tiles, ground, this.tell),
+    );
     const parts = [
       ...this.swarms.map((swarm) => swarm.object),
       ...this.critters.flatMap((group) => group.placed.map((placed) => placed.mesh)),
@@ -148,10 +156,15 @@ export class BiomeLife {
     if (parts.length) this.object.add(...parts);
   }
 
+  /** Quien oye lo que hacen los animales cerca de lo que se mira (para que suene: systems/sound/animalCalls.ts). */
+  onAnimal(listener: AnimalListener): void {
+    this.listeners.push(listener);
+  }
+
   /** Mueve lo que vive cerca de `center` (lo que mira la camara), en un radio `radius`. */
   update(seconds: number, center: THREE.Vector3, radius: number, camera: THREE.PerspectiveCamera, viewportHeight: number): void {
     for (const swarm of this.swarms) swarm.update(seconds, center, radius, camera, viewportHeight);
-    for (const group of this.critters) group.update(seconds);
+    for (const group of this.critters) group.update(seconds, center, radius);
     for (const flock of this.travellers) flock.update(seconds, center, radius);
   }
 

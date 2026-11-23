@@ -8,6 +8,7 @@ import {
   endSound,
   hitSound,
   menuSound,
+  selectSound,
   stepSounds,
   surfaceOf,
   UNIT_SOUND_TYPES,
@@ -33,6 +34,18 @@ describe('efectos de sonido', () => {
     expect(unitSounds('BSoldier', 'march').shot).not.toBe(unitSounds('Soldier', 'march').shot);
     expect(unitSounds('THelicopter', 'fly').step).not.toBe(unitSounds('Fighter', 'fly').step);
     expect(unitSounds('Unknown', 'drive')).toEqual(unitSounds('Unknown', 'drive'));
+  });
+
+  it('el jeep y los camiones suenan a lo suyo, arrancan y, al elegirlos, tocan la bocina en vez de hablar', () => {
+    const jeep = unitSounds('Car', 'drive');
+    const truck = unitSounds('Transport', 'drive');
+    expect(jeep.step).not.toBe(truck.step);
+    expect(jeep.start).not.toBe(truck.start);
+    expect(unitSounds('Tank', 'drive').start).toBeUndefined();
+    expect(selectSound('Car', 'drive')).toBe('horn_jeep');
+    expect(selectSound('Supplier', 'drive')).toBe('horn_truck');
+    expect(selectSound('Tank', 'drive')).toBe('voice_ack_driver');
+    expect(selectSound('Soldier', 'march')).toBe('voice_ack_infantry');
   });
 
   it('a pie, el paso de cada suelo; con ruedas, el motor y lo que añada el suelo', () => {

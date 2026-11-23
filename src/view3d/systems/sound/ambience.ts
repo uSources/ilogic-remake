@@ -69,6 +69,28 @@ const AMBIENT_VOLUMES: Partial<Record<AmbientName, number>> = {
   amb_swamp: 0.65,
 };
 
+/** Los ambientes que son sobre todo animales (pajaros, grillos, ranas): con mal tiempo se callan. */
+const ANIMAL_AMBIENTS: ReadonlySet<AmbientName> = new Set<AmbientName>([
+  'amb_woods',
+  'amb_meadow',
+  'amb_marsh',
+  'amb_plains',
+  'amb_forest',
+  'amb_swamp',
+]);
+/**
+ * Lo que se oye a los animales con cada clima (id de weather.json), de 0 a 1: con lluvia o nevada, poco;
+ * con tormenta o arena, nada. Despejado (o un clima que no esta), todo.
+ */
+const ANIMALS_IN_WEATHER: Readonly<Record<string, number>> = { Rain: 0.25, Snow: 0.35, Storm: 0, Sandstorm: 0 };
+
+/** Lo que se oye a los animales con el clima `weather` (null: despejado), de 0 a 1. */
+export const animalLevelOf = (weather: string | null): number => (weather === null ? 1 : (ANIMALS_IN_WEATHER[weather] ?? 1));
+
+/** A que parte de lo suyo suena `name` con el clima `weather`: los de animales bajan con el mal tiempo; el resto, igual. */
+export const weatherLevelOf = (name: AmbientName, weather: string | null): number =>
+  ANIMAL_AMBIENTS.has(name) ? animalLevelOf(weather) : 1;
+
 /** Los emisores se juntan por trozos del mapa de este lado (casillas): uno por sonido y trozo. */
 const REGION_SIZE = 6;
 /** Un trozo con menos casillas de un sonido no lo tiene (dos arboles sueltos no son un bosque). */

@@ -126,7 +126,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
 
   /** Los sucesos se ven con las piezas y los efectos del motor (systems/events dice que pasos lleva cada uno). */
   const day = { viewer, incomeSpots: (team: TeamId) => incomeSpotsOf(state, team) };
-  /** El ambiente: el fondo del tema, el clima y lo que suena cerca de donde mira la camara (y los truenos). */
+  /** El ambiente: el fondo del tema, el clima, lo que suena cerca de donde mira la camara, los truenos y los animales. */
   const ambience = new AmbiencePlayer({
     loops: audio.loops,
     playAt: (sound, at) => audio.playAt(sound, at),
@@ -135,6 +135,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   });
   ambience.load(state);
   scene.weather.onLightning(() => ambience.lightning());
+  scene.life.onAnimal((moment) => ambience.animal(moment));
   /** Los sonidos del tablero suenan desde su sitio, respecto a la camara. */
   const sounds = scene.soundStage(audio);
   const stages = { ...scene.stages, sounds, day, board: boardLookupOf(state, viewer) };

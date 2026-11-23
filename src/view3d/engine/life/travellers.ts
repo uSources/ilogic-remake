@@ -4,11 +4,13 @@
  * las bolas que ruedan por las dunas). Como las motas, pero con su modelo de Ashfox, mirando hacia donde
  * van: cada clase es un dato (`TravellerKind`, en kinds.ts: su modelo, cuantos, como van, si baten las
  * alas, si ruedan, si se inclinan al subir y bajar y si van por el suelo). Salen creciendo y se van
- * encogiendo, sin aparecer de golpe (salvo lo que sale de donde no se ve: el pez, del agua). Con
- * «reducir el movimiento» no salen.
+ * encogiendo, sin aparecer de golpe (salvo lo que sale de donde no se ve: el pez, del agua). Al salir
+ * lo cuentan (`AnimalListener`, ports/life.ts; una vez por bandada), para que suene. Con «reducir el
+ * movimiento» no salen.
  */
 import * as THREE from 'three';
 import type { Pos } from '../../../core/model';
+import type { AnimalListener } from '../../ports/life';
 import { reducedMotion } from '../../../ui/motion';
 import type { GlbLibrary } from '../pieces/glbModels';
 import { instancedParts, moveCopy, terrainParts, type PlacedMesh } from '../terrain/placed';
@@ -86,6 +88,7 @@ export class Travellers {
     private readonly kind: TravellerKind,
     tiles: readonly Pos[],
     private readonly ground: TravelGround,
+    private readonly tell: AnimalListener,
   ) {
     this.travellers = Array.from({ length: kind.count }, () => null);
     this.births = new Births(kind, tiles, ground.groundOf);
@@ -105,10 +108,19 @@ export class Travellers {
     if (!this.object.visible) return;
     this.births.tick(seconds, center, radius);
     for (let index = 0; index < this.travellers.length; index++) {
-      const traveller = stepLife(this.travellers[index] ?? null, seconds, this.births);
+      const before = this.travellers[index] ?? null;
+      const traveller = stepLife(before, seconds, this.births);
+      if (!before && traveller) this.leaving(traveller);
       this.travellers[index] = traveller;
       this.moveCopies(index, traveller ? this.placeOf(traveller) : HIDDEN);
     }
+  }
+
+  /** Cuenta que sale uno (de una bandada, solo el primero: la bandada entera es una vez). */
+  private leaving(traveller: Flier): void {
+    if (traveller.rank) return;
+    const { home } = traveller;
+    this.tell({ animal: this.kind.model, act: 'leave', at: { x: home.x, y: home.y, z: home.z } });
   }
 
   private moveCopies(index: number, place: THREE.Matrix4): void {

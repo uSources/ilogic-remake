@@ -426,6 +426,8 @@ const DIVE_AT_THE_EDGE = 0.26;
 const DIVE_IN = 0.34;
 const DIVE_SURFACING = 0.72;
 const DIVE_LANDED = 0.86;
+/** Cuando toca el agua al caer (cae cada vez mas deprisa: pasada la mitad de la caida) y al salir. */
+const DIVE_SPLASHES = [0.31, DIVE_SURFACING];
 /** Donde se acaba su casilla (casillas por delante de su sitio), hasta donde se desliza y hasta donde cae. */
 const SHORE = 0.2;
 const SLIDE_REACH = SHORE + 0.08;
@@ -496,7 +498,7 @@ export const PENGUIN: CritterKind = {
   size: PENGUIN_SIZE,
   every: [2, 6],
   move: { seconds: 1.2, turn: [0, 0], pose: waddle },
-  sometimes: { move: { seconds: 7, turn: [0, 0], pose: bellyDive }, share: 0.25 },
+  sometimes: { move: { seconds: 7, turn: [0, 0], pose: bellyDive, splashes: DIVE_SPLASHES }, share: 0.25 },
 };
 
 // --- La foca de la nieve: tumbada en el hielo de la orilla, mirando al agua; de vez en cuando levanta
