@@ -33,6 +33,8 @@ export interface HudMoment {
   overheadOf(pos: Pos): Anchor;
   /** «Fin del turno» espera la segunda pulsacion (dice «¿Terminar?»). */
   endArmed: boolean;
+  /** Quien mira mira jugar a los demas: el boton del menu abre la pausa igual (para salir). */
+  watching: boolean;
 }
 
 export interface HudActions {
@@ -105,7 +107,7 @@ export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, m
     weather: weatherVM(s),
     turn: sideOf(s, viewer, s.turn),
     busy: moment.busy,
-    watching: false,
+    watching: moment.watching,
     tile: moment.menu ? null : tileCard(textures, s, viewer, moment),
     menu: menuOf(moment),
     forecast: forecastOf(textures, s, viewer, moment),
