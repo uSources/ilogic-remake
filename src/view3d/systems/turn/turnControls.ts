@@ -43,7 +43,7 @@ import { fmtNum, nameOf, settings, t } from '../../../settings';
 import { buyBlockedText } from '../../../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
 import { teamState } from '../../../core/teams';
-import { ackVoice, endSound } from '../sound/soundCues';
+import { endSound, selectSound } from '../sound/soundCues';
 import { feet } from '../events/steps';
 import { attackPlan, type AttackPlan } from './attackPlan';
 import type { EventPlayer, MovePreview, ScreenView, TileMarks } from '../../ports/turn';
@@ -423,10 +423,10 @@ export class TurnControls {
     this.setMode({ kind: 'idle' });
   }
 
-  /** Elegir una unidad propia suena en su casilla, con su «¡sí!» de juguete. */
+  /** Elegir una unidad propia suena en su casilla, con su «¡sí!» de juguete (o su bocina). */
   private chooseOwnUnit(unit: Unit): void {
     this.host.sounds.play('unit_select', feet(unit.uid));
-    this.host.sounds.play(ackVoice(unitTypeOf(this.s, unit).motion), feet(unit.uid));
+    this.host.sounds.play(selectSound(unit.type, unitTypeOf(this.s, unit).motion), feet(unit.uid));
     this.select(unit);
   }
 

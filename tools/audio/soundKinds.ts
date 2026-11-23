@@ -38,7 +38,7 @@ const SILENCE_AFTER_DB = 50;
 const MUSIC_SILENCE_DB = 60;
 
 /**
- * Los efectos y las voces como los de Ashfox: mono a 48 kHz. Los ambientes de zona, en mono: suenan
+ * Los efectos, las voces y los del campo como los de Ashfox: mono a 48 kHz. Los ambientes de zona, en mono: suenan
  * desde un sitio del mapa y el juego los coloca. Lo demas se queda en estereo a 44,1 kHz (lo que da el modelo).
  */
 const MONO_48K: DecodeFormat = { channelCount: 1, sampleRate: 48000 };
@@ -61,6 +61,14 @@ function shapeJingle(pcm: Pcm): Pcm {
   return normalizePeak(fadeOut(trimmed, JINGLE_FADE_SECONDS), PEAK_DB);
 }
 
+/**
+ * Las voces de los muñecos: ni chillonas ni de pito (asi eran las primeras y no gustaron), sino un
+ * balbuceo de muñeco con su gracia, sin palabras. Tambien se probo todo por walkie-talkie: sale apagado
+ * (casi nada por encima de 1,5 kHz) y con el tono inestable; solo lo lleva el piloto, en su texto.
+ */
+const VOICE_STYLE =
+  'Vocal sound effect of a small cartoon toy figure for a toy soldiers strategy game, warm mid-pitched gibberish babble like a video game character, expressive, unintelligible with no real words, close-up, dry, no music';
+
 /** Juguetes de bloques en una isla (docs/ESTETICA.md): guerra de juguete, con pegada y sin realismo duro. */
 const MUSIC_STYLE =
   'Instrumental background music for a toy soldiers strategy game, light orchestral military band with snare drums, brass and woodwinds, playful but determined, steady tempo, seamless loop';
@@ -74,8 +82,14 @@ export const KINDS: Readonly<Record<SoundKind, KindSettings>> = {
     folder: 'sfx',
   },
   voice: {
-    style:
-      'Vocal sound effect of a tiny toy soldier figure for a toy soldiers strategy game, squeaky high-pitched cartoon voice, unintelligible gibberish with no real words, close-up, dry, no music',
+    style: VOICE_STYLE,
+    extraSeconds: 1,
+    decode: MONO_48K,
+    shape: shapeEffect,
+    folder: 'sfx',
+  },
+  nature: {
+    style: 'Natural outdoor sound effect in a calm toy diorama landscape, clear and natural, no music, no human voices',
     extraSeconds: 1,
     decode: MONO_48K,
     shape: shapeEffect,

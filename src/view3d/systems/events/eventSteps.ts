@@ -97,16 +97,27 @@ const stepsAlong = (path: readonly Pos[]): [Pos, Pos][] => path.slice(1).map((to
 
 const soundsOfPiece = (piece: ShownPiece) => unitSounds(piece.unitType, piece.motion);
 
-/** Moverse: arranca su animacion de marcha, una casilla tras otra (con su paso, segun el suelo) y vuelve a quedarse quieta. */
+/**
+ * Moverse: arranca su animacion de marcha (y su motor, si arranca), una casilla tras otra (con su paso,
+ * segun el suelo) y vuelve a quedarse quieta.
+ */
 function moveSteps(event: EventOf<'move'>, { pieces, board }: StepContext): AnimationStep[] {
   const piece = pieces.pieceOf(event.uid);
   if (!piece?.isVisible) return [];
+  const sounds = soundsOfPiece(piece);
+  const engineStart = sounds.start ? [sound(sounds.start, feet(event.uid))] : [];
   const walk = stepsAlong(event.path).flatMap(([from, to]): AnimationStep[] => [
-    ...stepSounds(soundsOfPiece(piece), piece.motion, board?.surfaceAt(to) ?? DEFAULT_SURFACE).map((step) => sound(step, feet(event.uid))),
+    ...stepSounds(sounds, piece.motion, board?.surfaceAt(to) ?? DEFAULT_SURFACE).map((step) => sound(step, feet(event.uid))),
     { kind: 'walk', uid: event.uid, from, to },
   ]);
   const ambush = event.interruption?.kind === 'ambush' ? [sound('ambush', feet(event.uid))] : [];
-  return [{ kind: 'clip', uid: event.uid, clip: 'drive' }, ...walk, ...ambush, { kind: 'clip', uid: event.uid, clip: 'idle' }];
+  return [
+    { kind: 'clip', uid: event.uid, clip: 'drive' },
+    ...engineStart,
+    ...walk,
+    ...ambush,
+    { kind: 'clip', uid: event.uid, clip: 'idle' },
+  ];
 }
 
 /** Un disparo: apunta (con el giro de su torreta), suena, sale humo de la boca y a la vez el golpe de vuelta y el proyectil. */

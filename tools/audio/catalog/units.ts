@@ -37,7 +37,13 @@ const WEAPONS: SoundSpec[] = [
 /** Motores: suenan una vez por casilla, asi que son cortos y con variantes. */
 const ENGINES: SoundSpec[] = [
   effect('step_tracks', 0.4, 'constant', 'One short burst of tank tracks clanking forward over dirt with an engine rumble'),
-  effect('step_wheels', 0.4, 'constant', 'One short burst of a small truck engine revving and tires rolling on gravel'),
+  effect('step_jeep', 0.4, 'constant', 'One short burst of a small open jeep engine revving lightly with tires rolling on a dirt road'),
+  effect(
+    'step_truck',
+    0.4,
+    'constant',
+    'One short burst of a heavy military truck diesel engine rumbling low with big tires rolling on gravel',
+  ),
   effect('step_motorbike', 0.4, 'constant', 'One short burst of a small dirt bike engine revving with a buzzy two-stroke putter'),
   effect(
     'step_hover',
@@ -48,6 +54,17 @@ const ENGINES: SoundSpec[] = [
   effect('step_prop', 0.4, 'constant', 'One short burst of a small propeller airplane engine droning past'),
   effect('step_jet', 0.4, 'constant', 'One short burst of a jet fighter engine roar passing by'),
   effect('step_heli', 0.4, 'constant', 'One short burst of helicopter rotor blades chopping overhead'),
+];
+
+/**
+ * Lo propio de los vehiculos de ruedas: arrancan al echar a andar y, al elegirlos, tocan la bocina en vez
+ * de hablar (src/view3d/systems/sound/soundCues.ts). El jeep, ligero; los camiones, graves.
+ */
+const VEHICLE_DETAILS: SoundSpec[] = [
+  effect('engine_start_jeep', 1, 'often', 'A small jeep engine starting: a quick starter crank and a light engine catching and idling'),
+  effect('engine_start_truck', 1.2, 'often', 'A big diesel truck engine starting: a starter crank, a cough and a deep rumbling idle'),
+  effect('horn_jeep', 0.5, 'often', 'A small toy car horn: two quick bright beeps'),
+  effect('horn_truck', 0.6, 'often', 'A truck horn: one short low honk'),
 ];
 
 /** Como cae cada una: juguetes, sin sangre. */
@@ -76,4 +93,4 @@ const COMBAT: SoundSpec[] = [
   effect('hit_air', 0.5, 'often', 'Bullets hitting a small airplane: quick metallic rattling pings on thin sheet metal'),
 ];
 
-export const UNIT_SOUNDS: readonly SoundSpec[] = [...WEAPONS, ...ENGINES, ...DESTRUCTION, ...COMBAT];
+export const UNIT_SOUNDS: readonly SoundSpec[] = [...WEAPONS, ...ENGINES, ...VEHICLE_DETAILS, ...DESTRUCTION, ...COMBAT];
