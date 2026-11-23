@@ -176,6 +176,18 @@ describe('la partida por la red en 3D (OnlinePlay)', () => {
     expect(controls.busy).toBe(false);
   });
 
+  it('si se acaba el tiempo dos turnos seguidos, las dos veces se anima a los demas y vuelve a tocar', async () => {
+    const { room, controls, online, deliver, shown, ownTurns } = await onlineMatch();
+    for (const nextDay of [2, 3]) {
+      deliver(room.endTurnOf(PERSON));
+      await settle();
+      expect(shown.day).toBe(nextDay);
+      expect(online.session.awaitingInput).toBe(PERSON);
+      expect(controls.busy).toBe(false);
+    }
+    expect(ownTurns()).toBe(3);
+  });
+
   it('rendirse sin otra persona que juegue acaba la sala: llega su final y la pantalla lo enseña', async () => {
     const { online, ended, room } = await onlineMatch();
     expect((await online.act({ kind: 'surrender' })).ok).toBe(true);
