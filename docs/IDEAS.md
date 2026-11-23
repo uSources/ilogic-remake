@@ -59,9 +59,6 @@ cosa en su PR:
    curarse. Normal: como ahora.
 4. **Modo Escaramuza.** Mapa pequeño (12×12), menos dinero, partidas de ~10 días.
 5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar visión. Ver cómo se juegan primero (PR #47).
-6. **Puntos de control: quitarlos o marcarlos mejor.** Hoy son zonas con un borde y un banderín
-   (`src/core/rules/control.ts`), pero no se distinguen bien en la partida. O se quitan (al menos en
-   línea) o se marcan de forma clara: de quién son, si están disputadas y cuánto pagan.
 
 ## Equilibrio
 
