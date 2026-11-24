@@ -6,7 +6,7 @@
  * pasos de una llamada: se sigue en otra, desde la alarma, con su tiempo de CPU aparte). Aqui se
  * calcula; quien lo cumple es roomObject.ts.
  */
-import type { SeatId } from '@core/net';
+import type { SeatId, TurnClock } from '@core/net';
 import { ROOM_EXPIRY_MS } from './limits';
 import type { AwaitedSeat } from './roomAdapter';
 
@@ -77,6 +77,13 @@ export function dueTimers(timers: Timers, now: number): TimerKind[] {
   if (timers.turn && timers.turn.at <= now) due.push('turn');
   if (timers.continueAt !== null && timers.continueAt <= now) due.push('continue');
   return due;
+}
+
+/** El reloj del turno en curso como lo ve el cliente (lo que le queda y lo que dura), o null si no corre ninguno. */
+export function turnClockOf(timers: Timers, settings: TimerSettings, now: number): TurnClock | null {
+  if (!timers.turn || settings.turnSeconds === undefined) return null;
+  // Vencido y sin atender aun (la alarma aun no ha sonado): no le queda nada, no tiempo de menos.
+  return { leftMs: Math.max(0, timers.turn.at - now), totalMs: settings.turnSeconds * 1000 };
 }
 
 /** El asiento al que se le ha acabado el turno (si el reloj del turno ha vencido). */

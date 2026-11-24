@@ -80,10 +80,10 @@ export class Courier {
     this.lastSent.delete(seat.id);
   }
 
-  /** A quien se espera (o quien juega ahora), con lo que tuviera pendiente antes. */
+  /** A quien se espera (o quien juega ahora), con lo que tuviera pendiente antes. Sin reloj: lo pone el servidor. */
   sendTurn(seat: PersonSeat, team: TeamId, day: number): void {
     this.deliver(seat);
-    this.outbox.send(seat.id, { kind: 'turn', step: this.nextStep(seat), team, day });
+    this.outbox.send(seat.id, { kind: 'turn', step: this.nextStep(seat), team, day, clock: null });
   }
 
   /**

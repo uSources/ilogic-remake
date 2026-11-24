@@ -20,6 +20,9 @@ const kindsTo = (outgoing: readonly Outgoing[], seat: SeatId): string[] =>
 
 const hello = (token: string) => ({ kind: 'hello', token, ...CURRENT_PROTOCOL });
 
+/** El reloj que pone el servidor en los `turn` del turno en curso. */
+const CLOCK = { leftMs: 50_000, totalMs: 120_000 };
+
 /** Cada asiento de persona, pedido como con el codigo (el primero es el de quien crea la sala). */
 function claimAll(adapter: RoomAdapter): Invitation[] {
   const seats: Invitation[] = [];
@@ -87,6 +90,27 @@ describe('el adaptador de la sala', () => {
     // El numero de orden del mensaje rechazado ya se gasto: el siguiente.
     expect(kindsTo(adapter.handle(1, { kind: 'endTurn', seq: 2 }), 0)).toContain('turn');
     expect(adapter.awaiting()).toEqual({ seat: 0, day: 2 });
+  });
+
+  it('el reloj va en el `turn` del turno en curso (a quien vuelve, tambien); lo demas, tal cual', () => {
+    const { adapter, tokens } = joinedRoom();
+    const back = adapter.rejoin(tokens[1]!);
+    if (!back.ok) throw new Error(back.error);
+    const stamped = adapter.withTurnClock(back.messages, CLOCK);
+    expect(stamped.map((sent) => sent.message.kind)).toEqual(['welcome', 'view', 'turn']);
+    expect(stamped[2]!.message).toEqual({ ...back.messages[2]!.message, clock: CLOCK });
+    expect(stamped.slice(0, 2)).toEqual(back.messages.slice(0, 2));
+    expect(adapter.withTurnClock(back.messages, null)).toEqual(back.messages);
+  });
+
+  it('un `turn` de un turno que ya ha pasado en el mismo lote se queda sin reloj: ya no corre', () => {
+    const { adapter } = joinedRoom();
+    const pastTurn = { seat: 1, message: { kind: 'turn', step: 1, team: 0, day: 1, clock: null } } satisfies Outgoing;
+    const stamped = adapter.withTurnClock([pastTurn, ...adapter.timeOut(0)], CLOCK);
+    expect(stamped[0]).toEqual(pastTurn);
+    const turns = stamped.slice(1).filter((sent) => sent.message.kind === 'turn');
+    expect(turns.map((sent) => sent.seat).sort()).toEqual([0, 1]);
+    for (const sent of turns) expect(sent.message).toMatchObject({ team: 1, clock: CLOCK });
   });
 
   it('si la IA se queda a medias (presupuesto de pasos), lo dice y se sigue hasta que toca a una persona', () => {

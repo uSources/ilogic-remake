@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { ROOM_EXPIRY_MS } from '../../src/limits';
 import { watchRejections } from '../../src/rateLimit';
-import { doneWaiting, dueTimers, initialTimers, nextAlarm, timedOutSeat, touched, withContinuation, withTurnOf } from '../../src/timers';
+import {
+  doneWaiting,
+  dueTimers,
+  initialTimers,
+  nextAlarm,
+  timedOutSeat,
+  touched,
+  turnClockOf,
+  withContinuation,
+  withTurnOf,
+} from '../../src/timers';
 
 const NOW = 1_000_000;
 
@@ -33,6 +43,15 @@ describe('los relojes de una sala', () => {
     expect(dueTimers(timers, NOW + ROOM_EXPIRY_MS)).toEqual(['expiry', 'waiting', 'turn']);
     expect(timedOutSeat(timers)).toBe(1);
     expect(dueTimers(doneWaiting(timers), NOW + 30_000)).toEqual([]);
+  });
+
+  it('el reloj que ve el cliente es lo que le queda al turno y lo que dura, nunca menos de nada; sin reloj, ninguno', () => {
+    const settings = { turnSeconds: 120 };
+    const timers = withTurnOf(initialTimers(settings, NOW), { seat: 0, day: 1 }, settings, NOW);
+    expect(turnClockOf(timers, settings, NOW + 34_000)).toEqual({ leftMs: 86_000, totalMs: 120_000 });
+    expect(turnClockOf(timers, settings, NOW + 125_000)).toEqual({ leftMs: 0, totalMs: 120_000 });
+    expect(turnClockOf(initialTimers(settings, NOW), settings, NOW)).toBeNull();
+    expect(turnClockOf(timers, {}, NOW)).toBeNull();
   });
 
   it('una partida a medias se sigue cuanto antes: la alarma suena ya', () => {
