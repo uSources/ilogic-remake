@@ -124,7 +124,8 @@ La persona de la pantalla ataca con una unidad. Lo que pasa, en orden, nombrando
     lista de `Outgoing`.
 11. **`HostedRoom.afterActivity` → `sync`**: pone los relojes al dia (`timers.ts`), guarda la sala
     entera (`save`: `snapshot` + `meta`, y la alarma del primer reloj, `RoomHost.save`) y reparte cada
-    `Outgoing` a los sockets abiertos de su asiento (`deliver`). A quien lleva demasiados rechazos
+    `Outgoing` a los sockets abiertos de su asiento (`deliver`; cada `turn`, con lo que le queda al
+    reloj del turno: `withTurnClock`). A quien lleva demasiados rechazos
     (`isOverRejectionLimit`, contado al llegar cada mensaje) se le corta despues.
 12. **En cada cliente**, `ServerLink.receive`: si el mensaje lleva `seq`, deja de estar sin contestar
     (`answered`); si lleva `step`, tiene que ser el siguiente (`followsStep`; si no, `resync`). Se lo
@@ -325,11 +326,33 @@ nota. Mientras, el turno esta ocupado (`TurnControls.busy`) y no se puede pulsar
      `adapter.continueMatch()` → `Room.continueMatch` → `advance` otra vez, con su propio tiempo de
      CPU. Lo que sale de una alarma llega a los que estan dentro como lo de cualquier paso.
 4. En la pantalla, el `turn` de otro equipo pone «Esperando al equipo N…» en la linea de la conexion
-   (`UIState.net.waiting`, una pastilla bajo la del dia); el lote de los demas se anima contra
+   (`UIState.net.waiting`, una pastilla bajo la del dia) o, si la sala tiene reloj, su cuenta atras
+   (ver «El reloj del turno»); el lote de los demas se anima contra
    `animationView(before, after)` (`showBatch` → `TurnControls.showOthers`, con el aviso del turno de
    cada uno, que va en sus sucesos); el `turn` propio devuelve el mando (`hooks.ownTurn` →
    `notifyTurn`: si no se mira la pestaña, el titulo lo avisa; el sonido de «tu turno» ya lo pone el
    turno).
+
+### El reloj del turno
+
+Si la sala tiene reloj (`turnSeconds`: 2 minutos en vivo, 1 dia por turnos), la pantalla cuenta lo
+que le queda al turno de quien se espera:
+
+1. La sala no sabe de relojes: su `turn` sale con `clock: null`. El servidor, en `HostedRoom.sync`,
+   pone el reloj al dia (`withTurnOf`) y, al repartir, cada `turn` del turno en curso (a todos, y a
+   quien entra o vuelve) lleva lo que le queda y lo que dura (`turnClockOf` → `TurnClock`:
+   `{ leftMs, totalMs }`; `RoomAdapter.withTurnClock`). Va en tiempo que queda, no en hora: el reloj
+   del navegador puede no ir a la par del servidor.
+2. `RoomClient` lo pasa a hora de aqui al llegar (`TurnDeadline`: `endsAt`, `totalMs`) y lo lleva en
+   la jugada `turn`: asi corre desde que llego aunque la jugada se atienda despues de lo que se anima.
+3. `OnlinePlay` lo dice al atender cada `turn` (`hooks.showClock`; tambien el propio que vuelve tras
+   un corte, `duringOwnTurn`) y lo quita (null) al acabar el turno propio, cuando la partida sigue sin
+   el (`endsOwnTurn`: se le acabo el tiempo) y al final.
+4. `TurnClock` (`src/view3d/systems/net/turnClock.ts`) lo cuenta con el bucle de dibujo y publica
+   `UIState.turnClock` (`turnClockVM`, `src/ui/models/turnClock.ts`) cada vez que cambia el segundo:
+   azul en el turno propio, rojo los ultimos `HURRY_SECONDS` (15) con un tic suave por segundo
+   (`turn_clock_tick`) y «Fin del turno» que parpadea, y oscuro en el de otro (el anillo de su lado,
+   «Juega el rojo»). Con el reloj y la conexion bien, la linea de la conexion no sale: ya lo dice el reloj.
 
 ### Abandono y sustituir por la IA
 
@@ -398,7 +421,7 @@ version de la partida (`SAVE_VERSION`) va aparte en el saludo porque la vista es
 | `view` | `Courier.sendView` (desde `sendSituation`) | al entrar, al volver, tras `resync`, al despertar el servidor | `step`, `view` (`ViewSnapshot` entera) |
 | `events` | `Courier.deliver` | lo de su alianza, al momento; lo de los demas, cuando la sala para (si ve algo); tras una accion suya que vale, siempre (el eco) | `step`, `actor` (el equipo del ultimo paso), `events` (los vistos), `view` (`ViewChange`) |
 | `result` | `Room.act` | la respuesta a un `act` o `surrender` suyo | `seq`, `result` (`{ ok, events }` con sus sucesos tal como los ve, o `{ ok: false, reason }`) |
-| `turn` | `Courier.sendTurn` (desde `announceTurn` y `sendSituation`) | la sala para esperando a una persona (a todos), y al entrar si ya se esperaba a alguien | `step`, `team`, `day` |
+| `turn` | `Courier.sendTurn` (desde `announceTurn` y `sendSituation`) | la sala para esperando a una persona (a todos), y al entrar si ya se esperaba a alguien | `step`, `team`, `day`, `clock` (`{ leftMs, totalMs }`, lo que le queda al reloj del turno: lo pone el servidor, `withTurnClock`; null sin reloj) |
 | `ended` | `Room.advance`, `sendSituation` | la partida se decide o ya no juega ninguna persona | `result` (`MatchResult`), `abandoned` |
 | `error` | `Room.refuse`, `HostedRoom.turnAway` | un mensaje que la sala no atiende | `error` (`NetError`), `seq` si lo llevaba |
 
@@ -477,7 +500,7 @@ servidor).
 | `cloudflare/` | `index.ts`, el Worker (las rutas); `rooms.ts`, las salas como un Durable Object por codigo (`roomOf`); `roomObject.ts`, `RoomObject`: el Durable Object de una sala, con su almacen, su alarma y sus sockets hibernados; `matchmakerObject.ts`, `MatchmakerObject`: el unico emparejador, con su cola en su almacen; `env.ts`, lo que da Cloudflare |
 | `../node/src/` | El servidor de Node: `nodeServer.ts` (HTTP, la subida a WebSocket, el emparejador y el juego compilado), `nodeRooms.ts` (las salas del proceso, con `setTimeout` como alarma), `roomFiles.ts` (un JSON por sala y la cola del emparejador), `httpBridge.ts` (con la direccion del socket), `config.ts` (las variables de entorno) |
 | `roomAdapter.ts` | `RoomAdapter`: lo unico que toca `Room`, con nombres del servidor; el vestibulo (`lobby`, con a quien se espera), pedir un asiento con el codigo (`claimSeat`), dar un asiento a la IA (`handToAi`) y si se puede cerrar (`canClose`) |
-| `timers.ts` | Los relojes como datos puros (caducar, el turno, la espera, seguir a medias) y cuando suena la alarma |
+| `timers.ts` | Los relojes como datos puros (caducar, el turno, la espera, seguir a medias), cuando suena la alarma y lo que le queda al turno para el cliente (`turnClockOf`) |
 | `roomRequest.ts` | La forma de lo que se pide al crear una sala (`isRoomRequest`) |
 | `codes.ts` | El codigo de sala al azar (`newRoomCode`; su forma es del nucleo), las fichas (`newToken`) y `sameToken` |
 | `limits.ts`, `rateLimit.ts`, `cors.ts` | Topes y tiempos; frenar a quien insiste (en una sala, y las busquedas por direccion: `RequestLimit`); desde que paginas se puede hablar |
@@ -506,6 +529,8 @@ puerto; ademas, sus alarmas, arrancar otra vez y servir el juego).
 | `src/view3d/systems/turn/matchRunner.ts` | `MatchRunner` (lo que el turno pide a quien lleva la partida) y `localRunner` (una partida de esta pantalla) |
 | `src/view3d/systems/net/onlinePlay.ts` | `OnlinePlay`, el `MatchRunner` por la red: `act` (lo comprueba con lo que sabe el equipo y lo decide el servidor: `askRoom`), `finishTurn`, la cola de jugadas hasta el turno propio (`untilInput`; `showBatch` anima un lote, `waitFor` pone «Esperando al equipo N…»), una sola bomba que atiende cada jugada en orden (`pump` → `route`: lo que llega en el turno propio, `duringOwnTurn`, o lo que lo acaba, `endsOwnTurn`), `adopt`/`fill` (la vista en la partida que se ve), la linea de la conexion (`publishLink`) y el cierre sin arreglo (`roomClosed`). Lo que toca del turno de la pantalla lo pide por `OnlineHooks` |
 | `src/view3d/systems/net/turnNotice.ts` | El aviso de «Tu turno» cuando no se mira la pestaña (el titulo) |
+| `src/view3d/systems/net/turnClock.ts` | `TurnClock`: la cuenta atras del turno que se ve (publica `UIState.turnClock` y hace el tic de los ultimos segundos) |
+| `src/ui/models/turnClock.ts`, `src/hud/game/TurnClock.tsx` | Lo que enseña el reloj (`turnClockVM`, `clockText`) y su pastilla con el anillo (estilo en `styles/game/turnclock.css`) |
 | `src/view3d/app/match3d.ts` | Junta `OnlinePlay` con el turno (`TurnControls`), la pausa (sin guardar; rendirse por la sala) y el final |
 
 Pruebas: `tests/onlineClient.test.ts` (enlace y cliente con un socket falso), `tests/onlinePlay.test.ts`
