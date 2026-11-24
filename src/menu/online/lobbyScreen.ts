@@ -16,10 +16,11 @@ import { forgetRoom, readOnlineRooms, rememberRoom, roomLinkUrl, type OnlineRoom
 import { handToAi, lobbyOf, type LobbyInfo, type LobbySeat } from '../../net/roomApi';
 import type { RoomPlay } from '../../net/roomClient';
 import type { FatalClose, LinkStatus } from '../../net/serverLink';
+import { introOf, saveIntro } from '../../net/matchIntro';
 import { serverUrl } from '../../net/serverUrl';
-import { t, type TextKey } from '../../settings';
+import { themeOf } from '../../core/gameContent';
+import { nameOf, t, type TextKey } from '../../settings';
 import { closeText, paceLabel, paceTurnText, statusText, type KnownSeat, type OnlineScreens } from './shared';
-
 /** Cada cuanto se pregunta al servidor quien esta en la sala mientras se espera. */
 const LOBBY_POLL_MS = 3000;
 
@@ -48,6 +49,8 @@ export class LobbyScreen {
   private pollHandle: ReturnType<typeof setTimeout> | null = null;
   /** La conexion ya se ha pasado a la escena: lo que llegue despues no es de esta pantalla. */
   private isLeaving = false;
+  /** Se ha entrado buscando rival (con este ritmo): al empezar la partida, «¡Rival encontrado!». */
+  private foundPace: SearchPace | null = null;
 
   constructor(private readonly screens: OnlineScreens) {}
 
@@ -88,6 +91,7 @@ export class LobbyScreen {
       search: known?.search ?? remembered?.search,
     };
     if (known) rememberRoom(this.entry);
+    this.foundPace = known?.found ?? null;
     this.screens.show('lobby', 'leave');
     this.screens.error = null;
     this.linkStatus = 'connecting';
@@ -222,8 +226,26 @@ export class LobbyScreen {
     this.stopPolling();
     match.listener = {};
     this.remember();
+    this.announceRival(match);
     this.screens.host.startOnline(match);
     this.match = null;
+  }
+
+  /**
+   * Si se ha llegado buscando rival y la partida empieza ahora (dia 1), apunta «¡Rival encontrado!»
+   * para la carga de la pagina de la partida: quien empieza, el mapa, el reloj y la niebla.
+   */
+  private announceRival(match: OnlineMatch): void {
+    const state = match.client.state;
+    const team = match.client.team;
+    if (!this.foundPace || !state || team === null || state.day !== 1) return;
+    const size = state.map.length;
+    const details = [
+      `${size}×${size} · ${nameOf(themeOf(state))}`,
+      paceTurnText(this.foundPace),
+      t(state.settings.fog ? 'optFog' : 'onlineNoFog'),
+    ];
+    saveIntro(introOf(state, team, details));
   }
 
   // --- El vestibulo ------------------------------------------------------------------------------

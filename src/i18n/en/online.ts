@@ -92,4 +92,11 @@ export const online: Translation<typeof ES> = {
   onlineRejected: "The server didn't accept the move: syncing the game",
   onlineResynced: 'Game synced with the server',
   onlineNoSave: "Online games aren't saved here: they resume from the server",
+  onlineFound: 'Opponent found!',
+  onlineYouStart: 'You go first',
+  onlineRivalStarts: 'Your opponent goes first',
+  onlineArmyBlue: 'Blue army',
+  onlineArmyRed: 'Red army',
+  onlineNoFog: 'No fog',
+  onlineFoundLoading: 'Getting the battlefield ready…',
 };

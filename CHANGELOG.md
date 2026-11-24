@@ -12,6 +12,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Novedades
 - **«Buscar rival»**: te empareja con otra persona, 1 contra 1, con las reglas de siempre y un mapa al azar. Puede ser **por turnos** (un día por turno: cada uno juega cuando puede, y puedes cerrar el juego mientras esperas) o **en vivo** (2 minutos por turno, con los dos conectados a la vez). Mientras llega alguien puedes jugar contra la IA o cancelar la búsqueda.
 
+### Interfaz
+- Cuando «Buscar rival» te empareja, la partida carga detrás de «¡Rival encontrado!»: los dos ejércitos frente a frente, quién empieza, el mapa y el tiempo por turno.
+
 ### Arreglos
 - El menú de la partida (☰ o Esc) también se abre mientras juegan los demás, para salir o rendirte: antes no hacía nada hasta tu turno.
 
@@ -19,6 +22,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### New
 - **“Find an opponent”**: matches you with another person, 1 vs 1, with the usual rules and a random map. It can be **Daily** (a day per turn: each plays when they can, and you can close the game while you wait) or **Live** (2 minutes per turn, with both online at the same time). While you wait you can play against the AI or cancel the search.
+
+### Interface
+- When “Find an opponent” pairs you up, the game loads behind an “Opponent found!” screen: both armies face to face, who goes first, the map and the time per turn.
 
 ### Fixes
 - The game menu (☰ or Esc) also opens while others are playing, so you can leave or surrender: before, it did nothing until your turn.

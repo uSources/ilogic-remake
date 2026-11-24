@@ -1,0 +1,185 @@
+/* «¡Rival encontrado!» (overlays/MatchIntro.tsx): la carga de una partida de «Buscar rival». Mitad azul, mitad roja. */
+.match-intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 24px;
+  box-sizing: border-box;
+  background: linear-gradient(90deg, #1d3a6e 0 50%, #6e1f1d 50% 100%);
+  pointer-events: auto;
+}
+.match-intro .intro-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(32px, 6vw, 52px);
+  color: var(--panel);
+  text-shadow: 0 4px 0 #000;
+  text-align: center;
+  animation: intro-drop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.match-intro .intro-sides {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 4vw, 48px);
+}
+.match-intro .intro-card {
+  width: clamp(150px, 26vw, 320px);
+  box-sizing: border-box;
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 6px 0 #000;
+  border-top-width: 14px;
+  animation: intro-in-left 0.5s ease-out both;
+}
+.match-intro .intro-card.blue {
+  border-top-color: var(--blue-btn);
+}
+.match-intro .intro-card.red {
+  border-top-color: var(--red);
+  animation-name: intro-in-right;
+}
+.match-intro .intro-army {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.match-intro .intro-army.mirrored {
+  transform: scaleX(-1);
+}
+.match-intro .intro-army .soldier {
+  width: clamp(48px, 7vw, 80px);
+  height: auto;
+}
+.match-intro .intro-army .tank {
+  width: clamp(56px, 8vw, 96px);
+  height: auto;
+}
+.match-intro .intro-name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(22px, 3vw, 28px);
+  color: var(--ink);
+}
+.match-intro .intro-tag {
+  font-weight: 800;
+  font-size: 14px;
+  border-radius: 999px;
+  padding: 4px 12px;
+  text-align: center;
+}
+.match-intro .intro-tag.starts {
+  background: var(--ink);
+  color: var(--panel);
+}
+.match-intro .intro-tag.blue {
+  background: var(--sel);
+  color: var(--blue-lo);
+}
+.match-intro .intro-tag.red {
+  background: #ffe1de;
+  color: var(--red-lo);
+}
+.match-intro .intro-vs {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(36px, 6vw, 64px);
+  color: #f5c04a;
+  text-shadow: 0 4px 0 #000;
+  animation: intro-pop 0.4s 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.match-intro .intro-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+.match-intro .intro-chips li {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--panel);
+  border-radius: 999px;
+  padding: 7px 16px;
+}
+.match-intro .intro-loading {
+  width: min(320px, 80vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: #e8dff5;
+  font-weight: 700;
+}
+.match-intro .intro-loading .label {
+  color: #e8dff5;
+}
+.match-intro .intro-loading .bar {
+  width: 100%;
+  height: 12px;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.match-intro .intro-loading .bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #f5c04a;
+  transition: width 0.2s ease-out;
+}
+/* En un movil de pie, una tarjeta encima de otra. */
+@media (max-width: 560px) {
+  .match-intro .intro-sides {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .match-intro {
+    background: linear-gradient(180deg, #1d3a6e 0 50%, #6e1f1d 50% 100%);
+    gap: 18px;
+  }
+  .match-intro .intro-card {
+    width: min(300px, 86vw);
+    padding: 14px;
+  }
+}
+@keyframes intro-drop {
+  from {
+    transform: translateY(-24px);
+    opacity: 0;
+  }
+}
+@keyframes intro-in-left {
+  from {
+    transform: translateX(-60px);
+    opacity: 0;
+  }
+}
+@keyframes intro-in-right {
+  from {
+    transform: translateX(60px);
+    opacity: 0;
+  }
+}
+@keyframes intro-pop {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .match-intro * {
+    animation: none !important;
+  }
+}

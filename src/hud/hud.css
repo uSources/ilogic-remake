@@ -12,6 +12,7 @@
 @import './styles/game/forecast.css';
 @import './styles/overlays/notices.css';
 @import './styles/overlays/loading.css';
+@import './styles/overlays/intro.css';
 @import './styles/base/narrow.css';
 @import './styles/game/side.css';
 @import './styles/overlays/help.css';
