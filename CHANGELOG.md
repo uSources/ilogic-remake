@@ -7,27 +7,49 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.17.0] - 2026-11-24 — Cada bioma, vivo, y el juego en línea vuelve
 
 ### Novedades
+- **Jugar en línea vuelve, ya en 3D**: crea una partida, pasa el código o el enlace a tus amigos y jugad cada uno desde su casa. Para unirse vale pegar el código o el enlace, y recargar la página te devuelve a la sala.
+- **«Mis partidas»** dice cómo va cada sala sin entrar: si te toca (con el día y el tiempo que queda de turno), a quién le toca, si espera jugadores o si ya acabó. Lo que te pide jugar sale arriba.
+- **El desierto tiene vida**: remolinos de polvo, lagartijas que toman el sol y hacen flexiones, bolas rodadoras que cruzan con el viento y buitres dando vueltas en lo alto.
+- **La nieve tiene vida**: copos que destellan al sol, pingüinos que se tiran de barriga al agua y focas que miran alrededor.
+- **La llanura tiene vida**: mariposas sobre las flores, conejos que asoman de su madriguera, peces que saltan y bandadas de gansos en V.
 - **El campo suena**: los animalitos del tablero dicen lo suyo cuando hacen algo cerca de la cámara (la rana croa al saltar, el pájaro pía al salir de la copa, los gansos graznan al pasar, el pingüino chapotea al tirarse al agua, y la ardilla, el ciervo, el buitre y la foca también), uno cada poco y casi nunca con la cámara alta. Con lluvia o nieve se oyen mucho menos, y con tormenta o tormenta de arena se callan, igual que sus ambientes.
 - Las tormentas tienen trueno: un chasquido y un retumbar que se aleja después de cada relámpago.
 - El jeep y los camiones (transporte, suministros y lanzamisiles) tienen cada uno su motor: arrancan al moverse y tocan la bocina al elegirlos.
 - Las voces de las unidades son otras: un balbuceo de juguete menos chillón, y el piloto contesta por radio.
+- **Los puntos de control se ven en el tablero**: un borde dorado, una cinta del color del dueño y sus banderines en las esquinas. Si está disputado, el borde late en rojo (solo cuentan las unidades que ves), y al cobrar sale su chapa de dinero.
 
 ### Interfaz
 - En Novedades ya se leen el código, que salía como un recuadro oscuro vacío, la negrita, que salía blanca sobre la crema, y los enlaces.
 
+### Arreglos
+- Las marcas del suelo ya no se entierran en las dunas ni en las laderas.
+- En línea, la pantalla ya no deshace una acción tuya al volver a conectar, y la sala enseña los asientos aunque los datos lleguen desordenados.
+- Si montas tu propio servidor: tiene tope de salas y de conexiones, y una conexión rota ya no lo tumba.
+
 <!-- en -->
 
 ### New
+- **Online play is back, now in 3D**: create a game, send the code or link to your friends and each of you plays from home. To join, paste the code or the link; reloading the page takes you back to the room.
+- **“My games”** shows how each room is going without opening it: whether it's your turn (with the day and the time left), whose turn it is, whether it's waiting for players or already over. The ones waiting for you come first.
+- **The desert comes alive**: little dust devils, lizards sunbathing and doing push-ups, tumbleweeds rolling along with the wind and vultures circling high above.
+- **The snow comes alive**: snowflakes that glint in the sun, penguins belly-flopping into the water and seals looking around.
+- **The plains come alive**: butterflies over the flowers, rabbits peeking out of their burrows, leaping fish and flocks of geese flying in a V.
 - **The countryside comes alive with sound**: the little animals on the board call out when they do something near the camera (the frog croaks as it hops, the bird chirps as it leaves a treetop, geese honk as they fly by, the penguin splashes as it dives, and the squirrel, deer, vulture and seal have their own calls), one every so often and hardly ever with the camera up high. In rain or snow they're much quieter, and in a storm or sandstorm they fall silent, like their ambiences.
 - Storms have thunder: a crack and a rumble rolling away after each lightning flash.
 - The jeep and the trucks (transport, supplier and missile truck) each have their own engine: they start up when they move and honk when selected.
 - Unit voices are new: a less squeaky toy babble, and the pilot answers over the radio.
+- **Control points show on the board**: a golden border, a ribbon in the owner's color and their pennants at the corners. When contested, the border pulses red (only units you can see count), and a money badge pops up when it pays out.
 
 ### Interface
 - In “What's new”, code no longer shows as an empty dark box, and bold text and links no longer fade into the cream background.
+
+### Fixes
+- Ground markers no longer sink into dunes and slopes.
+- Online, the screen no longer undoes one of your actions when reconnecting, and the room shows its seats even if the data arrives out of order.
+- If you run your own server: it now caps rooms and connections, and a broken connection no longer brings it down.
 
 ## [0.16.0] - 2026-11-22 — El bosque cobra vida
 
