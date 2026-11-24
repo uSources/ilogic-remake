@@ -609,6 +609,7 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `weather` | `weather` | acierto, lo que se puede gastar al moverse, el radio de vision, el cambio de clima con el dia y el clima del primer dia (`matchSetup`) |
 | `controlPoints` | `controlPoints` > 0 | lo que pagan al acabar la ronda |
 | `upkeep` | `upkeep` > 0 | pagar el mantenimiento al acabar la ronda |
+| `commandPoints` | `commandPoints` no null | el tope de puntos de mando del ejercito (`armyLimits`, detras del numero de unidades de `ARMY_LIMITS`; la cuenta, `commandUsed`) |
 | `noHealUnderFire` | `noHealUnderFire` | quien ha recibido un ataque hoy no se cura (`unhealable`) |
 | `noFog` | `fog` quitado | todos ven todo el mapa |
 | `forestHides` | `forestHides` | el terreno que esconde solo se ve desde al lado |
@@ -621,7 +622,7 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `elevation` | `elevation` (apagado por defecto) | lo que hace la altura (la prepara `relief`): el acierto desde arriba o desde abajo (`elevationHit`), la vision desde lo alto (`elevationVision`) y lo que cuesta subir (`elevationClimb`: `enterCosts` recibe tambien la casilla de la que se viene); los aviones no lo notan |
 
 Las listas (`RuleHooks`, en `ruleModules/hooks.ts`, solo tipos): `hitModifiers`, `coverPiercing`,
-`counterRules`, `combatSteps` (con su `CombatStage`), `roundPhases` (con su `RoundStage`),
+`counterRules`, `combatSteps` (con su `CombatStage`), `armyLimits` (un tope del ejercito; su nombre en `ArmyLimits`), `roundPhases` (con su `RoundStage`),
 `matchSetup`, `healingBlocks`, `visionRadius`, `revealRules`, `concealment`, `coverSight`,
 `enterCosts`, `moveBudgets`, `passRules`, `stopRules`, `pathInterruptions`, `roundReportParts` y
 `captureFactors`. Las que van por momentos

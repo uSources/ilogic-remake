@@ -57,6 +57,17 @@ export type GameActionKind = GameAction['kind'];
 /** La accion de un tipo concreto, p. ej. `GameActionOf<'attack'>`. */
 export type GameActionOf<K extends GameActionKind> = Extract<GameAction, { kind: K }>;
 
+/**
+ * Los topes del ejercito (ver `armyLimit`, rules/economy.ts): el numero de unidades (siempre) y los
+ * puntos de mando (su modulo). Un modo que trae otro tope (`armyLimits` de su modulo) anade su nombre
+ * ampliando esta interfaz (`declare module`), como `IncomeSources`; sale tambien como rechazo de comprar.
+ */
+export interface ArmyLimits {
+  units: true;
+  command: true;
+}
+export type ArmyLimit = keyof ArmyLimits;
+
 /** Por que no vale una accion (lo dice `validate`; la partida no cambia). */
 export type ActionRejection =
   /** No tiene la forma de una accion: un `kind` que no existe o un campo que no es lo que dice GameAction. */
@@ -102,12 +113,11 @@ export type ActionRejection =
   | 'nobodyToSupply'
   /** Fuera del mapa. */
   | 'offBoard'
-  /** Comprar: el edificio no la fabrica, no hay sitio, falta dinero o no cabe en el ejercito. */
+  /** Comprar: el edificio no la fabrica, no hay sitio, falta dinero o no cabe en el ejercito (`ArmyLimit`). */
   | 'notBuiltHere'
   | 'occupied'
   | 'funds'
-  | 'units'
-  | 'command'
+  | ArmyLimit
   /** Ordenes permanentes (ver standingOrderBlock): capturar donde no hay nada, o sin nadie que capture. */
   | 'noBuilding'
   | 'noCapturer'

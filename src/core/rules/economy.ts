@@ -6,18 +6,18 @@
 import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import type { BuildingType, UnitType } from '../content';
 import { isWalkable, teamUnits, unitAt } from './queries';
-import type { ActionRejection, Building, GameState, TeamId, Unit } from '../model';
+import type { ActionRejection, ArmyLimit, Building, GameState, TeamId, Unit } from '../model';
 import { newUnit } from './lifecycle';
 import { PURCHASE, type Production, type ProductionShortage } from './production';
 import { gameModeOf } from '../modes';
-import { hooksOf } from '../ruleModules/ruleset';
+import { hooksOf, isRuleOn } from '../ruleModules/ruleset';
+import type { ArmyLimitRule } from '../ruleModules/hooks';
 
 /** Los ingresos y el mantenimiento se redondean a multiplos de esto. */
 const MONEY_STEP = 100;
 
 const roundToMoneyStep = (amount: number): number => Math.round(amount / MONEY_STEP) * MONEY_STEP;
 
-/** El equipo ya tiene todas las unidades que caben (`maxUnits`). */
 /**
  * [CAMBIO] Lo que cobra quien destruye una unidad como `lost`: lo de los `killRewards` de los modulos
  * (el botin), 0 si la partida no lleva ninguno. Lo preguntan la prevision de combate y la IA.
@@ -25,26 +25,27 @@ const roundToMoneyStep = (amount: number): number => Math.round(amount / MONEY_S
 export const killReward = (s: GameState, lost: Pick<Unit, 'type'>): number =>
   hooksOf(s, 'killRewards').reduce((total, reward) => total + reward.amount(s, lost), 0);
 
-export const hasFullArmy = (s: GameState, team: TeamId): boolean => teamUnits(s, team).length >= s.settings.maxUnits;
-
 /** La produccion de la partida (rules/production.ts): la de su modo o, si no dice ninguna, comprar. */
 export const productionOf = (s: GameState): Production => gameModeOf(s).production ?? PURCHASE;
 
-/** El ejercito tiene tope de puntos de mando (regla commandPoints): cada unidad ocupa los de su tipo. */
-export const usesCommandPoints = (s: GameState): boolean => s.settings.commandPoints !== null;
+/** El equipo ya tiene todas las unidades que caben (`maxUnits`). */
+export const hasFullArmy = (s: GameState, team: TeamId): boolean => teamUnits(s, team).length >= s.settings.maxUnits;
 
-/** Puntos de mando que ocupan las unidades de un equipo (regla commandPoints). */
+/** El ejercito tiene tope de puntos de mando (el modulo commandPoints): cada unidad ocupa los de su tipo. */
+export const usesCommandPoints = (s: GameState): boolean => isRuleOn(s, 'commandPoints');
+
+/** Puntos de mando que ocupan las unidades de un equipo (los cuenta el modulo commandPoints y los enseña la interfaz). */
 export function commandUsed(s: GameState, team: TeamId): number {
   return teamUnits(s, team).reduce((total, unit) => total + unitTypeOf(s, unit).command, 0);
 }
 
-/** Por que no cabe una unidad mas de ese tipo en el equipo (null = cabe). */
-export type ArmyLimit = 'units' | 'command';
+/** Los topes del ejercito de cualquier partida: el numero de unidades. Los de los modulos (`armyLimits`) van detras. */
+export const ARMY_LIMITS: readonly ArmyLimitRule[] = [{ id: 'units', blocks: (s, team) => hasFullArmy(s, team) }];
+
+/** Por que no cabe una unidad mas de ese tipo en el equipo (null = cabe): el primer tope que la para. */
 export function armyLimit(s: GameState, team: TeamId, unitType: UnitType): ArmyLimit | null {
-  if (hasFullArmy(s, team)) return 'units';
-  const points = s.settings.commandPoints;
-  if (points === null) return null;
-  return commandUsed(s, team) + unitType.command > points ? 'command' : null;
+  const limits = [...ARMY_LIMITS, ...hooksOf(s, 'armyLimits')];
+  return limits.find((limit) => limit.blocks(s, team, unitType))?.id ?? null;
 }
 
 /**

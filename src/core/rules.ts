@@ -155,9 +155,11 @@ export {
   buyProblem,
   killReward,
   productionOf,
-  type ArmyLimit,
+  ARMY_LIMITS,
   type BuyOption,
 } from './rules/economy';
+export type { ArmyLimitRule } from './ruleModules/hooks';
+export type { ArmyLimit, ArmyLimits } from './model';
 export { PURCHASE, type Production, type ProductionShortage } from './rules/production';
 export { inControlZone, isContested, teamsInZone } from './rules/control';
 export type { RoundReport, RoundReportParts } from './model';
