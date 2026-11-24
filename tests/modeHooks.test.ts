@@ -29,7 +29,7 @@ import {
 import { newUnit } from '@core/measure';
 import { traverse } from '@core/rules/traverse';
 import { GameSession, passiveController, runMatch } from '@core/session';
-import { startsTurn } from '@core/actions';
+import { dispatch, startsTurn } from '@core/actions';
 import { act, BLANK_SEEDS, blankState, giveTurn, unitTypeNamed } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
 
@@ -43,6 +43,12 @@ declare module '@core/ruleModules/hooks' {
   interface RuleModuleIds {
     testBonus: true;
     testMines: true;
+    testFront: true;
+  }
+}
+declare module '@core/model/actions' {
+  interface ArmyLimits {
+    testFront: true;
   }
 }
 declare module '@core/model/events' {
@@ -215,6 +221,22 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
     act(s, team, { kind: 'buy', at: factory, unitType: 'Tank' });
     expect(spent).toEqual(['Tank']);
     expect(teamState(s, team).funds).toBe(0);
+  });
+
+  it('un modo puede traer su propio tope del ejercito (armyLimits): para la compra con su nombre', () => {
+    const frontFull: RuleModule = {
+      id: 'testFront',
+      isOn: () => true,
+      hooks: { armyLimits: [{ id: 'testFront', blocks: (_s, _team, unitType) => unitType.id === 'Tank' }] },
+    };
+    const s = testModeState({ ruleModules: [frontFull] });
+    const team = s.turn;
+    teamState(s, team).funds = 100000;
+    const factory = { type: 'Factory', owner: team, x: 5, y: 5 };
+    s.buildings.push(factory);
+    expect(buyOptions(s, factory).find((option) => option.unitType.id === 'Tank')?.blocked).toBe('testFront');
+    expect(dispatch(s, team, { kind: 'buy', at: factory, unitType: 'Tank' })).toEqual({ ok: false, reason: 'testFront' });
+    act(s, team, { kind: 'buy', at: factory, unitType: 'LTank' });
   });
 
   it('sin produccion propia, un modo compra con dinero (PURCHASE)', () => {

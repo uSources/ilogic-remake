@@ -14,6 +14,7 @@ export const actions: Translation<typeof es> = {
   cancel: 'Cancel',
   buy: 'Buy',
   cantAfford: 'Not enough funds',
+  armyFull: 'No room in your army',
   unitLimit: '{n} unit limit reached',
   commandLimit: 'Not enough command points (max {n})',
   commandShort: 'command',
