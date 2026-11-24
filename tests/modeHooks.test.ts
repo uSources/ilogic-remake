@@ -13,12 +13,23 @@ import { settingsWith } from '@core/matchSettings';
 import { buildMatch, skirmishConfig } from '@core/match';
 import { deserialize, readSave, serialize } from '@core/save';
 import type { MatchSettings } from '@core/model';
-import type { TeamSetup } from '@core/teams';
-import { engagement, hitChance, hooksOf, isRuleOn, unitById, type RuleModule } from '@core/rules';
+import { teamState, type TeamSetup } from '@core/teams';
+import {
+  buyOptions,
+  engagement,
+  hitChance,
+  hooksOf,
+  isRuleOn,
+  productionOf,
+  PURCHASE,
+  unitById,
+  type Production,
+  type RuleModule,
+} from '@core/rules';
 import { newUnit } from '@core/measure';
 import { traverse } from '@core/rules/traverse';
 import { GameSession, passiveController, runMatch } from '@core/session';
-import { startsTurn } from '@core/actions';
+import { dispatch, startsTurn } from '@core/actions';
 import { act, BLANK_SEEDS, blankState, giveTurn, unitTypeNamed } from './helpers';
 import { PLAIN_SETTINGS } from './plainSettings';
 
@@ -32,6 +43,12 @@ declare module '@core/ruleModules/hooks' {
   interface RuleModuleIds {
     testBonus: true;
     testMines: true;
+    testFront: true;
+  }
+}
+declare module '@core/model/actions' {
+  interface ArmyLimits {
+    testFront: true;
   }
 }
 declare module '@core/model/events' {
@@ -182,6 +199,48 @@ describe('modos de juego: lo que fija un modo (core/modes.ts)', () => {
     const plainAttacker = newUnit(plain, unitTypeNamed('Tank'), 0, { x: 2, y: 2 });
     const plainDefender = newUnit(plain, unitTypeNamed('Tank'), 1, { x: 3, y: 2 });
     expect(hitChance(s, engagement(attacker, defender))).toBe(2 * hitChance(plain, engagement(plainAttacker, plainDefender)));
+  });
+
+  it('un modo puede traer su propia produccion: el precio, lo que falta y lo que se gasta son suyos', () => {
+    const spent: string[] = [];
+    const freeTokens: Production = {
+      id: 'freeTokens',
+      price: () => 1,
+      shortage: () => undefined,
+      spend: (_s, _team, unitType) => {
+        spent.push(unitType.id);
+      },
+    };
+    const s = testModeState({ production: freeTokens });
+    const team = s.turn;
+    teamState(s, team).funds = 0;
+    const factory = { type: 'Factory', owner: team, x: 5, y: 5 };
+    s.buildings.push(factory);
+    expect(productionOf(s)).toBe(freeTokens);
+    expect(buyOptions(s, factory).every((option) => option.cost === 1 && option.affordable)).toBe(true);
+    act(s, team, { kind: 'buy', at: factory, unitType: 'Tank' });
+    expect(spent).toEqual(['Tank']);
+    expect(teamState(s, team).funds).toBe(0);
+  });
+
+  it('un modo puede traer su propio tope del ejercito (armyLimits): para la compra con su nombre', () => {
+    const frontFull: RuleModule = {
+      id: 'testFront',
+      isOn: () => true,
+      hooks: { armyLimits: [{ id: 'testFront', blocks: (_s, _team, unitType) => unitType.id === 'Tank' }] },
+    };
+    const s = testModeState({ ruleModules: [frontFull] });
+    const team = s.turn;
+    teamState(s, team).funds = 100000;
+    const factory = { type: 'Factory', owner: team, x: 5, y: 5 };
+    s.buildings.push(factory);
+    expect(buyOptions(s, factory).find((option) => option.unitType.id === 'Tank')?.blocked).toBe('testFront');
+    expect(dispatch(s, team, { kind: 'buy', at: factory, unitType: 'Tank' })).toEqual({ ok: false, reason: 'testFront' });
+    act(s, team, { kind: 'buy', at: factory, unitType: 'LTank' });
+  });
+
+  it('sin produccion propia, un modo compra con dinero (PURCHASE)', () => {
+    expect(productionOf(testModeState({}))).toBe(PURCHASE);
   });
 
   it('un modulo del modo no puede llamarse como uno del juego (isRuleOn diria que esta puesto el otro)', () => {

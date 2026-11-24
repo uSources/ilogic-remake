@@ -3,7 +3,7 @@
  * opciones), la compra (precio y datos de cada unidad) y lo que cobra un equipo cada dia (la barra de
  * arriba).
  */
-import type { BuyOption } from '../../../core/rules';
+import { usesCommandPoints, type BuyOption } from '../../../core/rules';
 import type { UnitType } from '../../../core/content';
 import type { GameState, Unit } from '../../../core/model';
 import type { MenuItemVM } from '../../../hud/store';
@@ -85,7 +85,7 @@ export function buyItem(s: GameState, option: BuyOption, funds: number): MenuIte
 
 function buyDetail(s: GameState, option: BuyOption): string {
   const { unitType } = option;
-  const command = s.settings.commandPoints === null ? '' : ` · ${t('commandShort')} ${unitType.command}`;
+  const command = !usesCommandPoints(s) ? '' : ` · ${t('commandShort')} ${unitType.command}`;
   const abilities = abilitiesVM(s, unitType)
     .map((ability) => ` · ${ability.name}`)
     .join('');

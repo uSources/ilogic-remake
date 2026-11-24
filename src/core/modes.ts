@@ -10,6 +10,7 @@
  */
 import { deepFreeze } from './util/freeze';
 import type { RuleModule } from './ruleModules/hooks';
+import type { Production } from './rules/production';
 import type { ActionDispatcher, GameEvent, GameModeId, GameState, MatchSettings, TeamId, VictoryRuleId } from './model';
 
 /**
@@ -36,6 +37,11 @@ export interface GameMode {
   readonly fixedSettings?: Partial<MatchSettings>;
   /** Modulos de reglas propios del modo, ademas de los del juego (RULE_MODULES); se enchufan igual, con su `isOn`. */
   readonly ruleModules?: readonly RuleModule[];
+  /**
+   * Como sacan unidades los edificios (rules/production.ts): sin ninguna, se compran con dinero
+   * (`PURCHASE`). Un modo con otra forma de producir trae la suya, sin cambiar la compra.
+   */
+  readonly production?: Production;
   /** Pasos propios del modo al empezar y al acabar cada turno, detras de TURN_START_PHASES y TURN_END_PHASES. */
   readonly turnPhases?: { readonly start?: readonly TurnPhase[]; readonly end?: readonly TurnPhase[] };
   /**

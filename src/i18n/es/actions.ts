@@ -12,6 +12,7 @@ export const actions = {
   cancel: 'Cancelar',
   buy: 'Comprar',
   cantAfford: 'Fondos insuficientes',
+  armyFull: 'No cabe en el ejército',
   unitLimit: 'Límite de {n} unidades',
   commandLimit: 'Sin puntos de mando (máximo {n})',
   commandShort: 'mando',

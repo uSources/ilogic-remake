@@ -22,6 +22,7 @@ const SWITCHED_OFF: Partial<Record<RuleModuleId, Partial<MatchSettings>>> = {
   buildingIncome: { incomeScale: 0 },
   controlPoints: { controlPoints: 0 },
   upkeep: { upkeep: 0 },
+  commandPoints: { commandPoints: null },
   noHealUnderFire: { noHealUnderFire: false },
   forestHides: { forestHides: false },
   terrainCost: { terrainCost: false },

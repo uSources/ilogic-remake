@@ -10,6 +10,7 @@ import { ABILITIES } from './abilities';
 import { AMBUSH } from './ambush';
 import { BOUNTY } from './bounty';
 import { BUILDING_INCOME } from './buildingIncome';
+import { COMMAND_POINTS } from './commandPoints';
 import { CONTROL_POINTS } from './controlPoints';
 import { ELEVATION } from './elevation';
 import { COUNTERATTACK } from './counterattack';
@@ -38,6 +39,7 @@ export const RULE_MODULES: readonly RuleModule[] = [
   BUILDING_INCOME,
   CONTROL_POINTS,
   UPKEEP,
+  COMMAND_POINTS,
   NO_HEAL_UNDER_FIRE,
   NO_FOG,
   FOREST_HIDES,
