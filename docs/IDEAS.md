@@ -85,6 +85,16 @@ cosa en su PR:
       territorios propios hasta tu capital queda aislado y no puede reabastecer a sus equipos.
       Cortar el frente enemigo por el medio es una jugada en sí, sin ir a por su capital; y lo mismo
       te lo puede hacer la IA.
+    - **Moverse cuesta turnos de guerra** (decidido): un equipo avanza un territorio por turno y,
+      mientras viaja, no combate; en el mapamundi se ve con su flecha y «llega en N turnos». Cada
+      tipo tiene su velocidad (Reconocimiento e Infantería motorizada, 2; Infantería y Blindados, 1).
+      Los equipos nuevos aparecen en la capital y tienen que llegar al frente: no se puede comprar
+      defensa en el mismo territorio atacado, hay que preverlo. Propuesta de turno: los dos dan
+      órdenes, todo se mueve a la vez y hay batalla donde coinciden equipos enemigos o alguien entra
+      en territorio ajeno.
+    - **El tren va por las líneas de suministro** (decidido): dentro de tu territorio conectado a la
+      capital, los equipos van en tren, 3 territorios por turno; fuera, a pie. Cortarle el frente al
+      rival también le frena los refuerzos, y un territorio recién conquistado aún no tiene vía.
     - **La IA también ataca** (decidido): el rojo mueve sus frentes, así que hay que repartir entre
       atacar y defender lo que ya es tuyo.
     - **Inteligencia** (decidido): saber qué hay en un territorio antes de atacarlo o qué trae quien
