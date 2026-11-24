@@ -1,12 +1,12 @@
 /**
  * Lo que dice el servidor de las salas apuntadas en este navegador («Mis partidas», net/onlineRooms):
  * te toca, le toca a otro, esperando, acabada, ya no existe. Pregunta por todas a la vez al empezar a
- * mirar y cada poco mientras se miran, y avisa con cada respuesta. Una sola para todo el menu: la
- * tarjeta «En línea» de Inicio (si te toca) y la lista de «Jugar en línea» ven lo mismo, y al pasar
- * de una a otra no se vuelve a empezar de cero.
+ * mirar y cada poco mientras se miran, y avisa con cada respuesta; con eso sabe tambien si el servidor
+ * contesta («Conectado»). Una sola para todo el menu: la tarjeta «En línea» de Inicio (si te toca) y
+ * la lista de «Jugar en línea» ven lo mismo, y al pasar de una a otra no se vuelve a empezar de cero.
  */
 import { readOnlineRooms, type OnlineRoomEntry } from '../../net/onlineRooms';
-import { lobbyOf, type ApiResult, type LobbyInfo } from '../../net/roomApi';
+import { lobbyOf, serverHealth, type ApiResult, type LobbyInfo } from '../../net/roomApi';
 import { serverUrl } from '../../net/serverUrl';
 import { isSettled, type RoomLook } from './roomLines';
 
@@ -15,11 +15,11 @@ const ROOMS_POLL_MS = 20_000;
 
 const UNKNOWN: RoomLook = { kind: 'unknown' };
 
-/** Si el servidor contesta: la pastilla de arriba de «Jugar en línea» (null sin salas apuntadas: no hay por que preguntarle). */
+/** Si el servidor contesta: la pastilla de arriba de «Jugar en línea» (null mientras no se sabe: aun no ha contestado). */
 export type ServerReach = 'online' | 'offline' | null;
 
 /** Contesta si alguna respuesta ha llegado de el (aunque sea «esa sala no existe»). */
-const reachOf = (results: readonly ApiResult<LobbyInfo>[]): ServerReach =>
+const reachOf = (results: readonly ApiResult<unknown>[]): ServerReach =>
   results.some((result) => result.ok || result.error !== 'unreachable') ? 'online' : 'offline';
 
 /**
@@ -48,7 +48,7 @@ export class RoomWatch {
     return this.looks.get(code) ?? UNKNOWN;
   }
 
-  /** Si el servidor contesto la ultima vez que se le pregunto (sin salas apuntadas, no se sabe: null). */
+  /** Si el servidor contesto la ultima vez que se le pregunto (null si aun no se le ha preguntado). */
   serverReach(): ServerReach {
     return this.reach;
   }
@@ -78,21 +78,27 @@ export class RoomWatch {
   }
 
   /**
-   * Pregunta al servidor por cada sala apuntada que sigue en marcha (a la vez; las acabadas o que ya
-   * no existen no cambian: `isSettled`) y, mientras se mire, vuelve a preguntar. Si todas han
-   * acabado, pregunta solo por la mas reciente, para seguir sabiendo si el servidor contesta; sin
-   * ninguna apuntada no hay a quien preguntar ni nada que esperar (al volver a mirar, `start`).
+   * Pregunta al servidor por cada sala apuntada que sigue en marcha (las acabadas o que ya no existen
+   * no cambian: `isSettled`) y, mientras se mire, vuelve a preguntar. Si todas han acabado, pregunta
+   * solo por la mas reciente; sin ninguna apuntada, solo si contesta (`/health`): asi «Conectado»
+   * dice siempre lo de ahora.
    */
   private async refresh(watch: number): Promise<void> {
     const base = serverUrl();
     if (!base || watch !== this.watch) return;
-    const asked = this.roomsToAsk();
-    const answers = await Promise.all(asked.map(async ({ code }) => ({ code, result: await lobbyOf(base, code) })));
-    for (const { code, result } of answers) this.looks.set(code, lookAfter(result, this.lookOf(code)));
-    this.reach = answers.length > 0 ? reachOf(answers.map(({ result }) => result)) : null;
+    const rooms = this.roomsToAsk();
+    const reach = rooms.length > 0 ? await this.askRooms(base, rooms) : reachOf([await serverHealth(base)]);
     if (watch !== this.watch) return;
+    this.reach = reach;
     this.onChange?.();
-    if (asked.length > 0) this.pollHandle = setTimeout(() => void this.refresh(watch), ROOMS_POLL_MS);
+    this.pollHandle = setTimeout(() => void this.refresh(watch), ROOMS_POLL_MS);
+  }
+
+  /** Pregunta por esas salas a la vez y apunta lo que diga de cada una; devuelve si el servidor ha contestado. */
+  private async askRooms(base: string, rooms: readonly OnlineRoomEntry[]): Promise<ServerReach> {
+    const answers = await Promise.all(rooms.map(async ({ code }) => ({ code, result: await lobbyOf(base, code) })));
+    for (const { code, result } of answers) this.looks.set(code, lookAfter(result, this.lookOf(code)));
+    return reachOf(answers.map(({ result }) => result));
   }
 
   /** Las salas en marcha o, si todas han acabado, la mas reciente (la lista esta de la mas reciente a la mas vieja). */

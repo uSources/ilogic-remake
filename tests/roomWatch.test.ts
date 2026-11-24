@@ -1,7 +1,8 @@
 /**
  * Lo que dice el servidor de las salas apuntadas (`RoomWatch`, la que miran a la vez «Mis partidas» y
  * la tarjeta «En línea» de Inicio), con `fetch` y `localStorage` falsos y el reloj a mano: pregunta por
- * las que siguen en marcha, avisa solo a quien empezo a mirar el ultimo y, al parar, deja de preguntar.
+ * las que siguen en marcha (sin ninguna, solo si el servidor contesta), avisa solo a quien empezo a
+ * mirar el ultimo y, al parar, deja de preguntar.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CURRENT_PROTOCOL } from '@core/net';
@@ -38,12 +39,13 @@ const room = (status: LobbyInfo['status']): LobbyInfo => ({
 
 /** Lo que contesta el servidor por cada sala; la que no esta, ya no existe. */
 let rooms: Record<string, LobbyInfo> = {};
-/** Por que salas se ha preguntado, en orden. */
+/** Por que salas se ha preguntado, en orden (`health`: solo si el servidor contesta). */
 const asked: string[] = [];
 
 function fakeFetch(url: string): Promise<Response> {
   const code = url.slice(url.lastIndexOf('/') + 1);
   asked.push(code);
+  if (code === 'health') return Promise.resolve(new Response(JSON.stringify(CURRENT_PROTOCOL), { status: 200 }));
   const info = rooms[code];
   const body = info ?? { error: 'noSuchRoom' };
   return Promise.resolve(new Response(JSON.stringify(body), { status: info ? 200 : 404 }));
@@ -100,7 +102,7 @@ describe('RoomWatch', () => {
     expect(menu).toHaveBeenCalledTimes(1);
   });
 
-  it('con todas acabadas pregunta solo por la mas reciente, para saber si el servidor contesta; sin salas, ni pregunta ni espera', async () => {
+  it('con todas acabadas pregunta solo por la mas reciente, para saber si el servidor contesta (y si deja de contestar)', async () => {
     writeOnlineRooms([entry('ENDED1'), entry('GONE11')]);
     watch.start(() => {});
     await settle();
@@ -110,11 +112,19 @@ describe('RoomWatch', () => {
     vi.stubGlobal('fetch', () => Promise.reject(new TypeError('sin red')));
     await settle(POLL_MS);
     expect(watch.serverReach()).toBe('offline');
+  });
 
+  it('sin salas apuntadas pregunta solo si el servidor contesta («/health»), y cada poco mientras se mira', async () => {
     writeOnlineRooms([]);
+    expect(watch.serverReach()).toBeNull();
     watch.start(() => {});
     await settle();
-    expect(watch.serverReach()).toBeNull();
+    expect(asked).toEqual(['health']);
+    expect(watch.serverReach()).toBe('online');
+
+    await settle(POLL_MS);
+    expect(asked).toEqual(['health', 'health']);
+    watch.stop();
     expect(vi.getTimerCount()).toBe(0);
   });
 

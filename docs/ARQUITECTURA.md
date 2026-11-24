@@ -1099,8 +1099,9 @@ archivo y por donde pasa cada cosa, en `docs/RED.md`. Las decisiones:
 - **Lo que dice el servidor de tus salas es uno para todo el menu** (`RoomWatch`,
   `src/menu/online/roomWatch.ts`): la tarjeta «En línea» de Inicio (si te toca en alguna) y «Mis
   partidas» miran lo mismo. Pregunta solo mientras se ve una de las dos: Inicio empieza a mirar al
-  abrirse y lo deja al salir (`HomeScreen.open`/`close`, desde `MenuFlow`), y «Jugar en línea» igual
-  con su menu.
+  abrirse si hay partidas apuntadas y lo deja al salir (`HomeScreen.open`/`close`, desde `MenuFlow`),
+  y «Jugar en línea» igual con su menu. Con lo que contesta sabe tambien si el servidor responde (la
+  pastilla «Conectado»); sin salas apuntadas, se lo pregunta a `GET /health` (`serverHealth`).
 - **Donde esta el servidor** (`serverUrl.ts`): `VITE_SERVER_URL` al compilar o, por encima,
   `ilogic.server` en localStorage (el propio servidor de quien juega, o uno local en los tests); sin
   ninguna, el juego no ofrece «Jugar en línea».

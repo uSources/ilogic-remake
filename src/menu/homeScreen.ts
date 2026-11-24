@@ -79,9 +79,12 @@ export class HomeScreen {
     };
   }
 
-  /** Pasa a Inicio: se enseña y, si se puede jugar en linea, pregunta como estan tus partidas. */
+  /**
+   * Pasa a Inicio: se enseña y, si se puede jugar en linea y tienes partidas apuntadas, pregunta como
+   * estan (sin ninguna, la tarjeta no tiene nada que contar del servidor).
+   */
   open(): void {
-    if (this.canPlayOnline()) this.host.onlineRooms.start(() => this.publish());
+    if (this.canPlayOnline() && readOnlineRooms().length > 0) this.host.onlineRooms.start(() => this.publish());
     this.publish();
   }
 

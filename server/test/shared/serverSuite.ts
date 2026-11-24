@@ -155,6 +155,12 @@ function describeRoutes(serverOf: () => TestServer): void {
       expect((await claimSeat(server, 'ABCDEF')).status).toBe(404);
     });
 
+    it('«/health» dice que el servidor contesta y que version habla, sin mirar ninguna sala', async () => {
+      const response = await serverOf().fetch('/health', { headers: { Origin: GAME_ORIGIN } });
+      expect(response.status).toBe(200);
+      expect(await bodyOf(response)).toEqual(CURRENT_PROTOCOL);
+    });
+
     it('una sala que no existe, un codigo mal escrito y una ruta que no hay', async () => {
       const server = serverOf();
       expect((await lobbyOf(server, 'ABCDEF')).status).toBe(404);

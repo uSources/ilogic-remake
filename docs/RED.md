@@ -222,7 +222,8 @@ nota. Mientras, el turno esta ocupado (`TurnControls.busy`) y no se puede pulsar
    nada de la partida) mientras la sala espera. Quien creo puede dar un asiento vacio a la IA
    (`handToAi`, `POST /rooms/:code/ai` → `RoomAdapter.handToAi` → `Room.replaceWithAi`). «Mis
    partidas» y la tarjeta «En línea» de Inicio preguntan lo mismo cada 20 s por cada sala apuntada
-   (`RoomWatch`, `src/menu/online/roomWatch.ts`, una para las dos): con
+   (`RoomWatch`, `src/menu/online/roomWatch.ts`, una para las dos; sin ninguna apuntada, «Jugar en
+   línea» pregunta solo si el servidor contesta, `serverHealth`, `GET /health`): con
    `LobbyInfo.turn` (a quien se espera, el dia y cuando vence su reloj; los turnos se anuncian a
    todos) dice «Te toca», el turno de quien, «Esperando jugadores», «Acabada» o «Ya no existe», con
    lo que pide hacer algo arriba (`roomLines.ts`).
@@ -416,6 +417,7 @@ badVersion, 4429 tooManyRejections).
 | `POST /rooms/:code/seat` | pide un asiento libre con el codigo | → `{ code, seat, team, token }`; si no, 404 'noSuchRoom', 409 'notWaiting' o 'noFreeSeat' |
 | `GET /rooms/:code` | el vestibulo y «Mis partidas» | → `LobbyInfo` (`status`, versiones, `seats: [{ seat, team, kind, joined }]`, `turn: { seat, day, endsAt } \| null`) |
 | `POST /rooms/:code/ai` | quien creo da un asiento vacio a la IA | `{ token, seat }` → `{ ok: true }` |
+| `GET /health` | si el servidor contesta: «Conectado» en «Jugar en línea» sin salas apuntadas | → `{ protocol, save }` (las versiones que habla; no mira ninguna sala) |
 | `GET /rooms/:code/ws` | la conexion de la partida | subida a WebSocket |
 
 ## Los estados de la sala
@@ -501,7 +503,7 @@ puerto; ademas, sus alarmas, arrancar otra vez y servir el juego).
 | `src/net/mirrorSession.ts` | `mirrorSession`: la sesion de la pantalla sobre una vista |
 | `src/net/roomApi.ts` | Las rutas HTTP: `createRoom`, `claimSeat`, `lobbyOf`, `handToAi`, `closeRoom`, `searchRival` |
 | `src/net/onlineRooms.ts` | «Mis partidas» en localStorage (la sala de una busqueda, con su ritmo: `search`); el enlace de la sala (`parseRoomLink`, `roomLinkUrl`) |
-| `src/menu/online/` | La pantalla «Jugar en línea»: `onlineScreen.ts` (`OnlineScreen`: enlaza las tres pantallas, el foco y las ordenes, entrar con el codigo, `enterRoom`, y buscar rival y cancelar, `searchRival`, `cancelSearch`), `menuScreen.ts` (buscar rival con su ritmo, crear, unirse con el codigo y «Mis partidas»), `roomWatch.ts` (`RoomWatch`: pregunta cada 20 s como va cada sala apuntada, para «Mis partidas» y la tarjeta «En línea» de Inicio, y con eso sabe si el servidor contesta: la pastilla «Conectado» del menu), `roomLines.ts` (como se enseña cada sala de «Mis partidas» y lo que dice la tarjeta de Inicio, `onlineCardOf`; puro), `createScreen.ts`, `lobbyScreen.ts` (el vestibulo: la sala, con el codigo para invitar, o «Buscando rival…»; la conexion con la sala y el paso a la partida) y `shared.ts` (`OnlineHost`, `OnlineScreens`, los textos de los ritmos) |
+| `src/menu/online/` | La pantalla «Jugar en línea»: `onlineScreen.ts` (`OnlineScreen`: enlaza las tres pantallas, el foco y las ordenes, entrar con el codigo, `enterRoom`, y buscar rival y cancelar, `searchRival`, `cancelSearch`), `menuScreen.ts` (buscar rival con su ritmo, crear, unirse con el codigo y «Mis partidas»), `roomWatch.ts` (`RoomWatch`: pregunta cada 20 s como va cada sala apuntada, para «Mis partidas» y la tarjeta «En línea» de Inicio, y con eso sabe si el servidor contesta: la pastilla «Conectado» del menu; sin salas, lo pregunta a `GET /health`), `roomLines.ts` (como se enseña cada sala de «Mis partidas» y lo que dice la tarjeta de Inicio, `onlineCardOf`; puro), `createScreen.ts`, `lobbyScreen.ts` (el vestibulo: la sala, con el codigo para invitar, o «Buscando rival…»; la conexion con la sala y el paso a la partida) y `shared.ts` (`OnlineHost`, `OnlineScreens`, los textos de los ritmos) |
 | `src/hud/menus/Online.tsx` | El HTML de esa pantalla (Preact), a partir de `OnlineVM` |
 | `src/view3d/app/gameStart.ts` | El arranque 'online' (codigo y ficha) y `joinMatch`: volver a entrar en la sala al cargar la partida |
 | `src/view3d/systems/turn/matchRunner.ts` | `MatchRunner` (lo que el turno pide a quien lleva la partida) y `localRunner` (una partida de esta pantalla) |
