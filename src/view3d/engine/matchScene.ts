@@ -230,8 +230,9 @@ export class MatchScene implements ScreenView {
     return this.terrain.life;
   }
 
-  onFrame(listener: FrameListener): void {
-    this.world.onFrame(listener);
+  /** Llama a `listener` en cada fotograma; devuelve como dejar de llamarlo. */
+  onFrame(listener: FrameListener): () => void {
+    return this.world.onFrame(listener);
   }
 
   start(): void {

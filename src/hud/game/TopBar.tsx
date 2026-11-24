@@ -10,7 +10,7 @@ import type { WeatherVM } from '../vm/topBar';
 import type { Side } from '../vm/common';
 import { DayPanel, EconomyPanel } from './Breakdown';
 import { keyLabelOf } from '../keyLabels';
-import { canAct, canUseMenuButton } from './turn';
+import { canAct, canUseMenuButton, isOwnTurn } from './turn';
 
 /** El dinero; al pasar por encima o tocarlo, el desglose (ingresos, mantenimiento, puntos de mando). */
 function Funds({ s }: { s: UIState }) {
@@ -43,10 +43,13 @@ function Day({ s }: { s: UIState }) {
   );
 }
 
+/** Por la red, en los ultimos segundos del reloj del turno propio: «Fin del turno» parpadea. */
+const isTurnEnding = (s: UIState) => isOwnTurn(s) && s.turnClock?.mood === 'hurry';
+
 /**
  * Fin del turno, abajo a la derecha: la ficha grande y, en su esquina, cuantas unidades quedan sin
  * mover (pulsarlo lleva a la siguiente, como Tab). Al primer clic con unidades sin mover,
- * "¿Terminar?" en rojo.
+ * "¿Terminar?" en rojo; por la red, parpadea cuando se acaba el tiempo.
  */
 export function EndTurnChip({ s }: { s: UIState }) {
   const { pending, armed } = s.endTurn;
@@ -58,7 +61,7 @@ export function EndTurnChip({ s }: { s: UIState }) {
         text={armed ? t('endTurnConfirm') : t('endTurn')}
         tone={armed ? 'enemy' : 'own'}
         size="lg"
-        cls={`end ${armed ? 'armed' : ''}`}
+        cls={`end ${armed ? 'armed' : ''} ${isTurnEnding(s) ? 'hurry' : ''}`}
         disabled={!canAct(s)}
         onClick={() => ui.actions.endTurn()}
       />

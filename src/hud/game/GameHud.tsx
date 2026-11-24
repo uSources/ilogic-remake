@@ -13,6 +13,7 @@ import { RadialMenu } from './RadialMenu';
 import { TileTip, tileTipKey } from './TileTip';
 import { SelectionPanel } from './SelectionPanel';
 import { EndTurnChip, TopBar } from './TopBar';
+import { TurnClockPill } from './TurnClock';
 import { canAct, isOwnTurn } from './turn';
 
 /**
@@ -35,6 +36,9 @@ function NetLine({ net }: { net: NetVM }) {
   );
 }
 
+/** La linea de la conexion, salvo con el reloj y conectado: entonces el reloj ya dice a quien se espera. */
+const showsNetLine = (s: UIState) => !!s.net && !(s.turnClock && s.net.status === 'online');
+
 /** Con dos o mas unidades elegidas, su panel sustituye a las fichas de la casilla. */
 const showsSelection = (s: UIState) => !!s.selection && !s.busy;
 /** La ficha de la casilla señalada: en tu turno y sin otra cosa encima (menu, prevision de combate, lo elegido). */
@@ -51,7 +55,8 @@ const SIDE_PANELS: GamePanel[] = [
 /** En el orden en que van en la pagina, que es el de apilado. Un panel nuevo es una entrada mas. */
 const GAME_PANELS: GamePanel[] = [
   { id: 'topBar', render: (s) => <TopBar s={s} /> },
-  { id: 'net', render: (s) => s.net && <NetLine net={s.net} /> },
+  { id: 'turnClock', render: (s) => s.turnClock && <TurnClockPill clock={s.turnClock} /> },
+  { id: 'net', render: (s) => showsNetLine(s) && s.net && <NetLine net={s.net} /> },
   { id: 'mission', render: (s) => s.mission && isOwnTurn(s) && <MissionPanel mission={s.mission} /> },
   { id: 'selection', render: (s) => showsSelection(s) && s.selection && <SelectionPanel selection={s.selection} /> },
   {
