@@ -69,27 +69,28 @@ cosa en su PR:
       Cada territorio es un mapa de batalla. Lo que se gana o se pierde se pinta en el mapamundi.
     - **Turnos de guerra**: en cada uno se elige qué territorio atacar (uno vecino de los tuyos) o
       dónde defender, y se juega esa batalla con las reglas de siempre.
-    - **Recursos**: cada territorio da dinero de guerra por turno; las **capitales** dan mucho más (y
-      quizá algo más: una fábrica mejor, una unidad propia). Antes de cada batalla se decide cuánto
-      dinero de guerra se lleva: es el dinero inicial de esa batalla, y lo que no se gasta se guarda.
+    - **Recursos**: cada territorio da presupuesto por turno de guerra; las **capitales** dan mucho
+      más. El presupuesto se gasta en el **cuartel general** (decidido): se reclutan unidades, que
+      van a la reserva, y se **asignan a los frentes** (atacar un territorio, defender uno amenazado,
+      guarnición). Las que sobreviven vuelven con su veteranía y cuestan mantenimiento por turno de
+      guerra (las dos reglas ya existen en la partida). Cada frente tiene un tope de unidades.
+    - **La IA también ataca** (decidido): el rojo mueve sus frentes, así que hay que repartir entre
+      atacar y defender lo que ya es tuyo.
+    - **Inteligencia** (decidido): saber qué hay en un territorio antes de atacarlo o qué trae quien
+      te ataca. Por niveles: patrulla gratis si hay un Jeep o un Helicóptero en un vecino (cuántos y
+      de qué tipo, a grandes rasgos), reconocimiento pagado (todas las unidades) y espía (además, su
+      veteranía y lo que piensa hacer). La IA también sabe de ti lo que haya visto.
     - **Se gana conquistando la capital enemiga.** Perder la propia es perder la guerra.
     - **Mapas hechos a mano**, el mapamundi y el de cada territorio (decidido): la guerra es
       contenido diseñado, como las misiones (skill `nueva-mision`).
     - **En línea, más adelante** (decidido): la misma guerra entre dos personas es mucho más
       compleja de hacer; primero la campaña de una persona.
-    - **Qué reutiliza**: cada batalla es una partida normal (`createMatch` con su mapa, dinero y
-      objetivo), así que lo nuevo es la capa de encima: el mapamundi, sus turnos y la cuenta de
-      recursos, en `src/core` y guardada aparte de la partida.
-    - **Las unidades entre batallas** (por decidir): nuevas en cada batalla (sencillo, y cada mapa
-      a mano se equilibra solo), o un **núcleo de veteranos**: hasta unas pocas unidades que
-      sobreviven pasan con su veteranía y cuestan mantenimiento por turno de guerra (las dos reglas
-      ya existen en la partida). El núcleo da apego sin la bola de nieve de pasar el ejército entero.
-    - **El dinero de guerra** (por decidir): solo tiene sentido si compite entre varios usos; si solo
-      sirve para la batalla de ahora, siempre se lleva todo. Usos posibles: el dinero inicial de la
-      batalla, mantener a los veteranos y fortificar un territorio contra un contraataque.
-    - **Preguntas abiertas**: ¿la IA también ataca en el mapamundi (frentes que se mueven solos)?
-      ¿cuánto dura una guerra? ¿la campaña de 6 misiones de ahora se queda como tutorial antes de
-      la guerra?
+    - **Qué reutiliza**: cada batalla es una partida normal (`createMatch` con su mapa, las
+      unidades asignadas y su objetivo), así que lo nuevo es la capa de encima: el mapamundi, sus
+      turnos, el cuartel general y la inteligencia, en `src/core` y guardada aparte de la partida.
+    - **Preguntas abiertas**: ¿en la batalla se sigue comprando en fábricas o solo se juega con lo
+      asignado? ¿cuántas batallas por turno de guerra? ¿cuánto dura una guerra? ¿la campaña de 6
+      misiones de ahora se queda como tutorial antes de la guerra?
 
 ## Equilibrio
 
