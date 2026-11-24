@@ -3,7 +3,7 @@ import {
   allianceScore,
   buildingIncome,
   commandUsed,
-  usesCommandPoints,
+  commandPointsCap,
   isRuleOn,
   rivalScore,
   teamUnits,
@@ -12,7 +12,7 @@ import {
   buildingsOf,
 } from '../../core/rules';
 import { teamState } from '../../core/teams';
-import type { Texts } from '../../core/content';
+import type { Texts, UnitType } from '../../core/content';
 import type { GameState, TeamId } from '../../core/model';
 import type { BreakdownLineVM, DayInfoVM, EconomyVM } from '../../hud/store';
 import { nameOf, t } from '../../settings';
@@ -30,7 +30,7 @@ export function buyBlockedText(s: GameState, blocked: NonNullable<BuyOption['blo
     case 'units':
       return t('unitLimit').replace('{n}', String(s.settings.maxUnits));
     case 'command':
-      return t('commandLimit').replace('{n}', String(s.settings.commandPoints ?? 0));
+      return t('commandLimit').replace('{n}', String(commandPointsCap(s) ?? 0));
     default:
       return t('armyFull');
   }
@@ -77,15 +77,15 @@ export function economyVM(s: GameState, team: TeamId): EconomyVM {
     net: income - upkeep,
     next: Math.min(afterIncome - paid, s.content.maxFunds),
     shortfall: paid < upkeep ? paid : null,
-    commandPoints:
-      !usesCommandPoints(s) || s.settings.commandPoints === null
-        ? null
-        : {
-            lines: tally(units, (unitType) => unitType.command),
-            used: commandUsed(s, team),
-            max: s.settings.commandPoints,
-          },
+    commandPoints: commandPointsOf(s, team, units),
   };
+}
+
+/** Los puntos de mando del equipo, o null si la partida no los lleva (el modulo commandPoints). */
+function commandPointsOf(s: GameState, team: TeamId, units: readonly UnitType[]): EconomyVM['commandPoints'] {
+  const max = commandPointsCap(s);
+  if (max === null) return null;
+  return { lines: tally(units, (unitType) => unitType.command), used: commandUsed(s, team), max };
 }
 
 /**

@@ -34,6 +34,9 @@ export const hasFullArmy = (s: GameState, team: TeamId): boolean => teamUnits(s,
 /** El ejercito tiene tope de puntos de mando (el modulo commandPoints): cada unidad ocupa los de su tipo. */
 export const usesCommandPoints = (s: GameState): boolean => isRuleOn(s, 'commandPoints');
 
+/** El tope de puntos de mando del ejercito, o null si la partida no lleva el modulo commandPoints. */
+export const commandPointsCap = (s: GameState): number | null => (usesCommandPoints(s) ? s.settings.commandPoints : null);
+
 /** Puntos de mando que ocupan las unidades de un equipo (los cuenta el modulo commandPoints y los enseña la interfaz). */
 export function commandUsed(s: GameState, team: TeamId): number {
   return teamUnits(s, team).reduce((total, unit) => total + unitTypeOf(s, unit).command, 0);
@@ -44,8 +47,8 @@ export const ARMY_LIMITS: readonly ArmyLimitRule[] = [{ id: 'units', blocks: (s,
 
 /** Por que no cabe una unidad mas de ese tipo en el equipo (null = cabe): el primer tope que la para. */
 export function armyLimit(s: GameState, team: TeamId, unitType: UnitType): ArmyLimit | null {
-  const limits = [...ARMY_LIMITS, ...hooksOf(s, 'armyLimits')];
-  return limits.find((limit) => limit.blocks(s, team, unitType))?.id ?? null;
+  const stops = (limit: ArmyLimitRule): boolean => limit.blocks(s, team, unitType);
+  return (ARMY_LIMITS.find(stops) ?? hooksOf(s, 'armyLimits').find(stops))?.id ?? null;
 }
 
 /**
@@ -110,8 +113,8 @@ export function canBuyAt(s: GameState, building: Building): boolean {
 
 /**
  * Por que `team` no puede fabricar ahora una unidad de ese tipo en ese edificio (null = puede): tiene
- * que ser suyo, fabricarla, estar libre (y la casilla ser de su tipo de movimiento), y que haya dinero y
- * sitio en el ejercito.
+ * que ser suyo, fabricarla, estar libre (y la casilla ser de su tipo de movimiento), que quepa en el
+ * ejercito y que la produccion de la partida lo permita (comprando, que haya dinero).
  */
 export function buyProblem(s: GameState, team: TeamId, building: Building, unitType: UnitType): ActionRejection | null {
   if (building.owner !== team) return 'notYours';

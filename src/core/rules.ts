@@ -147,6 +147,7 @@ export {
   armyLimit,
   hasFullArmy,
   usesCommandPoints,
+  commandPointsCap,
   upkeepOf,
   projectedIncome,
   buildingIncome,

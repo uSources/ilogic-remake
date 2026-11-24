@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { settingsWith } from '@core/matchSettings';
 import { defaultContent } from '@core/content/default';
-import { armyLimit, buyOptions, commandUsed, upkeepOf } from '@core/rules';
+import { armyLimit, buyOptions, commandPointsCap, commandUsed, upkeepOf } from '@core/rules';
 import { newUnit } from '@core/measure';
 import { dispatch } from '@core/actions';
 import { blankState, unitTypeNamed, endRoundReport, withoutHeadquarters } from './helpers';
@@ -48,6 +48,11 @@ describe('puntos de mando', () => {
     expect(armyLimit(s, 0, TANK)).toBeNull();
     newUnit(s, TANK, 0, { x: 2, y: 2 });
     expect(armyLimit(s, 0, SOLDIER)).toBe('units');
+  });
+
+  it('el tope de puntos de mando es el del ajuste, o null sin el modulo', () => {
+    expect(commandPointsCap(blankState(TEST_SETTINGS))).toBe(10);
+    expect(commandPointsCap(blankState(settingsWith(defaultContent(), { commandPoints: null })))).toBeNull();
   });
 });
 

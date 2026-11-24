@@ -623,9 +623,10 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `elevation` | `elevation` (apagado por defecto) | lo que hace la altura (la prepara `relief`): el acierto desde arriba o desde abajo (`elevationHit`), la vision desde lo alto (`elevationVision`) y lo que cuesta subir (`elevationClimb`: `enterCosts` recibe tambien la casilla de la que se viene); los aviones no lo notan |
 
 Las listas (`RuleHooks`, en `ruleModules/hooks.ts`, solo tipos): `hitModifiers`, `coverPiercing`,
-`counterRules`, `combatSteps` (con su `CombatStage`), `armyLimits` (un tope del ejercito; su nombre en `ArmyLimits`), `roundPhases` (con su `RoundStage`),
-`matchSetup`, `healingBlocks`, `visionRadius`, `revealRules`, `concealment`, `coverSight`,
-`enterCosts`, `moveBudgets`, `passRules`, `stopRules`, `pathInterruptions`, `roundReportParts` y
+`counterRules`, `combatSteps` (con su `CombatStage`), `roundPhases` (con su `RoundStage`),
+`matchSetup`, `healingBlocks`, `killRewards`, `armyLimits` (un tope del ejercito; su nombre en
+`ArmyLimits`), `visionRadius`, `revealRules`, `concealment`, `coverSight`, `enterCosts`,
+`moveBudgets`, `passRules`, `stopRules`, `pathInterruptions`, `roundReportParts` y
 `captureFactors`. Las que van por momentos
 (el fin de ronda, el ataque) se ordenan por momento y, en cada uno, primero las de siempre y luego
 las de los modulos (`roundPhasesOf`, `combatResolutionOf`); en el acierto, el orden de los modulos

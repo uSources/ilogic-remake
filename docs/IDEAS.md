@@ -212,6 +212,14 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
     `CreateRoom`, `RenameSquad`, `showEndIfOver`, `buildTerrain` y dos de `menuFlow.ts` y
     `matchScene.ts`. Cuando se toquen, partirlas; luego se puede poner `max-lines-per-function` en
     ESLint como ya está `max-depth`.
+36. **La segunda producción** (lo que la revisión de la PR #195 dejó para entonces). Cuando haya otra
+    forma de sacar unidades que comprar (la fábrica que saca refuerzos de la reserva, idea 35):
+    ampliar `ProductionShortage` (`rules/production.ts`) con su motivo y repasar los sitios que
+    suponen que lo que falta es dinero, de los que el compilador no avisa: `buyBlockedText`
+    (`ui/models/economy.ts`, cuyo `default` diría que el ejército está lleno), el «te faltan N» del
+    menú de compra (`view3d/systems/turn/menuItems.ts`) y lo que la IA se plantea aunque aún no lo
+    pueda pagar (`ai/production.ts`). Y renombrar `buyBlock` (`rules/economy.ts`), que ya pregunta a
+    la producción de la partida y no solo a la compra (`productionBlock` o parecido).
 
 ## Descartado (y por qué)
 
