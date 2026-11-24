@@ -70,15 +70,24 @@ cosa en su PR:
     - **Turnos de guerra**: en cada uno se elige qué territorio atacar (uno vecino de los tuyos) o
       dónde defender, y se juega esa batalla con las reglas de siempre.
     - **Recursos**: cada territorio da presupuesto por turno de guerra; las **capitales** dan mucho
-      más. El presupuesto se gasta en el **cuartel general** (decidido): se reclutan unidades, que
-      van a la reserva, y se **asignan a los frentes** (atacar un territorio, defender uno amenazado,
-      guarnición). Las que sobreviven vuelven con su veteranía y cuestan mantenimiento por turno de
-      guerra (las dos reglas ya existen en la partida). Cada frente tiene un tope de unidades.
+      más. El presupuesto se gasta en el **cuartel general** (decidido), al estilo de Heroes &
+      Generals.
+    - **Equipos, no unidades sueltas** (decidido): se compran grupos con nombre y composición fija
+      (Infantería: 4 soldados y 2 bazucas; Blindados: 2 tanques y 1 tanque ligero; Artillería;
+      Reconocimiento…) y se asignan a los frentes (atacar, defender, guarnición). En la batalla son
+      sus unidades de siempre; el equipo solo existe en la capa de la guerra. La veteranía es del
+      equipo, que sube de nivel ganando batallas, y cuesta mantenimiento por turno de guerra.
+    - **La fábrica como entrada de refuerzos** (propuesta): cada equipo trae unidades en el campo y
+      otras en reserva; en la batalla no se compra con dinero, la fábrica o la Base saca unidades de
+      la reserva de tus equipos, hasta que se acaba. Al volver, las bajas se pagan con el presupuesto
+      (reabastecer).
+    - **Líneas de suministro** (propuesta): un territorio sin camino a tu capital no puede reabastecer
+      a sus equipos; cortar el frente enemigo es una jugada en sí.
     - **La IA también ataca** (decidido): el rojo mueve sus frentes, así que hay que repartir entre
       atacar y defender lo que ya es tuyo.
     - **Inteligencia** (decidido): saber qué hay en un territorio antes de atacarlo o qué trae quien
-      te ataca. Por niveles: patrulla gratis si hay un Jeep o un Helicóptero en un vecino (cuántos y
-      de qué tipo, a grandes rasgos), reconocimiento pagado (todas las unidades) y espía (además, su
+      te ataca. Por niveles: patrulla gratis si hay un equipo de Reconocimiento en un vecino
+      (cuántos y de qué tipo, a grandes rasgos), reconocimiento pagado (todas las unidades) y espía (además, su
       veteranía y lo que piensa hacer). La IA también sabe de ti lo que haya visto.
     - **Se gana conquistando la capital enemiga.** Perder la propia es perder la guerra.
     - **Mapas hechos a mano**, el mapamundi y el de cada territorio (decidido): la guerra es
@@ -88,8 +97,8 @@ cosa en su PR:
     - **Qué reutiliza**: cada batalla es una partida normal (`createMatch` con su mapa, las
       unidades asignadas y su objetivo), así que lo nuevo es la capa de encima: el mapamundi, sus
       turnos, el cuartel general y la inteligencia, en `src/core` y guardada aparte de la partida.
-    - **Preguntas abiertas**: ¿en la batalla se sigue comprando en fábricas o solo se juega con lo
-      asignado? ¿cuántas batallas por turno de guerra? ¿cuánto dura una guerra? ¿la campaña de 6
+    - **Preguntas abiertas**: ¿la fábrica como entrada de refuerzos y las líneas de suministro? ¿se
+      puede cambiar alguna unidad de un equipo? ¿cuántas batallas por turno de guerra? ¿cuánto dura una guerra? ¿la campaña de 6
       misiones de ahora se queda como tutorial antes de la guerra?
 
 ## Equilibrio
