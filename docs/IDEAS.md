@@ -60,6 +60,29 @@ cosa en su PR:
 4. **Modo Escaramuza.** Mapa pequeño (12×12), menos dinero, partidas de ~10 días.
 5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar visión. Ver cómo se juegan primero (PR #47).
 
+## Campaña: la guerra por el mapamundi
+
+35. **La campaña como una guerra entera, no misiones sueltas.** Idea del usuario (24-11-2026); los
+    conceptos de pantalla están en el lienzo de diseño «Ilogic · Rediseño de Jugar en línea», página
+    «Campaña: mapamundi».
+    - **El mapamundi**: el mundo partido en territorios (regiones), cada uno de un bando o neutral.
+      Cada territorio es un mapa de batalla. Lo que se gana o se pierde se pinta en el mapamundi.
+    - **Turnos de guerra**: en cada uno se elige qué territorio atacar (uno vecino de los tuyos) o
+      dónde defender, y se juega esa batalla con las reglas de siempre.
+    - **Recursos**: cada territorio da dinero de guerra por turno; las **capitales** dan mucho más (y
+      quizá algo más: una fábrica mejor, una unidad propia). Antes de cada batalla se decide cuánto
+      dinero de guerra se lleva: es el dinero inicial de esa batalla, y lo que no se gasta se guarda.
+    - **Se gana conquistando la capital enemiga.** Perder la propia es perder la guerra.
+    - **En línea, igual**: dos personas en el mismo mapamundi, cada una con su dinero de guerra;
+      cada batalla es una partida en vivo. Encaja con «Buscar rival» y con las salas con amigos.
+    - **Qué reutiliza**: cada batalla es una partida normal (`createMatch` con su mapa, dinero y
+      objetivo), así que lo nuevo es la capa de encima: el mapamundi, sus turnos y la cuenta de
+      recursos, en `src/core` y guardada aparte de la partida.
+    - **Preguntas abiertas**: ¿mapas hechos a mano o generados por territorio? ¿la IA también ataca
+      en el mapamundi (frentes que se mueven solos)? ¿las unidades que sobreviven pasan a la
+      siguiente batalla o solo el dinero? ¿qué pasa con un territorio ganado que no se defiende? ¿la
+      campaña de 6 misiones de ahora se queda como tutorial antes de la guerra?
+
 ## Equilibrio
 
 10. **Unidades.** `npm run balance` dice que el Soldado (1,6×) y el Caza ligero (2×) rinden demasiado
