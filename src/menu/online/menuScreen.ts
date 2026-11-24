@@ -12,6 +12,7 @@ import { forgetRoom, parseRoomLink, readOnlineRooms, type OnlineRoomEntry } from
 import { t, type TextKey } from '../../settings';
 import { isSearching, roomLines } from './roomLines';
 import { paceTurnText, type OnlineScreens } from './shared';
+import { Visits } from './visits';
 
 const ROOM_PREFIX = 'room-';
 const FORGET_PREFIX = 'forget-';
@@ -53,8 +54,8 @@ export class MenuScreen {
   private pace: SearchPace = FIRST_PACE;
   private codeText = '';
   private codeError: string | null = null;
-  /** Cuantas veces se ha abierto o cerrado la lista: lo que acaba despues de salir (cancelar una busqueda) ya no la toca. */
-  private visit = 0;
+  /** Cada vez que se abre o cierra la lista: lo que acaba despues de salir (cancelar una busqueda) ya no la toca. */
+  private readonly visits = new Visits();
 
   constructor(private readonly screens: OnlineScreens) {}
 
@@ -69,7 +70,7 @@ export class MenuScreen {
 
   /** Se deja de mirar la lista (a crear, a una sala o fuera): nada queda preguntando. */
   close(): void {
-    this.visit++;
+    this.visits.next();
     this.screens.rooms.stop();
   }
 
@@ -145,9 +146,9 @@ export class MenuScreen {
   }
 
   private async cancelSearch(entry: OnlineRoomEntry): Promise<void> {
-    const visit = this.visit;
+    const visit = this.visits.current();
     const cancelled = await this.screens.cancelSearch(entry);
-    if (visit !== this.visit) return;
+    if (!this.visits.isCurrent(visit)) return;
     if (cancelled) return this.forgotten(entry.code);
     // Ha llegado un rival: lo que diga ahora el servidor.
     this.screens.rooms.forget(entry.code);

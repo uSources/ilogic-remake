@@ -9,6 +9,7 @@ import { readOnlineRooms, type OnlineRoomEntry } from '../../net/onlineRooms';
 import { lobbyOf, serverHealth, type ApiResult, type LobbyInfo } from '../../net/roomApi';
 import { serverUrl } from '../../net/serverUrl';
 import { isSettled, type RoomLook } from './roomLines';
+import { Visits } from './visits';
 
 /** Cada cuanto se vuelve a preguntar mientras se miran las salas (te toca, quedan 3 h...). */
 const ROOMS_POLL_MS = 20_000;
@@ -37,11 +38,8 @@ export class RoomWatch {
   private reach: ServerReach = null;
   private pollHandle: ReturnType<typeof setTimeout> | null = null;
   private onChange: (() => void) | null = null;
-  /**
-   * Cuantas veces se ha empezado o dejado de mirar: lo que se pregunta lleva la de entonces y, si ya
-   * es otra (se dejo de mirar, o se volvio a empezar con otra ronda de preguntas en marcha), no sigue.
-   */
-  private watch = 0;
+  /** Cada vez que se empieza o deja de mirar: una ronda de preguntas de una vez anterior no sigue. */
+  private readonly watches = new Visits();
 
   /** Lo ultimo que dijo el servidor de esa sala (o nada, si aun no ha contestado). */
   lookOf(code: string): RoomLook {
@@ -62,7 +60,7 @@ export class RoomWatch {
   start(onChange: () => void): void {
     this.stop();
     this.onChange = onChange;
-    void this.refresh(this.watch);
+    void this.refresh(this.watches.current());
   }
 
   /** Vuelve a preguntar ya, para quien esta mirando (si hay alguien). */
@@ -71,7 +69,7 @@ export class RoomWatch {
   }
 
   stop(): void {
-    this.watch++;
+    this.watches.next();
     this.onChange = null;
     if (this.pollHandle !== null) clearTimeout(this.pollHandle);
     this.pollHandle = null;
@@ -85,10 +83,10 @@ export class RoomWatch {
    */
   private async refresh(watch: number): Promise<void> {
     const base = serverUrl();
-    if (!base || watch !== this.watch) return;
+    if (!base || !this.watches.isCurrent(watch)) return;
     const rooms = this.roomsToAsk();
     const reach = rooms.length > 0 ? await this.askRooms(base, rooms) : reachOf([await serverHealth(base)]);
-    if (watch !== this.watch) return;
+    if (!this.watches.isCurrent(watch)) return;
     this.reach = reach;
     this.onChange?.();
     this.pollHandle = setTimeout(() => void this.refresh(watch), ROOMS_POLL_MS);
