@@ -42,8 +42,8 @@ publicacion se actualiza sola. Solo se registra en la web (`src/pwa.ts`): ni en 
 
 ## Jugar en línea
 
-Contra amigos por internet, cada uno en su navegador, por turnos y sin prisa (se puede cerrar y
-volver: la partida vive en el servidor). Hace falta un servidor de partidas (`server/`: un Worker
+Contra otra persona o contra amigos por internet, cada uno en su navegador, por turnos y sin prisa
+(se puede cerrar y volver: la partida vive en el servidor) o en vivo. Hace falta un servidor de partidas (`server/`: un Worker
 de Cloudflare o, para alojarlo uno mismo, un servidor de Node; como se pone cada uno, en
 `server/README.md`) y que el juego sepa donde esta:
 `VITE_SERVER_URL` al compilar (en GitHub, la variable del repositorio; en local, `.env` a partir de
@@ -52,23 +52,31 @@ jugar con un servidor propio sin recompilar). Sin servidor, Inicio no ofrece «J
 Para tenerlo todo en casa: `npm run selfhost` compila el juego y arranca el servidor de Node, que
 sirve el juego y las salas en la misma direccion (`http://<tu-equipo>:8787`).
 
-- **Crear partida**: Inicio → «Jugar en línea» → «Crear partida». De 2 a 4 equipos y quien juega
+- **Buscar rival**: Inicio → «Jugar en línea» → «Buscar rival», con el ritmo: **por turnos** (un
+  dia por turno: juegas cuando puedes) o **en vivo** (dos minutos por turno, los dos a la vez). Es 1
+  contra 1, con las reglas normales y un mapa al azar. Si alguien espera con ese ritmo, la partida
+  empieza ya; si no, tu sala queda «Buscando rival» y empieza cuando llegue alguien: por turnos
+  puedes cerrar el juego y te la encuentras en «Mis partidas en línea»; en vivo solo te emparejan
+  mientras estas en la sala, y si no quieres esperar puedes jugar contra la IA. «Cancelar búsqueda»
+  (o «Cancelar» en «Mis partidas») la cierra.
+- **Con amigos, crear partida**: Inicio → «Jugar en línea» → «Crear partida». De 2 a 4 equipos y quien juega
   cada uno (una persona o la IA), las reglas (los ajustes de «Nueva partida» o «Personalizada»), y si
   se quiere un reloj por turno (al acabarse, el turno pasa solo) y cuanto esperar a los que no entran
   (pasado, su asiento lo juega la IA). La partida da un codigo de 6 letras y un enlace, el mismo para
   todos: copialo (o compartelo desde el movil). Empieza cuando han entrado todos; mientras, quien la
   creo puede dar a la IA un asiento que sigue vacio.
 - **Unirse**: con el enlace (abre el juego directamente en la sala) o escribiendo el codigo (o
-  pegando el enlace) en «Unirse a una partida»: el servidor da el primer asiento libre.
+  pegando el enlace) en «Con amigos»: el servidor da el primer asiento libre.
 - **Mis partidas en línea** recuerda las salas de este navegador y dice como va cada una: «Te toca»
   (con el dia y lo que queda de turno, si hay reloj), el turno de otro equipo, esperando jugadores,
-  acabada o ya no existe. Lo que pide jugar va arriba.
+  buscando rival, acabada o ya no existe. Lo que pide jugar va arriba.
 - **En la partida**: tu turno se juega como siempre (cada accion la confirma el servidor); en los
   demas sale «Esperando al equipo N…» y lo que hacen llega animado cuando acaban. Si cambias de
   pestaña, el titulo avisa de que te toca. La pastilla bajo la del dia dice como va la conexion: si
   se corta, el juego vuelve a conectar solo. Guardar no esta: la partida sigue desde el servidor
-  (recargar la pagina vuelve a ella). Rendirse o salir, desde el menu de pausa (al salir, tu asiento
-  sigue siendo tuyo: vuelve con el enlace o desde «Mis partidas en línea»).
+  (recargar la pagina vuelve a ella). Rendirse o salir, desde el menu de pausa, tambien mientras
+  juegan los demas (al salir, tu asiento sigue siendo tuyo: vuelve con el enlace o desde «Mis
+  partidas en línea»).
 
 `npm run online` lo prueba de punta a punta con el servidor de Node en local y dos navegadores. Como funciona por dentro (que garantiza, por donde pasa cada jugada, los mensajes):
 [docs/RED.md](docs/RED.md).

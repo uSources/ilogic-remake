@@ -1,6 +1,8 @@
 /**
  * Lo que tiene que hacer cualquier servidor de partidas, lo aloje quien lo aloje: las rutas, una
- * partida entera por WebSocket (dos personas y la IA), volver a entrar y lo que no deja pasar. Lo
+ * partida entera por WebSocket (dos personas y la IA), volver a entrar, buscar rival (el emparejador
+ * es uno para todo el servidor: cada prueba cierra las salas que deja esperando, para que no se las
+ * encuentre la siguiente) y lo que no deja pasar. Lo
  * corren test/workers (Cloudflare) y node/test (Node) con su `TestServer`; lo que solo pasa en uno
  * (despertar un Durable Object, arrancar Node otra vez) esta en el suyo.
  */
@@ -81,10 +83,39 @@ export async function joinedRoom(
   return { code: created.code, clients, tokens };
 }
 
+/** Lo que contesta el servidor a quien busca rival: su asiento y si ya lo tiene. */
+export interface SearchTicket extends SeatTicket {
+  matched: boolean;
+}
+
+export function searchRival(server: TestServer, body: unknown): Promise<Response> {
+  return server.fetch('/match', {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { Origin: GAME_ORIGIN, 'Content-Type': 'application/json' },
+  });
+}
+
+export async function searchTicket(server: TestServer, body: unknown): Promise<SearchTicket> {
+  const response = await searchRival(server, body);
+  expect(response.status).toBe(200);
+  return bodyOf<SearchTicket>(response);
+}
+
+/** Quien creo la sala la cierra (cancela su busqueda). */
+export function closeRoom(server: TestServer, code: string, token: string): Promise<Response> {
+  return server.fetch(`/rooms/${code}/close`, {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+    headers: { Origin: GAME_ORIGIN, 'Content-Type': 'application/json' },
+  });
+}
+
 /** Las pruebas comunes, contra el servidor que da `serverOf` (se pide en cada prueba: puede arrancar antes). */
 export function describeServer(serverOf: () => TestServer): void {
   describeRoutes(serverOf);
   describeMatch(serverOf);
+  describeSearch(serverOf);
   describeRefusals(serverOf);
 }
 
@@ -208,6 +239,72 @@ function describeMatch(serverOf: () => TestServer): void {
       again.close();
       await again.closed;
       await expect.poll(async () => (await lobbyOf(server, code)).info?.seats[0]?.joined).toBe(false);
+    });
+  });
+}
+
+function describeSearch(serverOf: () => TestServer): void {
+  describe('buscar rival', () => {
+    it('el primero abre su sala y espera; el segundo se queda el otro asiento y la partida empieza sin nadie dentro', async () => {
+      const server = serverOf();
+      const opener = await searchTicket(server, { pace: 'daily' });
+      expect(opener).toMatchObject({ seat: 0, team: 0, matched: false });
+      expect((await lobbyOf(server, opener.code)).info?.status).toBe('waiting');
+      const rival = await searchTicket(server, { pace: 'daily' });
+      expect(rival).toMatchObject({ code: opener.code, seat: 1, team: 1, matched: true });
+      const { info } = await lobbyOf(server, opener.code);
+      expect(info?.status).toBe('playing');
+      expect(info?.turn).toMatchObject({ seat: 1, day: 1 });
+      // Cada uno entra cuando puede, con su ficha.
+      const client = await SocketClient.join(server, rival.code, rival.token);
+      await client.take(['turn']);
+      expect(client.net.isMyTurn).toBe(true);
+      client.close();
+    });
+
+    it('a quien busca no le toca su sala, y en vivo solo se empareja con quien esta en la suya', async () => {
+      const server = serverOf();
+      const own = await searchTicket(server, { pace: 'live' });
+      const other = await searchTicket(server, { pace: 'live', avoid: [own.code] });
+      expect(other.matched).toBe(false);
+      expect(other.code).not.toBe(own.code);
+      // Nadie esta dentro de las dos: la siguiente busqueda abre otra.
+      const third = await searchTicket(server, { pace: 'live' });
+      expect(third.matched).toBe(false);
+      const inside = await SocketClient.join(server, other.code, other.token);
+      expect(await searchTicket(server, { pace: 'live' })).toMatchObject({ code: other.code, matched: true });
+      inside.close();
+      for (const left of [own, third]) expect((await closeRoom(server, left.code, left.token)).status).toBe(200);
+    });
+
+    it('quien abrio la sala la cierra antes de que empiece (y quien este dentro sale); con otra ficha, o ya empezada, no', async () => {
+      const server = serverOf();
+      const opener = await searchTicket(server, { pace: 'daily' });
+      const inside = await SocketClient.join(server, opener.code, opener.token);
+      const wrong = await closeRoom(server, opener.code, 'x'.repeat(opener.token.length));
+      expect(wrong.status).toBe(403);
+      expect(await bodyOf(wrong)).toEqual({ error: 'badToken' });
+      const closed = await closeRoom(server, opener.code, opener.token);
+      expect(closed.status).toBe(200);
+      expect(await bodyOf(closed)).toEqual({ ok: true });
+      expect(await inside.closed).toMatchObject({ code: CLOSE_CODES.gone });
+      expect((await lobbyOf(server, opener.code)).status).toBe(404);
+      expect(await bodyOf(await closeRoom(server, opener.code, opener.token))).toEqual({ error: 'noSuchRoom' });
+      const { code, tokens } = await joinedRoom(server);
+      const playing = await closeRoom(server, code, tokens[0]!);
+      expect(playing.status).toBe(409);
+      expect(await bodyOf(playing)).toEqual({ error: 'notWaiting' });
+    });
+
+    it('lo que no es una busqueda bien pedida se rechaza', async () => {
+      const server = serverOf();
+      for (const body of [{ pace: 'weekly' }, { pace: 'daily', avoid: ['abc'] }, { pace: 'daily', rules: {} }, 'daily']) {
+        const refused = await searchRival(server, body);
+        expect(refused.status).toBe(400);
+        expect(await bodyOf(refused)).toEqual({ error: 'badRequest' });
+      }
+      // Cerrar sin ficha tampoco.
+      expect((await closeRoom(server, 'ABCDEF', '')).status).toBe(400);
     });
   });
 }

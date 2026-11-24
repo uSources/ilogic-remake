@@ -24,10 +24,11 @@
  *
  * La maquina de estados (`RoomStatus`):
  *
- *   'waiting'  esperando a que entren todas las personas: quien llega con el codigo pide un asiento
- *              (`claimSeat`). Quien abandona antes se rinde y ya no se le espera; un asiento vacio
- *              puede pasar a la IA (`replaceWithAi`).
- *      │  entran todas (`join` → `startIfComplete`)
+ *   'waiting'  esperando a las personas: quien llega con el codigo pide un asiento (`claimSeat`).
+ *              Quien abandona antes se rinde y ya no se le espera; un asiento vacio puede pasar a la
+ *              IA (`replaceWithAi`).
+ *      │  entran todas (`join` → `startIfComplete`) o, si la sala empieza asi (`StartRule`
+ *      │  'everyoneSeated', la busqueda de rival), cada asiento es ya de alguien (`claimSeat`)
  *      ▼
  *   'playing'  la partida sigue: `advance` la lleva hasta que hay que esperar a una persona (`turn`),
  *              de `ADVANCE_STEP_BUDGET` pasos en pasos (`isMidway()`, `continueMatch()`: una llamada
@@ -85,10 +86,27 @@ import {
 export type { Outgoing } from './courier';
 export type { AiSeat, PersonSeat, Seat } from './seats';
 
-/** Lo que se elige de una sala: la partida y el perfil de la IA de cada equipo de la IA (por su nombre). */
+/**
+ * Cuando empieza la partida: cuando han entrado todas las personas (la sala de amigos: en el
+ * vestibulo se ve quien esta) o en cuanto cada asiento es de alguien, aunque no esten dentro (la
+ * busqueda de rival: en una partida por turnos los dos no tienen por que coincidir; quien no esta se
+ * entera de que le toca en «Mis partidas»).
+ */
+export type StartRule = 'everyoneIn' | 'everyoneSeated';
+
+/** Si una persona cuenta para empezar, segun la regla (una que se ha rendido cuenta siempre: ya no se la espera). */
+const COUNTS_FOR_START: Record<StartRule, (seat: PersonSeat) => boolean> = {
+  everyoneIn: isJoined,
+  everyoneSeated: (seat) => seat.claimed,
+};
+
+const isStartRule = (value: unknown): value is StartRule => typeof value === 'string' && Object.hasOwn(COUNTS_FOR_START, value);
+
+/** Lo que se elige de una sala: la partida, el perfil de la IA de cada equipo de la IA (por su nombre) y cuando empieza (si no, cuando entren todos). */
 export interface RoomConfig {
   match: MatchConfig;
   aiProfiles?: Readonly<Partial<Record<TeamId, string>>>;
+  start?: StartRule;
 }
 
 /** Lo que el servidor le da a la sala para trabajar. */
@@ -106,12 +124,13 @@ export interface RoomContext {
 }
 
 /** La version de la sala guardada (sube cuando cambia lo que guarda; aparte del protocolo). */
-export const ROOM_SNAPSHOT_VERSION = 2;
+export const ROOM_SNAPSHOT_VERSION = 3;
 
 /** La sala entera como JSON, para guardarla (`restore` la recupera). */
 export interface RoomSnapshot {
   version: number;
   status: RoomStatus;
+  start: StartRule;
   seats: Seat[];
   state: SavedGameState;
   /** El numero de la siguiente conexion que entre. */
@@ -124,7 +143,7 @@ export type JoinResult = { ok: true; seat: SeatId; connection: number; messages:
 export type ClaimError = 'notWaiting' | 'noFreeSeat';
 
 /** El asiento que se da a quien llega con el codigo (con su ficha, para entrar), o por que no. */
-export type ClaimResult = { ok: true; seat: SeatId; team: TeamId; token: string } | { ok: false; error: ClaimError };
+export type ClaimResult = { ok: true; seat: SeatId; team: TeamId; token: string; messages: Outgoing[] } | { ok: false; error: ClaimError };
 export type RestoreResult = { ok: true; room: Room } | { ok: false; error: 'badSnapshot' | SaveError };
 
 const ROOM_STATUSES: readonly RoomStatus[] = ['waiting', 'playing', 'ended'];
@@ -156,6 +175,7 @@ export class Room {
     state: GameState,
     private readonly roomSeats: Seat[],
     private roomStatus: RoomStatus,
+    private readonly startRule: StartRule,
     private readonly context: RoomContext,
     private nextConnection: number,
   ) {
@@ -171,7 +191,8 @@ export class Room {
   /** Una sala nueva con esa partida: esperando a que entren sus personas. */
   static create(config: RoomConfig, context: RoomContext): Room {
     const state = buildMatch(config.match, { content: context.content, modes: context.modes });
-    return new Room(state, seatsFor(state, config.aiProfiles ?? {}, context.newToken), 'waiting', context, 1);
+    const seats = seatsFor(state, config.aiProfiles ?? {}, context.newToken);
+    return new Room(state, seats, 'waiting', config.start ?? 'everyoneIn', context, 1);
   }
 
   /**
@@ -179,13 +200,13 @@ export class Room {
    * Nadie esta dentro al recuperarla: cada cliente vuelve a saludar (y recibe su vista entera).
    */
   static restore(snapshot: unknown, context: RoomContext): RestoreResult {
-    if (!isObject(snapshot) || snapshot.version !== ROOM_SNAPSHOT_VERSION || !isRoomStatus(snapshot.status))
+    if (!isObject(snapshot) || snapshot.version !== ROOM_SNAPSHOT_VERSION || !isRoomStatus(snapshot.status) || !isStartRule(snapshot.start))
       return { ok: false, error: 'badSnapshot' };
     const read = readSaved(structuredClone(snapshot.state), context.content, { modes: context.modes ?? GAME_MODES });
     if (!read.ok) return read;
     const seats = restoredSeats(read.state, snapshot.seats);
     if (!seats || !isInt(snapshot.nextConnection, 1, Number.MAX_SAFE_INTEGER)) return { ok: false, error: 'badSnapshot' };
-    const room = new Room(read.state, seats, snapshot.status, context, snapshot.nextConnection);
+    const room = new Room(read.state, seats, snapshot.status, snapshot.start, context, snapshot.nextConnection);
     room.resume();
     return { ok: true, room };
   }
@@ -195,6 +216,7 @@ export class Room {
     const snapshot: RoomSnapshot = {
       version: ROOM_SNAPSHOT_VERSION,
       status: this.roomStatus,
+      start: this.startRule,
       seats: this.roomSeats,
       state: savedPart(this.state),
       nextConnection: this.nextConnection,
@@ -280,14 +302,17 @@ export class Room {
    * Alguien llega con el codigo de la sala, sin ficha: se le da el primer asiento de persona que no
    * es de nadie, que desde ahora es suyo (entra con esa ficha). Solo mientras la sala espera. Un
    * asiento dado no se libera: si quien lo pidio no llega a entrar, lo pasa a la IA la espera o
-   * quien creo la sala (`replaceWithAi`), como a cualquiera que falta.
+   * quien creo la sala (`replaceWithAi`), como a cualquiera que falta. En una sala que empieza con
+   * todos los asientos dados ('everyoneSeated'), dar el ultimo la pone a jugar: lo que haya que
+   * mandar a quien ya este dentro va en `messages`.
    */
   claimSeat(): ClaimResult {
     if (this.roomStatus !== 'waiting') return { ok: false, error: 'notWaiting' };
     const seat = this.personSeats().find(isFree);
     if (!seat) return { ok: false, error: 'noFreeSeat' };
     seat.claimed = true;
-    return { ok: true, seat: seat.id, team: seat.team, token: seat.token };
+    this.startIfComplete();
+    return { ok: true, seat: seat.id, team: seat.team, token: seat.token, messages: this.outbox.flush() };
   }
 
   /** El saludo de vuelta: su asiento, su equipo, la version del servidor, como esta la sala y su ultimo `seq` atendido. */
@@ -310,9 +335,10 @@ export class Room {
     this.courier.forget(person);
   }
 
-  /** Si ya estan todas las personas que hacen falta (dentro, o rendidas), la partida empieza. */
+  /** Si ya estan todas las personas que hacen falta (segun la regla de la sala, o rendidas), la partida empieza. */
   private startIfComplete(): void {
-    const isIn = (seat: PersonSeat) => isJoined(seat) || teamState(this.state, seat.team).resigned;
+    const counts = COUNTS_FOR_START[this.startRule];
+    const isIn = (seat: PersonSeat) => counts(seat) || teamState(this.state, seat.team).resigned;
     if (!this.personSeats().every(isIn)) return;
     this.roomStatus = 'playing';
     this.advance();

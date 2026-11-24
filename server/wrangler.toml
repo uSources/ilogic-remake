@@ -1,5 +1,6 @@
-# El servidor de las partidas por la red: un Worker con las rutas y un Durable Object por sala
-# (`RoomObject`, src/cloudflare/roomObject.ts). Ver README.md y docs/ARQUITECTURA.md, "Red" → "Servidor".
+# El servidor de las partidas por la red: un Worker con las rutas, un Durable Object por sala
+# (`RoomObject`, src/cloudflare/roomObject.ts) y uno para el emparejador de «Buscar rival»
+# (`MatchmakerObject`, src/cloudflare/matchmakerObject.ts). Ver README.md y docs/ARQUITECTURA.md, "Red" → "Servidor".
 name = "ilogic-servidor"
 main = "src/cloudflare/index.ts"
 compatibility_date = "2026-08-01"
@@ -16,10 +17,18 @@ enabled = true
 ALLOWED_ORIGINS = "https://usources.github.io,null"
 
 [durable_objects]
-bindings = [{ name = "ROOMS", class_name = "RoomObject" }]
+bindings = [
+  { name = "ROOMS", class_name = "RoomObject" },
+  { name = "MATCHMAKER", class_name = "MatchmakerObject" },
+]
 
 # Con SQLite: es lo que admite el plan gratuito de Workers (los Durable Objects "clasicos", con
 # almacen clave-valor, piden el plan de pago).
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["RoomObject"]
+
+# El emparejador (llego despues: cada clase nueva de Durable Object va en una migracion nueva).
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["MatchmakerObject"]

@@ -141,6 +141,11 @@ export class TurnControls {
     return this.isBusy;
   }
 
+  /** Juegan los demas (sus turnos animados o, por la red, la espera a que acaben): quien mira solo mira. */
+  get isWatchingOthers(): boolean {
+    return this.isRunning;
+  }
+
   private get isMyTurn(): boolean {
     return !this.isBusy && this.host.runner.session.awaitingInput === this.host.viewer;
   }

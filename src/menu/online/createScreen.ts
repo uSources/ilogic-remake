@@ -26,7 +26,7 @@ import {
 } from '../../setup';
 import { nameOf, settings, t, type TextKey } from '../../settings';
 import { mapThumb } from '../thumb';
-import type { OnlineScreens } from './shared';
+import { timerText, type OnlineScreens } from './shared';
 
 /** Un asiento al crear la sala: quien lo juega (el primero es siempre quien crea). */
 interface SeatChoice {
@@ -69,14 +69,6 @@ const presetVM = (id: PresetId): PresetVM => ({
 });
 
 const isPresetId = (value: string): value is PresetId => (PRESET_IDS as readonly string[]).includes(value);
-
-/** "3 min", "1 h", "1 día" o sin límite. */
-function secondsLabel(seconds: number | null): string {
-  if (seconds === null) return t('onlineNoTimer');
-  if (seconds >= 86400) return t('onlineOneDay');
-  if (seconds >= 3600) return `${seconds / 3600} ${t('onlineHours')}`;
-  return `${seconds / 60} ${t('onlineMinutes')}`;
-}
 
 export class CreateScreen {
   private options!: NewGameOptions;
@@ -210,14 +202,14 @@ export class CreateScreen {
         id: 'turn',
         group: '',
         label: t('onlineTurnTimer'),
-        choices: TURN_SECONDS.map(secondsLabel),
+        choices: TURN_SECONDS.map(timerText),
         index: TURN_SECONDS.indexOf(this.turnSeconds),
       },
       {
         id: 'wait',
         group: '',
         label: t('onlineWaitTimer'),
-        choices: WAITING_SECONDS.map(secondsLabel),
+        choices: WAITING_SECONDS.map(timerText),
         index: WAITING_SECONDS.indexOf(this.waitingSeconds),
       },
     ];

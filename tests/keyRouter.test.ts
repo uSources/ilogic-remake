@@ -214,7 +214,8 @@ describe('KeyRouter con la pausa de verdad', () => {
   });
 
   /** La pausa de una partida vacia (sin ordenes: no sale «Ver órdenes»); lo que pide a la partida se apunta por su nombre. */
-  function pausedMatch() {
+  /** Con `watching`, quien mira esta mirando jugar a los demas. */
+  function pausedMatch(watching = false) {
     const asked: string[] = [];
     const ask = (name: string) => () => void asked.push(name);
     const pause = new PauseMenu({
@@ -229,6 +230,7 @@ describe('KeyRouter con la pausa de verdad', () => {
       isThreatOn: () => false,
       isIntentsOn: () => false,
       hasOrders: () => false,
+      isWatching: () => watching,
       refresh: () => undefined,
     });
     const match = fakeMatch([pause]);
@@ -266,6 +268,14 @@ describe('KeyRouter con la pausa de verdad', () => {
     expect(asked).toEqual(['endTurn']);
     expect(pause.isOpen).toBe(false);
     expect(sounds).toEqual(['ui_move', 'ui_move', 'ui_move', 'ui_move', 'ui_move', 'ui_select']);
+  });
+
+  it('mirando jugar a los demas no sale lo del turno propio (terminarlo, guardar): rendirse y salir, si', () => {
+    const { press, pause, asked } = pausedMatch(true);
+    expect(shownPause(pause).items.map((item) => item.id)).toEqual(['resume', 'threat', 'options', 'help', 'surrender', 'quit']);
+    press('KeyE');
+    expect(asked).toEqual([]);
+    expect(pause.isOpen).toBe(true);
   });
 
   it('las peligrosas van en su fila, abajo', () => {

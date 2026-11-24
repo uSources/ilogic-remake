@@ -4,6 +4,8 @@
 // verdad: A crea la sala, B entra por el enlace de la sala (pide un asiento con el codigo), juegan
 // turnos (los dos tienen que ver lo mismo), «Mis partidas» de A dice que le toca, B recarga la pagina a
 // mitad (vuelve a la sala sola) y A se rinde (los dos ven el final, y «Mis partidas», que acabo).
+// Despues, «Buscar rival»: C busca por turnos y espera en su sala, D busca y se queda su asiento (la
+// partida empieza en los dos y juega primero D), y E busca en vivo y cancela (la sala se cierra).
 //
 //   npm run online
 //   ILOGIC_SERVER_URL=https://ilogic-servidor.<cuenta>.workers.dev npm run online   # contra el publicado
@@ -175,6 +177,16 @@ const comparable = () => {
   return JSON.stringify({ day: s.day, turn: s.turn, units, owners: s.buildings.map((b) => [b.x, b.y, b.owner]) });
 };
 
+/**
+ * Con niebla (las reglas de siempre, como en «Buscar rival») cada uno ve sus unidades y no las del
+ * otro: lo que tienen que ver igual es el dia, el turno y los edificios con sus dueños.
+ */
+const comparableInFog = () => {
+  const s = window.ilogic3d.session.state;
+  const owners = s.buildings.map((building) => [building.x, building.y, building.owner]);
+  return JSON.stringify({ day: s.day, turn: s.turn, owners });
+};
+
 /** Mueve la primera unidad propia que llega a una casilla vacia, como lo haria la persona (dos toques). */
 async function moveOneUnit() {
   const rules = await import('/src/core/rules.ts');
@@ -208,12 +220,12 @@ async function playTurn(page, other, who) {
   await page.evaluate(() => window.ilogic3d.controls.endTurn());
 }
 
-/** Los dos ven la misma partida (cuando los dos han acabado de animar). */
-async function sameMatch(a, b, when) {
+/** Los dos ven la misma partida (cuando los dos han acabado de animar); `view`, lo que se compara de ella. */
+async function sameMatch(a, b, when, view = comparable) {
   const deadline = Date.now() + TURN_MS;
   let seen = [];
   while (Date.now() < deadline) {
-    seen = await Promise.all([a.evaluate(comparable), b.evaluate(comparable)]).catch(() => []);
+    seen = await Promise.all([a.evaluate(view), b.evaluate(view)]).catch(() => []);
     if (seen.length && seen[0] === seen[1]) return check(true, `${when}, los dos ven lo mismo`);
     await sleep(200);
   }
@@ -239,6 +251,15 @@ async function lobbyWithSeats() {
   return lobby?.link && lobby.seats.length > 0 ? lobby : null;
 }
 
+/** El vestibulo de la propia busqueda de rival, cuando ya sabe quien hay en la sala. */
+async function searchingLobby() {
+  const lobby = (await import('/src/hud/store.ts')).ui.get().online?.lobby;
+  return lobby?.searching && lobby.seats.length > 0 ? lobby : null;
+}
+
+/** «Jugar en línea» esta en su menu (no en el vestibulo de una sala). */
+const isOnlineMenu = async () => (await import('/src/hud/store.ts')).ui.get().online?.mode === 'menu';
+
 /** La linea de la sala `code` en «Mis partidas», cuando ya se sabe lo que dice el servidor de ella. */
 async function knownRoomLine(code) {
   const rooms = (await import('/src/hud/store.ts')).ui.get().online?.rooms ?? [];
@@ -248,13 +269,17 @@ async function knownRoomLine(code) {
 
 // --- El guion ------------------------------------------------------------------------------------
 
+/** Del menu de inicio a «Jugar en línea». */
+async function openOnline(page, who) {
+  await until(page, () => document.querySelector('button') !== null, null, `el menu en ${who}`);
+  check((await menuState(page)).screen === 'menu', `${who} esta en el menu de inicio`);
+  await menuAction(page, 'homePick', 'online');
+  check((await menuState(page)).online?.error === null, `con servidor, «Jugar en línea» se abre sin aviso en ${who}`);
+}
+
 /** A crea una partida de dos personas y espera en el vestibulo: devuelve el vestibulo (con el enlace de la sala). */
 async function createRoom(a) {
-  await until(a, () => document.querySelector('button') !== null, null, 'el menu en A');
-  check((await menuState(a)).screen === 'menu', 'A esta en el menu de inicio');
-  await menuAction(a, 'homePick', 'online');
-  const online = (await menuState(a)).online;
-  check(online?.error === null, 'con servidor, «Jugar en línea» se abre sin aviso');
+  await openOnline(a, 'A');
   await shot(a, 'menu');
   await menuAction(a, 'onlinePick', 'create');
   const create = (await menuState(a)).online.create;
@@ -325,6 +350,44 @@ async function playOnline(browser, gameUrl, server) {
   await checkMyRooms(a, gameUrl, lobby.code, 'ended', 'mis-partidas-acabada');
 }
 
+/** «Buscar rival»: C espera por turnos y D llega (la partida empieza, y juega primero D); E busca en vivo y cancela. */
+async function searchRivals(browser, gameUrl, server) {
+  const c = await openPlayer(browser, 'C', gameUrl, server);
+  await openOnline(c, 'C');
+  await menuAction(c, 'onlinePick', 'search');
+  const daily = await until(c, searchingLobby, null, 'el vestibulo de la busqueda de C');
+  check(!daily.canInvite, 'buscando rival no se invita: no hay enlace que repartir');
+  check(daily.seats[1]?.canHandToAi === true, `C puede jugar contra la IA mientras espera («${daily.handToAiLabel}»)`);
+  await shot(c, 'buscando');
+  await c.setViewportSize(PHONE);
+  await shot(c, 'buscando-movil');
+  await c.setViewportSize(VIEWPORT);
+
+  const d = await openPlayer(browser, 'D', gameUrl, server);
+  await openOnline(d, 'D');
+  await menuAction(d, 'onlinePick', 'search');
+  await until(d, inMatch, null, 'la partida en D', MATCH_START_MS);
+  await until(c, inMatch, null, 'la partida en C', MATCH_START_MS);
+  check(true, 'D se queda el asiento de la sala de C: la partida empieza en las dos pantallas');
+  await until(d, ownTurnReady, null, 'el primer turno de D (quien llega juega primero)');
+  await sameMatch(c, d, 'al emparejar', comparableInFog);
+  await shot(d, 'd-emparejado');
+
+  const e = await openPlayer(browser, 'E', gameUrl, server);
+  await openOnline(e, 'E');
+  await menuAction(e, 'onlinePick', 'pace-live');
+  await shot(e, 'menu-en-vivo');
+  await menuAction(e, 'onlinePick', 'search');
+  const live = await until(e, searchingLobby, null, 'el vestibulo de la busqueda en vivo de E');
+  check(live.code !== daily.code && live.searching !== daily.searching, `E busca en vivo en su propia sala («${live.searching}»)`);
+  await shot(e, 'buscando-en-vivo');
+  await menuAction(e, 'onlinePick', 'cancelSearch');
+  await until(e, isOnlineMenu, null, 'que E vuelva al menu al cancelar');
+  check((await fetch(`${server}/rooms/${live.code}`)).status === 404, 'al cancelar, la sala de E se cierra en el servidor');
+  const rooms = (await menuState(e)).online.rooms;
+  check(!rooms.some((room) => room.code === live.code), 'y sale de «Mis partidas» de E');
+}
+
 const roomServer = await roomServerToUse();
 console.log(`salas en ${roomServer.url}`);
 const dev = await startDevServer();
@@ -332,6 +395,7 @@ console.log(`juego en ${dev.url}`);
 const browser = await chromium.launch();
 try {
   await playOnline(browser, dev.url, roomServer.url);
+  await searchRivals(browser, dev.url, roomServer.url);
 } catch (error) {
   failures.push(error.message);
   console.log(`MAL  ${error.message}`);

@@ -1,6 +1,7 @@
 /**
  * Lo que el servidor genera con azar: el codigo de una sala (lo que se escribe o se dicta; su forma,
- * `isRoomCode`, es del nucleo, para que la pantalla la compruebe igual) y las fichas de los asientos
+ * `isRoomCode`, es del nucleo, para que la pantalla la compruebe igual), la semilla del mapa de una
+ * sala de la busqueda de rival y las fichas de los asientos
  * (`RoomContext.newToken`: el nucleo no tira de ningun azar). Todo sale de `crypto.getRandomValues`,
  * nunca de `Math.random`. Y como se compara una ficha sin que el tiempo diga en que letra deja de
  * coincidir (`sameToken`).
@@ -24,6 +25,14 @@ export function newRoomCode(): string {
     }
   }
   return code;
+}
+
+/** Bytes de una semilla de mapa: 32 bits, como el codigo de mapa de la pantalla. */
+const SEED_BYTES = 4;
+
+/** Una semilla de mapa al azar (la de una sala de la busqueda de rival: el mapa no lo elige nadie). */
+export function newSeed(): number {
+  return randomBytes(SEED_BYTES).reduce((seed, byte) => seed * 256 + byte, 0);
 }
 
 /** Una ficha de `bytes` bytes de azar, en base64 para URL (sin relleno: va en un enlace). */
