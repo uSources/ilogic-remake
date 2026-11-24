@@ -81,8 +81,10 @@ cosa en su PR:
       otras en reserva; en la batalla no se compra con dinero, la fábrica o la Base saca unidades de
       la reserva de tus equipos, hasta que se acaba. Al volver, las bajas se pagan con el presupuesto
       (reabastecer).
-    - **Líneas de suministro** (propuesta): un territorio sin camino a tu capital no puede reabastecer
-      a sus equipos; cortar el frente enemigo es una jugada en sí.
+    - **Líneas de suministro** (decidido; al usuario le encanta): un territorio sin camino de
+      territorios propios hasta tu capital queda aislado y no puede reabastecer a sus equipos.
+      Cortar el frente enemigo por el medio es una jugada en sí, sin ir a por su capital; y lo mismo
+      te lo puede hacer la IA.
     - **La IA también ataca** (decidido): el rojo mueve sus frentes, así que hay que repartir entre
       atacar y defender lo que ya es tuyo.
     - **Inteligencia** (decidido): saber qué hay en un territorio antes de atacarlo o qué trae quien
@@ -97,7 +99,7 @@ cosa en su PR:
     - **Qué reutiliza**: cada batalla es una partida normal (`createMatch` con su mapa, las
       unidades asignadas y su objetivo), así que lo nuevo es la capa de encima: el mapamundi, sus
       turnos, el cuartel general y la inteligencia, en `src/core` y guardada aparte de la partida.
-    - **Preguntas abiertas**: ¿la fábrica como entrada de refuerzos y las líneas de suministro? ¿se
+    - **Preguntas abiertas**: ¿la fábrica como entrada de refuerzos? ¿se
       puede cambiar alguna unidad de un equipo? ¿cuántas batallas por turno de guerra? ¿cuánto dura una guerra? ¿la campaña de 6
       misiones de ahora se queda como tutorial antes de la guerra?
 
