@@ -277,7 +277,9 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   se acaba (`victory`, en orden), el orden de los turnos de cada ronda (`turnOrder`: se fija al
   crear la partida y se guarda con ella), las reglas que impone (`fixedSettings`, que aplica
   `buildMatch`: la partida para mirar no tiene clima), sus pasos de turno (`turnPhases`, detras de
-  los de siempre) y si la pantalla guarda sola al empezar el turno de una persona
+  los de siempre), como sacan unidades los edificios (`production`, el puerto de
+  `rules/production.ts`: precio, por que no se puede y lo que se gasta; sin ninguna, se compra con
+  dinero, `PURCHASE`) y si la pantalla guarda sola al empezar el turno de una persona
   (`saves`). Esta congelado. Cada partida resuelve su modo al crearse o leerse, como sus modulos de
   reglas (`s.ruleset.mode`), de un registro (`GameModeRegistry`; los del juego, `GAME_MODES`), y
   todo lo lee por `gameModeOf(s)` (las reglas, la sesion, la preparacion). Asi otro modo (uno de
@@ -399,6 +401,7 @@ la regla del ataque, `attackProblem` con `from`: `view3d/systems/turn/attackPlan
 | `forecast` | prevision de combate (`combatForecast` de un `Engagement`) y zona de amenaza |
 | `transport`, `supply` | unir y transportes (`mergeProblem`, `loadProblem`, `unloadProblem` y como se hacen); reparar |
 | `economy` | ingresos, mantenimiento, limite del ejercito, comprar (`buyProblem`, `buildUnit`) |
+| `production` | como sacan unidades los edificios: el puerto que elige el modo (`Production`; la de la partida, `productionOf` de `economy`); comprar con dinero es `PURCHASE` |
 | `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`, cada paso devuelve sus sucesos; `roundReport`, el resumen, con `ROUND_REPORT_PARTS` y las `roundReportParts` de los modulos) |
 | `rank` | el rango por bajas (`RANK_KILLS`, `rank`: lo usa el modulo de veterania y la interfaz) |
 | `victory` | como acaba la partida, igual para todos (`matchResult(s)`, `VICTORY_RULES`; ver abajo) |
@@ -604,8 +607,10 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `veterancy` | `veterancy` | el rango al acierto (`rank`, `RANK_KILLS`; las bajas se cuentan siempre) |
 | `flank` | `flankBonus` > 0 | rematar a quien ya ha recibido un ataque hoy (`flankBonusFor`, `wasHitToday`) |
 | `weather` | `weather` | acierto, lo que se puede gastar al moverse, el radio de vision, el cambio de clima con el dia y el clima del primer dia (`matchSetup`) |
+| `buildingIncome` | `incomeScale` > 0 | lo que pagan los edificios al acabar la ronda (la cura encima es de todas las partidas: `repair`, en `ROUND_PHASES`) |
 | `controlPoints` | `controlPoints` > 0 | lo que pagan al acabar la ronda |
 | `upkeep` | `upkeep` > 0 | pagar el mantenimiento al acabar la ronda |
+| `commandPoints` | `commandPoints` no null | el tope de puntos de mando del ejercito (`armyLimits`, detras del numero de unidades de `ARMY_LIMITS`; la cuenta, `commandUsed`) |
 | `noHealUnderFire` | `noHealUnderFire` | quien ha recibido un ataque hoy no se cura (`unhealable`) |
 | `noFog` | `fog` quitado | todos ven todo el mapa |
 | `forestHides` | `forestHides` | el terreno que esconde solo se ve desde al lado |
@@ -618,7 +623,7 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `elevation` | `elevation` (apagado por defecto) | lo que hace la altura (la prepara `relief`): el acierto desde arriba o desde abajo (`elevationHit`), la vision desde lo alto (`elevationVision`) y lo que cuesta subir (`elevationClimb`: `enterCosts` recibe tambien la casilla de la que se viene); los aviones no lo notan |
 
 Las listas (`RuleHooks`, en `ruleModules/hooks.ts`, solo tipos): `hitModifiers`, `coverPiercing`,
-`counterRules`, `combatSteps` (con su `CombatStage`), `roundPhases` (con su `RoundStage`),
+`counterRules`, `combatSteps` (con su `CombatStage`), `armyLimits` (un tope del ejercito; su nombre en `ArmyLimits`), `roundPhases` (con su `RoundStage`),
 `matchSetup`, `healingBlocks`, `visionRadius`, `revealRules`, `concealment`, `coverSight`,
 `enterCosts`, `moveBudgets`, `passRules`, `stopRules`, `pathInterruptions`, `roundReportParts` y
 `captureFactors`. Las que van por momentos

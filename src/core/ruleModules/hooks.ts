@@ -8,6 +8,7 @@
  */
 import type { MoveType, UnitType } from '../content';
 import type {
+  ArmyLimit,
   AttackRecord,
   Dice,
   Engagement,
@@ -59,9 +60,9 @@ export interface CombatStep {
 
 /**
  * Momentos del fin de ronda, en orden (ROUND_STAGES, rules/round.ts): empezar (las unidades vuelven a
- * poder actuar), cobrar, pagar, el dia nuevo y apuntar como acaba.
+ * poder actuar), cobrar, curar sobre edificios propios, pagar, el dia nuevo y apuntar como acaba.
  */
-export type RoundStage = 'start' | 'income' | 'costs' | 'newDay' | 'record';
+export type RoundStage = 'start' | 'income' | 'repair' | 'costs' | 'newDay' | 'record';
 
 /** Un paso del fin de ronda: cambia el estado y devuelve sus sucesos (los que tenga). */
 export interface RoundPhase {
@@ -82,6 +83,12 @@ export interface RoundReportPart {
 export interface MatchSetupStep {
   readonly id: string;
   run(s: GameState): void;
+}
+
+/** Un tope del ejercito: si `team` ya no puede tener una unidad mas de ese tipo (ver `armyLimit`, rules/economy.ts). */
+export interface ArmyLimitRule {
+  readonly id: ArmyLimit;
+  blocks(s: GameState, team: TeamId, unitType: UnitType): boolean;
 }
 
 /** Una razon por la que una unidad no se cura en un edificio al acabar el dia. */
@@ -202,6 +209,8 @@ export interface RuleHooks {
   readonly combatSteps?: readonly CombatStep[];
   /** Lo que cuenta en las estadisticas de quien hace un suceso, ademas de STAT_COUNTERS (stats.ts). */
   readonly statCounters?: readonly StatCounterRule[];
+  /** Topes del ejercito, detras del de siempre (ARMY_LIMITS y `armyLimit`, rules/economy.ts). */
+  readonly armyLimits?: readonly ArmyLimitRule[];
   /** Lo que se cobra por destruir una unidad (ver `killReward`, rules/economy.ts). */
   readonly killRewards?: readonly KillReward[];
   /** Pasos del fin de ronda (ver ROUND_PHASES, rules/round.ts). */
@@ -240,8 +249,10 @@ export interface RuleModuleIds {
   veterancy: true;
   flank: true;
   weather: true;
+  buildingIncome: true;
   controlPoints: true;
   upkeep: true;
+  commandPoints: true;
   noHealUnderFire: true;
   noFog: true;
   forestHides: true;

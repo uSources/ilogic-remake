@@ -586,6 +586,18 @@ describe('sucesos completos', () => {
     expect(report.income[0]).toBeGreaterThan(0);
     expect(report.healed).toEqual([{ uid: soldier.uid, team: 0, amount: 30 }]);
   });
+
+  it('sin ingresos de los edificios (incomeScale 0, el modulo buildingIncome apagado) se sigue curando encima', () => {
+    const s = blankState({ ...PLAIN_SETTINGS, incomeScale: 0 });
+    s.buildings.push({ type: 'City', owner: 0, x: 4, y: 4 });
+    const soldier = newUnit(s, SOLDIER, 0, { x: 4, y: 4 });
+    soldier.life = 50;
+    const funds = teamState(s, 0).funds;
+    const events = endRound(s);
+    expect(events.some((event) => event.kind === 'income')).toBe(false);
+    expect(teamState(s, 0).funds).toBe(funds);
+    expect(events).toContainEqual({ kind: 'heal', actor: null, uid: soldier.uid, team: 0, amount: 30 });
+  });
 });
 
 describe('deshacer no pierde la captura a medias (K2)', () => {

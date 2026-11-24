@@ -3,6 +3,7 @@ import {
   allianceScore,
   buildingIncome,
   commandUsed,
+  usesCommandPoints,
   isRuleOn,
   rivalScore,
   teamUnits,
@@ -18,7 +19,10 @@ import { nameOf, t } from '../../settings';
 
 /** Dinero y dias: por que no se puede comprar, desglose del dinero y del dia (barra de arriba). */
 
-/** Por que no se puede comprar una unidad (menu de compra y aviso). */
+/**
+ * Por que no se puede comprar una unidad (menu de compra y aviso). Los topes del ejercito se pueden
+ * ampliar (`ArmyLimits`: un modo con el suyo), asi que uno sin texto propio dice que no cabe.
+ */
 export function buyBlockedText(s: GameState, blocked: NonNullable<BuyOption['blocked']>): string {
   switch (blocked) {
     case 'funds':
@@ -27,6 +31,8 @@ export function buyBlockedText(s: GameState, blocked: NonNullable<BuyOption['blo
       return t('unitLimit').replace('{n}', String(s.settings.maxUnits));
     case 'command':
       return t('commandLimit').replace('{n}', String(s.settings.commandPoints ?? 0));
+    default:
+      return t('armyFull');
   }
 }
 /** Un tipo del contenido (unidad o edificio): se cuenta por el y se enseña su nombre. */
@@ -72,7 +78,7 @@ export function economyVM(s: GameState, team: TeamId): EconomyVM {
     next: Math.min(afterIncome - paid, s.content.maxFunds),
     shortfall: paid < upkeep ? paid : null,
     commandPoints:
-      s.settings.commandPoints === null
+      !usesCommandPoints(s) || s.settings.commandPoints === null
         ? null
         : {
             lines: tally(units, (unitType) => unitType.command),
