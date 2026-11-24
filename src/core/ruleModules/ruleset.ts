@@ -35,6 +35,7 @@ const HOOK_LISTS = {
   coverPiercing: true,
   counterRules: true,
   combatSteps: true,
+  armyLimits: true,
   killRewards: true,
   statCounters: true,
   roundPhases: true,

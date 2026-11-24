@@ -19,8 +19,10 @@ const SWITCHED_OFF: Partial<Record<RuleModuleId, Partial<MatchSettings>>> = {
   veterancy: { veterancy: false },
   flank: { flankBonus: 0 },
   weather: { weather: false },
+  buildingIncome: { incomeScale: 0 },
   controlPoints: { controlPoints: 0 },
   upkeep: { upkeep: 0 },
+  commandPoints: { commandPoints: null },
   noHealUnderFire: { noHealUnderFire: false },
   forestHides: { forestHides: false },
   terrainCost: { terrainCost: false },
@@ -89,7 +91,7 @@ describe('modulos de reglas (RULE_MODULES)', () => {
   it('resolveRuleset: solo los que se enchufan con esos ajustes, con sus listas juntas en orden', () => {
     const ruleset = resolveRuleset(RULE_MODULES, settingsWith(defaultContent(), { weather: false }), GAME_MODES.skirmish);
     expect(ruleset.modules.map((module) => module.id)).not.toContain('weather');
-    expect(ruleset.hooks.roundPhases.map((phase) => phase.id)).toEqual(['control', 'upkeep']);
+    expect(ruleset.hooks.roundPhases.map((phase) => phase.id)).toEqual(['buildingIncome', 'control', 'upkeep']);
   });
 
   it('mergeHooks: cada lista con las entradas de todas las piezas, una detras de otra y en su orden', () => {
