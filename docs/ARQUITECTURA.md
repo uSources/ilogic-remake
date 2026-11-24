@@ -277,7 +277,9 @@ Las piezas de abajo, que usa todo lo demas (los detalles, debajo de la tabla):
   se acaba (`victory`, en orden), el orden de los turnos de cada ronda (`turnOrder`: se fija al
   crear la partida y se guarda con ella), las reglas que impone (`fixedSettings`, que aplica
   `buildMatch`: la partida para mirar no tiene clima), sus pasos de turno (`turnPhases`, detras de
-  los de siempre) y si la pantalla guarda sola al empezar el turno de una persona
+  los de siempre), como sacan unidades los edificios (`production`, el puerto de
+  `rules/production.ts`: precio, por que no se puede y lo que se gasta; sin ninguna, se compra con
+  dinero, `PURCHASE`) y si la pantalla guarda sola al empezar el turno de una persona
   (`saves`). Esta congelado. Cada partida resuelve su modo al crearse o leerse, como sus modulos de
   reglas (`s.ruleset.mode`), de un registro (`GameModeRegistry`; los del juego, `GAME_MODES`), y
   todo lo lee por `gameModeOf(s)` (las reglas, la sesion, la preparacion). Asi otro modo (uno de
@@ -399,6 +401,7 @@ la regla del ataque, `attackProblem` con `from`: `view3d/systems/turn/attackPlan
 | `forecast` | prevision de combate (`combatForecast` de un `Engagement`) y zona de amenaza |
 | `transport`, `supply` | unir y transportes (`mergeProblem`, `loadProblem`, `unloadProblem` y como se hacen); reparar |
 | `economy` | ingresos, mantenimiento, limite del ejercito, comprar (`buyProblem`, `buildUnit`) |
+| `production` | como sacan unidades los edificios: el puerto que elige el modo (`Production`; la de la partida, `productionOf` de `economy`); comprar con dinero es `PURCHASE` |
 | `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`, cada paso devuelve sus sucesos; `roundReport`, el resumen, con `ROUND_REPORT_PARTS` y las `roundReportParts` de los modulos) |
 | `rank` | el rango por bajas (`RANK_KILLS`, `rank`: lo usa el modulo de veterania y la interfaz) |
 | `victory` | como acaba la partida, igual para todos (`matchResult(s)`, `VICTORY_RULES`; ver abajo) |

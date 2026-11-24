@@ -5,11 +5,11 @@
 
 import { unitTypeOf, buildingTypeOf } from '../gameContent';
 import type { BuildingType, UnitType } from '../content';
-import { teamState } from '../teams';
 import { isWalkable, teamUnits, unitAt } from './queries';
 import type { ActionRejection, Building, GameState, TeamId, Unit } from '../model';
 import { newUnit } from './lifecycle';
-import { pay } from './funds';
+import { PURCHASE, type Production, type ProductionShortage } from './production';
+import { gameModeOf } from '../modes';
 import { hooksOf } from '../ruleModules/ruleset';
 
 /** Los ingresos y el mantenimiento se redondean a multiplos de esto. */
@@ -26,6 +26,9 @@ export const killReward = (s: GameState, lost: Pick<Unit, 'type'>): number =>
   hooksOf(s, 'killRewards').reduce((total, reward) => total + reward.amount(s, lost), 0);
 
 export const hasFullArmy = (s: GameState, team: TeamId): boolean => teamUnits(s, team).length >= s.settings.maxUnits;
+
+/** La produccion de la partida (rules/production.ts): la de su modo o, si no dice ninguna, comprar. */
+export const productionOf = (s: GameState): Production => gameModeOf(s).production ?? PURCHASE;
 
 /** El ejercito tiene tope de puntos de mando (regla commandPoints): cada unidad ocupa los de su tipo. */
 export const usesCommandPoints = (s: GameState): boolean => s.settings.commandPoints !== null;
@@ -74,25 +77,26 @@ export interface BuyOption {
   unitType: UnitType;
   cost: number;
   affordable: boolean;
-  /** Por que no se puede comprar (si no se puede): sin dinero o sin sitio en el ejercito. */
-  blocked?: ArmyLimit | 'funds';
+  /** Por que no se puede sacar (si no se puede): sin sitio en el ejercito o por lo que cuesta (sin dinero). */
+  blocked?: ArmyLimit | ProductionShortage;
 }
 
 /** El edificio fabrica ese tipo de unidad (units.json, "builtAt"). */
 const builds = (s: GameState, building: Building, unitType: UnitType): boolean => unitType.builtAt.includes(buildingTypeOf(s, building).id);
 
-/** Por que el equipo no puede comprar ahora una unidad de ese tipo (undefined = puede). */
+/** Por que el equipo no puede sacar ahora una unidad de ese tipo (undefined = puede): el ejercito, y luego la produccion. */
 function buyBlock(s: GameState, team: TeamId, unitType: UnitType): BuyOption['blocked'] {
-  return armyLimit(s, team, unitType) ?? (unitType.cost > teamState(s, team).funds ? 'funds' : undefined);
+  return armyLimit(s, team, unitType) ?? productionOf(s).shortage(s, team, unitType);
 }
 
-/** Tipos que fabrica un edificio, en el orden de units.json, y si se pueden pagar ahora. */
+/** Tipos que fabrica un edificio, en el orden de units.json, lo que cuesta cada uno y si se puede sacar ahora. */
 export function buyOptions(s: GameState, building: Building): BuyOption[] {
   if (building.owner === null) return [];
   const team = building.owner;
+  const production = productionOf(s);
   const toOption = (unitType: UnitType): BuyOption => {
     const blocked = buyBlock(s, team, unitType);
-    const cost = unitType.cost;
+    const cost = production.price(s, team, unitType);
     return blocked ? { unitType, cost, affordable: false, blocked } : { unitType, cost, affordable: true };
   };
   return s.content.units.list.filter((unitType) => builds(s, building, unitType)).map(toOption);
@@ -116,10 +120,10 @@ export function buyProblem(s: GameState, team: TeamId, building: Building, unitT
 }
 
 /**
- * El equipo `team` fabrica una unidad en su edificio, ya comprobado (buyProblem): se paga y nace sin
- * poder actuar hasta la ronda siguiente.
+ * El equipo `team` fabrica una unidad en su edificio, ya comprobado (buyProblem): se gasta lo que diga
+ * la produccion de la partida (comprando, su precio) y nace sin poder actuar hasta la ronda siguiente.
  */
 export function buildUnit(s: GameState, team: TeamId, building: Building, unitType: UnitType): Unit {
-  pay(s, team, unitType.cost);
+  productionOf(s).spend(s, team, unitType);
   return newUnit(s, unitType, team, building, 'done');
 }

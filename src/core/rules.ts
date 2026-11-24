@@ -35,6 +35,7 @@
  * | `transport` | unir, subir y bajar de transportes |
  * | `supply` | a quien se puede reparar, y repararlas |
  * | `economy` | ingresos, mantenimiento, limite del ejercito, comprar |
+ * | `production` | como sacan unidades los edificios: el puerto que elige el modo (`Production`; comprar, `PURCHASE`); la de la partida, `productionOf` de `economy` |
  * | `control` | puntos de control |
  * | `round` | fin de ronda |
  * | `undo` | los movimientos que se pueden deshacer (`undoableMoves`): apuntarlos, olvidarlos y por que no se puede |
@@ -153,9 +154,11 @@ export {
   canBuyAt,
   buyProblem,
   killReward,
+  productionOf,
   type ArmyLimit,
   type BuyOption,
 } from './rules/economy';
+export { PURCHASE, type Production, type ProductionShortage } from './rules/production';
 export { inControlZone, isContested, teamsInZone } from './rules/control';
 export type { RoundReport, RoundReportParts } from './model';
 export type { ControlReport } from './ruleModules/controlPoints';
