@@ -18,6 +18,7 @@ import { installSounds, webAudioSounds } from '../../audio/sfx';
 import { followPageVisibility } from '../../audio/volumeControl';
 import { webAudio } from '../../audio/gameAudio';
 import { openGame, pendingStart } from './gameStart';
+import { takeIntro } from '../../net/matchIntro';
 import { GlbLibrary } from '../engine/pieces/glbModels';
 import { playMatch } from './match3d';
 import { MenuFlow } from './menuFlow';
@@ -40,14 +41,28 @@ const MODEL_TYPES = {
   buildings: content.buildings.list.map((buildingType) => buildingType.id),
 };
 
+/** Lo minimo que se ve «¡Rival encontrado!», para que se lea aunque la partida cargue enseguida. */
+const INTRO_MIN_MS = 1500;
+
 const start = pendingStart();
+// Recien emparejada con «Buscar rival»: la carga enseña a los dos rivales (src/net/matchIntro.ts).
+// Sale en cuanto estan las imagenes (lleva los soldados y tanques del atlas) y se ve un minimo.
+const intro = start?.start === 'online' ? takeIntro() : null;
+const imagesLoaded = loadGameImages(asset);
+const introShown = intro
+  ? imagesLoaded.then(() => {
+      ui.set({ intro });
+      return new Promise((done) => setTimeout(done, INTRO_MIN_MS));
+    })
+  : null;
 // Una partida por la red tarda lo que tarde la sala en mandarla: mientras, se cargan las imagenes.
-const [opened, images] = await Promise.all([start ? openGame(start) : null, loadGameImages(asset)]);
+const [opened, images] = await Promise.all([start ? openGame(start) : null, imagesLoaded, introShown]);
 if (opened?.ok) playMatch(opened.game, images, await GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES), webAudio);
 else openMenu(opened?.notice ?? null);
 
 /** El menu principal, con el aviso de por que no ha empezado la partida apuntada (si lo hay). */
 function openMenu(notice: string | null): void {
+  ui.set({ intro: null });
   new MenuFlow(webAudioSounds).open();
   if (notice) showToast(notice);
 }

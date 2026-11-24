@@ -1,7 +1,8 @@
 /**
  * Lo que pide quien crea una sala (`POST /rooms`): una escaramuza (lo mismo que elige la pantalla,
- * `SkirmishChoices`) y, si quiere, un reloj por turno y cuanto esperar a los que faltan antes de
- * darles a la IA. Llega como JSON de fuera, asi que se comprueba campo a campo, como el protocolo
+ * `SkirmishChoices`) y, si quiere, un reloj por turno, cuanto esperar a los que faltan antes de
+ * darles a la IA y cuando empieza (la sala de una busqueda de rival, en cuanto cada asiento es de
+ * alguien). Llega como JSON de fuera, asi que se comprueba campo a campo, como el protocolo
  * comprueba cada mensaje (`CLIENT_MESSAGE_SHAPES`): una tabla con una comprobacion por campo, que
  * el tipo exige completa. Los temas tienen que existir en el contenido; las reglas,
  * valer segun `SETTINGS_SCHEMA`.
@@ -10,6 +11,7 @@ import { isEntryId, type GameContent } from '@core/content';
 import { MAP_SIZES } from '@core/data';
 import type { MatchTeam, SkirmishChoices } from '@core/match';
 import type { MatchSettings } from '@core/model';
+import type { StartRule } from '@core/net';
 import { SETTING_NAMES, SETTINGS_SCHEMA, isValidSetting } from '@core/settingsSchema';
 import { isInt, isObject } from '@core/util/validation';
 import { MAX_ROOM_TEAMS, MAX_TURN_SECONDS, MAX_WAITING_SECONDS, MIN_TURN_SECONDS, MIN_WAITING_SECONDS } from './limits';
@@ -21,6 +23,8 @@ export interface RoomRequest {
   turnSeconds?: number;
   /** Segundos que se espera a los que no entran; pasados, su asiento lo juega la IA (si falta, se les espera siempre). */
   waitingSeconds?: number;
+  /** Cuando empieza la partida (si falta, cuando entren todos). */
+  start?: StartRule;
 }
 
 /** Si un campo tiene la forma que toca (con el contenido a mano, para los ids). */
@@ -88,6 +92,7 @@ const REQUEST_SHAPE: ShapeOf<RoomRequest> = {
   match: (value, content) => isMatch(value, content) && hasFirstTeamInList(value as SkirmishChoices),
   turnSeconds: optional((value) => isInt(value, MIN_TURN_SECONDS, MAX_TURN_SECONDS)),
   waitingSeconds: optional((value) => isInt(value, MIN_WAITING_SECONDS, MAX_WAITING_SECONDS)),
+  start: optional((value) => value === 'everyoneIn' || value === 'everyoneSeated'),
 };
 
 const isRequest = hasShape(REQUEST_SHAPE);

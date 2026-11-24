@@ -60,6 +60,59 @@ cosa en su PR:
 4. **Modo Escaramuza.** Mapa pequeño (12×12), menos dinero, partidas de ~10 días.
 5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar visión. Ver cómo se juegan primero (PR #47).
 
+## Campaña: la guerra por el mapamundi
+
+35. **La campaña como una guerra entera, no misiones sueltas.** Idea del usuario (24-11-2026); los
+    conceptos de pantalla están en el lienzo de diseño «Ilogic · Rediseño de Jugar en línea», página
+    «Campaña: mapamundi».
+    - **El mapamundi**: el mundo partido en territorios (regiones), cada uno de un bando o neutral.
+      Cada territorio es un mapa de batalla. Lo que se gana o se pierde se pinta en el mapamundi.
+    - **Turnos de guerra**: en cada uno se elige qué territorio atacar (uno vecino de los tuyos) o
+      dónde defender, y se juega esa batalla con las reglas de siempre.
+    - **Recursos**: cada territorio da presupuesto por turno de guerra; las **capitales** dan mucho
+      más. El presupuesto se gasta en el **cuartel general** (decidido), al estilo de Heroes &
+      Generals.
+    - **Equipos, no unidades sueltas** (decidido): se compran grupos con nombre y composición fija
+      (Infantería: 4 soldados y 2 bazucas; Blindados: 2 tanques y 1 tanque ligero; Artillería;
+      Reconocimiento…) y se asignan a los frentes (atacar, defender, guarnición). En la batalla son
+      sus unidades de siempre; el equipo solo existe en la capa de la guerra. La veteranía es del
+      equipo, que sube de nivel ganando batallas, y cuesta mantenimiento por turno de guerra.
+    - **La fábrica como entrada de refuerzos** (propuesta): cada equipo trae unidades en el campo y
+      otras en reserva; en la batalla no se compra con dinero, la fábrica o la Base saca unidades de
+      la reserva de tus equipos, hasta que se acaba. Al volver, las bajas se pagan con el presupuesto
+      (reabastecer).
+    - **Líneas de suministro** (decidido; al usuario le encanta): un territorio sin camino de
+      territorios propios hasta tu capital queda aislado y no puede reabastecer a sus equipos.
+      Cortar el frente enemigo por el medio es una jugada en sí, sin ir a por su capital; y lo mismo
+      te lo puede hacer la IA.
+    - **Moverse cuesta turnos de guerra** (decidido): un equipo avanza un territorio por turno y,
+      mientras viaja, no combate; en el mapamundi se ve con su flecha y «llega en N turnos». Cada
+      tipo tiene su velocidad (Reconocimiento e Infantería motorizada, 2; Infantería y Blindados, 1).
+      Los equipos nuevos aparecen en la capital y tienen que llegar al frente: no se puede comprar
+      defensa en el mismo territorio atacado, hay que preverlo. Propuesta de turno: los dos dan
+      órdenes, todo se mueve a la vez y hay batalla donde coinciden equipos enemigos o alguien entra
+      en territorio ajeno.
+    - **El tren va por las líneas de suministro** (decidido): dentro de tu territorio conectado a la
+      capital, los equipos van en tren, 3 territorios por turno; fuera, a pie. Cortarle el frente al
+      rival también le frena los refuerzos, y un territorio recién conquistado aún no tiene vía.
+    - **La IA también ataca** (decidido): el rojo mueve sus frentes, así que hay que repartir entre
+      atacar y defender lo que ya es tuyo.
+    - **Inteligencia** (decidido): saber qué hay en un territorio antes de atacarlo o qué trae quien
+      te ataca. Por niveles: patrulla gratis si hay un equipo de Reconocimiento en un vecino
+      (cuántos y de qué tipo, a grandes rasgos), reconocimiento pagado (todas las unidades) y espía (además, su
+      veteranía y lo que piensa hacer). La IA también sabe de ti lo que haya visto.
+    - **Se gana conquistando la capital enemiga.** Perder la propia es perder la guerra.
+    - **Mapas hechos a mano**, el mapamundi y el de cada territorio (decidido): la guerra es
+      contenido diseñado, como las misiones (skill `nueva-mision`).
+    - **En línea, más adelante** (decidido): la misma guerra entre dos personas es mucho más
+      compleja de hacer; primero la campaña de una persona.
+    - **Qué reutiliza**: cada batalla es una partida normal (`createMatch` con su mapa, las
+      unidades asignadas y su objetivo), así que lo nuevo es la capa de encima: el mapamundi, sus
+      turnos, el cuartel general y la inteligencia, en `src/core` y guardada aparte de la partida.
+    - **Preguntas abiertas**: ¿la fábrica como entrada de refuerzos? ¿se
+      puede cambiar alguna unidad de un equipo? ¿cuántas batallas por turno de guerra? ¿cuánto dura una guerra? ¿la campaña de 6
+      misiones de ahora se queda como tutorial antes de la guerra?
+
 ## Equilibrio
 
 10. **Unidades.** `npm run balance` dice que el Soldado (1,6×) y el Caza ligero (2×) rinden demasiado
@@ -84,14 +137,14 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     (hecho: `server/`); (3) la pantalla: crear una partida, unirse con su
     código o su enlace, «Mis partidas» con el estado de cada una (te toca, turno del rival,
     esperando, acabada) y jugar desde la vista y los sucesos que llegan (hecho: `src/net`, «Jugar en línea»;
-    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"; en la vista 3D, `OnlinePlay`). Queda: «Buscar rival» (emparejar
-    con quien busque partida con las mismas reglas: un objeto del servidor que junta peticiones y
-    crea la sala; como habrá poca gente, que se pueda dejar buscando y la partida salga en «Mis
-    partidas»; si con eso las salas se hacen públicas, pedir asiento, `POST /rooms/:code/seat`,
-    necesita un tope por IP o asientos reservados: hoy quien sabe el código puede gastar los
-    asientos libres de una sala que espera, y el código es el único secreto), la cuenta
-    atrás del reloj por turno en la pantalla, avisos fuera de la pestaña (notificaciones del
-    navegador) y que el final sepa las cuentas de todos: cada uno solo ve las suyas
+    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"; en la vista 3D, `OnlinePlay`). «Buscar rival»
+    también está (por turnos o en vivo; 1 contra 1, reglas normales y mapa al azar: un emparejador
+    en el servidor, `server/src/matchmaker.ts`). Queda: pedir asiento con el código,
+    `POST /rooms/:code/seat`, sin tope por IP (quien sabe el código de una sala que espera puede
+    gastar sus asientos libres, y el código es el único secreto; las de la búsqueda no se reparten,
+    pero su código sale en «Mis partidas» de los dos), la cuenta atrás del reloj por turno en la
+    pantalla, avisos fuera de la pestaña (notificaciones del navegador: más aún con «Buscar rival»
+    por turnos, que empieza sin que estés) y que el final sepa las cuentas de todos: cada uno solo ve las suyas
     (`withoutBooks`, `core/playerView.ts`), así que en la pantalla final las del rival salen a 0 y
     su gráfica del valor del ejército solo tiene el último día; al acabar ya no hay nada que
     esconder y la sala podría mandar la partida entera. Decidido: el servidor manda (las acciones pasan por la sesión

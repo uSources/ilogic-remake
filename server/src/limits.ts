@@ -34,3 +34,24 @@ export const MAX_ROOM_TEAMS = 4;
 
 /** Cuantos codigos de sala se prueban si el elegido ya esta ocupado (con casi 900 millones de codigos, uno basta casi siempre). */
 export const MAX_CODE_TRIES = 5;
+
+/**
+ * Cuantas busquedas de rival se atienden de una misma direccion en una ventana: una persona busca
+ * unas pocas veces; quien pide sin parar se quedaria los asientos de los que esperan (y llenaria
+ * el servidor de salas). Pasado el tope, 'tooManySearches' hasta que pase la ventana. Es un freno:
+ * se cuenta en memoria y empieza de cero si el emparejador sale de memoria o se reinicia.
+ */
+export const MAX_SEARCHES_PER_WINDOW = 20;
+export const SEARCH_WINDOW_MS = 10 * MINUTE;
+/** Direcciones que se recuerdan como mucho para ese tope (si se llenan, se olvidan las que ya no cuentan). */
+export const MAX_WATCHED_CLIENTS = 1000;
+
+/** Salas esperando rival que guarda la cola de cada ritmo (pasado esto, la mas vieja sale de la cola). */
+export const MAX_WAITING_ROOMS = 100;
+/** Cuantas salas de la cola se miran como mucho en una busqueda (cada una es una pregunta a su sala). */
+export const MAX_SEARCH_CANDIDATES = 20;
+/**
+ * En vivo solo se empareja con quien esta en su sala. Si no esta, su sala sigue en la cola este rato
+ * (desde que se ve que no esta: puede estar recargando la pagina) y despues sale.
+ */
+export const LIVE_ABSENCE_GRACE_MS = 5 * MINUTE;

@@ -66,6 +66,8 @@ export interface PauseHost {
   isIntentsOn(): boolean;
   /** Alguna unidad propia lleva orden (si no, «Ver órdenes» no sale). */
   hasOrders(): boolean;
+  /** Juegan los demas: lo que se hace en el turno propio (terminarlo, guardar) no sale. */
+  isWatching(): boolean;
   /** Se ha abierto, cerrado o cambiado: volver a publicar la interfaz. */
   refresh(): void;
 }
@@ -127,11 +129,17 @@ export class PauseMenu {
     this.hover(choices.findIndex((choice) => choice === next));
   }
 
-  /** Las opciones en esta partida: guardar si su modo se guarda, rendirse si se puede perder. */
+  /**
+   * Las opciones en esta partida: guardar si su modo se guarda, rendirse si se puede perder. Mirando
+   * jugar a los demas, ni terminar el turno ni guardar (a medias del turno de otro); rendirse si
+   * (vale en cualquier momento: `anyTime`).
+   */
   private choices(): PauseChoice[] {
     const mode = gameModeOf(this.host.session.state);
+    const isOwnTurn = !this.host.isWatching();
     const isOffered: Partial<Record<PauseChoice, boolean>> = {
-      save: mode.saves && this.host.savesHere,
+      endTurn: isOwnTurn,
+      save: mode.saves && this.host.savesHere && isOwnTurn,
       surrender: canBeLost(mode),
       intents: this.host.hasOrders(),
     };

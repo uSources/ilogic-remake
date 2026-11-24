@@ -897,6 +897,9 @@ deshacer y el porque:
   crea se queda con el primer asiento; los demas lo piden con el codigo o el enlace de la sala
   (`Room.claimSeat`: el primer asiento de persona libre, una vez cada uno y mientras se espera) y
   guardan su ficha; con ella se entra y se vuelve a entrar. El codigo y el enlace no llevan fichas.
+  Una sala empieza cuando han entrado todos (`start: 'everyoneIn'`) o, la de una busqueda de rival,
+  en cuanto cada asiento es de alguien (`'everyoneSeated'`): asi una partida por turnos empieza
+  aunque quien la abrio no este, y se entera en «Mis partidas».
 - **Orden y repeticiones.** Lo que tiene efecto (`act`, `endTurn`, `surrender`) lleva un numero de
   orden del cliente (`seq`, creciente por asiento; `welcome` dice el ultimo atendido, para seguir
   contando tras un corte): la sala contesta con el en `result` y no repite uno ya atendido
@@ -1003,6 +1006,20 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
   la espera a los que no llegan (`replaceWithAi` a cada asiento vacio y la partida empieza) y seguir
   una partida a medias (`isMidway()` tras cada paso → alarma ya → `continueMatch()` desde ella: cada
   llamada tiene su tiempo de CPU, y un turno largo de la IA se reparte en varias).
+- **Buscar rival: un emparejador para todo el servidor** (`matchmaker.ts`; en Cloudflare, un solo
+  Durable Object, `MatchmakerObject`; en Node, uno en el proceso con su cola en
+  `emparejador.json`). Una cola por ritmo (`PACE_RULES`, `core/net/search.ts`: por turnos, un dia
+  por turno; en vivo, dos minutos) con las salas que esperan rival. Quien busca se queda el asiento
+  libre de la primera que vale (la sala empieza: `'everyoneSeated'`); si no hay, se le abre una
+  suya, que entra en la cola. En la busqueda no se eligen reglas (1 contra 1, las de siempre, mapa
+  al azar): con poca gente, cada eleccion partiria la cola y nadie coincidiria. Las salas son las
+  de siempre (`createRoomWithFreeCode`, como `POST /rooms`); el emparejador solo las apunta y les
+  pide asiento, y lo que ya no vale (cerrada, empezada, caducada) sale de la cola al mirarla. Las
+  busquedas van de una en una (un Durable Object atiende otra mientras espera a una sala: dos a la
+  vez partirian de la misma cola). En vivo solo se empareja con quien esta en su sala; quien busca
+  dice sus salas (`avoid`) para que no le toque la suya, y hay un tope de busquedas por direccion
+  (`RequestLimit`; la direccion, `CF-Connecting-IP`, que en Node escribe el servidor con la del
+  socket). Cancelar es cerrar la sala (`POST /rooms/:code/close`, solo su creador y mientras espera).
 - **Topes antes de leer.** Los bytes de cada mensaje y del cuerpo de `POST /rooms` se acotan antes
   de leer el JSON (`MAX_MESSAGE_BYTES`; los topes de la forma los pone `isValidMessage`); a quien la
   sala le rechaza mas de `MAX_REJECTIONS_PER_WINDOW` mensajes en un minuto (`rateLimit.ts`) se le
@@ -1021,7 +1038,7 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
 - **Tests**: `server/test/unit` (las piezas puras con la sala de verdad); `server/test/shared`, lo
   que tiene que hacer cualquier servidor (dos personas por WebSocket y la IA juegan varios dias con
   el cliente simulado de `tests/sim/netClient.ts`, que comprueba cada mensaje; volver a entrar, un
-  `seq` repetido, el tope de bytes, los rechazos), que corren los dos: `server/test/workers`
+  `seq` repetido, buscar rival y cerrar una sala, el tope de bytes, los rechazos), que corren los dos: `server/test/workers`
   (`@cloudflare/vitest-plugin`: el Worker y el objeto de verdad dentro de workerd; ademas despertar el
   objeto, `evictDurableObject`, y las alarmas adelantando los relojes guardados y sonando con
   `runDurableObjectAlarm`) y `server/node/test` (el servidor de Node en un puerto; ademas sus alarmas
@@ -1073,6 +1090,12 @@ archivo y por donde pasa cada cosa, en `docs/RED.md`. Las decisiones:
   asi otra pestaña o una recarga siguen contando. Lo atendido cuya respuesta se perdio se da por
   bueno (`RoomClient.answerLost`). Un cierre sin arreglo (ficha mala, otra version, otra pestaña con
   la misma ficha, la sala ya no existe) no se reintenta: se avisa y se sale al menu.
+- **Buscar rival es entrar en una sala** (`OnlineScreen.searchRival`): el servidor contesta con un
+  asiento, como al crear o al pedir uno con el codigo, y la pantalla entra en esa sala. Con rival
+  (`matched`) la partida ya ha empezado y pasa a la escena; si no, la sala propia se apunta en «Mis
+  partidas» con su ritmo (`OnlineRoomEntry.search`) y su vestibulo dice que se busca (en vez de
+  invitar), con «Jugar contra la IA» (dar el asiento del rival a la IA) y «Cancelar búsqueda» (cerrar
+  la sala). Al buscar se mandan las salas propias que esperan, para no caer en una.
 - **Donde esta el servidor** (`serverUrl.ts`): `VITE_SERVER_URL` al compilar o, por encima,
   `ilogic.server` en localStorage (el propio servidor de quien juega, o uno local en los tests); sin
   ninguna, el juego no ofrece «Jugar en línea».

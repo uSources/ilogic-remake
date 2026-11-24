@@ -235,6 +235,45 @@ nota. Mientras, el turno esta ocupado (`TurnControls.busy`) y no se puede pulsar
    enlace `#/sala/...` al cargar el juego entra directo (`MenuFlow.openRoomFromHash` →
    `OnlineScreen.openRoom`).
 
+### Buscar rival
+
+1. «Buscar rival» en el menu (`src/menu/online/menuScreen.ts`): el ritmo (por turnos o en vivo;
+   `PACE_RULES`, `src/core/net/search.ts`, que dice tambien el reloj y el mapa de cada uno) y
+   «Buscar» → `OnlineScreen.searchRival(pace)` → `searchRival(base, { pace, avoid })`
+   (`src/net/roomApi.ts`, `POST /match`). `avoid` son las salas propias que esperan rival
+   (`OnlineRoomEntry.search`): que no le toque la suya.
+2. `server/src/routes.ts`, ruta `searchRival`: comprueba el cuerpo (`searchRequestOf`) y lo pasa,
+   con la direccion de quien pide (`CF-Connecting-IP`), al emparejador (`RivalSearch.search`: en
+   Cloudflare, por RPC al unico `MatchmakerObject`; en Node, el `Matchmaker` del proceso). Las
+   busquedas van de una en una (`Matchmaker.search` las encadena) y cada direccion tiene un tope
+   (`RequestLimit`; pasado, 'tooManySearches').
+3. `Matchmaker.searchNow`: la cola de ese ritmo (cargada del almacen la primera vez) → para cada sala
+   (como mucho `MAX_SEARCH_CANDIDATES`, sin las de `avoid`), `RoomDirectory.info`: si ya no espera o
+   no existe, sale de la cola; en vivo, si quien la abrio no esta dentro, se deja un rato
+   (`LIVE_ABSENCE_GRACE_MS` desde que se ve) y despues sale; si vale, sale de la cola y
+   `RoomDirectory.claimSeat` le da el asiento libre → `Room.claimSeat`, y como la sala es de las que
+   empiezan con los asientos dados (`start: 'everyoneSeated'`), empieza ya: 'playing' y `advance`
+   hasta la primera persona, que es quien llega (`firstTeam`: esta delante). A quien estaba dentro
+   le llega por su socket (`ClaimSeatResult.outgoing`). Respuesta: `{ code, seat, team, token,
+   matched: true }`.
+4. Si ninguna vale: `createRoomWithFreeCode(rooms, searchRoomRequest(pace, newSeed()))` (lo mismo
+   que `POST /rooms`: 1 contra 1, las reglas de siempre, mapa al azar con el tamaño del ritmo, su
+   reloj y `start: 'everyoneSeated'`), la sala entra en la cola (si pasa de `MAX_WAITING_ROOMS`, sale
+   la mas vieja) y la respuesta es su primer asiento, `matched: false`. La cola se guarda
+   (`MatchQueueStore`: el almacen del objeto, o `emparejador.json`).
+5. La pantalla entra en la sala como siempre (`OnlineScreens.joinRoom(code, token, { seat, team,
+   search })`, paso 4 de «Crear una sala»): con rival, la sala ya juega y pasa a la partida; sin
+   rival, la sala se apunta en «Mis partidas» con su ritmo y el vestibulo (`LobbyScreen`, con
+   `entry.search`) dice «Buscando rival» en vez de invitar, con «Jugar contra la IA» (`handToAi` del
+   asiento del rival: la sala empieza y sale de la cola al mirarla) y «Cancelar búsqueda». Por
+   turnos se puede cerrar el juego: cuando llega alguien, «Mis partidas» lo dice («Te toca» o el
+   turno del otro).
+6. **Cancelar** (en el vestibulo, o «Cancelar» en la linea de «Mis partidas»:
+   `OnlineScreen.cancelSearch`) → `closeRoom(base, code, token)` (`POST /rooms/:code/close` →
+   `HostedRoom.close` → `RoomAdapter.canClose`: la ficha del primer asiento y la sala esperando) →
+   la sala se borra (`expire`: quien este dentro sale con 4410) y se quita de «Mis partidas». Si
+   justo llego un rival, 'notWaiting': la sala se queda y la partida sigue.
+
 ### Reconexion y resync
 
 - **Se corta el socket.** `ServerLink.closed`: si el codigo de cierre no es de los que no tienen
@@ -297,8 +336,10 @@ nota. Mientras, el turno esta ocupado (`TurnControls.busy`) y no se puede pulsar
 - **Cerrar la pestaña** no es abandonar: `HostedRoom.forget` → `adapter.leave(seat,
   connection)` → `Room.leave`: la persona queda fuera (`connection: null`, el `Courier` la olvida), su
   asiento sigue siendo suyo y la sala sigue esperandola. Vuelve con el enlace o desde «Mis partidas».
-- **Rendirse** (menu de pausa, dos pulsaciones; `match3d.surrender` → `runner.act`): `surrender` por la red (`RoomClient.act` lo manda
-  como mensaje `surrender`; vale fuera de turno: `isAnyTime`). La sesion lo apunta, el `Courier` lo
+- **Rendirse** (menu de pausa, dos pulsaciones, tambien en el turno de otro: la pausa se abre mirando
+  jugar a los demas, `TurnControls.isWatchingOthers`, sin «Fin del turno»; `match3d.surrender` →
+  `runner.act`): `surrender` por la red (`RoomClient.act` lo manda como mensaje `surrender`; vale
+  fuera de turno: `isAnyTime`). La sesion lo apunta, el `Courier` lo
   cuenta a todos (es publico) y, si ya no juega ninguna persona, la sala acaba (`ended.abandoned`).
 - **Un asiento pedido no se libera.** Quien pide asiento con el codigo se lo queda aunque no llegue
   a entrar: si cierra la pestaña justo tras la respuesta, antes de apuntar la sala en «Mis partidas»,
@@ -378,7 +419,8 @@ badVersion, 4429 tooManyRejections).
 
 ## Los estados de la sala
 
-`RoomStatus`: 'waiting' (esperando a que entren todas las personas), 'playing', 'ended'. Esta tabla
+`RoomStatus`: 'waiting' (esperando a que entren todas las personas o, en una sala de la busqueda de
+rival, `start: 'everyoneSeated'`, a que cada asiento sea de alguien), 'playing', 'ended'. Esta tabla
 es la maquina de estados de `Room` (`src/core/net/room.ts` remite aqui).
 
 | Suceso | 'waiting' | 'playing' | 'ended' |
@@ -390,7 +432,7 @@ es la maquina de estados de `Room` (`src/core/net/room.ts` remite aqui).
 | `surrender` | 'notPlaying' (pero ver `abandon`) | se rinde (vale fuera de turno); si ya no juega ninguna persona → **'ended'** (`abandoned`) | 'notPlaying' |
 | `endTurn` | 'notPlaying' | si se le espera: `finishInput` y `advance` hasta la siguiente persona (`turn`), el final (**'ended'**) o el presupuesto (`isMidway`); si no, 'notYourTurn' | 'notPlaying' |
 | `resync` | `view` | `view` + `turn` | `view` + `ended` |
-| `claimSeat()` (pedir asiento con el codigo) | da el primer asiento de persona libre (`claimed`) y su ficha; si no queda, 'noFreeSeat' | 'notWaiting' | 'notWaiting' |
+| `claimSeat()` (pedir asiento con el codigo, o buscando rival) | da el primer asiento de persona libre (`claimed`) y su ficha; si no queda, 'noFreeSeat'; con 'everyoneSeated', si era el ultimo → **'playing'** y `advance` | 'notWaiting' | 'notWaiting' |
 | `replaceWithAi(seat)` (alarma de espera, o quien creo) | el asiento pasa a la IA; si ya estan todos → **'playing'** | el asiento pasa a la IA y la partida sigue (desde su turno, si era el suyo) | nada (el asiento cambia, pero no se juega) |
 | `endTurnOf(seat)` (reloj del turno) | nada | si se le esperaba: como `endTurn` | nada |
 | `abandon(seat)` (hoy no lo llama el servidor) | se rinde y ya no se le espera; si con eso estan todos → **'playing'** | se rinde y queda fuera; `advance` | queda fuera |
@@ -410,6 +452,7 @@ snapshot; las conexiones no (al recuperar, nadie esta dentro).
 |---|---|
 | `protocol.ts` | Los mensajes como tipos (`ClientMessage`, `ServerMessage`, `NetError`), las versiones, `isValidMessage` con sus topes, y la vista por trozos (`FIXED_VIEW_KEYS`, `viewChangeOf`, `mergeView`) |
 | `roomCode.ts` | La forma del codigo de una sala (`isRoomCode`, `ROOM_CODE_ALPHABET`), la misma en el servidor y en la pantalla |
+| `search.ts` | Los ritmos de «Buscar rival» (`SEARCH_PACES`, `PACE_RULES`: el reloj, el mapa y si quien busca tiene que estar) y cuantas salas propias se pueden evitar (`MAX_AVOIDED_ROOMS`) |
 | `seats.ts` | `PersonSeat`, `AiSeat`; buscar una persona por ficha (`personWithToken`), si un asiento esta libre (`isFree`), los asientos de una partida nueva (`seatsFor`), un asiento guardado bien formado (`isSeatOf`) |
 | `eventFog.ts` | La niebla de los sucesos: `knowledgeOf`, `eventsSeenBy` y la tabla `EVENT_FOG` (que ve un equipo de cada tipo de suceso) |
 | `courier.ts` | `Outbox` (lo que sale en esta llamada) y `Courier` (lo que se lleva a cada persona: vista, lotes, turno; los `step`) |
@@ -426,20 +469,23 @@ servidor).
 
 | Archivo | Que hay |
 |---|---|
-| `routes.ts` | Las rutas (`ROUTES`), CORS, el cuerpo acotado; las salas las da quien aloja el servidor (`RoomDirectory`) |
+| `routes.ts` | Las rutas (`ROUTES`), CORS, el cuerpo acotado y la direccion de quien pide (`CLIENT_ADDRESS_HEADER`) |
+| `roomDirectory.ts` | `RoomDirectory`: las salas por su codigo, que da quien aloja el servidor; `createRoomWithFreeCode` |
+| `matchmaker.ts` | `Matchmaker`: el emparejador de «Buscar rival» (la cola de cada ritmo, de una busqueda en una, guardada en su `MatchQueueStore`); `searchRoomRequest` (la sala de una busqueda) y `searchRequestOf` (lo que pide quien busca) |
 | `hostedRoom.ts` | `HostedRoom`: una sala del servidor, se aloje donde se aloje. Los sockets (`receive`, `greet`, `forget`), guardar y cargar (`save`, `load`, `readmitAll`), la alarma (`ring`) y repartir lo que sale (`deliver`) |
 | `roomHost.ts` | `RoomHost`: lo que la sala pide a quien la aloja (guardar con su alarma, cargar, borrar, sus conexiones, la hora) |
-| `cloudflare/` | `index.ts`, el Worker (las rutas con un Durable Object por codigo, `roomOf`); `roomObject.ts`, `RoomObject`: el Durable Object de una sala, con su almacen, su alarma y sus sockets hibernados |
-| `../node/src/` | El servidor de Node: `nodeServer.ts` (HTTP, la subida a WebSocket y el juego compilado), `nodeRooms.ts` (las salas del proceso, con `setTimeout` como alarma), `roomFiles.ts` (un JSON por sala), `config.ts` (las variables de entorno) |
-| `roomAdapter.ts` | `RoomAdapter`: lo unico que toca `Room`, con nombres del servidor; el vestibulo (`lobby`, con a quien se espera), pedir un asiento con el codigo (`claimSeat`) y dar un asiento a la IA (`handToAi`) |
+| `cloudflare/` | `index.ts`, el Worker (las rutas); `rooms.ts`, las salas como un Durable Object por codigo (`roomOf`); `roomObject.ts`, `RoomObject`: el Durable Object de una sala, con su almacen, su alarma y sus sockets hibernados; `matchmakerObject.ts`, `MatchmakerObject`: el unico emparejador, con su cola en su almacen; `env.ts`, lo que da Cloudflare |
+| `../node/src/` | El servidor de Node: `nodeServer.ts` (HTTP, la subida a WebSocket, el emparejador y el juego compilado), `nodeRooms.ts` (las salas del proceso, con `setTimeout` como alarma), `roomFiles.ts` (un JSON por sala y la cola del emparejador), `httpBridge.ts` (con la direccion del socket), `config.ts` (las variables de entorno) |
+| `roomAdapter.ts` | `RoomAdapter`: lo unico que toca `Room`, con nombres del servidor; el vestibulo (`lobby`, con a quien se espera), pedir un asiento con el codigo (`claimSeat`), dar un asiento a la IA (`handToAi`) y si se puede cerrar (`canClose`) |
 | `timers.ts` | Los relojes como datos puros (caducar, el turno, la espera, seguir a medias) y cuando suena la alarma |
 | `roomRequest.ts` | La forma de lo que se pide al crear una sala (`isRoomRequest`) |
 | `codes.ts` | El codigo de sala al azar (`newRoomCode`; su forma es del nucleo), las fichas (`newToken`) y `sameToken` |
-| `limits.ts`, `rateLimit.ts`, `cors.ts` | Topes y tiempos; frenar a quien insiste; desde que paginas se puede hablar |
+| `limits.ts`, `rateLimit.ts`, `cors.ts` | Topes y tiempos; frenar a quien insiste (en una sala, y las busquedas por direccion: `RequestLimit`); desde que paginas se puede hablar |
 
-Pruebas: `server/test/unit/` (las piezas puras con la sala de verdad), `server/test/shared/` (lo que
-tiene que hacer cualquier servidor: dos personas por WebSocket y la IA, volver a entrar, un `seq`
-repetido, lo que no deja pasar), que corren `server/test/workers/` (el Worker y el objeto de verdad
+Pruebas: `server/test/unit/` (las piezas puras con la sala de verdad; el emparejador con salas en
+memoria, `matchmaker.test.ts`), `server/test/shared/` (lo que tiene que hacer cualquier servidor: dos
+personas por WebSocket y la IA, volver a entrar, un `seq` repetido, buscar rival y cerrar una sala,
+lo que no deja pasar), que corren `server/test/workers/` (el Worker y el objeto de verdad
 dentro de workerd; ademas, despertar y las alarmas) y `server/node/test/` (el servidor de Node en un
 puerto; ademas, sus alarmas, arrancar otra vez y servir el juego).
 
@@ -452,9 +498,9 @@ puerto; ademas, sus alarmas, arrancar otra vez y servir el juego).
 | `src/net/roomClient.ts` | `RoomClient`: los mensajes como partida (`state`) y jugadas (`RoomPlay`, `next`), `act` con su promesa, que trae el resultado y su eco (y las respuestas perdidas en un corte, `answerLost`); `animationView` para animar un lote |
 | `src/net/onlineMatch.ts` | `OnlineMatch`: enlace y cliente juntos, con quien los escucha; `inPlay` (conectar y esperar a estar en juego) |
 | `src/net/mirrorSession.ts` | `mirrorSession`: la sesion de la pantalla sobre una vista |
-| `src/net/roomApi.ts` | Las rutas HTTP: `createRoom`, `claimSeat`, `lobbyOf`, `handToAi` |
-| `src/net/onlineRooms.ts` | «Mis partidas en línea» en localStorage; el enlace de la sala (`parseRoomLink`, `roomLinkUrl`) |
-| `src/menu/online/` | La pantalla «Jugar en línea»: `onlineScreen.ts` (`OnlineScreen`: enlaza las tres pantallas, el foco y las ordenes, y entrar con el codigo: `enterRoom`), `menuScreen.ts` (crear, unirse con el codigo y «Mis partidas», que pregunta cada 20 s como va cada sala), `roomLines.ts` (como se enseña cada sala de «Mis partidas», puro), `createScreen.ts`, `lobbyScreen.ts` (el vestibulo: invitar, la conexion con la sala y el paso a la partida) y `shared.ts` (`OnlineHost`, `OnlineScreens`) |
+| `src/net/roomApi.ts` | Las rutas HTTP: `createRoom`, `claimSeat`, `lobbyOf`, `handToAi`, `closeRoom`, `searchRival` |
+| `src/net/onlineRooms.ts` | «Mis partidas en línea» en localStorage (la sala de una busqueda, con su ritmo: `search`); el enlace de la sala (`parseRoomLink`, `roomLinkUrl`) |
+| `src/menu/online/` | La pantalla «Jugar en línea»: `onlineScreen.ts` (`OnlineScreen`: enlaza las tres pantallas, el foco y las ordenes, entrar con el codigo, `enterRoom`, y buscar rival y cancelar, `searchRival`, `cancelSearch`), `menuScreen.ts` (buscar rival con su ritmo, crear, unirse con el codigo y «Mis partidas», que pregunta cada 20 s como va cada sala), `roomLines.ts` (como se enseña cada sala de «Mis partidas», puro), `createScreen.ts`, `lobbyScreen.ts` (el vestibulo: invitar o buscando rival, la conexion con la sala y el paso a la partida) y `shared.ts` (`OnlineHost`, `OnlineScreens`, los textos de los ritmos) |
 | `src/hud/menus/Online.tsx` | El HTML de esa pantalla (Preact), a partir de `OnlineVM` |
 | `src/view3d/app/gameStart.ts` | El arranque 'online' (codigo y ficha) y `joinMatch`: volver a entrar en la sala al cargar la partida |
 | `src/view3d/systems/turn/matchRunner.ts` | `MatchRunner` (lo que el turno pide a quien lleva la partida) y `localRunner` (una partida de esta pantalla) |

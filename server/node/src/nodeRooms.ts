@@ -7,11 +7,19 @@
  */
 import type { RawData, WebSocket } from 'ws';
 import type { SeatId } from '@core/net';
-import { CLOSE_CODES, HostedRoom, type ClaimResult, type CreateResult, type HandToAiResult, type RawMessage } from '../../src/hostedRoom';
+import {
+  CLOSE_CODES,
+  HostedRoom,
+  type ClaimResult,
+  type CloseResult,
+  type CreateResult,
+  type HandToAiResult,
+  type RawMessage,
+} from '../../src/hostedRoom';
 import type { LobbyInfo } from '../../src/roomAdapter';
+import type { RoomDirectory, RoomsFull } from '../../src/roomDirectory';
 import type { RoomHost, StoredRoom } from '../../src/roomHost';
 import type { RoomRequest } from '../../src/roomRequest';
-import type { RoomDirectory, RoomsFull } from '../../src/routes';
 import { NodeSocket } from './nodeSocket';
 import type { RoomFile, RoomFiles } from './roomFiles';
 
@@ -153,6 +161,10 @@ export class NodeRooms implements RoomDirectory {
 
   handToAi(code: string, token: string, seat: SeatId): Promise<HandToAiResult> {
     return this.roomOf(code)?.handToAi(token, seat) ?? Promise.resolve({ ok: false, error: 'noSuchRoom' });
+  }
+
+  close(code: string, token: string): Promise<CloseResult> {
+    return this.roomOf(code)?.close(token) ?? Promise.resolve({ ok: false, error: 'noSuchRoom' });
   }
 
   /** En Node las subidas a WebSocket las atiende el servidor HTTP antes que las rutas (`accept`): lo que llega aqui no es una de verdad. */

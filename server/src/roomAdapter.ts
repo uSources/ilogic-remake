@@ -2,8 +2,8 @@
  * El unico sitio del servidor que habla con la sala del nucleo (`Room`, src/core/net): lo que el
  * Durable Object necesita de ella, con nombres del servidor (entrar, atender, irse, el reloj, la IA
  * por quien no vuelve, guardar y recuperar) y nada de la partida: solo salen los mensajes que la
- * sala manda a cada asiento (`Outgoing`), lo que puede saber cualquiera (`lobby`) y el asiento que se
- * da a quien llega con el codigo (`claimSeat`). Asi un cambio en
+ * sala manda a cada asiento (`Outgoing`), lo que puede saber cualquiera (`lobby`), el asiento que se
+ * da a quien llega con el codigo (`claimSeat`) y si quien la creo puede cerrarla (`canClose`). Asi un cambio en
  * la sala se absorbe aqui, y el resto del servidor no sabe ni que existe una `GameSession`.
  */
 import { defaultContent } from '@core/content/default';
@@ -65,7 +65,11 @@ export interface Invitation {
 /** Por que no se da un asiento a la IA: la ficha no es de quien creo la sala, la sala ya juega, el asiento no es de otra persona, o ya esta dentro. */
 export type HandToAiError = 'badToken' | 'notWaiting' | 'noSeat' | 'seatTaken';
 
-export type ClaimSeatResult = { ok: true; seat: Invitation } | { ok: false; error: ClaimError };
+/** El asiento dado y lo que hay que mandar (si con el la sala empieza, a quien ya este dentro), o por que no. */
+export type ClaimSeatResult = { ok: true; seat: Invitation; outgoing: Outgoing[] } | { ok: false; error: ClaimError };
+
+/** Por que no se cierra una sala: la ficha no es de quien la creo, o ya ha empezado. */
+export type CloseError = 'badToken' | 'notWaiting';
 
 /** Lo que el servidor le da a la sala: el contenido del juego, su azar y (en tests) cuantos pasos seguidos. */
 export const roomContext = (stepBudget?: number): RoomContext => ({ content: defaultContent(), newToken, sameToken, stepBudget });
@@ -75,7 +79,8 @@ export class RoomAdapter {
 
   /** Una sala nueva con la escaramuza pedida, esperando a sus personas. */
   static create(request: RoomRequest, stepBudget?: number): RoomAdapter {
-    return new RoomAdapter(Room.create({ match: skirmishConfig(request.match) }, roomContext(stepBudget)));
+    const config = { match: skirmishConfig(request.match), start: request.start };
+    return new RoomAdapter(Room.create(config, roomContext(stepBudget)));
   }
 
   /** La sala guardada, o null si lo guardado no es una sala (otra version, o roto). */
@@ -96,7 +101,17 @@ export class RoomAdapter {
   claimSeat(): ClaimSeatResult {
     const claimed = this.room.claimSeat();
     if (!claimed.ok) return claimed;
-    return { ok: true, seat: { seat: claimed.seat, team: claimed.team, token: claimed.token } };
+    return { ok: true, seat: { seat: claimed.seat, team: claimed.team, token: claimed.token }, outgoing: claimed.messages };
+  }
+
+  /**
+   * Quien creo la sala (la ficha del primer asiento de persona) la cierra antes de que empiece: se
+   * cancela la busqueda de rival, o ya no se espera a nadie. Una sala que ya juega no se cierra asi
+   * (se rinde quien quiera irse).
+   */
+  canClose(token: string): { ok: true } | { ok: false; error: CloseError } {
+    if (!this.isCreator(token)) return { ok: false, error: 'badToken' };
+    return this.room.status === 'waiting' ? { ok: true } : { ok: false, error: 'notWaiting' };
   }
 
   /** Lo que puede saber cualquiera, con la hora a la que se le acaba el turno a quien se espera (null: sin reloj). */
@@ -154,11 +169,10 @@ export class RoomAdapter {
    * que no ha entrado, mientras la sala espera: lo que hay que mandar, o por que no.
    */
   handToAi(token: string, seat: SeatId): { ok: true; outgoing: Outgoing[] } | { ok: false; error: HandToAiError } {
-    const creator = this.room.personSeats()[0];
-    if (!creator || !sameToken(token, creator.token)) return { ok: false, error: 'badToken' };
+    if (!this.isCreator(token)) return { ok: false, error: 'badToken' };
     if (this.room.status !== 'waiting') return { ok: false, error: 'notWaiting' };
     const target = this.room.personSeats().find((person) => person.id === seat);
-    if (!target || target.id === creator.id) return { ok: false, error: 'noSeat' };
+    if (!target || this.isCreator(target.token)) return { ok: false, error: 'noSeat' };
     if (target.connection !== null) return { ok: false, error: 'seatTaken' };
     return { ok: true, outgoing: this.room.replaceWithAi(seat) };
   }
@@ -181,5 +195,11 @@ export class RoomAdapter {
   /** Cuantos mensajes se le han rechazado al asiento desde que la sala esta en memoria. */
   rejectionsOf(seat: SeatId): number {
     return this.room.rejectionsOf(seat);
+  }
+
+  /** La ficha es la de quien creo la sala (el primer asiento de persona). */
+  private isCreator(token: string): boolean {
+    const creator = this.room.personSeats()[0];
+    return creator !== undefined && sameToken(token, creator.token);
   }
 }

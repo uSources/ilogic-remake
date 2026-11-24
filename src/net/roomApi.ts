@@ -1,13 +1,14 @@
 /**
  * Las rutas del servidor que no son la partida (server/README.md, "Rutas"): crear una sala
  * (`POST /rooms`), pedir un asiento con el codigo (`POST /rooms/:code/seat`), lo que sabe cualquiera
- * de una sala (`GET /rooms/:code`: quien esta y de quien es el turno, sin nada de la partida) y dar un
- * asiento vacio a la IA (`POST /rooms/:code/ai`, solo quien creo la sala). Todo JSON; lo que llega se
+ * de una sala (`GET /rooms/:code`: quien esta y de quien es el turno, sin nada de la partida), dar un
+ * asiento vacio a la IA (`POST /rooms/:code/ai`, solo quien creo la sala), cerrarla antes de que
+ * empiece (`POST /rooms/:code/close`, lo mismo) y buscar rival (`POST /match`). Todo JSON; lo que llega se
  * comprueba por encima (que tenga la forma), porque viene de fuera. Lo usan las pantallas de
  * «Jugar en línea» (src/menu/online/); la partida va aparte, por el WebSocket (serverLink.ts).
  */
 import type { SkirmishChoices } from '../core/match';
-import type { RoomStatus, SeatId } from '../core/net';
+import type { RoomStatus, SearchPace, SeatId } from '../core/net';
 import type { TeamId } from '../core/model';
 import { isInt, isObject } from '../core/util/validation';
 
@@ -29,6 +30,17 @@ export interface SeatTicket {
   seat: SeatId;
   team: TeamId;
   token: string;
+}
+
+/** Lo que contesta el servidor a quien busca rival: su asiento y si ya tiene rival (la partida ha empezado) o espera en su sala. */
+export interface SearchTicket extends SeatTicket {
+  matched: boolean;
+}
+
+/** Lo que se pide al buscar: el ritmo y las salas propias que esperan rival (para que no toque una de ellas). */
+export interface SearchRequest {
+  pace: SearchPace;
+  avoid: string[];
 }
 
 export interface LobbySeat {
@@ -65,6 +77,9 @@ const isSeatTicket = (value: unknown): value is SeatTicket =>
   isInt(value.seat, 0, MAX_SEAT) &&
   isInt(value.team, 0, MAX_SEAT) &&
   typeof value.token === 'string';
+
+const isSearchTicket = (value: unknown): value is SearchTicket =>
+  isObject(value) && typeof value.matched === 'boolean' && isSeatTicket(value);
 
 const isLobbySeat = (value: unknown): value is LobbySeat =>
   isObject(value) &&
@@ -131,3 +146,11 @@ const isOk = (value: unknown): value is { ok: true } => isObject(value) && value
 /** Quien creo la sala (su ficha) da un asiento de persona que no ha entrado a la IA. */
 export const handToAi = (base: string, code: string, token: string, seat: SeatId): Promise<ApiResult<{ ok: true }>> =>
   request(`${base}/rooms/${code}/ai`, jsonPost({ token, seat }), isOk);
+
+/** Quien creo la sala (su ficha) la cierra antes de que empiece: cancela su busqueda de rival. */
+export const closeRoom = (base: string, code: string, token: string): Promise<ApiResult<{ ok: true }>> =>
+  request(`${base}/rooms/${code}/close`, jsonPost({ token }), isOk);
+
+/** Busca rival: el asiento de una sala que esperaba a alguien o, si no habia, el de una sala nueva que espera. */
+export const searchRival = (base: string, search: SearchRequest): Promise<ApiResult<SearchTicket>> =>
+  request(`${base}/match`, jsonPost(search), isSearchTicket);

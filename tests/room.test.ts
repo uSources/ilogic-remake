@@ -82,9 +82,9 @@ describe('la sala: una partida por la red como logica pura', () => {
   it('con el codigo se da el primer asiento de persona que no es de nadie; quien ya entro con su ficha cuenta como dado', () => {
     const room = newRoom([{ controller: 'human' }, { controller: 'human' }, { controller: 'human' }]);
     const [, second, third] = tokensOf(room);
-    expect(room.claimSeat()).toEqual({ ok: true, seat: 0, team: 0, token: tokensOf(room)[0] });
+    expect(room.claimSeat()).toEqual({ ok: true, seat: 0, team: 0, token: tokensOf(room)[0], messages: [] });
     expect(room.join({ kind: 'hello', token: second!, ...CURRENT_PROTOCOL }).ok).toBe(true);
-    expect(room.claimSeat()).toEqual({ ok: true, seat: 2, team: 2, token: third });
+    expect(room.claimSeat()).toEqual({ ok: true, seat: 2, team: 2, token: third, messages: [] });
     expect(room.claimSeat()).toEqual({ ok: false, error: 'noFreeSeat' });
     // Lo dado se guarda con la sala.
     const restored = Room.restore(JSON.parse(JSON.stringify(newRoom().snapshot())) as unknown, context());
@@ -93,6 +93,31 @@ describe('la sala: una partida por la red como logica pura', () => {
     afterClaim.claimSeat();
     const again = Room.restore(JSON.parse(JSON.stringify(afterClaim.snapshot())) as unknown, context());
     expect(again.ok && again.room.claimSeat()).toMatchObject({ ok: true, seat: 1 });
+  });
+
+  it('la de la busqueda de rival empieza en cuanto cada asiento es de alguien, aunque nadie este dentro', () => {
+    const teams: MatchTeam[] = [{ controller: 'human' }, { controller: 'human' }];
+    const room = Room.create({ match: skirmishConfig({ seed: 21, size: 16, teams, firstTeam: 1 }), start: 'everyoneSeated' }, context());
+    expect(room.claimSeat()).toMatchObject({ ok: true, seat: 0 });
+    expect(room.status).toBe('waiting');
+    // Quien busca esta dentro (en el vestibulo): al llegar el rival, se le cuenta que le toca al otro.
+    const searcher = room.join({ kind: 'hello', token: tokensOf(room)[0]!, ...CURRENT_PROTOCOL });
+    expect(searcher.ok).toBe(true);
+    const rival = room.claimSeat();
+    expect(rival).toMatchObject({ ok: true, seat: 1 });
+    expect(room.status).toBe('playing');
+    expect(rival.ok && kindsTo(rival.messages, 0)).toContain('turn');
+    expect(room.awaiting?.id).toBe(1);
+    // Se guarda como empieza: recuperada, sigue igual.
+    const restored = Room.restore(JSON.parse(JSON.stringify(room.snapshot())) as unknown, context());
+    expect(restored.ok && restored.room.status).toBe('playing');
+  });
+
+  it('una sala de amigos no empieza por dar asientos: espera a que entren', () => {
+    const room = newRoom([{ controller: 'human' }, { controller: 'human' }]);
+    room.claimSeat();
+    expect(room.claimSeat()).toMatchObject({ ok: true, messages: [] });
+    expect(room.status).toBe('waiting');
   });
 
   it('una sala que ya juega no da asientos con el codigo', () => {

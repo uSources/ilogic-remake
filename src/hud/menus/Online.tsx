@@ -1,9 +1,10 @@
 /**
  * El HTML de «Jugar en línea» (Preact): dibuja `OnlineVM` tal como lo publica OnlineScreen
  * (src/menu/online/) y le devuelve lo que se toca por `ui.actions` (onlineHover, onlinePick,
- * onlineSet, onlineText). Tres vistas, una por modo: el menu (crear, unirse con el codigo y «Mis
- * partidas» con su estado), crear partida y el vestibulo. Sin logica: lo que se puede pulsar y lo que
- * dice cada fila ya viene decidido en el VM.
+ * onlineSet, onlineText). Tres vistas, una por modo: el menu (buscar rival, con amigos: crear o
+ * unirse con el codigo, y «Mis partidas» con su estado), crear partida y el vestibulo (el de una sala
+ * a la que se invita, o el de la propia busqueda de rival). Sin logica: lo que se puede pulsar y lo
+ * que dice cada fila ya viene decidido en el VM.
  */
 import { t } from '../../settings';
 import { Btn } from '../common/buttons';
@@ -19,39 +20,74 @@ function Row({ row, focus }: { row: OptionRowVM; focus: string }) {
   return <Seg row={row} sel={focus === row.id} onHover={hover(row.id)} onSet={(i) => ui.actions.onlineSet(row.id, i)} />;
 }
 
-/** Crear partida y unirse con el codigo, uno al lado del otro (uno encima del otro en el movil). */
-function StartBoxes({ online }: { online: OnlineVM }) {
+/** Buscar rival: el ritmo (por turnos o en vivo), lo que trae y buscar. */
+function SearchBox({ online }: { online: OnlineVM }) {
+  const { focus, search } = online;
+  return (
+    <div class="on-box">
+      <span class="label">{t('onlineSearch')}</span>
+      <p class="ng-note">{t('onlineSearchNote')}</p>
+      <div class="presets">
+        {search.paces.map((pace) => {
+          const id = `pace-${pace.id}`;
+          return (
+            <Btn
+              key={pace.id}
+              sel={focus === id}
+              cls={`preset ${search.pace === pace.id ? 'on' : ''}`}
+              onHover={hover(id)}
+              onPick={pick(id)}
+            >
+              {pace.label}
+            </Btn>
+          );
+        })}
+      </div>
+      <span class="muted small">{search.note}</span>
+      <Btn sel={focus === 'search'} cls="px-btn start" disabled={online.busy} onHover={hover('search')} onPick={pick('search')}>
+        {t('onlineSearchGo')} ▸
+      </Btn>
+    </div>
+  );
+}
+
+/** Con amigos: crear una partida con sus reglas, o entrar con el codigo (o el enlace) que te han pasado. */
+function FriendsBox({ online }: { online: OnlineVM }) {
   const { focus, code } = online;
   return (
-    <div class="on-start">
-      <div class="on-box">
-        <span class="label">{t('onlineCreate')}</span>
-        <p class="ng-note">{t('onlineCreateNote')}</p>
-        <Btn sel={focus === 'create'} cls="px-btn start" onHover={hover('create')} onPick={pick('create')}>
-          {t('onlineCreate')} ▸
+    <div class="on-box">
+      <span class="label">{t('onlineFriends')}</span>
+      <p class="ng-note">{t('onlineFriendsNote')}</p>
+      <Btn sel={focus === 'create'} cls="px-btn" onHover={hover('create')} onPick={pick('create')}>
+        {t('onlineCreate')} ▸
+      </Btn>
+      <div class="ng-coderow">
+        <input
+          class={`ng-code on-code-input ${code.error ? 'bad' : ''} ${focus === 'codeText' ? 'focus' : ''}`}
+          value={code.text}
+          placeholder={t('onlineJoinHint')}
+          spellcheck={false}
+          autocomplete="off"
+          aria-label={t('onlineJoin')}
+          onFocus={hover('codeText')}
+          onMouseEnter={hover('codeText')}
+          onInput={(event) => ui.actions.onlineText(event.currentTarget.value)}
+        />
+        <Btn sel={focus === 'codeGo'} disabled={online.busy} onHover={hover('codeGo')} onPick={pick('codeGo')}>
+          {t('onlineJoinGo')}
         </Btn>
       </div>
-      <div class="on-box">
-        <span class="label">{t('onlineJoin')}</span>
-        <p class="ng-note">{t('onlineJoinNote')}</p>
-        <div class="ng-coderow">
-          <input
-            class={`ng-code on-code-input ${code.error ? 'bad' : ''} ${focus === 'codeText' ? 'focus' : ''}`}
-            value={code.text}
-            placeholder={t('onlineJoinHint')}
-            spellcheck={false}
-            autocomplete="off"
-            aria-label={t('onlineJoin')}
-            onFocus={hover('codeText')}
-            onMouseEnter={hover('codeText')}
-            onInput={(event) => ui.actions.onlineText(event.currentTarget.value)}
-          />
-          <Btn sel={focus === 'codeGo'} disabled={online.busy} onHover={hover('codeGo')} onPick={pick('codeGo')}>
-            {t('onlineJoinGo')}
-          </Btn>
-        </div>
-        {code.error && <span class="bad-note">{code.error}</span>}
-      </div>
+      {code.error && <span class="bad-note">{code.error}</span>}
+    </div>
+  );
+}
+
+/** Buscar rival y, al lado, con amigos (uno encima del otro en el movil). */
+function StartBoxes({ online }: { online: OnlineVM }) {
+  return (
+    <div class="on-start">
+      <SearchBox online={online} />
+      <FriendsBox online={online} />
     </div>
   );
 }
@@ -78,7 +114,7 @@ function RoomRow({ room, focus }: { room: OnlineRoomVM; focus: string }) {
           </Btn>
         )}
         <Btn sel={focus === forgetId} cls="link" onHover={hover(forgetId)} onPick={pick(forgetId)}>
-          {t('onlineForget')}
+          {room.forget}
         </Btn>
       </div>
     </div>
@@ -164,7 +200,7 @@ function CreateRoom({ online }: { online: OnlineVM }) {
   );
 }
 
-function SeatRow({ seat, focus }: { seat: OnlineSeatVM; focus: string }) {
+function SeatRow({ seat, focus, aiLabel }: { seat: OnlineSeatVM; focus: string; aiLabel: string }) {
   const id = `ai-${seat.seat}`;
   return (
     <div class={`on-lobby-seat ${seat.presence}`}>
@@ -172,9 +208,22 @@ function SeatRow({ seat, focus }: { seat: OnlineSeatVM; focus: string }) {
       <span class="muted small">{seat.detail}</span>
       {seat.canHandToAi && (
         <Btn sel={focus === id} cls="px-btn plain" onHover={hover(id)} onPick={pick(id)}>
-          {t('onlineHandToAi')}
+          {aiLabel}
         </Btn>
       )}
+    </div>
+  );
+}
+
+/** La propia busqueda de rival, esperando: el ritmo que se busca, con un punto que late. */
+function Searching({ searching }: { searching: string }) {
+  return (
+    <div class="on-invite">
+      <span class="label">{t('onlineSearching')}</span>
+      <div class="on-invite-row">
+        <span class="on-pulse" aria-hidden="true" />
+        <span class="on-searching">{searching}</span>
+      </div>
     </div>
   );
 }
@@ -202,18 +251,25 @@ function Invite({ lobby, focus }: { lobby: OnlineLobbyVM; focus: string }) {
   );
 }
 
-/** El vestibulo: el codigo y el enlace para invitar, quien hay y la conexion. */
+/** El vestibulo: el codigo y el enlace para invitar (o, si se busca rival, que se esta buscando), quien hay y la conexion. */
 function Lobby({ online }: { online: OnlineVM }) {
-  const lobby = online.lobby;
+  const { lobby, focus } = online;
   if (!lobby) return null;
   return (
     <div class="on-lobby">
-      <Invite lobby={lobby} focus={online.focus} />
+      {lobby.searching ? <Searching searching={lobby.searching} /> : <Invite lobby={lobby} focus={focus} />}
       <span class="label">{t('onlinePlayers')}</span>
       {lobby.seats.map((seat) => (
-        <SeatRow key={seat.seat} seat={seat} focus={online.focus} />
+        <SeatRow key={seat.seat} seat={seat} focus={focus} aiLabel={lobby.handToAiLabel} />
       ))}
       <p class="ng-note">{lobby.note}</p>
+      {lobby.searching && (
+        <div class="on-cancel">
+          <Btn sel={focus === 'cancelSearch'} cls="px-btn plain" onHover={hover('cancelSearch')} onPick={pick('cancelSearch')}>
+            {t('onlineCancelSearch')}
+          </Btn>
+        </div>
+      )}
       <span class="muted small">{lobby.connection}</span>
     </div>
   );

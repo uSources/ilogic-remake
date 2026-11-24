@@ -9,6 +9,7 @@ import { LobbyScreen } from '../src/menu/online/lobbyScreen';
 import type { OnlineHost, OnlineScreens } from '../src/menu/online/shared';
 import { readOnlineRooms } from '../src/net/onlineRooms';
 import type { LobbyInfo } from '../src/net/roomApi';
+import { t } from '../src/settings';
 
 const PAGE = 'http://localhost/';
 const CODE = 'ABCDEF';
@@ -66,6 +67,9 @@ type Welcome = Extract<ServerMessage, { kind: 'welcome' }>;
 
 const welcome: Welcome = { kind: 'welcome', seat: 0, team: 0, ...CURRENT_PROTOCOL, status: 'waiting', lastSeq: 0 };
 
+/** Lo que pidio la pantalla al conjunto (cancelar la busqueda, volver al menu). */
+const asked: string[] = [];
+
 const screens = (): OnlineScreens => ({
   host: {} as OnlineHost,
   focus: '',
@@ -74,6 +78,12 @@ const screens = (): OnlineScreens => ({
   show: () => {},
   joinRoom: () => {},
   enterRoom: () => {},
+  searchRival: () => {},
+  cancelSearch: (entry) => {
+    asked.push(`cancel ${entry.code}`);
+    return Promise.resolve(true);
+  },
+  toMenu: () => asked.push('menu'),
   publish: () => {},
 });
 
@@ -90,6 +100,7 @@ describe('LobbyScreen', () => {
     vi.stubGlobal('WebSocket', FakeSocket);
     vi.stubGlobal('fetch', fakeFetch);
     unanswered.length = 0;
+    asked.length = 0;
     lobby = new LobbyScreen(screens());
   });
 
@@ -131,5 +142,26 @@ describe('LobbyScreen', () => {
 
     expect(lobby.vm()).toBeNull();
     expect(unanswered).toHaveLength(0);
+  });
+
+  it('la propia busqueda de rival: sin invitar, el rival por llegar, jugar contra la IA y cancelar', async () => {
+    lobby.join(CODE, 'ficha-0', 2, { seat: 0, team: 0, search: 'live' });
+    FakeSocket.last?.reply(welcome);
+    unanswered.shift()?.(waitingRoom);
+    await settle();
+
+    const vm = lobby.vm();
+    expect(vm?.canInvite).toBe(false);
+    expect(vm?.searching).toContain(t('onlinePaceLive'));
+    expect(vm?.note).toBe(t('onlineSearchingLive'));
+    expect(vm?.handToAiLabel).toBe(t('onlinePlayAi'));
+    expect(vm?.seats[1]?.detail).toBe(`${t('onlineRival')} · ${t('onlineRivalComing')}`);
+    expect(lobby.rows()).toEqual([['ai-1'], ['cancelSearch'], ['leave']]);
+    expect(readOnlineRooms()).toMatchObject([{ code: CODE, search: 'live' }]);
+
+    lobby.pick('cancelSearch');
+    await settle();
+    expect(asked).toEqual([`cancel ${CODE}`, 'menu']);
+    expect(lobby.vm()).toBeNull();
   });
 });

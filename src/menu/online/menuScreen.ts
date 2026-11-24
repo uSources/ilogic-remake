@@ -1,20 +1,26 @@
 /**
- * El menu de «Jugar en línea»: «Crear partida», entrar con el codigo (o el enlace) de una sala y
- * «Mis partidas en línea» (las salas en las que este navegador tiene asiento, `net/onlineRooms`), cada
- * una con como esta segun el servidor (te toca, le toca a otro...: roomLines.ts), que se pregunta al
- * abrir y cada poco mientras se mira la lista. Abrir «Crear partida» y entrar en una sala lo hace el
- * conjunto (onlineScreen.ts: `enterRoom`, `joinRoom`).
+ * El menu de «Jugar en línea»: «Buscar rival» (con el ritmo: por turnos o en vivo), «Con amigos»
+ * (crear partida, o entrar con el codigo o el enlace de una sala) y «Mis partidas en línea» (las
+ * salas en las que este navegador tiene asiento, `net/onlineRooms`), cada una con como esta segun el
+ * servidor (te toca, le toca a otro, buscando rival...: roomLines.ts), que se pregunta al abrir y cada
+ * poco mientras se mira la lista. Buscar, abrir «Crear partida» y entrar en una sala lo hace el
+ * conjunto (onlineScreen.ts: `searchRival`, `enterRoom`, `joinRoom`).
  */
+import { isSearchPace, SEARCH_PACES, type SearchPace } from '../../core/net';
 import type { OnlineVM } from '../../hud/store';
-import { forgetRoom, parseRoomLink, readOnlineRooms } from '../../net/onlineRooms';
+import { forgetRoom, parseRoomLink, readOnlineRooms, type OnlineRoomEntry } from '../../net/onlineRooms';
 import { lobbyOf, type ApiResult, type LobbyInfo } from '../../net/roomApi';
 import { serverUrl } from '../../net/serverUrl';
 import { t } from '../../settings';
-import { isSettled, roomLines, type RoomLook } from './roomLines';
-import type { OnlineScreens } from './shared';
+import { isSearching, isSettled, roomLines, type RoomLook } from './roomLines';
+import { paceLabel, paceNote, type OnlineScreens } from './shared';
 
 const ROOM_PREFIX = 'room-';
 const FORGET_PREFIX = 'forget-';
+const PACE_PREFIX = 'pace-';
+
+/** Lo que tiene el foco al abrir el menu: buscar rival, lo primero que se viene a hacer. */
+const FIRST_FOCUS = 'search';
 
 /** Cada cuanto se vuelve a preguntar como estan las salas mientras se mira la lista (te toca, quedan 3 h...). */
 const ROOMS_POLL_MS = 20_000;
@@ -38,6 +44,8 @@ function lookAfter(result: ApiResult<LobbyInfo>, before: RoomLook): RoomLook {
 }
 
 export class MenuScreen {
+  /** El ritmo de «Buscar rival» (se queda el elegido mientras la pantalla siga abierta). */
+  private pace: SearchPace = 'daily';
   private codeText = '';
   private codeError: string | null = null;
   private readonly looks = new Map<string, RoomLook>();
@@ -55,7 +63,7 @@ export class MenuScreen {
     this.close();
     this.codeText = '';
     this.codeError = null;
-    this.screens.show('menu', 'create');
+    this.screens.show('menu', FIRST_FOCUS);
     void this.refresh(this.watch);
   }
 
@@ -66,19 +74,26 @@ export class MenuScreen {
     this.pollHandle = null;
   }
 
-  /** Las salas, con lo que pide hacer algo arriba, y el cuadro del codigo. */
-  vm(): Pick<OnlineVM, 'rooms' | 'code'> {
+  /** Buscar rival (los ritmos y el elegido), las salas (con lo que pide hacer algo arriba) y el cuadro del codigo. */
+  vm(): Pick<OnlineVM, 'search' | 'rooms' | 'code'> {
+    const paces = SEARCH_PACES.map((pace) => ({ id: pace, label: paceLabel(pace) }));
+    const search = { paces, pace: this.pace, note: paceNote(this.pace) };
     const rooms = roomLines(readOnlineRooms(), (code) => this.lookOf(code), Date.now());
-    return { rooms, code: { text: this.codeText, error: this.codeError } };
+    return { search, rooms, code: { text: this.codeText, error: this.codeError } };
   }
 
-  /** Las filas del foco: crear, el codigo, cada sala (entrar, si aun existe, y quitarla) y volver. */
+  /**
+   * Las filas del foco: las dos cajas de arriba lado a lado, cada una de dos columnas (los dos ritmos
+   * y, debajo, «Buscar»; «Crear partida» y, debajo, el codigo y «Entrar»), cada sala (entrar, si aun
+   * existe, y quitarla) y volver. Lo que ocupa dos columnas se repite: de un ritmo se baja a «Buscar».
+   */
   rows(): string[][] {
     const rooms = this.vm().rooms.map((room) => {
       const forget = `${FORGET_PREFIX}${room.code}`;
       return room.enter === null ? [forget] : [`${ROOM_PREFIX}${room.code}`, forget];
     });
-    return [['create'], ['codeText', 'codeGo'], ...rooms, ['back']];
+    const paces = SEARCH_PACES.map((pace) => `${PACE_PREFIX}${pace}`);
+    return [[...paces, 'create', 'create'], ['search', 'search', 'codeText', 'codeGo'], ...rooms, ['back']];
   }
 
   /** Lo que se ha escrito en el cuadro del codigo. */
@@ -88,9 +103,11 @@ export class MenuScreen {
     this.screens.publish();
   }
 
-  /** Lo que se ha pulsado, si es de esta pantalla (el codigo, una sala, quitarla): true si se ha atendido. */
+  /** Lo que se ha pulsado, si es de esta pantalla (un ritmo, buscar, el codigo, una sala, quitarla): true si se ha atendido. */
   pick(focus: string): boolean {
-    if (focus === 'codeGo') this.enterFromText();
+    if (focus === 'search') this.screens.searchRival(this.pace);
+    else if (focus.startsWith(PACE_PREFIX)) this.choosePace(focus.slice(PACE_PREFIX.length));
+    else if (focus === 'codeGo') this.enterFromText();
     else if (focus === 'codeText') document.querySelector<HTMLInputElement>(`.${CODE_INPUT_CLASS}`)?.focus();
     else if (focus.startsWith(ROOM_PREFIX)) this.rejoin(focus.slice(ROOM_PREFIX.length));
     else if (focus.startsWith(FORGET_PREFIX)) this.forget(focus.slice(FORGET_PREFIX.length));
@@ -115,10 +132,33 @@ export class MenuScreen {
     if (room) this.screens.joinRoom(room.code, room.token);
   }
 
+  private choosePace(pace: string): void {
+    if (isSearchPace(pace)) this.pace = pace;
+    this.screens.publish();
+  }
+
+  /** Quita la sala de la lista; si es la propia busqueda de rival, antes la cancela (si llego un rival justo, se queda). */
   private forget(code: string): void {
+    const entry = readOnlineRooms().find((candidate) => candidate.code === code);
+    if (entry && isSearching(entry, this.lookOf(code))) return void this.cancelSearch(entry);
     forgetRoom(code);
+    this.forgotten(code);
+  }
+
+  private async cancelSearch(entry: OnlineRoomEntry): Promise<void> {
+    const watch = this.watch;
+    const cancelled = await this.screens.cancelSearch(entry);
+    if (watch !== this.watch) return;
+    if (cancelled) return this.forgotten(entry.code);
+    // Ha llegado un rival: lo que diga ahora el servidor.
+    this.looks.delete(entry.code);
+    this.close();
+    void this.refresh(this.watch);
+  }
+
+  private forgotten(code: string): void {
     this.looks.delete(code);
-    this.screens.focus = 'create';
+    this.screens.focus = FIRST_FOCUS;
     this.screens.publish();
   }
 

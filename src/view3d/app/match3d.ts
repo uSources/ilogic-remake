@@ -87,6 +87,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
       forecast,
       selected: controls.selectedUnits(),
       endArmed: endGuard.isArmed,
+      watching: controls.isWatchingOthers,
       anchorOf,
       overheadOf: (pos) => scene.overheadOf(pos),
     });
@@ -185,6 +186,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     isThreatOn: () => threat.isShowing,
     isIntentsOn: () => intents.isShowingAll,
     hasOrders: () => anyStandingOrder(state, viewer),
+    isWatching: () => controls.isWatchingOthers,
     refresh: () => publish(),
   });
 
@@ -204,9 +206,12 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     showEnd();
   }
 
-  /** Esc en el mapa: deshace lo elegido; sin nada elegido, abre la pausa (abierta, como las opciones o la ayuda, Esc es suyo). */
+  /**
+   * Esc en el mapa: deshace lo elegido; sin nada elegido, o mirando jugar a los demas (no hay nada que
+   * deshacer), abre la pausa (abierta, como las opciones o la ayuda, Esc es suyo).
+   */
   function escape(): void {
-    if (!controls.cancel()) pause.open();
+    if (controls.isWatchingOthers || !controls.cancel()) pause.open();
   }
 
   /** Elige la unidad y lleva la camara hasta ella. */

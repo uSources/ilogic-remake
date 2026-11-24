@@ -11,8 +11,9 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { newRoomCode } from '../../src/codes';
 import { CLOSE_CODES } from '../../src/hostedRoom';
-import { MAX_MESSAGE_BYTES, ROOM_EXPIRY_MS } from '../../src/limits';
-import { bodyOf, createRoom, describeServer, joinedRoom, lobbyOf, post, roomRequest } from '../../test/shared/serverSuite';
+import { MAX_MESSAGE_BYTES, MAX_SEARCHES_PER_WINDOW, ROOM_EXPIRY_MS } from '../../src/limits';
+import { CLIENT_ADDRESS_HEADER } from '../../src/routes';
+import { bodyOf, createRoom, describeServer, joinedRoom, lobbyOf, post, roomRequest, searchTicket } from '../../test/shared/serverSuite';
 import { closingOf, SocketClient } from '../../test/shared/socketClient';
 import { GAME_ORIGIN } from '../../test/shared/testServer';
 import { NodeRooms } from '../src/nodeRooms';
@@ -157,12 +158,37 @@ describe('arrancar otra vez', () => {
     expect(back.find((client) => client !== first)!.net.isMyTurn).toBe(true);
   });
 
+  it('la cola del emparejador sigue: quien busca despues se queda la sala que esperaba', async () => {
+    const opener = await searchTicket(node.server, { pace: 'daily' });
+    await node.restart();
+    expect(await searchTicket(node.server, { pace: 'daily' })).toMatchObject({ code: opener.code, matched: true });
+  });
+
   it('las alarmas se ponen al arrancar: una sala que caduco con el servidor parado se borra sola', async () => {
     const { code } = await createRoom(node.server);
     node.advance(ROOM_EXPIRY_MS + SECOND);
     await node.restart();
     await expect.poll(() => node.server.stored(code)).toBeNull();
     expect((await lobbyOf(node.server, code)).status).toBe(404);
+  });
+});
+
+describe('el tope de busquedas de rival', () => {
+  const node = useNodeServer();
+
+  /** Una busqueda que dice venir de otra direccion (lo que intentaria quien quiere saltarse el tope). */
+  const searchFrom = (address: string): Promise<Response> =>
+    node.server.fetch('/match', {
+      method: 'POST',
+      body: JSON.stringify({ pace: 'daily' }),
+      headers: { Origin: GAME_ORIGIN, 'Content-Type': 'application/json', [CLIENT_ADDRESS_HEADER]: address },
+    });
+
+  it('cuenta por la direccion de la conexion: la cabecera que mande el cliente no vale', async () => {
+    for (let search = 0; search < MAX_SEARCHES_PER_WINDOW; search++) expect((await searchFrom(`10.0.0.${search}`)).status).toBe(200);
+    const refused = await searchFrom('10.0.1.1');
+    expect(refused.status).toBe(429);
+    expect(await bodyOf(refused)).toEqual({ error: 'tooManySearches' });
   });
 });
 
