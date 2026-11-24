@@ -5,7 +5,7 @@
  * tarjeta «En línea» de Inicio (si te toca) y la lista de «Jugar en línea» ven lo mismo, y al pasar
  * de una a otra no se vuelve a empezar de cero.
  */
-import { readOnlineRooms } from '../../net/onlineRooms';
+import { readOnlineRooms, type OnlineRoomEntry } from '../../net/onlineRooms';
 import { lobbyOf, type ApiResult, type LobbyInfo } from '../../net/roomApi';
 import { serverUrl } from '../../net/serverUrl';
 import { isSettled, type RoomLook } from './roomLines';
@@ -15,7 +15,7 @@ const ROOMS_POLL_MS = 20_000;
 
 const UNKNOWN: RoomLook = { kind: 'unknown' };
 
-/** Si el servidor contesta: la pastilla de arriba de «Jugar en línea» (null mientras no se le ha preguntado). */
+/** Si el servidor contesta: la pastilla de arriba de «Jugar en línea» (null sin salas apuntadas: no hay por que preguntarle). */
 export type ServerReach = 'online' | 'offline' | null;
 
 /** Contesta si alguna respuesta ha llegado de el (aunque sea «esa sala no existe»). */
@@ -48,7 +48,7 @@ export class RoomWatch {
     return this.looks.get(code) ?? UNKNOWN;
   }
 
-  /** Si el servidor contesto la ultima vez que se le pregunto (sin salas que mirar, no se sabe). */
+  /** Si el servidor contesto la ultima vez que se le pregunto (sin salas apuntadas, no se sabe: null). */
   serverReach(): ServerReach {
     return this.reach;
   }
@@ -79,18 +79,26 @@ export class RoomWatch {
 
   /**
    * Pregunta al servidor por cada sala apuntada que sigue en marcha (a la vez; las acabadas o que ya
-   * no existen no cambian: `isSettled`) y, mientras se mire, vuelve a preguntar.
+   * no existen no cambian: `isSettled`) y, mientras se mire, vuelve a preguntar. Si todas han
+   * acabado, pregunta solo por la mas reciente, para seguir sabiendo si el servidor contesta; sin
+   * ninguna apuntada no hay a quien preguntar ni nada que esperar (al volver a mirar, `start`).
    */
   private async refresh(watch: number): Promise<void> {
     const base = serverUrl();
     if (!base || watch !== this.watch) return;
-    const ask = async (code: string) => ({ code, result: await lobbyOf(base, code) });
-    const live = readOnlineRooms().filter((entry) => !isSettled(this.lookOf(entry.code)));
-    const answers = await Promise.all(live.map((entry) => ask(entry.code)));
+    const asked = this.roomsToAsk();
+    const answers = await Promise.all(asked.map(async ({ code }) => ({ code, result: await lobbyOf(base, code) })));
     for (const { code, result } of answers) this.looks.set(code, lookAfter(result, this.lookOf(code)));
-    if (answers.length > 0) this.reach = reachOf(answers.map(({ result }) => result));
+    this.reach = answers.length > 0 ? reachOf(answers.map(({ result }) => result)) : null;
     if (watch !== this.watch) return;
     this.onChange?.();
-    this.pollHandle = setTimeout(() => void this.refresh(watch), ROOMS_POLL_MS);
+    if (asked.length > 0) this.pollHandle = setTimeout(() => void this.refresh(watch), ROOMS_POLL_MS);
+  }
+
+  /** Las salas en marcha o, si todas han acabado, la mas reciente (la lista esta de la mas reciente a la mas vieja). */
+  private roomsToAsk(): OnlineRoomEntry[] {
+    const rooms = readOnlineRooms();
+    const live = rooms.filter((entry) => !isSettled(this.lookOf(entry.code)));
+    return live.length > 0 ? live : rooms.slice(0, 1);
   }
 }

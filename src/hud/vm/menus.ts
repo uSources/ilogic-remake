@@ -206,7 +206,7 @@ export interface OnlineLobbyVM {
   canShare: boolean;
   /** Si es la propia busqueda de rival, aun esperando: su ritmo («En vivo · 2 min por turno»); se puede cancelar. Si no, null. */
   searching: string | null;
-  /** Desde cuando se espera rival en esta pantalla (ms, `Date.now()`): el reloj de «Buscando rival…». */
+  /** Desde cuando se busca rival (ms, `Date.now()`; aunque se haya salido y vuelto): el reloj de «Buscando rival…». */
   searchingSince: number | null;
   seats: OnlineSeatVM[];
   /** El boton de dar un asiento a la IA: «Sustituir por IA», o «Jugar contra la IA» si se busca rival. */

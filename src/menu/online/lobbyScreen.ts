@@ -54,6 +54,20 @@ function seatStatus(presence: OnlineSeatVM['presence'], isRivalSought: boolean):
   return presence === 'in' ? t('onlineIn') : null;
 }
 
+/**
+ * Cuando empezo la busqueda de la sala: ahora si se acaba de buscar; si se vuelve a una que ya
+ * buscaba, cuando empezo (o ahora, si no se apunto). Sin busqueda, nada.
+ */
+function searchStart(
+  search: SearchPace | undefined,
+  known: KnownSeat | undefined,
+  remembered: OnlineRoomEntry | undefined,
+  now: number,
+): number | undefined {
+  if (search === undefined) return undefined;
+  return known?.search ? now : (remembered?.searchedAt ?? now);
+}
+
 /** De quien es el ejercito: el tuyo, azul; en un duelo, el otro, rojo; con mas, su numero de equipo. */
 function seatTeam(seat: LobbySeat, isMe: boolean, isDuel: boolean): string {
   if (isMe) return t('onlineArmyBlue');
@@ -71,8 +85,6 @@ export class LobbyScreen {
   private isLeaving = false;
   /** Se ha entrado buscando rival (con este ritmo): al empezar la partida, «¡Rival encontrado!». */
   private foundPace: SearchPace | null = null;
-  /** Cuando se entro en la sala: el reloj de «Buscando rival…» cuenta desde ahi. */
-  private enteredAt = 0;
 
   constructor(private readonly screens: OnlineScreens) {}
 
@@ -102,6 +114,8 @@ export class LobbyScreen {
     if (!base) return;
     this.leave();
     const remembered = readOnlineRooms().find((room) => room.code === code);
+    const now = Date.now();
+    const search = known?.search ?? remembered?.search;
     this.entry = {
       code,
       token,
@@ -109,12 +123,12 @@ export class LobbyScreen {
       team: known?.team ?? remembered?.team ?? 0,
       teams: remembered?.teams ?? chosenTeams,
       status: remembered?.status ?? 'waiting',
-      at: Date.now(),
-      search: known?.search ?? remembered?.search,
+      at: now,
+      search,
+      searchedAt: searchStart(search, known, remembered, now),
     };
     if (known) rememberRoom(this.entry);
     this.foundPace = known?.found ?? null;
-    this.enteredAt = Date.now();
     this.screens.show('lobby', 'leave');
     this.screens.error = null;
     this.linkStatus = 'connecting';
@@ -147,7 +161,7 @@ export class LobbyScreen {
       canInvite: status === 'waiting' && !search,
       canShare: canShare(),
       searching: search ? `${paceLabel(search)} · ${paceTurnText(search)}` : null,
-      searchingSince: search ? this.enteredAt : null,
+      searchingSince: search ? (entry.searchedAt ?? null) : null,
       seats,
       handToAiLabel: t(search ? 'onlinePlayAi' : 'onlineHandToAi'),
       note: this.noteOf(status, search),

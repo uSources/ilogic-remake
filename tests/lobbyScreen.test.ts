@@ -8,7 +8,7 @@ import { CURRENT_PROTOCOL, type ServerMessage } from '@core/net';
 import { LobbyScreen } from '../src/menu/online/lobbyScreen';
 import { RoomWatch } from '../src/menu/online/roomWatch';
 import type { OnlineHost, OnlineScreens } from '../src/menu/online/shared';
-import { readOnlineRooms } from '../src/net/onlineRooms';
+import { readOnlineRooms, writeOnlineRooms } from '../src/net/onlineRooms';
 import type { LobbyInfo } from '../src/net/roomApi';
 import { t } from '../src/settings';
 
@@ -142,6 +142,20 @@ describe('LobbyScreen', () => {
     expect(readOnlineRooms()).toMatchObject([{ code: CODE, token: 'ficha-1', seat: 1, team: 1, status: 'waiting' }]);
   });
 
+  it('al volver a una busqueda desde «Mis partidas», «Buscando rival…» cuenta desde que empezo, no desde ahora', async () => {
+    const STARTED = 1_000;
+    writeOnlineRooms([
+      { code: CODE, token: 'ficha-0', seat: 0, team: 0, teams: 2, status: 'waiting', at: STARTED, search: 'daily', searchedAt: STARTED },
+    ]);
+    lobby.join(CODE, 'ficha-0', 2);
+    FakeSocket.last?.reply(welcome);
+    unanswered.shift()?.(waitingRoom);
+    await settle();
+
+    expect(lobby.vm()?.searchingSince).toBe(STARTED);
+    expect(readOnlineRooms()[0]?.searchedAt).toBe(STARTED);
+  });
+
   it('una respuesta que llega despues de salir de la sala no la enseña ni vuelve a preguntar', async () => {
     lobby.join(CODE, 'ficha-0', 2);
     lobby.leave();
@@ -165,6 +179,7 @@ describe('LobbyScreen', () => {
     expect(vm?.handToAiLabel).toBe(t('onlinePlayAi'));
     expect(vm?.seats[1]).toMatchObject({ who: t('onlineRival'), status: t('onlineRivalComing'), isYou: false });
     expect(vm?.searchingSince).toEqual(expect.any(Number));
+    expect(readOnlineRooms()[0]?.searchedAt).toBe(vm?.searchingSince);
     expect(lobby.rows()).toEqual([['ai-1', 'cancelSearch', 'leave']]);
     expect(readOnlineRooms()).toMatchObject([{ code: CODE, search: 'live' }]);
 

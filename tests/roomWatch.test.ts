@@ -100,6 +100,24 @@ describe('RoomWatch', () => {
     expect(menu).toHaveBeenCalledTimes(1);
   });
 
+  it('con todas acabadas pregunta solo por la mas reciente, para saber si el servidor contesta; sin salas, ni pregunta ni espera', async () => {
+    writeOnlineRooms([entry('ENDED1'), entry('GONE11')]);
+    watch.start(() => {});
+    await settle();
+    expect(asked).toEqual(['ENDED1', 'GONE11']);
+    expect(watch.serverReach()).toBe('online');
+
+    vi.stubGlobal('fetch', () => Promise.reject(new TypeError('sin red')));
+    await settle(POLL_MS);
+    expect(watch.serverReach()).toBe('offline');
+
+    writeOnlineRooms([]);
+    watch.start(() => {});
+    await settle();
+    expect(watch.serverReach()).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('lo que se sabe se queda al dejar de mirar (al volver se ve ya); olvidar una sala lo borra', async () => {
     watch.start(() => {});
     await settle();
