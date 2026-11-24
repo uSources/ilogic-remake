@@ -38,6 +38,12 @@ interface Focus {
 }
 
 const isFocused = (focus: Focus, ...ids: string[]) => ids.includes(focus.focused);
+
+/** Pulsar la tarjeta la usa, salvo en su boton: ese ya la usa, y si no se usaria dos veces. */
+const pickCard = (focus: Focus, id: string) => (event: MouseEvent) => {
+  const onButton = event.target instanceof Element && event.target.closest('button') !== null;
+  if (!onButton) focus.pick(id)();
+};
 const cardSelClass = (focus: Focus, ...ids: string[]) => (isFocused(focus, ...ids) ? 'sel' : '');
 
 function ContinueCard({ save, focus }: { save: NonNullable<HomeVM['save']>; focus: Focus }) {
@@ -45,7 +51,7 @@ function ContinueCard({ save, focus }: { save: NonNullable<HomeVM['save']>; focu
     <div
       class={`px card card-continue ${cardSelClass(focus, 'continue')}`}
       onMouseEnter={focus.hover('continue')}
-      onClick={focus.pick('continue')}
+      onClick={pickCard(focus, 'continue')}
     >
       <span class="label">{t('savedGame')}</span>
       <img class="thumb" src={save.thumb} alt="" />
@@ -92,7 +98,7 @@ function OnlineCard({ card, focus }: { card: OnlineCardVM; focus: Focus }) {
     <div
       class={`px card card-online ${card.yourTurn ? 'your-turn' : ''} ${cardSelClass(focus, 'online')}`}
       onMouseEnter={focus.hover('online')}
-      onClick={focus.pick('online')}
+      onClick={pickCard(focus, 'online')}
     >
       <span class="label">{t('onlineCardTitle')}</span>
       <div class="card-art">
@@ -112,7 +118,7 @@ function CampaignCard({ campaign, focus }: { campaign: HomeVM['campaign']; focus
     <div
       class={`px card card-campaign ${cardSelClass(focus, 'campaign')}`}
       onMouseEnter={focus.hover('campaign')}
-      onClick={focus.pick('campaign')}
+      onClick={pickCard(focus, 'campaign')}
     >
       <span class="label">{t('campaign')}</span>
       {campaign.thumb ? <img class="thumb" src={campaign.thumb} alt="" /> : <div class="thumb done">✓</div>}
