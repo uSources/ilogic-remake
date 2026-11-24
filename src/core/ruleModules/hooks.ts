@@ -60,9 +60,9 @@ export interface CombatStep {
 
 /**
  * Momentos del fin de ronda, en orden (ROUND_STAGES, rules/round.ts): empezar (las unidades vuelven a
- * poder actuar), cobrar, pagar, el dia nuevo y apuntar como acaba.
+ * poder actuar), cobrar, curar sobre edificios propios, pagar, el dia nuevo y apuntar como acaba.
  */
-export type RoundStage = 'start' | 'income' | 'costs' | 'newDay' | 'record';
+export type RoundStage = 'start' | 'income' | 'repair' | 'costs' | 'newDay' | 'record';
 
 /** Un paso del fin de ronda: cambia el estado y devuelve sus sucesos (los que tenga). */
 export interface RoundPhase {
@@ -249,6 +249,7 @@ export interface RuleModuleIds {
   veterancy: true;
   flank: true;
   weather: true;
+  buildingIncome: true;
   controlPoints: true;
   upkeep: true;
   commandPoints: true;

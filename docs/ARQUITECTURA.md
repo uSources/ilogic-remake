@@ -607,6 +607,7 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `veterancy` | `veterancy` | el rango al acierto (`rank`, `RANK_KILLS`; las bajas se cuentan siempre) |
 | `flank` | `flankBonus` > 0 | rematar a quien ya ha recibido un ataque hoy (`flankBonusFor`, `wasHitToday`) |
 | `weather` | `weather` | acierto, lo que se puede gastar al moverse, el radio de vision, el cambio de clima con el dia y el clima del primer dia (`matchSetup`) |
+| `buildingIncome` | `incomeScale` > 0 | lo que pagan los edificios al acabar la ronda (la cura encima es de todas las partidas: `repair`, en `ROUND_PHASES`) |
 | `controlPoints` | `controlPoints` > 0 | lo que pagan al acabar la ronda |
 | `upkeep` | `upkeep` > 0 | pagar el mantenimiento al acabar la ronda |
 | `commandPoints` | `commandPoints` no null | el tope de puntos de mando del ejercito (`armyLimits`, detras del numero de unidades de `ARMY_LIMITS`; la cuenta, `commandUsed`) |

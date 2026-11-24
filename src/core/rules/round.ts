@@ -7,11 +7,9 @@ import type { Building, GameEvent, GameState, RoundReport, Unit } from '../model
 import type { RoundPhase, RoundReportPart, RoundStage } from '../ruleModules/hooks';
 import { hooksOf } from '../ruleModules/ruleset';
 import { inStageOrder } from '../util/stages';
-import { addForTeam, perTeam, teamIds } from '../teams';
-import { earn } from './funds';
+import { addForTeam, perTeam } from '../teams';
 import { restoreInvariants } from './invariants';
 import { quietly } from '../util/quietly';
-import { buildingIncome } from './economy';
 import { unitAt } from './queries';
 import { readyUnit } from './unitTurn';
 import { canRepair } from './supply';
@@ -45,21 +43,9 @@ function healOnBuilding(s: GameState, building: Building): GameEvent[] {
   return amount > 0 ? [{ kind: 'heal', actor: null, uid: patient.uid, team: patient.team, amount }] : [];
 }
 
-/** Cada edificio con dueño le paga y cura a la unidad propia que tenga encima. */
-function collectAndHeal(s: GameState): GameEvent[] {
-  const heals: GameEvent[] = [];
-  const income = perTeam(s, () => 0);
-  for (const building of s.buildings) {
-    if (building.owner === null) continue;
-    const earned = buildingIncome(s, buildingTypeOf(s, building));
-    earn(s, building.owner, earned);
-    addForTeam(income, building.owner, earned);
-    heals.push(...healOnBuilding(s, building));
-  }
-  const incomes = teamIds(s)
-    .filter((team) => income[team])
-    .map((team): GameEvent => ({ kind: 'income', actor: null, team, amount: income[team] ?? 0, source: 'buildings' }));
-  return [...incomes, ...heals];
+/** Cada edificio con dueño cura a la unidad propia que tenga encima (lo que cobra es del modulo buildingIncome). */
+function healOnBuildings(s: GameState): GameEvent[] {
+  return s.buildings.filter((building) => building.owner !== null).flatMap((building) => healOnBuilding(s, building));
 }
 
 /** Empieza el dia siguiente (lo que pase del maximo de dinero se pierde despues: INVARIANTS). */
@@ -69,19 +55,19 @@ function nextDay(s: GameState): GameEvent[] {
 }
 
 /** Los momentos del fin de ronda, en orden: el orden importa (se paga despues de cobrar, el clima cambia con el dia nuevo). */
-export const ROUND_STAGES: readonly RoundStage[] = ['start', 'income', 'costs', 'newDay', 'record'];
+export const ROUND_STAGES: readonly RoundStage[] = ['start', 'income', 'repair', 'costs', 'newDay', 'record'];
 
 /**
  * Los pasos del fin de ronda de cualquier partida, cada uno en su momento. Lo que depende de la
- * partida (puntos de control, mantenimiento, clima) lo aportan sus modulos de reglas
+ * partida (ingresos de los edificios, puntos de control, mantenimiento, clima) lo aportan sus modulos de reglas
  * (`roundPhasesOf`). Un sistema nuevo que actua cada ronda (moral, suministro...) es un paso de su
  * modulo, en el momento que le toque.
  */
 export const ROUND_PHASES: readonly RoundPhase[] = [
   // Las unidades vuelven a poder actuar en la ronda nueva.
   { id: 'refresh', stage: 'start', run: refreshUnits },
-  // Ingresos de los edificios y cura de las unidades propias encima.
-  { id: 'buildings', stage: 'income', run: collectAndHeal },
+  // Ya cobrado todo (los edificios y los puntos de control son modulos): la cura sobre edificios propios.
+  { id: 'repair', stage: 'repair', run: healOnBuildings },
   { id: 'day', stage: 'newDay', run: nextDay },
   // Con el dia ya empezado: el valor del ejercito de cada equipo ese dia (la grafica del final).
   { id: 'army', stage: 'record', run: quietly(sampleArmy) },
@@ -96,8 +82,8 @@ export function roundPhasesOf(s: GameState): RoundPhase[] {
 }
 
 /**
- * Fin de ronda, tras el turno del ultimo equipo (ciclojuego, fase 2): reactivar unidades, cobrar y curar
- * sobre edificios propios (ver ROUND_PHASES). Devuelve sus sucesos, sin actor (los hace la partida).
+ * Fin de ronda, tras el turno del ultimo equipo (ciclojuego, fase 2): reactivar unidades, cobrar, curar
+ * sobre edificios propios, pagar y el dia nuevo (ver ROUND_PHASES). Devuelve sus sucesos, sin actor (los hace la partida).
  * [CAMBIO] sin combustible ni municion: ya no hay repostaje ni aviones que caen.
  */
 export function endRound(s: GameState): GameEvent[] {
