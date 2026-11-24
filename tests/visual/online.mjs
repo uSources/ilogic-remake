@@ -4,8 +4,9 @@
 // verdad: A crea la sala, B entra por el enlace de la sala (pide un asiento con el codigo), juegan
 // turnos (los dos tienen que ver lo mismo), «Mis partidas» de A dice que le toca, B recarga la pagina a
 // mitad (vuelve a la sala sola) y A se rinde (los dos ven el final, y «Mis partidas», que acabo).
-// Despues, «Buscar rival»: C busca por turnos y espera en su sala, D busca y se queda su asiento (la
-// partida empieza en los dos y juega primero D), y E busca en vivo y cancela (la sala se cierra).
+// Despues, «Buscar rival»: C busca por turnos y espera en su sala, D busca y se queda su asiento (los
+// dos ven «¡Rival encontrado!» mientras carga; la partida empieza en los dos y juega primero D), y E
+// busca en vivo y cancela (la sala se cierra).
 //
 //   npm run online
 //   ILOGIC_SERVER_URL=https://ilogic-servidor.<cuenta>.workers.dev npm run online   # contra el publicado
@@ -34,6 +35,8 @@ const SERVER_START_MS = 60000;
 const MATCH_START_MS = 60000;
 const TURN_MS = 60000;
 const ROUNDS = 2;
+/** Lo que tarda «¡Rival encontrado!» en entrar (sus animaciones), para capturarlo quieto. */
+const INTRO_SETTLE_MS = 900;
 
 const failures = [];
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -257,6 +260,12 @@ async function searchingLobby() {
   return lobby?.searching && lobby.seats.length > 0 ? lobby : null;
 }
 
+/** «¡Rival encontrado!» mientras carga la partida recien emparejada (null si se ve otra cosa). */
+async function foundIntro() {
+  const s = (await import('/src/hud/store.ts')).ui.get();
+  return s.screen === 'loading' && s.intro ? s.intro : null;
+}
+
 /** «Jugar en línea» esta en su menu (no en el vestibulo de una sala). */
 const isOnlineMenu = async () => (await import('/src/hud/store.ts')).ui.get().online?.mode === 'menu';
 
@@ -366,6 +375,23 @@ async function searchRivals(browser, gameUrl, server) {
   const d = await openPlayer(browser, 'D', gameUrl, server);
   await openOnline(d, 'D');
   await menuAction(d, 'onlinePick', 'search');
+  // Al emparejar, la carga de la partida de los dos es «¡Rival encontrado!» (se ve un rato corto: se captura al verla).
+  const [introD, introC] = await Promise.all([
+    until(d, foundIntro, null, '«¡Rival encontrado!» en D', MATCH_START_MS).then(async (intro) => {
+      await sleep(INTRO_SETTLE_MS);
+      await shot(d, 'rival-encontrado');
+      return intro;
+    }),
+    until(c, foundIntro, null, '«¡Rival encontrado!» en C', MATCH_START_MS).then(async (intro) => {
+      await c.setViewportSize(PHONE);
+      await sleep(INTRO_SETTLE_MS);
+      await shot(c, 'rival-encontrado-movil');
+      await c.setViewportSize(VIEWPORT);
+      return intro;
+    }),
+  ]);
+  check(introD.youStart && !introC.youStart, '«¡Rival encontrado!» en los dos al cargar: D sabe que empieza y C, que empieza el rival');
+  check(introD.chips.join() === introC.chips.join(), `los dos ven lo mismo de la partida (${introD.chips.join(' · ')})`);
   await until(d, inMatch, null, 'la partida en D', MATCH_START_MS);
   await until(c, inMatch, null, 'la partida en C', MATCH_START_MS);
   check(true, 'D se queda el asiento de la sala de C: la partida empieza en las dos pantallas');

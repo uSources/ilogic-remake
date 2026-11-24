@@ -90,4 +90,11 @@ export const online = {
   onlineRejected: 'El servidor no ha aceptado la jugada: se pone la partida al día',
   onlineResynced: 'Partida puesta al día con el servidor',
   onlineNoSave: 'Las partidas en línea no se guardan aquí: se siguen desde el servidor',
+  onlineFound: '¡Rival encontrado!',
+  onlineYouStart: 'Empiezas tú',
+  onlineRivalStarts: 'Empieza el rival',
+  onlineArmyBlue: 'Ejército azul',
+  onlineArmyRed: 'Ejército rojo',
+  onlineNoFog: 'Sin niebla',
+  onlineFoundLoading: 'Preparando el campo de batalla…',
 };

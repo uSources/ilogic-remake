@@ -11,6 +11,7 @@ import { Banner, Loading, Toast } from './overlays/Notices';
 import { PatchNotes } from './overlays/PatchNotes';
 import { RenameSquad } from './overlays/RenameSquad';
 import { Handoff } from './overlays/Handoff';
+import { MatchIntro } from './overlays/MatchIntro';
 
 /**
  * Raiz de la interfaz HTML: la pantalla en curso (s.screen) y, encima, los dialogos y avisos.
@@ -27,7 +28,7 @@ export function Hud() {
   const s = useUI();
   return (
     <>
-      {s.screen === 'loading' && <Loading progress={s.loading} />}
+      {s.screen === 'loading' && (s.intro ? <MatchIntro intro={s.intro} progress={s.loading} /> : <Loading progress={s.loading} />)}
       {(s.screen === 'menu' || s.screen === 'setup' || s.screen === 'campaign' || s.screen === 'online') && <div class="menu-veil" />}
       {s.screen === 'menu' && <Home s={s} />}
       {s.screen === 'setup' && <NewGame s={s} />}

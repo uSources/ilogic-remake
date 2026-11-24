@@ -31,6 +31,8 @@ export interface KnownSeat {
   seat: SeatId;
   team: number;
   search?: SearchPace;
+  /** El ritmo de la busqueda que ha llevado a esta sala, con rival ya o sin el: al empezar, «¡Rival encontrado!». */
+  found?: SearchPace;
 }
 
 /** Lo que cada pantalla pide al conjunto (onlineScreen.ts): lo que es de todas y pasar de una a otra. */

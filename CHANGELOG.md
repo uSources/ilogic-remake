@@ -17,6 +17,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - Las voces de las unidades son otras: un balbuceo de juguete menos chillón, y el piloto contesta por radio.
 
 ### Interfaz
+- Cuando «Buscar rival» te empareja, la partida carga detrás de «¡Rival encontrado!»: los dos ejércitos frente a frente, quién empieza, el mapa y el tiempo por turno.
 - En Novedades ya se leen el código, que salía como un recuadro oscuro vacío, la negrita, que salía blanca sobre la crema, y los enlaces.
 
 ### Arreglos
@@ -32,6 +33,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - Unit voices are new: a less squeaky toy babble, and the pilot answers over the radio.
 
 ### Interface
+- When “Find an opponent” pairs you up, the game loads behind an “Opponent found!” screen: both armies face to face, who goes first, the map and the time per turn.
 - In “What's new”, code no longer shows as an empty dark box, and bold text and links no longer fade into the cream background.
 
 ### Fixes

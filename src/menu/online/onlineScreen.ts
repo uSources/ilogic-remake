@@ -224,7 +224,7 @@ export class OnlineScreen implements OnlineScreens {
     const found = await this.askServer((base) => searchRival(base, { pace, avoid: ownSearchRooms() }), SEARCH_ERROR_TEXT);
     if (!found.ok) return;
     const { code, token, seat, team, matched } = found.value;
-    this.joinRoom(code, token, { seat, team, search: matched ? undefined : pace });
+    this.joinRoom(code, token, { seat, team, search: matched ? undefined : pace, found: pace });
   }
 
   /**

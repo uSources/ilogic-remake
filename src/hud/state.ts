@@ -7,7 +7,7 @@ import type { SelectionVM } from './vm/army';
 import type { CampaignItemVM, HomeVM, MenuVM, NetVM, OnlineVM, OptionsVM, SetupVM } from './vm/menus';
 import type { MinimapVM } from './vm/minimap';
 import type { NotesVM } from './vm/notes';
-import type { HandoffVM } from './vm/notices';
+import type { HandoffVM, MatchIntroVM } from './vm/notices';
 import type { TileVM } from './vm/tile';
 import type { DayInfoVM, EconomyVM, WeatherVM } from './vm/topBar';
 
@@ -34,6 +34,8 @@ export interface UIState {
   /** Panel de la mision en curso (null fuera de la campaña). */
   mission: { title: string; objective: string; status: string | null; tip: string | null; step: string | null } | null;
   loading: number;
+  /** «¡Rival encontrado!» en vez de la barra sola, en la carga de una partida de «Buscar rival» (null: la barra). */
+  intro: MatchIntroVM | null;
   // Partida
   funds: number;
   /** Desglose de dinero y mando (al pasar por encima del dinero). */
@@ -106,6 +108,7 @@ export interface UIState {
 export const initialState: UIState = {
   screen: 'loading',
   loading: 0,
+  intro: null,
   home: {
     focus: 'quick',
     save: null,
