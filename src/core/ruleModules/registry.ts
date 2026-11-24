@@ -9,6 +9,7 @@ import type { GameMode } from '../modes';
 import { ABILITIES } from './abilities';
 import { AMBUSH } from './ambush';
 import { BOUNTY } from './bounty';
+import { BUILDING_INCOME } from './buildingIncome';
 import { CONTROL_POINTS } from './controlPoints';
 import { ELEVATION } from './elevation';
 import { COUNTERATTACK } from './counterattack';
@@ -34,6 +35,7 @@ export const RULE_MODULES: readonly RuleModule[] = [
   VETERANCY,
   FLANK,
   WEATHER,
+  BUILDING_INCOME,
   CONTROL_POINTS,
   UPKEEP,
   NO_HEAL_UNDER_FIRE,
