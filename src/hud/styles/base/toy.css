@@ -143,3 +143,45 @@
   font-size: 19px;
   padding: 3px 10px;
 }
+/* Un ejercito de juguete (common/Army.tsx): un soldado y un tanque de pie; el rojo, de espejo, mira al azul. */
+.army {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.army.mirrored {
+  transform: scaleX(-1);
+}
+.army img {
+  width: 56px;
+  height: auto;
+  image-rendering: pixelated;
+}
+.army .tank {
+  width: 64px;
+}
+/* «VS» entre dos ejercitos: dorado con sombra dura, como el titulo de «¡Rival encontrado!». */
+.versus {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 1;
+  color: #f5c04a;
+  text-shadow: 0 3px 0 var(--ink);
+}
+/* Azul contra rojo sobre el fondo de la tarjeta de «Nueva partida» (home.css, `.card-art`). */
+.faceoff {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+}
+.faceoff .versus {
+  align-self: center;
+}
+.faceoff .army img {
+  width: 44px;
+}
+.faceoff .army .tank {
+  width: 52px;
+}

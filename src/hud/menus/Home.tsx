@@ -1,9 +1,10 @@
 import { imgUrl } from '../../assets';
 import { fmtNum, t } from '../../settings';
+import { Faceoff } from '../common/Army';
 import { Btn } from '../common/buttons';
 import type { UIState } from '../state';
 import { ui } from '../store';
-import type { HomeVM, MarkVM } from '../vm/menus';
+import type { HomeVM, MarkVM, OnlineCardVM } from '../vm/menus';
 
 /** Marcas de las misiones de la campaña (hecha, abierta, cerrada). */
 function Marks({ marks }: { marks: MarkVM[] }) {
@@ -63,9 +64,9 @@ function ContinueCard({ save, focus }: { save: NonNullable<HomeVM['save']>; focu
   );
 }
 
-function NewGameCard({ quickSummary, online, focus }: { quickSummary: string; online: boolean; focus: Focus }) {
+function NewGameCard({ quickSummary, focus }: { quickSummary: string; focus: Focus }) {
   return (
-    <div class={`px card card-new ${cardSelClass(focus, 'quick', 'custom', 'online')}`}>
+    <div class={`px card card-new ${cardSelClass(focus, 'quick', 'custom')}`}>
       <span class="label">{t('newGame')}</span>
       <div class="card-art" aria-hidden="true">
         <img class="px-icon" src={imgUrl('b_Soldier')} alt="" />
@@ -80,12 +81,28 @@ function NewGameCard({ quickSummary, online, focus }: { quickSummary: string; on
         <Btn sel={isFocused(focus, 'custom')} cls="px-btn plain" onHover={focus.hover('custom')} onPick={focus.pick('custom')}>
           {t('customGame')}
         </Btn>
-        {online && (
-          <Btn sel={isFocused(focus, 'online')} cls="px-btn plain" onHover={focus.hover('online')} onPick={focus.pick('online')}>
-            {t('online')}
-          </Btn>
-        )}
       </div>
+    </div>
+  );
+}
+
+/** En línea: azul contra rojo, si te toca en alguna partida (entonces se resalta) y la entrada a «Jugar en línea». */
+function OnlineCard({ card, focus }: { card: OnlineCardVM; focus: Focus }) {
+  return (
+    <div
+      class={`px card card-online ${card.yourTurn ? 'your-turn' : ''} ${cardSelClass(focus, 'online')}`}
+      onMouseEnter={focus.hover('online')}
+      onClick={focus.pick('online')}
+    >
+      <span class="label">{t('onlineCardTitle')}</span>
+      <div class="card-art">
+        <Faceoff />
+      </div>
+      {card.yourTurn && <span class="turn-note">{card.yourTurn}</span>}
+      <span class="muted small">{card.status}</span>
+      <Btn sel={isFocused(focus, 'online')} cls={card.yourTurn ? 'px-btn' : 'px-btn plain'} onPick={focus.pick('online')}>
+        {t('online')} ▸
+      </Btn>
     </div>
   );
 }
@@ -147,7 +164,7 @@ function Credits({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Inicio: partida guardada, partida nueva, campaña y los enlaces de abajo. */
+/** Inicio: partida guardada, partida nueva, en línea, campaña y los enlaces de abajo. */
 export function Home({ s }: { s: UIState }) {
   const home = s.home;
   const focus: Focus = {
@@ -160,7 +177,8 @@ export function Home({ s }: { s: UIState }) {
       <img class="px-icon logo" src={imgUrl('logoilogic')} alt="Ilogic" />
       <div class="home-cards">
         {home.save && <ContinueCard save={home.save} focus={focus} />}
-        <NewGameCard quickSummary={home.quick} online={home.online} focus={focus} />
+        <NewGameCard quickSummary={home.quick} focus={focus} />
+        {home.online && <OnlineCard card={home.online} focus={focus} />}
         <CampaignCard campaign={home.campaign} focus={focus} />
       </div>
       <FootLinks s={s} focus={focus} />

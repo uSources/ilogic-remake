@@ -107,6 +107,31 @@
   flex-direction: column;
   gap: 10px;
 }
+/* En línea: azul contra rojo en pequeño, y «¡Te toca!» en una chapa amarilla (la de los numeros) */
+.card-online .army {
+  gap: 2px;
+}
+.card-online .army img {
+  width: 36px;
+  height: auto;
+}
+.card-online .army .tank {
+  width: 44px;
+}
+.card-online .versus {
+  font-size: 22px;
+}
+.card-online .turn-note {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #ffd23f;
+  color: var(--ink);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 14px;
+}
 .marks {
   display: flex;
   gap: 4px;

@@ -1,175 +1,1035 @@
-/* Jugar en línea: el menu (buscar rival, con amigos y mis partidas), crear partida y el vestibulo */
-.on-menu {
+/* Jugar en línea: el menu, la sala y buscando rival, como el lienzo de diseño «Ilogic · Rediseño de
+   Jugar en línea»: una barra arriba y fichas sueltas sobre el fondo, como Inicio (home.css). Crear
+   sala es el panel de «Nueva partida» (newgame.css). En el movil, una tarjeta encima de otra. */
+.on-screen {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 22px;
+  padding: 36px 56px 28px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  pointer-events: auto;
+  --on-soft: #b8aecb;
+  --on-softer: #9a91ad;
+  --on-light: #e8dff5;
+  --on-dash: #6b6385;
+  --on-glass: rgba(255, 247, 232, 0.08);
 }
-.on-start {
+.on-screen > * {
+  width: 100%;
+  max-width: 1120px;
+  box-sizing: border-box;
+}
+
+/* --- La barra de arriba: volver, el titulo y la conexion --- */
+.on-topbar {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
 }
-.on-box {
+.on-back {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--on-glass);
+  color: var(--panel);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 18px;
+  cursor: pointer;
+}
+.on-back:hover,
+.on-back.sel {
+  background: rgba(255, 247, 232, 0.16);
+}
+.on-back.sel {
+  outline: 3px solid var(--gold);
+}
+.on-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 40px;
+  letter-spacing: 0.5px;
+  color: var(--panel);
+  text-align: center;
+}
+.on-conn {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--on-glass);
+  color: var(--panel);
+  font-size: 14px;
+  font-weight: 700;
+}
+.on-conn.none {
+  visibility: hidden;
+}
+.on-conn i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+}
+.on-conn.connecting i,
+.on-conn.reconnecting i {
+  background: #f5c04a;
+  animation: on-pulse 1.6s ease-in-out infinite;
+}
+.on-conn.offline i,
+.on-conn.closed i {
+  background: var(--red-soft);
+}
+/* Lo que ha fallado: una pastilla roja bajo la barra */
+.on-problem {
+  margin: 0;
+  width: auto;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #ffe1de;
+  color: var(--red-lo);
+  font-weight: 800;
+  font-size: 15px;
+  text-align: center;
+  word-break: break-word;
+}
+
+/* --- El menu: tres tarjetas lado a lado --- */
+.on-grid {
+  flex: 1 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+/* Las tarjetas del menu no se pulsan enteras: dentro hay varios botones */
+.on-card {
+  position: relative;
+  width: auto;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 20px;
+  box-shadow: 0 6px 0 var(--ink);
+  cursor: default;
+}
+.on-card.sel {
+  transform: none;
+}
+.on-card .label {
+  letter-spacing: 1.2px;
+  color: #8a5a00;
+  font-weight: 700;
+}
+.on-art {
+  position: relative;
+  height: 170px;
+  flex: none;
+  box-sizing: border-box;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+}
+/* Buscar rival: el azul abajo a la izquierda, el rojo a la derecha mirandole, «VS» en medio */
+.on-art.battle {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #26324d 0%, #1c2433 100%);
+}
+.on-art.battle .versus {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%);
+  font-size: 34px;
+}
+.on-art.battle .army {
+  gap: 2px;
+}
+.card.sel .on-art .army img {
+  animation: hop 0.5s steps(2) infinite alternate;
+}
+.card.sel .on-art .army img + img {
+  animation-delay: 0.25s;
+}
+/* Con amigos: un enlace, lo que se pasa */
+.on-art.invite {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  background: var(--lo);
-  border-radius: var(--radius-sm);
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--slot);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
 }
-.on-box .ng-note {
-  min-height: 0;
+.on-art.invite span {
+  color: var(--muted);
+}
+.on-card-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.on-card-note {
+  margin-top: -10px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.on-card-fill {
   flex: 1;
 }
-.on-box .px-btn.start {
-  font-size: 18px;
-  padding: 10px 20px;
+.on-big {
+  justify-content: center;
+  min-height: 60px;
+  font-size: 22px;
+  font-weight: 700;
+  border-radius: 14px;
 }
-.on-box .ng-code {
-  font-size: 15px;
+.on-friends .on-big {
+  min-height: 54px;
+  font-size: 20px;
 }
-/* Los dos ritmos de «Buscar rival», como los ajustes de «Nueva partida» pero de dos en dos */
-.on-box .presets {
-  grid-template-columns: repeat(2, 1fr);
+/* El enlace al otro ritmo, debajo de «Buscar rival» */
+.on-card .on-pace-link {
+  align-self: center;
+  margin-top: -4px;
+  padding: 4px 8px;
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  text-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.on-card .on-pace-link:hover,
+.on-card .on-pace-link.sel {
+  color: var(--ink);
+}
+/* El tanque azul y el rojo junto al titulo: solo en el movil, donde no cabe el dibujo */
+.on-mini-army {
+  display: none;
+}
+.on-join {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.on-join-ask {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.on-join-row {
+  display: flex;
+  gap: 8px;
+}
+.on-code-input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  background: var(--hi);
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  color: var(--ink);
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: 4px;
+  text-align: center;
+}
+.on-code-input::placeholder {
+  color: #c9bda6;
+}
+.on-code-input.focus {
+  box-shadow: 0 0 0 3px var(--gold);
+}
+.on-code-input.bad {
+  border-color: var(--red);
+}
+.on-join-row .px-btn {
+  height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+}
+
+/* --- Mis partidas --- */
+.on-rooms-card {
+  gap: 12px;
+}
+.on-rooms-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.on-turn-count {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
 }
 .on-rooms {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-.on-room,
-.on-lobby-seat {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  padding: 6px 8px;
-  background: var(--slot);
-  border-radius: var(--radius-sm);
-}
-.on-room.yourTurn {
-  box-shadow: inset 4px 0 0 var(--gold);
-}
-.on-room.ended,
-.on-room.gone {
-  opacity: 0.7;
-}
-/* «Quitar»: el enlace del menu de inicio, sin la sombra que pide su fondo oscuro */
-.on-room .link {
-  text-shadow: none;
-}
-/* El codigo y el detalle no bajan de su ancho: en el movil, los botones pasan a la linea de abajo */
-.on-room-info {
-  flex: 1 1 140px;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.on-room-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-}
-.on-state {
-  min-width: 124px;
-  padding: 3px 10px;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--panel);
-  color: var(--muted);
-  font-family: var(--display);
-  font-size: 13px;
-  text-align: center;
-  white-space: nowrap;
-}
-.on-state.yourTurn {
-  background: var(--gold);
-  color: #fff;
-}
-.on-state.waiting {
-  background: var(--blue-btn);
-  color: #fff;
-}
-.on-state.gone {
-  color: var(--red);
-}
-.on-seat-name {
+  gap: 12px;
+  padding: 9px 9px 0 0;
+  margin: -9px -9px 0 0;
   flex: 1;
-  min-width: 0;
+  min-height: 0;
+  max-height: 440px;
+  overflow-y: auto;
 }
-.on-lobby-seat.out {
-  opacity: 0.75;
+.on-rooms-empty {
+  margin: auto;
+  padding: 24px 0;
+  color: var(--muted);
+  font-size: 15px;
+  text-align: center;
 }
-.on-code {
-  font-family: var(--display);
-  letter-spacing: 2px;
-  color: var(--gold);
+.on-rooms-foot {
+  margin-top: auto;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
 }
-.on-code.big {
-  font-size: 32px;
-}
-.on-lobby {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.on-invite {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  background: var(--lo);
-  border-radius: var(--radius-sm);
-}
-.on-invite-row {
+.on-room {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 10px;
+  border: 3px solid transparent;
+  border-radius: 14px;
+  background: var(--slot);
+}
+/* Te toca: blanca con borde dorado, lo primero que se ve */
+.on-room.yourTurn {
+  background: var(--hi);
+  border-color: var(--gold);
+}
+.on-room.ended,
+.on-room.gone {
+  opacity: 0.75;
+}
+.on-room-badge {
+  width: 58px;
+  height: 58px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  background: var(--lo);
+  color: var(--muted);
+}
+.on-room-badge img {
+  width: 40px;
+  height: 40px;
+  image-rendering: pixelated;
+}
+.on-room-badge img.mirrored {
+  transform: scaleX(-1);
+}
+.on-room-badge.yourTurn {
+  background: #7aa23e;
+}
+.on-room-badge.theirTurn {
+  background: #d9b66a;
+}
+.on-room-badge.ended,
+.on-room-badge.gone {
+  background: #e9eef5;
+}
+.on-room-badge.ended {
+  color: var(--green);
+}
+.on-room-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.on-room-title {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--ink);
+}
+.on-room.yourTurn .on-room-title {
+  font-weight: 700;
+}
+.on-room-detail {
+  font-size: 13px;
+  color: var(--muted);
+}
+.on-room-go {
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+/* Quitarla: una chapa redonda en la esquina, como la de un juguete (no quita sitio a lo que dice la fila) */
+.on-x {
+  position: absolute;
+  top: -9px;
+  right: -9px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+.on-x:hover,
+.on-x.sel {
+  background: #ffe1de;
+  color: var(--red-lo);
+}
+.on-x.sel {
+  outline: 3px solid var(--gold);
+}
+/* En el movil, lo que te toca va arriba (TurnStrip); en el escritorio ya esta en «Mis partidas» */
+.on-turn-strip {
+  display: none;
+}
+
+/* --- La sala: invitar, los equipos frente a frente y cuando empieza --- */
+.on-room-screen {
+  gap: 26px;
+}
+.on-invite {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 22px 26px;
+  border-radius: 20px;
+  box-shadow: 0 6px 0 #000;
+}
+.on-invite .label {
+  letter-spacing: 1.2px;
+  color: #8a5a00;
+  font-weight: 700;
+}
+.on-invite-code {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.on-invite-btns {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.on-invite-btns .px-btn {
+  justify-content: center;
+  border-radius: 14px;
+}
+.on-invite-btns .px-btn.plain {
+  min-height: 48px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.code-keys {
+  display: flex;
+  gap: 8px;
+}
+.code-keys kbd {
+  width: 58px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  background: var(--hi);
+  box-shadow: 0 4px 0 var(--ink);
+  color: var(--ink);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 40px;
+}
+.on-seats {
+  display: flex;
+  align-items: stretch;
+  gap: 28px;
   flex-wrap: wrap;
 }
-.on-invite-row .on-code {
-  margin-right: auto;
+.on-seats > .versus {
+  align-self: center;
+  font-size: 40px;
+  text-shadow: none;
 }
-.on-link {
-  word-break: break-all;
+.on-seat {
+  flex: 1 1 280px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  box-sizing: border-box;
+  background: var(--panel);
+  border: 3px solid var(--ink);
+  border-left: 14px solid var(--red);
+  border-radius: 20px;
+  box-shadow: 0 6px 0 #000;
 }
-/* Buscando rival: el ritmo, con un punto que late mientras se espera */
-.on-searching {
+.on-seat.own {
+  border-left-color: var(--blue-btn);
+}
+/* Aun no ha llegado nadie: un hueco de raya, con su color y un «?» que late */
+.on-seat.out {
+  background: rgba(255, 247, 232, 0.04);
+  border-style: dashed;
+  border-color: var(--on-dash);
+  border-left: 14px solid var(--red);
+  box-shadow: none;
+}
+.on-seat-avatar {
+  width: 96px;
+  height: 96px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: #ffe1de;
+}
+.on-seat.own .on-seat-avatar {
+  background: var(--sel);
+}
+.on-seat-avatar img {
+  width: 80px;
+  height: 80px;
+  image-rendering: pixelated;
+}
+.on-seat-avatar img.mirrored {
+  transform: scaleX(-1);
+}
+.on-q {
+  box-sizing: border-box;
+  border: 3px solid var(--on-dash);
+  background: none;
+  color: var(--on-soft);
   font-family: var(--display);
-  font-size: 22px;
-  color: var(--gold);
+  font-weight: 700;
+  font-size: 44px;
+  animation: on-pulse 1.6s ease-in-out infinite;
 }
-.on-pulse {
-  width: 14px;
-  height: 14px;
+.on-seat-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.on-seat-who {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 26px;
+  color: var(--ink);
+}
+.on-seat-team {
+  font-size: 15px;
+  color: var(--muted);
+}
+.on-seat.out .on-seat-who {
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--on-light);
+}
+.on-seat.out .on-seat-team {
+  color: var(--on-soft);
+}
+.on-seat-tag {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #d9f2df;
+  color: #1f7a3c;
+  font-size: 13px;
+  font-weight: 800;
+}
+.on-seat-tag::first-letter {
+  text-transform: uppercase;
+}
+.on-seat .on-seat-ai {
+  padding: 2px 0;
+  font-family: var(--body);
+  font-size: 14px;
+  font-weight: 800;
+  color: #f5c04a;
+  text-shadow: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.on-room-note {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--on-light);
+  text-align: center;
+}
+
+/* --- Buscando rival: tu ejercito contra un «?» --- */
+.on-searching-screen {
+  justify-content: safe center;
+  gap: 28px;
+  padding: 40px;
+}
+.on-search-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.on-search-pace {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(245, 192, 74, 0.12);
+  color: #f5c04a;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 16px;
+}
+.on-search-pace i {
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: var(--gold);
-  animation: on-pulse 1.4s ease-in-out infinite;
+  background: #f5c04a;
+  animation: on-pulse 1.6s ease-in-out infinite;
 }
+.on-title.big {
+  font-size: 44px;
+}
+.on-elapsed {
+  font-size: 22px;
+  color: var(--on-soft);
+}
+.on-duel {
+  width: auto;
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+.on-duel > .versus {
+  font-size: 56px;
+  text-shadow: 0 4px 0 #000;
+}
+.on-duel-card {
+  width: 340px;
+  height: 300px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border-radius: 20px;
+}
+.on-duel-card.own {
+  border-top-width: 14px;
+  border-top-color: var(--blue-btn);
+  border-radius: 20px;
+  box-shadow: 0 6px 0 var(--ink);
+}
+.on-duel-card.own .army .soldier {
+  width: 80px;
+}
+.on-duel-card.own .army .tank {
+  width: 96px;
+}
+.on-duel-card.coming {
+  border: 3px dashed var(--on-dash);
+  background: rgba(255, 247, 232, 0.04);
+}
+.on-duel-card .on-q {
+  width: 110px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-width: 4px;
+  border-radius: 50%;
+  font-size: 56px;
+}
+.on-duel-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.on-duel-name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--ink);
+}
+.on-duel-card.coming .on-duel-name {
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--on-soft);
+}
+.on-duel-tag {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--sel);
+  color: var(--blue-lo);
+  font-size: 14px;
+  font-weight: 800;
+}
+.on-duel-note {
+  max-width: 240px;
+  color: var(--on-softer);
+  font-size: 14px;
+  text-align: center;
+}
+.on-search-btns {
+  width: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+.on-search-btns .px-btn {
+  min-height: 58px;
+  padding: 0 26px;
+  font-size: 20px;
+  box-shadow:
+    inset 0 -4px 0 var(--blue-lo),
+    0 5px 0 #000;
+}
+.on-search-btns .px-btn.plain {
+  box-shadow:
+    inset 0 -4px 0 var(--lo),
+    0 5px 0 #000;
+}
+.on-search-note {
+  margin: 0;
+  max-width: 560px;
+  color: var(--on-softer);
+  font-size: 14px;
+  text-align: center;
+}
+
 @keyframes on-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
   50% {
-    opacity: 0.25;
-    transform: scale(0.7);
+    opacity: 1;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .on-pulse {
+  .on-q,
+  .on-search-pace i,
+  .on-conn i {
     animation: none;
   }
-}
-.on-cancel {
-  align-self: flex-start;
 }
 .on-error {
   word-break: break-all;
 }
-@media (max-width: 720px) {
-  .on-start {
-    grid-template-columns: 1fr;
+
+/* --- Pantallas medianas: dos tarjetas arriba y «Mis partidas» debajo, a lo ancho --- */
+@media (max-width: 1000px) {
+  .on-screen {
+    padding: 24px 20px;
   }
-  .on-state {
-    min-width: 0;
+  .on-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .on-rooms-card {
+    grid-column: 1 / -1;
+  }
+  .on-duel-card {
+    width: 280px;
+  }
+}
+
+/* --- El movil (el lienzo, 390 de ancho): una cosa encima de otra --- */
+@media (max-width: 720px) {
+  .on-screen {
+    gap: 14px;
+    padding: 20px 16px;
+  }
+  .on-back {
+    width: 44px;
+    height: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+  .on-back-label,
+  .on-back .key {
+    display: none;
+  }
+  .on-title {
+    font-size: 26px;
+  }
+  .on-conn {
+    padding: 0;
+    width: 44px;
+    justify-content: center;
+    background: none;
+  }
+  .on-conn i {
+    width: 12px;
+    height: 12px;
+  }
+  .on-conn-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .on-turn-strip {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .on-turn-strip .on-room {
+    padding: 10px;
+    background: var(--panel);
+    border-radius: 16px;
+    box-shadow: 0 4px 0 #000;
+  }
+  .on-turn-strip .on-room-badge {
+    width: 46px;
+    height: 46px;
+  }
+  .on-turn-strip .on-room-badge img {
+    width: 32px;
+    height: 32px;
+  }
+  .on-rooms .on-room.yourTurn {
+    display: none;
+  }
+  .on-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .on-card {
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    box-shadow: 0 5px 0 #000;
+  }
+  .on-card .on-art,
+  .on-friends .on-card-title,
+  .on-friends .on-card-note,
+  .on-card-fill {
+    display: none;
+  }
+  .on-search .on-card-title {
+    margin-top: -10px;
+    font-size: 22px;
+  }
+  .on-search .on-card-note {
+    margin-top: 0;
+    font-size: 14px;
+  }
+  .on-mini-army {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    align-items: flex-end;
+  }
+  .on-mini-army img {
+    width: 44px;
+    height: 44px;
+    image-rendering: pixelated;
+  }
+  .on-mini-army img.mirrored {
+    transform: scaleX(-1);
+  }
+  .on-big {
+    min-height: 54px;
+    font-size: 20px;
+  }
+  .on-friends .on-big {
+    min-height: 50px;
+    font-size: 18px;
+  }
+  .on-code-input {
+    height: 46px;
+    font-size: 18px;
+  }
+  .on-rooms {
+    max-height: none;
+  }
+  /* La sala */
+  .on-invite {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 16px;
+  }
+  .on-invite-btns {
+    width: auto;
+  }
+  .code-keys {
+    gap: 6px;
+  }
+  .code-keys kbd {
+    width: auto;
+    flex: 1;
+    max-width: 48px;
+    height: 56px;
+    font-size: 30px;
+  }
+  .on-seats {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .on-seats > .versus {
+    font-size: 30px;
+  }
+  .on-seat {
+    flex: none;
+    gap: 14px;
+    padding: 14px;
+    border-left-width: 12px;
+  }
+  .on-seat.out {
+    border-left-width: 12px;
+  }
+  .on-seat-avatar {
+    width: 64px;
+    height: 64px;
+  }
+  .on-seat-avatar img {
+    width: 52px;
+    height: 52px;
+  }
+  .on-seat-who {
+    font-size: 22px;
+  }
+  .on-room-note {
+    font-size: 16px;
+  }
+  /* Buscando rival */
+  .on-searching-screen {
+    justify-content: flex-start;
+    gap: 18px;
+    padding: 40px 20px 28px;
+  }
+  .on-title.big {
+    font-size: 32px;
+  }
+  .on-elapsed {
+    margin-top: -6px;
+    font-size: 20px;
+  }
+  .on-duel {
+    width: 100%;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .on-duel > .versus {
+    font-size: 34px;
+    text-shadow: none;
+  }
+  .on-duel-card {
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+  .on-duel-card.own {
+    border-top-width: 3px;
+    border-top-color: var(--ink);
+    border-left: 12px solid var(--blue-btn);
+    box-shadow: 0 5px 0 #000;
+  }
+  .on-duel-card.coming {
+    border-left: 12px solid var(--red);
+  }
+  .on-duel-card.own .army .soldier {
+    width: 48px;
+  }
+  .on-duel-card.own .army .tank {
+    width: 56px;
+  }
+  .on-duel-card .on-q {
+    width: 64px;
+    height: 64px;
+    flex: none;
+    border-width: 3px;
+    font-size: 32px;
+  }
+  .on-duel-text {
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .on-duel-name {
+    font-size: 22px;
+  }
+  .on-duel-card.coming .on-duel-name {
+    font-size: 20px;
+    color: var(--on-light);
+  }
+  .on-duel-tag {
+    padding: 0;
+    background: none;
+    font-size: 13px;
+  }
+  .on-duel-note {
+    max-width: none;
+    font-size: 13px;
+    text-align: left;
+    color: var(--on-soft);
+  }
+  .on-search-btns {
+    width: 100%;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .on-search-btns .px-btn {
+    justify-content: center;
+    min-height: 54px;
+    font-size: 18px;
   }
 }
 

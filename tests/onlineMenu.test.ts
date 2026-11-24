@@ -2,11 +2,11 @@
  * «Mis partidas en línea»: como se enseña cada sala segun lo que dice el servidor (roomLines.ts):
  * te toca, le toca a otro (o a la IA), esperando a que entren o buscando rival, acabada o ya no
  * existe; lo que queda del turno con reloj; que lo que pide hacer algo va arriba, y por que salas se
- * deja de preguntar.
+ * deja de preguntar. Y lo que dice de todas la tarjeta «En línea» de Inicio.
  */
 import { describe, expect, it } from 'vitest';
 import { CURRENT_PROTOCOL } from '@core/net';
-import { isSearching, isSettled, roomLineOf, roomLines, timeLeftText, type RoomLook } from '../src/menu/online/roomLines';
+import { isSearching, isSettled, onlineCardOf, roomLineOf, roomLines, timeLeftText, type RoomLook } from '../src/menu/online/roomLines';
 import type { OnlineRoomEntry } from '../src/net/onlineRooms';
 import type { LobbyInfo, LobbyTurn } from '../src/net/roomApi';
 import { t } from '../src/settings';
@@ -39,7 +39,7 @@ describe('las salas de «Mis partidas»', () => {
     expect(theirs.state).toBe('theirTurn');
     expect(theirs.title).toBe(t('onlineTurnOf').replace('{n}', '2'));
     expect(theirs.detail).not.toContain(t('onlineLeft'));
-    expect(theirs.enter).toBe(t('onlineRejoin'));
+    expect(theirs.enter).toBe(t('onlineWatch'));
     expect(roomLineOf(entry('AAAAAA'), info('playing'), NOW).title).toBe(t('onlineAiPlaying'));
   });
 
@@ -60,12 +60,19 @@ describe('las salas de «Mis partidas»', () => {
     expect(line.detail).toBe(`${t('onlinePaceDaily')} · ${t('onlinePerTurn').replace('{time}', t('onlineOneDay'))}`);
     expect(line.forget).toBe(t('onlineCancel'));
     expect(isSearching(searching, { kind: 'unknown' })).toBe(true);
-    // Ya con rival, o sin sala, es una mas.
-    expect(roomLineOf(searching, info('playing', { seat: 0, day: 1, endsAt: null }), NOW).forget).toBe(t('onlineForget'));
+    // Ya con rival, se esta jugando: no se quita (se dejaria de saber de ella); acabada, se quita sin cancelar nada.
+    expect(roomLineOf(searching, info('playing', { seat: 0, day: 1, endsAt: null }), NOW).forget).toBeNull();
+    expect(roomLineOf(searching, info('ended'), NOW).forget).toBe(t('onlineForget'));
     expect(isSearching(searching, { kind: 'gone' })).toBe(false);
     // La sala de quien invita, esperando, no es una busqueda.
     const invited = roomLineOf({ ...entry('BBBBBB'), status: 'waiting' }, info('waiting', null, [true, false]), NOW);
     expect([invited.title, invited.forget]).toEqual([t('onlineWaitingPlayers'), t('onlineForget')]);
+    // En un duelo no se dice cuantos equipos; con mas, si.
+    expect(invited.detail).toBe(`1/2 ${t('onlineIn')}`);
+    const trio = { ...entry('CCCCCC'), status: 'waiting' as const, teams: 3 };
+    expect(roomLineOf(trio, info('waiting', null, [true, false, false]), NOW).detail).toBe(
+      `1/3 ${t('onlineIn')} · 3 ${t('onlineTeams').toLowerCase()}`,
+    );
   });
 
   it('sin respuesta del servidor, lo ultimo que se supo', () => {
@@ -100,5 +107,30 @@ describe('las salas de «Mis partidas»', () => {
     expect(timeLeftText(5 * HOUR)).toBe(`5 ${t('onlineHours')}`);
     expect(timeLeftText(12 * MINUTE + 30_000)).toBe(`12 ${t('onlineMinutes')}`);
     expect(timeLeftText(10_000)).toBe(t('onlineUnderAMinute'));
+  });
+});
+
+describe('la tarjeta «En línea» de Inicio', () => {
+  const lookOf = (looks: Record<string, RoomLook>) => (code: string) => looks[code] ?? { kind: 'unknown' as const };
+  const yourTurnIn = (count: number) => t('onlineCardYourTurn').replace('{n}', String(count));
+  const live = (count: number) => t('onlineCardLive').replace('{n}', String(count));
+
+  it('dice en cuantas partidas te toca y cuantas siguen en marcha (las acabadas no cuentan)', () => {
+    const entries = ['MINE11', 'MINE22', 'THEIRS', 'ENDED1'].map((code) => entry(code));
+    const looks: Record<string, RoomLook> = {
+      MINE11: info('playing', { seat: 0, day: 3, endsAt: null }),
+      MINE22: info('playing', { seat: 0, day: 1, endsAt: null }),
+      THEIRS: info('playing', { seat: 1, day: 2, endsAt: null }),
+      ENDED1: info('ended'),
+    };
+    expect(onlineCardOf(entries, lookOf(looks))).toEqual({ yourTurn: yourTurnIn(2), status: live(3) });
+    expect(onlineCardOf(entries.slice(2), lookOf(looks))).toEqual({ yourTurn: null, status: live(1) });
+  });
+
+  it('sin respuesta del servidor cuenta lo apuntado que no habia acabado; sin partidas, de que va', () => {
+    const entries = [entry('AAAAAA'), { ...entry('BBBBBB'), status: 'waiting' as const }, { ...entry('CCCCCC'), status: 'ended' as const }];
+    expect(onlineCardOf(entries, lookOf({}))).toEqual({ yourTurn: null, status: live(2) });
+    expect(onlineCardOf([entry('GONE11')], lookOf({ GONE11: { kind: 'gone' } })).status).toBe(t('onlineCardNote'));
+    expect(onlineCardOf([], lookOf({})).status).toBe(t('onlineCardNote'));
   });
 });

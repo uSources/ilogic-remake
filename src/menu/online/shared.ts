@@ -12,6 +12,7 @@ import type { OnlineRoomEntry } from '../../net/onlineRooms';
 import type { FatalClose } from '../../net/serverLink';
 import { t, type TextKey } from '../../settings';
 import type { TerrainPalette } from '../../ui/terrainColors';
+import type { RoomWatch } from './roomWatch';
 
 export interface OnlineHost {
   readonly palette: TerrainPalette;
@@ -38,6 +39,8 @@ export interface KnownSeat {
 /** Lo que cada pantalla pide al conjunto (onlineScreen.ts): lo que es de todas y pasar de una a otra. */
 export interface OnlineScreens {
   readonly host: OnlineHost;
+  /** Lo que dice el servidor de las salas apuntadas («Mis partidas»; la tarjeta de Inicio mira la misma). */
+  readonly rooms: RoomWatch;
   /** El id de lo que tiene el foco (los ids son distintos en todas las pantallas). */
   focus: string;
   /** Algo que ha fallado (se enseña arriba, en cualquier pantalla). */
@@ -67,19 +70,13 @@ export function timerText(seconds: number | null): string {
   return `${seconds / 60} ${t('onlineMinutes')}`;
 }
 
-const PACE_TEXT: Record<SearchPace, { label: TextKey; note: TextKey }> = {
-  daily: { label: 'onlinePaceDaily', note: 'onlinePaceDailyNote' },
-  live: { label: 'onlinePaceLive', note: 'onlinePaceLiveNote' },
-};
+const PACE_LABEL: Record<SearchPace, TextKey> = { daily: 'onlinePaceDaily', live: 'onlinePaceLive' };
 
 /** «Por turnos» o «En vivo». */
-export const paceLabel = (pace: SearchPace): string => t(PACE_TEXT[pace].label);
+export const paceLabel = (pace: SearchPace): string => t(PACE_LABEL[pace]);
 
 /** «1 día por turno». */
 export const paceTurnText = (pace: SearchPace): string => t('onlinePerTurn').replace('{time}', timerText(PACE_RULES[pace].turnSeconds));
-
-/** «1 día por turno · Juega cuando puedas…». */
-export const paceNote = (pace: SearchPace): string => `${paceTurnText(pace)} · ${t(PACE_TEXT[pace].note)}`;
 
 /** «Esperando a los demás», «En juego» o «Acabada». */
 export const statusText = (status: RoomStatus): string =>

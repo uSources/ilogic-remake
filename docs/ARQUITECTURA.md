@@ -1096,6 +1096,11 @@ archivo y por donde pasa cada cosa, en `docs/RED.md`. Las decisiones:
   partidas» con su ritmo (`OnlineRoomEntry.search`) y su vestibulo dice que se busca (en vez de
   invitar), con «Jugar contra la IA» (dar el asiento del rival a la IA) y «Cancelar búsqueda» (cerrar
   la sala). Al buscar se mandan las salas propias que esperan, para no caer en una.
+- **Lo que dice el servidor de tus salas es uno para todo el menu** (`RoomWatch`,
+  `src/menu/online/roomWatch.ts`): la tarjeta «En línea» de Inicio (si te toca en alguna) y «Mis
+  partidas» miran lo mismo. Pregunta solo mientras se ve una de las dos: Inicio empieza a mirar al
+  abrirse y lo deja al salir (`HomeScreen.open`/`close`, desde `MenuFlow`), y «Jugar en línea» igual
+  con su menu.
 - **Donde esta el servidor** (`serverUrl.ts`): `VITE_SERVER_URL` al compilar o, por encima,
   `ilogic.server` en localStorage (el propio servidor de quien juega, o uno local en los tests); sin
   ninguna, el juego no ofrece «Jugar en línea».

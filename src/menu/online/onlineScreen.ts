@@ -18,6 +18,7 @@ import { navGrid } from '../nav';
 import { CreateScreen } from './createScreen';
 import { LobbyScreen } from './lobbyScreen';
 import { MenuScreen } from './menuScreen';
+import { RoomWatch } from './roomWatch';
 import type { KnownSeat, Mode, OnlineHost, OnlineScreens } from './shared';
 
 export { isTypingRoomCode } from './menuScreen';
@@ -54,6 +55,7 @@ export class OnlineScreen implements OnlineScreens {
   focus = 'search';
   error: string | null = null;
   busy = false;
+  readonly rooms = new RoomWatch();
 
   private readonly menu = new MenuScreen(this);
   private readonly create = new CreateScreen(this);

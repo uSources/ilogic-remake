@@ -1,9 +1,9 @@
 /**
- * El vestibulo de una sala: el codigo y el enlace de la sala para invitar (copiar y compartir: quien
- * lo abre, o escribe el codigo, se queda con un asiento libre), quien ha entrado (por `GET
- * /rooms/:code` cada pocos segundos) y «Sustituir por IA» de quien creo la sala. Si es la sala de la
- * propia busqueda de rival, en vez de invitar dice que se esta buscando, y se puede jugar contra la
- * IA o cancelar la busqueda. Es tambien quien
+ * El vestibulo de una sala: el codigo de la sala para invitar (compartir o copiar su enlace, o copiar
+ * el codigo: quien abre el enlace, o escribe el codigo, se queda con un asiento libre), quien ha
+ * entrado (por `GET /rooms/:code` cada pocos segundos) y «Jugar este asiento con la IA» de quien creo
+ * la sala. Si es la sala de la propia busqueda de rival, es «Buscando rival…»: desde cuando, y se
+ * puede jugar contra la IA o cancelar la busqueda. Es tambien quien
  * tiene la conexion con la sala (`OnlineMatch`): entra por el WebSocket al abrirse, apunta la sala en
  * «Mis partidas» y, cuando la sala juega (o ya acabo), le pasa la conexion a la escena
  * (`OnlineHost.startOnline`).
@@ -40,6 +40,26 @@ const SEARCHING_NOTE: Record<SearchPace, TextKey> = { daily: 'onlineSearchingDai
 
 const canShare = (): boolean => typeof navigator.share === 'function';
 
+/** Quien juega el asiento: «Tú», «La IA», «Rival» (buscando rival), «Persona» o, si aun no ha entrado, «Esperando a tu amigo…». */
+function seatWho(seat: LobbySeat, isMe: boolean, isSearching: boolean, presence: OnlineSeatVM['presence']): string {
+  if (seat.kind === 'ai') return t('onlineSeatAi');
+  if (isMe) return t('onlineYou');
+  if (isSearching) return t('onlineRival');
+  return t(presence === 'in' ? 'onlineSeatPerson' : 'onlineWaitingFriend');
+}
+
+/** La chapa del asiento: «dentro» o, el rival que se busca, «por llegar». Quien aun no ha entrado ya lo dice su nombre; la IA siempre esta. */
+function seatStatus(presence: OnlineSeatVM['presence'], isRivalSought: boolean): string | null {
+  if (isRivalSought) return t('onlineRivalComing');
+  return presence === 'in' ? t('onlineIn') : null;
+}
+
+/** De quien es el ejercito: el tuyo, azul; en un duelo, el otro, rojo; con mas, su numero de equipo. */
+function seatTeam(seat: LobbySeat, isMe: boolean, isDuel: boolean): string {
+  if (isMe) return t('onlineArmyBlue');
+  return isDuel ? t('onlineArmyRed') : `${t('onlineTeam')} ${shownTeamNumber(seat.team)}`;
+}
+
 export class LobbyScreen {
   /** La sala en la que se esta, con lo que se sabe de ella. */
   private match: OnlineMatch | null = null;
@@ -51,6 +71,8 @@ export class LobbyScreen {
   private isLeaving = false;
   /** Se ha entrado buscando rival (con este ritmo): al empezar la partida, «¡Rival encontrado!». */
   private foundPace: SearchPace | null = null;
+  /** Cuando se entro en la sala: el reloj de «Buscando rival…» cuenta desde ahi. */
+  private enteredAt = 0;
 
   constructor(private readonly screens: OnlineScreens) {}
 
@@ -92,6 +114,7 @@ export class LobbyScreen {
     };
     if (known) rememberRoom(this.entry);
     this.foundPace = known?.found ?? null;
+    this.enteredAt = Date.now();
     this.screens.show('lobby', 'leave');
     this.screens.error = null;
     this.linkStatus = 'connecting';
@@ -115,35 +138,41 @@ export class LobbyScreen {
     if (!entry) return null;
     const status = this.lobby?.status ?? entry.status;
     const search = status === 'waiting' ? entry.search : undefined;
-    const seats = (this.lobby?.seats ?? []).map((seat) => this.seatVM(seat, entry, status));
+    const lobbySeats = this.lobby?.seats ?? [];
+    const seats = lobbySeats.map((seat) => this.seatVM(seat, entry, status, lobbySeats.length === 2));
     return {
+      title: t(entry.seat === 0 ? 'onlineYourRoom' : 'onlineRoom'),
       code: entry.code,
       link: roomLinkUrl(entry.code, location.href),
       canInvite: status === 'waiting' && !search,
       canShare: canShare(),
       searching: search ? `${paceLabel(search)} · ${paceTurnText(search)}` : null,
+      searchingSince: search ? this.enteredAt : null,
       seats,
       handToAiLabel: t(search ? 'onlinePlayAi' : 'onlineHandToAi'),
       note: this.noteOf(status, search),
       connection: t(LINK_STATUS_TEXT[this.linkStatus]),
+      linkState: this.linkStatus,
     };
   }
 
   /**
-   * Las filas del foco: copiar y compartir el enlace (mientras se espera a quien se invita), dar a la
-   * IA cada asiento que se pueda, cancelar la busqueda (si se busca rival) y salir.
+   * Las filas del foco. En la sala: salir (arriba a la izquierda), compartir o copiar el enlace y,
+   * debajo, copiar el codigo (mientras se espera a quien se invita) y dar a la IA cada asiento que se
+   * pueda. Buscando rival, los botones de abajo en una fila: jugar contra la IA, cancelar y salir.
    */
   rows(): string[][] {
     const lobby = this.vm();
-    const invite = lobby?.canInvite ? [lobby.canShare ? ['copy', 'share'] : ['copy']] : [];
-    const handToAi = (lobby?.seats ?? []).filter((seat) => seat.canHandToAi).map((seat) => [`${AI_PREFIX}${seat.seat}`]);
-    const cancel = lobby?.searching ? [['cancelSearch']] : [];
-    return [...invite, ...handToAi, ...cancel, ['leave']];
+    const handToAi = (lobby?.seats ?? []).filter((seat) => seat.canHandToAi).map((seat) => `${AI_PREFIX}${seat.seat}`);
+    if (lobby?.searching) return [[...handToAi, 'cancelSearch', 'leave']];
+    const invite = lobby?.canInvite ? [[lobby.canShare ? 'share' : 'copy'], ['copyCode']] : [];
+    return [['leave'], ...invite, ...handToAi.map((id) => [id])];
   }
 
   /** Lo que se ha pulsado, si es de esta pantalla (copiar, compartir, a la IA, cancelar la busqueda): true si se ha atendido. */
   pick(focus: string): boolean {
     if (focus === 'copy') void this.copyLink();
+    else if (focus === 'copyCode') void this.copyCode();
     else if (focus === 'share') void this.shareLink();
     else if (focus === 'cancelSearch') void this.cancelSearch();
     else if (focus.startsWith(AI_PREFIX)) void this.handToAi(Number(focus.slice(AI_PREFIX.length)));
@@ -153,26 +182,21 @@ export class LobbyScreen {
 
   // --- Lo que se ve ------------------------------------------------------------------------------
 
-  private seatVM(seat: LobbySeat, entry: OnlineRoomEntry, status: RoomStatus): OnlineSeatVM {
+  private seatVM(seat: LobbySeat, entry: OnlineRoomEntry, status: RoomStatus, isDuel: boolean): OnlineSeatVM {
     const isMe = seat.seat === entry.seat;
     const isCreator = entry.seat === 0;
     const isPerson = seat.kind === 'person';
-    const presence = !isPerson ? 'ai' : seat.joined ? 'in' : 'out';
+    const presence = !isPerson ? 'ai' : this.isIn(seat) ? 'in' : 'out';
+    const isSearching = status === 'waiting' && entry.search !== undefined;
     return {
       seat: seat.seat,
-      label: `${t('onlineTeam')} ${shownTeamNumber(seat.team)}`,
-      detail: this.seatDetail(seat, isMe, status === 'waiting' && entry.search !== undefined),
+      team: seatTeam(seat, isMe, isDuel),
+      who: seatWho(seat, isMe, isSearching, presence),
+      isYou: isMe,
+      status: seatStatus(presence, isSearching && !isMe),
       presence,
       canHandToAi: isCreator && status === 'waiting' && isPerson && !seat.joined && !isMe,
     };
-  }
-
-  /** «Tú · dentro», «Persona · sin entrar», «La IA» o, buscando rival, «Rival · por llegar». */
-  private seatDetail(seat: LobbySeat, isMe: boolean, isSearching: boolean): string {
-    if (seat.kind === 'ai') return t('onlineSeatAi');
-    if (isMe) return `${t('onlineYou')} · ${t(seat.joined ? 'onlineIn' : 'onlineOut')}`;
-    if (isSearching) return `${t('onlineRival')} · ${t('onlineRivalComing')}`;
-    return `${t('onlineSeatPerson')} · ${t(seat.joined ? 'onlineIn' : 'onlineOut')}`;
   }
 
   /** Lo de debajo de los asientos: buscando rival, que hacer mientras; esperando, cuantos han entrado; si no, como esta. */
@@ -181,10 +205,19 @@ export class LobbyScreen {
     return status === 'waiting' ? this.waitingNote() : statusText(status);
   }
 
-  /** «La partida empieza cuando entren todos (1 de 2)». */
+  /**
+   * La persona del asiento esta dentro. El propio, en cuanto su conexion lo esta: el servidor lo dice
+   * al volver a preguntarle, unos segundos despues.
+   */
+  private isIn(seat: LobbySeat): boolean {
+    return seat.joined || (seat.seat === this.entry?.seat && this.linkStatus === 'online');
+  }
+
+  /** «La partida empieza sola cuando entre tu amigo» (falta uno) o «… cuando entren todos (1/3)». */
   private waitingNote(): string {
     const people = (this.lobby?.seats ?? []).filter((seat) => seat.kind === 'person');
-    const joined = people.filter((seat) => seat.joined).length;
+    const joined = people.filter((seat) => this.isIn(seat)).length;
+    if (people.length - joined === 1) return t('onlineWaitingOne');
     return `${t('onlineWaitingAll')} (${joined}/${people.length})`;
   }
 
@@ -299,10 +332,20 @@ export class LobbyScreen {
   /** Copia el enlace de la sala; si no se puede, lo enseña para copiarlo a mano. */
   private async copyLink(): Promise<void> {
     const link = this.vm()?.link;
-    if (!link) return;
-    const copied = await copyText(link);
-    this.screens.error = copied ? null : link;
-    if (copied) ui.set({ toast: { text: t('onlineCopied'), id: Date.now() } });
+    if (link) await this.copy(link, 'onlineCopied');
+  }
+
+  /** Copia el codigo de la sala (para dictarlo o escribirlo en otro sitio). */
+  private async copyCode(): Promise<void> {
+    const code = this.entry?.code;
+    if (code) await this.copy(code, 'onlineCodeCopied');
+  }
+
+  /** Copia el texto y lo dice; si no se puede, lo enseña arriba para copiarlo a mano. */
+  private async copy(text: string, copiedKey: TextKey): Promise<void> {
+    const copied = await copyText(text);
+    this.screens.error = copied ? null : text;
+    if (copied) ui.set({ toast: { text: t(copiedKey), id: Date.now() } });
     this.screens.publish();
   }
 
