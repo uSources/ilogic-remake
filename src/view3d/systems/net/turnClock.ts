@@ -32,6 +32,12 @@ export interface TurnClockHost {
   sounds: SoundPort;
 }
 
+/**
+ * Si dos son el mismo turno: el mismo equipo el mismo dia. `endsAt` no cuenta: se calcula al llegar
+ * cada `turn` (la hora de aqui mas lo que le queda) y casi nunca coincide al milisegundo.
+ */
+const isSameTurn = (a: TimedTurn, b: TimedTurn): boolean => a.team === b.team && a.day === b.day;
+
 export class TurnClock {
   private turn: TimedTurn | null = null;
   /** Los segundos que se enseñan (null: aun nada de este turno): solo se publica al cambiar. */
@@ -47,8 +53,10 @@ export class TurnClock {
 
   /** El turno que se ve ahora, con su reloj; null: no corre ninguno (sin reloj, acabado) y la pastilla se quita. */
   follow(turn: TimedTurn | null): void {
+    // El mismo turno otra vez (al volver tras un corte) sigue con el segundo que ya se ve: si no, el
+    // tic de los ultimos segundos sonaria dos veces en el mismo segundo.
+    if (!turn || !this.turn || !isSameTurn(turn, this.turn)) this.shownSeconds = null;
     this.turn = turn;
-    this.shownSeconds = null;
     if (!turn) return this.stop();
     // Una pastilla a 0:00 ya no miraba los fotogramas: el turno nuevo vuelve a contar.
     this.stopFrames ??= this.host.onFrame(() => this.update());

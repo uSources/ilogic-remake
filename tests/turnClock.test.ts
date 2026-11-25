@@ -129,6 +129,20 @@ describe('el reloj del turno: la cuenta', () => {
     expect(frames.size).toBe(1);
   });
 
+  it('el mismo turno que vuelve (tras un corte) en los ultimos segundos no repite el tic de ese segundo', () => {
+    const { clock, sounds, wait } = clockHarness();
+    clock.follow(turnOf(0, HURRY_SECONDS));
+    expect(sounds.heard).toEqual(['turn_clock_tick']);
+    wait(MS_PER_SECOND / 4);
+    clock.follow({
+      ...turnOf(0, HURRY_SECONDS),
+      deadline: { endsAt: NOW + HURRY_SECONDS * MS_PER_SECOND + 30, totalMs: TWO_MINUTES * MS_PER_SECOND },
+    });
+    expect(sounds.heard).toEqual(['turn_clock_tick']);
+    wait(MS_PER_SECOND);
+    expect(sounds.heard).toEqual(['turn_clock_tick', 'turn_clock_tick']);
+  });
+
   it('a 0:00 deja de mirar los fotogramas y se queda asi hasta el turno que sigue, que vuelve a contar', () => {
     const { clock, frames, wait } = clockHarness();
     clock.follow(turnOf(0, 2));
