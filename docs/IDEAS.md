@@ -176,6 +176,10 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   (`MusicTrack`, `src/audio/music.ts`).
 - **Sonidos en linea** (`room_created`, `player_joined`...): ya tienen nombre en `soundNames.ts`;
   falta que la partida en linea llegue a 3D.
+- **El tic del reloj del turno.** Los ultimos segundos de un turno en linea con reloj suenan con
+  `turn_clock_tick`, que aun tira de `ui_move` (`soundNames.ts`) y se confunde con mover el cursor:
+  generar el suyo (un tic de reloj de juguete, suave y seco; ya esta en el catalogo,
+  `tools/audio/catalog/interface.ts`).
 - **Mas momentos con sonido**: subir de rango, el botin, la torreta del aerodeslizador... (inventario en
   `docs/PLAN-SONIDO.md`).
 - **El trueno de las tormentas.** El relampago ya pide su trueno, lejos y algo despues
