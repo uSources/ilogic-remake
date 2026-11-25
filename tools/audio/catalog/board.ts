@@ -45,8 +45,9 @@ const BUILDINGS: SoundSpec[] = [
 ];
 
 const EVENTS: SoundSpec[] = [
-  effect('load', 1, 'often', 'A small soldier hops into a military truck: quick boot steps on a metal step and a door clunk shut'),
-  effect('unload', 1, 'often', 'A military truck tailgate drops open with a clank and small boots jump down onto dirt'),
+  // Subir y bajar del transporte, sea el camion o el helicoptero: sin motor ni rotor, que ya suenan al moverse.
+  effect('load', 1, 'often', 'A small soldier climbs aboard: two quick boot steps on a hollow metal floor, then a door latch clunks shut'),
+  effect('unload', 1, 'often', 'A metal door latch clanks open and a small soldier jumps down, boots landing on dirt with a soft thud'),
   effect('heli_takeoff', 2, 'often', 'Helicopter taking off: rotor spinning up from slow to fast with a rising engine whine'),
   effect(
     'heli_land',
