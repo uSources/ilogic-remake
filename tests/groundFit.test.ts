@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Pos } from '@core/model';
 import { highestIn, PIECES_PER_SIDE, slabsOn, stripsOn, tileTop, type MarkGround } from '../src/view3d/engine/fx/groundFit';
 
-/** Las marcas planas (alcance, amenaza, zonas de control) apoyadas en el relieve, sin quedar enterradas. */
+/** Las marcas planas (alcance, amenaza) apoyadas en el relieve, sin quedar enterradas. */
 
 const LIFT = 0.01;
 const ONE_TILE = { inset: 0.5, length: 1, lift: LIFT };

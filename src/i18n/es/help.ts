@@ -1,4 +1,4 @@
-import { controlZoneSide, joinSentences, percent, type HelpTexts, type KeyLabels, type RuleFacts } from '../help';
+import { joinSentences, percent, type HelpTexts, type KeyLabels, type RuleFacts } from '../help';
 
 const capture = ({ settings }: RuleFacts) =>
   `Capturar va por puntos: un edificio tiene ${settings.capturePoints} (la Base ${settings.hqCapturePoints}) y cada turno la unidad le resta su vida ÷ 10. Si se mueve o la destruyen, se pierde lo avanzado. Al llegar a 0 pasa a ser tuyo.`;
@@ -34,11 +34,6 @@ const armyLimits = ({ settings, on }: RuleFacts) =>
       : '',
   );
 
-const controlPoints = ({ settings, on }: RuleFacts) =>
-  on('controlPoints')
-    ? `Puntos de control: zonas de ${controlZoneSide(settings)}×${controlZoneSide(settings)} marcadas con un borde y un banderín (grises si no son de nadie). Al acabar la ronda, si dentro solo hay unidades tuyas, la zona es tuya y te da ${settings.controlIncome}; si hay de los dos bandos, está disputada y no paga a nadie; vacía, sigue pagando a quien la tenía. Pelea por ellas.`
-    : '';
-
 const ambush = ({ on }: RuleFacts) =>
   on('ambush') && !on('noFog')
     ? 'Puedes atravesar tus unidades. Con niebla, el bosque solo se ve desde al lado: si tu camino choca con un enemigo escondido, la unidad se para antes (¡emboscada!) y pierde el turno.'
@@ -62,7 +57,6 @@ const ruleLines = (facts: RuleFacts): string[] => [
   veterancy(facts),
   attackBonuses(facts),
   armyLimits(facts),
-  controlPoints(facts),
   ambush(facts),
   buildingVision(facts),
   weather(facts),

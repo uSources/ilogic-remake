@@ -1,9 +1,8 @@
-"""Graficos de la interfaz hechos con Retro Diffusion (clima, zona y banderin de los puntos de control,
-ordenes y marcas de las unidades, efectos).
+"""Graficos de la interfaz hechos con Retro Diffusion (clima, banderin, ordenes y marcas de las unidades,
+efectos).
 
 Fuente: tools/art/retrodiffusion/ui/ (PNG ya recortados, sin fondo, al tamaño nativo):
   wx_<clima>.png     16x16  icono del clima (id de weather.json)
-  zona.png           16x16  icono de punto de control (magenta = bando)
   flag.png           16x24  banderin que se planta en el mapa (magenta = bando)
   cmd_<orden>.png    16x16  icono sobre la unidad en automatico (attack, defend, capture; RD Plus low_res)
   mk_<marca>.png     8-10px marcas de la unidad: star (veterania), noheal (no se cura), cargo (lleva carga)
@@ -31,7 +30,7 @@ OUT = os.path.normpath(os.path.join(D, '..', '..', 'public', 'assets', 'img', 'u
 # Prefijo -> bandos que se sacan (None = se copia tal cual).
 # Lado de cada fotograma en las hojas de animacion (por defecto 48).
 ANIM_FRAME = {'boom': 64}
-TEAMS = {'anim': None, 'zona': 'bri', 'flag': 'bri', 'wx': None, 'cmd': None, 'mk': None}
+TEAMS = {'anim': None, 'flag': 'bri', 'wx': None, 'cmd': None, 'mk': None}
 
 # Color de cada orden (tono 0..1); 'go' = ir alli (dorado).
 CMD_HUES = {'attack': 0.0, 'defend': 0.47, 'capture': 0.13, 'go': 0.13}

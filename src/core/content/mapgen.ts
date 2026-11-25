@@ -37,24 +37,6 @@ export interface MapgenDef {
   passMovement: string;
   /** Distancia minima entre dos salidas en un mapa de 32 (se escala con el lado). */
   minSpawnDistance: number;
-  /** Donde pone los puntos de control (regla controlPoints). */
-  controlPoints: ControlPointPlacement;
-}
-
-/** Donde pone el generador los puntos de control: en tierra, en el medio y separados. */
-export interface ControlPointPlacement {
-  /** Parte de su zona que tiene que ser tierra para poder pelear por ella. */
-  minLandShare: number;
-  /** Ni pegados a las salidas: al menos esta parte del camino mas corto entre ellas. */
-  minSpawnShare: number;
-  /** Azar que se suma a su puntuacion (lo desigual que esta de las salidas) para que no salgan siempre igual. */
-  scoreNoise: number;
-  /** Puntuacion maxima para valer como punto de control. */
-  maxScore: number;
-  /** Distancia minima entre dos puntos, ademas de sus zonas... */
-  minGap: number;
-  /** ...o esta parte del lado del mapa, si es mas. */
-  gapShareOfSide: number;
 }
 
 const isRange = (value: unknown): value is Range =>
@@ -78,14 +60,4 @@ export function validateMapgen(settings: MapgenDef, context: ContentContext, che
   scope.known('landMovement', settings?.landMovement, context.movementIds, 'el movimiento ');
   scope.known('passMovement', settings?.passMovement, context.movementIds, 'el movimiento ');
   scope.num('minSpawnDistance', settings?.minSpawnDistance, { min: 1, int: true });
-  validateControlPointPlacement(check, settings?.controlPoints);
-}
-
-/** Los numeros de los puntos de control: partes entre 0 y 1, y lo demas no negativo. */
-function validateControlPointPlacement(check: Checker, placement: Partial<ControlPointPlacement> | undefined): void {
-  const scope = check.scope('mapgen.json, controlPoints');
-  for (const share of ['minLandShare', 'minSpawnShare', 'gapShareOfSide'] as const)
-    scope.num(share, placement?.[share], { min: 0, max: 1 });
-  for (const field of ['scoreNoise', 'maxScore'] as const) scope.num(field, placement?.[field], { min: 0 });
-  scope.num('minGap', placement?.minGap, { min: 0, int: true });
 }

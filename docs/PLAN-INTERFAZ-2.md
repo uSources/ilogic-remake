@@ -127,8 +127,8 @@ romper lo táctil que ya hay (pulsación larga = rueda o detalle). Adaptarlo ser
 - **Ficha de la casilla** (`TileTip.tsx`): el nombre y la vida de la unidad, el sitio (edificio con
   su dueño, o terreno) y lo que da la casilla en chapas con icono: defensa, lo que cuesta entrar,
   ingresos y lo que falta por capturar (solo lo que tenga). Con Alt, la misma ficha crece con el
-  resto (de quién es la unidad, escuadra y orden, movimiento, alcance y visión, carga, habilidades y
-  el punto de control); antes eran dos tarjetas con otro aspecto.
+  resto (de quién es la unidad, escuadra y orden, movimiento, alcance y visión, carga y
+  habilidades); antes eran dos tarjetas con otro aspecto.
 - **Vida en las unidades**: un número en una chapa solo cuando están heridas, como en Wargroove. Hoy
   hay una barra; se prueba el número frente a la barra en el navegador y se apunta en `ESTETICA.md`
   lo que se quede.

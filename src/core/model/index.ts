@@ -6,7 +6,7 @@ export type { Pos } from './geometry';
 export type { ControllerKind, TeamId, TeamState } from './team';
 export type { DefeatReason, TeamFall } from './defeat';
 export type { Unit, UnitTurnState } from './unit';
-export type { Building, ControlPoint } from './building';
+export type { Building } from './building';
 export type {
   StandingOrder,
   StandingOrderKind,

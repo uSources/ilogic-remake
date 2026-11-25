@@ -7,9 +7,6 @@ import type { DeepReadonly } from '../../core/util/freeze';
 import { unitTypeOf, buildingTypeOf, terrainAt } from '../../core/gameContent';
 import {
   canMoveOn,
-  inControlZone,
-  isContested,
-  isShownTo,
   buildingAt,
   buildingIncome,
   capturePointsOf,
@@ -29,11 +26,11 @@ import type { Grid } from '../../core/util/grid';
 import { turnEndOrderOf, isDetached, squadById } from '../../core/squads';
 import type { AbilityVM, BuildingVM, StatChipVM, TileVM, UnitVM } from '../../hud/store';
 import { nameOf, t, type TextKey } from '../../settings';
-import { isFriendly, ownerSideOf, sideLetter, sideOf } from '../sides';
+import { isFriendly, ownerSideOf, sideOf } from '../sides';
 import { AS_ACTIVE, buildingKey, terrainKey, unitKey } from '../sprites';
 import { standingOrderLabel } from './army';
 
-/** Fichas de abajo: la casilla (terreno, edificio, punto de control) y la unidad que hay en ella. */
+/** Fichas de abajo: la casilla (terreno y edificio) y la unidad que hay en ella. */
 
 /** "1–2": distancias a las que dispara un tipo de unidad. */
 const rangeText = (attack: UnitAttack): string => `${attack.minRange}–${attack.maxRange}`;
@@ -125,14 +122,12 @@ export interface TileViewer {
   selected?: Unit | null;
 }
 
-/** Ficha de la casilla `pos` para el equipo que mira: terreno, edificio, punto de control y unidad (si se ve). */
+/** Ficha de la casilla `pos` para el equipo que mira: terreno, edificio y unidad (si se ve). */
 export function tileVM(textures: GameImages, s: GameState, pos: Pos, view: TileViewer): TileVM {
   const isVisible = view.vis.at(pos);
   const info: TileVM = { terrain: terrainVM(s, pos) };
   const building = buildingAt(s, pos);
   if (building) info.building = buildingVM(textures, s, building, view.viewer, isVisible);
-  const point = controlPointVM(s, pos, view);
-  if (point) info.point = point;
   const shown = shownUnitAt(s, pos, view, isVisible);
   if (shown) info.unit = unitVM(textures, s, shown, view.viewer);
   return info;
@@ -162,23 +157,6 @@ function buildingVM(textures: GameImages, s: GameState, building: Building, view
     ...(capture && isKnown
       ? { capture: { left: capture.left, total: capturePointsOf(s, building), side: sideOf(s, viewer, capture.team) } }
       : {}),
-  };
-}
-
-/**
- * [CAMBIO] La zona de un punto de control (se ve aunque haya niebla: esta marcada en el mapa).
- * Disputada solo si se ven dentro unidades de alianzas enemigas (no delata a los escondidos).
- */
-function controlPointVM(s: GameState, pos: Pos, view: TileViewer): TileVM['point'] | null {
-  const controlPoint = s.controlPoints?.find((candidate) => inControlZone(s, candidate, pos));
-  if (!controlPoint) return null;
-  const isSeen = (at: Pos) => view.vis.at(at);
-  const owner = ownerSideOf(s, view.viewer, controlPoint.owner);
-  return {
-    owner,
-    income: s.settings.controlIncome,
-    contested: isContested(s, controlPoint, (unit) => isShownTo(view.viewer, unit, isSeen)),
-    icon: `ui/zona_${sideLetter(owner)}`,
   };
 }
 

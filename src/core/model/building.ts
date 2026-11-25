@@ -13,8 +13,3 @@ export interface Building extends Pos {
    */
   capture?: { team: TeamId; uid: number; left: number } | null;
 }
-
-/** [CAMBIO] Punto de control (ver GameState.controlPoints). */
-export interface ControlPoint extends Pos {
-  owner: TeamId | null;
-}

@@ -13,7 +13,6 @@ const TILE_PX = 4;
 const FOG_SHADE = 'rgba(5,8,12,0.45)';
 /** Marco oscuro alrededor de edificios y unidades, para que se vean sobre cualquier terreno. */
 const OUTLINE = '#0b1220';
-const CONTROL_POINT_BORDER = '#ffd34d';
 /** Boton principal del raton en `PointerEvent.buttons`. */
 const PRIMARY_BUTTON = 1;
 
@@ -51,25 +50,11 @@ function drawFog(painter: Painter, minimap: MinimapVM) {
     }
 }
 
-/** [CAMBIO] Puntos de control: su zona con borde dorado y dentro el color de su dueño. */
-function drawControlPoints(painter: Painter, minimap: MinimapVM) {
-  for (const point of minimap.points ?? []) {
-    const left = (point.x - point.r) * TILE_PX;
-    const top = (point.y - point.r) * TILE_PX;
-    const side = (2 * point.r + 1) * TILE_PX;
-    painter.fillStyle = CONTROL_POINT_BORDER;
-    painter.fillRect(left - 1, top - 1, side + 2, side + 2);
-    painter.fillStyle = ownerColor(point.owner);
-    painter.fillRect(left, top, side, side);
-  }
-}
-
 /** En este orden: lo de despues tapa lo de antes. */
 function drawMinimap(painter: Painter, minimap: MinimapVM) {
   drawTerrain(painter, minimap);
   drawFog(painter, minimap);
   for (const building of minimap.buildings) fillOutlinedTile(painter, building, ownerColor(building.owner));
-  drawControlPoints(painter, minimap);
   for (const unit of minimap.units) fillOutlinedTile(painter, unit, sidePaint(unit.side, 'canvasUnit'));
 }
 

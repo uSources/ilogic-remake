@@ -26,7 +26,7 @@ export function isHostile(s: GameState, first: TeamId, second: TeamId): boolean 
   return !areAllied(s, first, second);
 }
 
-/** El dueño de algo (un edificio, un punto de control) es de la alianza de `team`. Sin dueño, no. */
+/** El dueño de algo (un edificio) es de la alianza de `team`. Sin dueño, no. */
 export const isAlliedOwner = (s: GameState, owner: TeamId | null, team: TeamId): boolean => owner !== null && areAllied(s, owner, team);
 
 /** El dueño de algo es enemigo de `team`. Sin dueño, no. */
@@ -72,7 +72,7 @@ export function teamValue<T>(perTeamList: readonly T[], team: TeamId): T {
   return value;
 }
 
-/** Una lista con un valor por equipo, en orden (informes de la ronda, puntos de control...). */
+/** Una lista con un valor por equipo, en orden (informes de la ronda, ingresos...). */
 export const perTeam = <T>(s: GameState, valueFor: (team: TeamId) => T): T[] => teamIds(s).map(valueFor);
 
 /** Suma `amount` a lo del equipo en una lista por equipo (perTeam); si no estaba, desde 0. */

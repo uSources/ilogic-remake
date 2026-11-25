@@ -16,6 +16,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Interfaz
 - Cuando «Buscar rival» te empareja, la partida carga detrás de «¡Rival encontrado!»: los dos ejércitos frente a frente, quién empieza, el mapa y el tiempo por turno.
 
+### Cambios de juego
+- **Fuera los puntos de control**: las zonas de 3×3 que daban dinero repetían lo que ya hacen las ciudades, y se tomaban solo con dejar una unidad dentro. Para ganar dinero, a capturar edificios.
+
 ### Arreglos
 - El menú de la partida (☰ o Esc) también se abre mientras juegan los demás, para salir o rendirte: antes no hacía nada hasta tu turno.
 
@@ -27,6 +30,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### Interface
 - When “Find an opponent” pairs you up, the game loads behind an “Opponent found!” screen: both armies face to face, who goes first, the map and the time per turn.
+
+### Gameplay
+- **Control points are gone**: the 3×3 areas that paid money did the same job as cities, and you took them just by leaving a unit inside. To earn money, capture buildings.
 
 ### Fixes
 - The game menu (☰ or Esc) also opens while others are playing, so you can leave or surrender: before, it did nothing until your turn.

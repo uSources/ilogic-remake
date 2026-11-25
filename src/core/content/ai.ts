@@ -16,7 +16,6 @@ export const AI_KEYS = [
   'ownedBuildingPreference',
   'minCapturers',
   'guardRadius',
-  'controlPointHeadStart',
   'focusFireBonus',
   'squadSpread',
   'hqCaptureHeadStart',
