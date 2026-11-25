@@ -161,13 +161,17 @@ cada unidad (`modelSize` en `units.json`, por uno):
 |---|---|---|
 | Infantería | 0,42 (moto 0,45) | soldado, bazuca, mortero, antidisturbios, moto |
 | Vehículos ligeros | 0,5–0,55 | jeep, transporte, suministros, lanzamisiles, tanque ligero, anfibio |
-| Tanques | 0,62 | tanque, antiaéreo |
-| Pesados | 0,65 | artillería, bloqueador |
+| Tanques | 0,62 (artillería 0,55) | tanque, antiaéreo, artillería |
+| Pesados | 0,65 | bloqueador |
 | Aviones | 0,6–0,72 | caza ligero, caza, helicóptero; el bombardero, el más grande |
 
 Una unidad nueva entra en la clase que le toca. La regla de fondo: que el tamaño diga lo que pesa la
 unidad, con la infantería claramente la más pequeña, y que **todas queden más bajas que los
 edificios** (como en Advance Wars): así, con una unidad encima, el edificio asoma por detrás.
+Lo que cuenta es lo que mide en el tablero, no el número: el modelo de la artillería es más largo y
+alto que el del tanque (el cañón largo y alzado), y al 0,65 era la unidad de tierra más grande
+(0,71 casillas de alto y 0,90 de largo, frente a 0,58 y 0,68 del tanque) y se salía de su casilla.
+Al 0,55 mide lo que un tanque (0,6 de alto y 0,76 de largo, con el cañón).
 Se probó antes con la infantería a 0,6 y los tanques a 0,9 (un tanque tapaba la fábrica de debajo)
 y luego a 0,5 y 0,75 (aún descompensadas al lado de los edificios). Referencia: en Advance Wars
 (también en Re-Boot Camp) y Wargroove las unidades quedan claramente por debajo de los edificios.
