@@ -8,11 +8,14 @@
  * `<sitio>Pick(i)` = se pulsa, `<sitio>Set(i, k)` = boton de segmento k de la fila i.
  */
 import type { Pos } from '../core/model';
+import type { HelpTopic } from '../i18n/help';
 
 export interface UIActions {
   // --- Menu principal (Inicio, Nueva partida, Campaña, Opciones) ---
   homeHover(id: string): void;
   homePick(id: string): void;
+  /** Una pestaña de arriba del menu desde una de sus paginas: Jugar (vuelve a Inicio), Novedades, Aprender u Opciones. */
+  menuTab(id: string): void;
   setupHover(id: string): void;
   setupPick(id: string): void;
   setupSet(id: string, index: number): void;
@@ -63,4 +66,6 @@ export interface UIActions {
   endHover(index: number): void;
   endPick(index: number): void;
   closeHelp(): void;
+  /** Leer otro tema de Aprender. */
+  helpTopic(topic: HelpTopic): void;
 }

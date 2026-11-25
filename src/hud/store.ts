@@ -12,7 +12,7 @@ import { initialState, type UIState } from './state';
 
 export type { UIActions } from './actions';
 export type { UIState } from './state';
-export type { Anchor, BySide, OwnerSide, Side, StatChipVM } from './vm/common';
+export type { Anchor, BySide, OwnerSide, Side, StatChipVM, UnitCardVM } from './vm/common';
 export type { EndOutcome, EndStatsVM } from './vm/end';
 export type { PickedVM, SelectionVM } from './vm/army';
 export type { ForecastVM } from './vm/combat';
@@ -62,8 +62,10 @@ const DEFAULT_ACTIONS: UIActions = {
   endHover: noop,
   endPick: noop,
   closeHelp: () => ui.set({ help: false }),
+  helpTopic: (topic) => ui.set({ helpTopic: topic }),
   homeHover: noop,
   homePick: noop,
+  menuTab: noop,
   setupHover: noop,
   setupPick: noop,
   setupSet: noop,

@@ -1,8 +1,8 @@
 import { t } from '../../settings';
-import { Btn, Button, scrollRef } from '../common/buttons';
+import { Button, scrollRef } from '../common/buttons';
 import { Seg } from '../common/Seg';
-import { Veil } from '../common/Veil';
 import { ui } from '../store';
+import { MenuPage } from './MenuPage';
 import type { ActionRowVM, KeyRowVM, OptionsRowVM, OptionsTabVM, OptionsVM, VolumeRowVM } from '../vm/menus';
 
 /** Una fila con su posicion en la lista entera (la que entienden optionsHover, optionsSet y optionsPick). */
@@ -205,22 +205,15 @@ function TabContent({ tab, focus }: { tab: OptionsTabVM; focus: number }) {
   );
 }
 
-/** Opciones (desde el menu y desde la partida): una pestaña por tema. */
+/** Opciones (desde el menu y desde la partida): una pestaña por tema, con sus filas en fichas. */
 export function Options({ options }: { options: OptionsVM }) {
-  const actions = ui.actions;
   const tab = options.tabs[options.tab];
   return (
-    <Veil kind="veil" onClose={() => actions.optionsClose()}>
-      <div class="px options" role="dialog" aria-label={t('options')}>
-        <div class="help-head">
-          <span class="htitle">{t('options')}</span>
-          <Btn cls="px-btn plain" sound="ui_close" onPick={() => actions.optionsClose()}>
-            {t('close')} <span class="key">Esc</span>
-          </Btn>
-        </div>
+    <MenuPage tab="options" title={t('options')} onClose={() => ui.actions.optionsClose()} cls="options-page">
+      <div class="page-body options-body">
         <TabBar tabs={options.tabs} current={options.tab} />
         {tab && <TabContent tab={tab} focus={options.focus} />}
       </div>
-    </Veil>
+    </MenuPage>
   );
 }

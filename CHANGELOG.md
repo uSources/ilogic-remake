@@ -15,6 +15,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### Interfaz
 - **Nuevo menú de inicio**: una lista de texto a la izquierda (Continuar, Campaña, Escaramuza y En línea, cada una con lo que hay detrás: el día de tu partida guardada, la misión por la que vas) y, detrás, el juego en 3D: la cámara da vueltas despacio alrededor de la base de una partida de la IA. Novedades, Aprender y Opciones, arriba a la derecha.
+- **Novedades, Aprender y Opciones con el mismo diseño**, en pantalla entera y con las pestañas del menú arriba. Novedades se lee como un texto: las notas de la versión elegida en grande y las demás versiones al lado. Aprender va por temas (objetivo y reglas, colores del mapa, controles y, nuevo, las unidades con su precio, movimiento, alcance y visión). Opciones, con las pestañas en una barra y cada grupo en su ficha.
 - Cuando «Buscar rival» te empareja, la partida carga detrás de «¡Rival encontrado!»: los dos ejércitos frente a frente, quién empieza, el mapa y el tiempo por turno.
 
 ### Cambios de juego
@@ -31,6 +32,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### Interface
 - **New start menu**: a text list on the left (Continue, Campaign, Skirmish and Online, each with what's behind it: the day of your saved game, the mission you're on) and, behind it, the game in 3D: the camera slowly circles the base of an AI game. What's new, Learn and Options, top right.
+- **What's new, Learn and Options share the same look**, full screen with the menu tabs on top. What's new reads like a text: the notes of the chosen version in large type and the other versions beside them. Learn goes by topic (goal and rules, map colors, controls and, new, the units with their price, movement, range and vision). Options has its tabs in a bar and each group on its own card.
 - When “Find an opponent” pairs you up, the game loads behind an “Opponent found!” screen: both armies face to face, who goes first, the map and the time per turn.
 
 ### Gameplay

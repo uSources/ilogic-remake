@@ -53,8 +53,10 @@ export const MENU_KEYS: readonly MenuBinding[] = [
  * KEY_BINDINGS, keyboard.ts).
  */
 export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>> = {
-  // La ayuda se cierra con Esc, Retroceso, Enter, Espacio o H (las flechas no hacen nada).
+  // La ayuda se cierra con Esc, Retroceso, Enter, Espacio o H; arriba y abajo cambian de tema.
   help: [
+    { codes: KEY_UP, command: move(0, -1) },
+    { codes: KEY_DOWN, command: move(0, 1) },
     { codes: KEY_OK, command: { kind: 'ok', repeat: false } },
     { codes: KEY_BACK, command: { kind: 'back' } },
     { codes: ['KeyH'], command: { kind: 'help' } },

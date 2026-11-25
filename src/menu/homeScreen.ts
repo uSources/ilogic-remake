@@ -30,6 +30,8 @@ export interface HomeHost {
   /** Lo que dice el servidor de tus partidas en linea (la misma que mira «Jugar en línea»). */
   readonly onlineRooms: RoomWatch;
   openOptions(): void;
+  /** Cierra la pagina del menu que este abierta (Novedades, Aprender u Opciones). */
+  closePages(): void;
 }
 
 type HomeEntry = 'continue' | 'campaign' | 'skirmish' | 'online';
@@ -55,7 +57,16 @@ export class HomeScreen {
         this.focus = id;
         this.pick();
       },
+      menuTab: (id: string) => this.showTab(id),
     };
+  }
+
+  /** Desde una pagina, otra pestaña: se cierra la de ahora y se abre esa (Jugar se queda en Inicio). */
+  private showTab(id: string): void {
+    this.host.closePages();
+    if (id === 'play' || !(id in this.choices)) return;
+    this.focus = id;
+    this.choices[id as HomeChoice]();
   }
 
   /** Lo primero elegido al abrir el menu: seguir la partida guardada si la hay. */

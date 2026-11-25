@@ -23,7 +23,7 @@ import { isTypingRoomCode, OnlineScreen } from '../../menu/online/onlineScreen';
 import { isTypingCode, SetupScreen } from '../../menu/setupScreen';
 import type { OnlineMatch } from '../../net/onlineMatch';
 import { parseRoomLink } from '../../net/onlineRooms';
-import { checkNotes, notesCommand, notesOpen } from '../../patchNotes';
+import { checkNotes, closeNotes, notesCommand, notesOpen } from '../../patchNotes';
 import { matchConfigFor, randomSeed } from '../../setup';
 import { readSave } from '../../storage';
 import { terrainPalette, type TerrainPalette } from '../../ui/terrainColors';
@@ -85,7 +85,15 @@ export class MenuFlow {
       openOnline: () => this.openOnline(),
       onlineRooms: this.online.rooms,
       openOptions: () => this.options.open(),
+      closePages: () => this.closePages(),
     });
+  }
+
+  /** Cierra la pagina del menu que este abierta: cada pestaña de arriba es una y solo se ve una. */
+  private closePages(): void {
+    helpPanel.close();
+    closeNotes();
+    if (this.options.isOpen) this.options.close();
   }
 
   /** Enseña el menu y empieza a atender teclas y botones. */
@@ -94,13 +102,14 @@ export class MenuFlow {
     this.setup.loadOptions();
     this.home.focusFirst();
     Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions(), this.online.actions());
-    // La ayuda del menu cuenta las reglas de una partida nueva de las de siempre.
+    // La ayuda del menu cuenta las reglas y las unidades de una partida nueva de las de siempre.
+    const content = defaultContent();
     ui.set({
       screen: 'menu',
       options: null,
       toast: null,
       banner: null,
-      helpRules: helpRulesForSettingsOnly(settingsWith(defaultContent())),
+      helpRules: helpRulesForSettingsOnly(settingsWith(content), content.units.list),
     });
     this.home.open();
     this.openRoomFromHash();

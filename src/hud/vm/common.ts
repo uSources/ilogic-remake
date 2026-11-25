@@ -15,6 +15,15 @@ export interface StatChipVM {
   title: string;
 }
 
+/** Un tipo de unidad en Aprender: su retrato, nombre, precio y sus datos con icono. */
+export interface UnitCardVM {
+  id: string;
+  icon: string;
+  name: string;
+  cost: string;
+  stats: StatChipVM[];
+}
+
 /**
  * De que lado esta algo para quien mira la pantalla: lo suyo, de un aliado o de un enemigo (la
  * interfaz no sabe de numeros de equipo). Se pinta en azul lo suyo y lo aliado, en rojo lo enemigo.
