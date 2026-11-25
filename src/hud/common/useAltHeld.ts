@@ -1,19 +1,14 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useSyncExternalStore } from 'preact/compat';
+import { trackAltKey } from './altKey';
+
+/** La cuenta de Alt de la pagina, desde que carga la interfaz (asi la primera ficha ya lo sabe). */
+const pageAlt = trackAltKey(window);
+
+// Funciones fijas (no flechas nuevas en cada pintado): asi no se da de baja y de alta cada vez.
+const subscribe = (listener: () => void) => pageAlt.subscribe(listener);
+const snapshot = () => pageAlt.isHeld();
 
 /** Alt pulsado (la ficha de la casilla y la prevision de combate enseñan entonces todo). */
 export function useAltHeld(): boolean {
-  const [isHeld, setHeld] = useState(false);
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => setHeld(event.altKey);
-    const onBlur = () => setHeld(false);
-    window.addEventListener('keydown', onKey);
-    window.addEventListener('keyup', onKey);
-    window.addEventListener('blur', onBlur);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('keyup', onKey);
-      window.removeEventListener('blur', onBlur);
-    };
-  }, []);
-  return isHeld;
+  return useSyncExternalStore(subscribe, snapshot);
 }
