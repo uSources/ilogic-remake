@@ -1,14 +1,23 @@
 # Plan: rehacer los menús con tarjetas
 
-## Estado (27-10-2026)
+## Estado (25-11-2026)
 
-Hechas las seis fases (la sexta, el fondo vivo, se quitó con el paso a 3D):
-- **Inicio:** tarjetas Continuar (con miniatura de la partida guardada, solo tus unidades), Nueva partida (Rápida / Personalizar) y Campaña (progreso y casillas por misión). Abajo: Cómo se juega, Opciones, Créditos y Web original.
+Hechas las seis fases; después, Inicio se rehízo como menú clásico de texto (el diseño «C» del
+lienzo «Ilogic · Rediseño de Jugar en línea», página «Menú inicial») y el fondo vivo volvió en 3D:
+- **Inicio:** a la izquierda, el logo y una lista de texto: Continuar (si hay guardada: «Escaramuza ·
+  día 12» o la misión), Campaña («Misión 3 de 6»), Escaramuza (abre Nueva partida) y En línea (si hay
+  servidor). La elegida, más grande y con la flecha. Arriba a la derecha, Jugar · Novedades ·
+  Aprender · Opciones; abajo, Créditos y GitHub. Se recorre con ↑ ↓ y Enter (`src/menu/homeScreen.ts`).
+  Las tarjetas (Continuar con miniatura, Nueva partida con Rápida / Personalizar, Campaña con casillas
+  por misión) se quitaron con este cambio.
+- **Fondo vivo:** detrás del menú, una partida de la IA contra la IA ya jugada unos días
+  (`src/menu/menuBoard.ts`) con la cámara dando vueltas de cerca a una Base, una vuelta cada dos
+  minutos y medio (`src/view3d/app/menuBackdrop.ts`). Con «Menos movimiento», quieta. Antes de 3D era
+  una partida en 2D; luego hubo un tiempo la imagen de 2013.
 - **Opciones:** pantalla propia por grupos, la misma desde el menú y desde la partida (tecla O). Añade tamaño de la interfaz, reducir movimiento y ver siempre la amenaza.
 - **Nueva partida:** vista previa del mapa que se va a jugar, "Otro mapa" (R), código, y los ajustes Normal / Rápida / Clásica 2013 / Personalizada con botones de segmento.
 - **Campaña:** tarjetas con miniatura, tipo de objetivo, estado y mejor marca en días.
 - **Pausa:** panel centrado con el día, el código del mapa y el objetivo de la misión.
-- **Fondo vivo:** era una partida IA contra IA en 2D detrás del menú; se quitó con el 2D y ahora detrás del menú está la imagen de 2013. Pendiente: un fondo vivo en 3D.
 
 ## Cómo estaban
 

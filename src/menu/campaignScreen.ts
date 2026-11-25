@@ -66,7 +66,7 @@ export class CampaignScreen {
     };
   }
 
-  missionThumb(index: number): string {
+  private missionThumb(index: number): string {
     const cached = this.thumbs.get(index);
     if (cached) return cached;
     const s = createMatch({ mode: 'mission', mission: campaignMissions()[index]!.id, seed: THUMB_SEED });

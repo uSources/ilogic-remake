@@ -26,8 +26,7 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 20. **Varias personas en la misma pantalla** (el aviso de cambio de jugador), repetir el turno
     enemigo y guardado automático.
 21. **El dedo:** pellizcar para acercar y girar con dos dedos (`docs/PLAN-MOVIL.md`).
-22. **Laboratorio de animaciones** (se quitó con el 2D; para los modelos está `units3d.html`) y fondo
-    vivo del menú (se quitó también su opción).
+22. **Laboratorio de animaciones** (se quitó con el 2D; para los modelos está `units3d.html`).
 24. **Edificios con explanada delante** (como en Advance Wars): rehacer los seis en Ashfox ocupando
     la mitad de atrás de la casilla, para que la unidad de encima quede delante sin tener que
     encogerlos ni moverlos a una esquina (ahora lo hace `sharedTile.ts`). Para cuando se retoquen los

@@ -109,7 +109,7 @@ export interface OptionsVM {
 
 export type MarkVM = 'done' | 'open' | 'locked';
 
-/** La tarjeta «En línea» de Inicio: si te toca en alguna partida (entonces se resalta) y cuantas hay en marcha. */
+/** Lo que dice Inicio de tus partidas en linea (la nota de «En línea»): si te toca en alguna y cuantas hay en marcha. */
 export interface OnlineCardVM {
   /** «¡Te toca en 2!», o null si no te toca en ninguna. */
   yourTurn: string | null;
@@ -117,14 +117,18 @@ export interface OnlineCardVM {
   status: string;
 }
 
+/** Una entrada de la lista de Inicio: su nombre y, debajo, lo que hay detras (el dia de la guardada, por donde va la campaña). */
+export interface HomeEntryVM {
+  id: string;
+  title: string;
+  note: string;
+  /** Pide jugar aunque no este elegida (te toca en una partida en linea): la nota se resalta. */
+  urgent: boolean;
+}
+
 export interface HomeVM {
   focus: string;
-  save: { thumb: string; day: number; funds: number; size: number; mission: string | null; limit: number | null } | null;
-  /** Resumen de las ultimas opciones (lo que hara "Rapida"). */
-  quick: string;
-  /** La tarjeta «En línea» (si hay servidor de partidas por la red; si no, null). */
-  online: OnlineCardVM | null;
-  campaign: { done: number; total: number; next: string | null; thumb: string | null; marks: MarkVM[] };
+  entries: HomeEntryVM[];
   credits: boolean;
 }
 

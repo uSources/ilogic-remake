@@ -1,36 +1,29 @@
 /**
- * Pantalla de inicio del menu: tarjetas (Continuar, Nueva partida, En línea, Campaña) y la fila de
- * abajo (Novedades, Ayuda, Opciones, Creditos, Web). Mientras se ve, pregunta como estan tus partidas
- * en linea (la tarjeta «En línea» dice si te toca). Pide a la escena lo poco que usa (`HomeHost`).
+ * Pantalla de inicio del menu, el menu clasico de texto: la lista de lo que se juega (Continuar,
+ * Campaña, Escaramuza, En línea), cada entrada con lo que hay detras en una linea; arriba, Novedades,
+ * Aprender y Opciones, y abajo, Creditos y la web. Mientras se ve, pregunta como estan tus partidas en
+ * linea («En línea» dice si te toca). Pide a la escena lo poco que usa (`HomeHost`).
  */
-import type { TerrainPalette } from '../ui/terrainColors';
 import type { MenuCommand } from '../controls/menu';
-import { mapGrid } from '../core/mapGrid';
-import { playerTeam, teamState } from '../core/teams';
 import type { GameState } from '../core/model';
-import { campaignMissions, completedMissions, missionUnlocked, nextMissionIndex } from '../campaign';
-import { ui, type MarkVM, type UIActions } from '../hud/store';
+import { campaignMissions, completedMissions, nextMissionIndex } from '../campaign';
+import { ui, type HomeEntryVM, type UIActions } from '../hud/store';
 import { WEB_URL } from '../layout';
 import { openNotes } from '../patchNotes';
-import { randomSeed, type NewGameOptions } from '../setup';
-import { settings, t, type TextKey } from '../settings';
+import { settings, t } from '../settings';
 import { readOnlineRooms } from '../net/onlineRooms';
 import { serverUrl } from '../net/serverUrl';
 import { navGrid } from './nav';
 import { onlineCardOf } from './online/roomLines';
 import type { RoomWatch } from './online/roomWatch';
-import { mapThumb } from './thumb';
 
 export interface HomeHost {
-  /** La partida guardada, si la hay (tarjeta Continuar). */
+  /** La partida guardada, si la hay (la entrada Continuar). */
   readonly save: GameState | null;
-  readonly palette: TerrainPalette;
-  readonly options: NewGameOptions;
   /** Ya se esta saliendo del menu: no hacer caso de mas ordenes. */
   readonly leaving: boolean;
-  missionThumb(index: number): string;
   continueGame(): void;
-  startNew(seed: number): void;
+  /** Escaramuza: la pantalla de partida nueva (alli se elige el mapa y las reglas y se empieza). */
   openSetup(): void;
   openCampaign(): void;
   openOnline(): void;
@@ -39,30 +32,16 @@ export interface HomeHost {
   openOptions(): void;
 }
 
-type HomeCard = 'continue' | 'quick' | 'custom' | 'online' | 'campaign' | 'news' | 'help' | 'options' | 'credits' | 'web';
+type HomeEntry = 'continue' | 'campaign' | 'skirmish' | 'online';
+type HomeLink = 'news' | 'help' | 'options' | 'credits' | 'web';
+type HomeChoice = HomeEntry | HomeLink;
 
-const FOOTER_ROW: HomeCard[] = ['news', 'help', 'options', 'credits', 'web'];
-
-/** Lo que tiene el foco en cada fila de una tarjeta: Nueva partida tiene dos botones; las demas, uno que ocupa las dos. */
-type CardColumn = [top: HomeCard, bottom: HomeCard];
-
-/** Como se ve cada mision en la tarjeta de la campaña: hecha, abierta o cerrada. */
-function missionMarks(done: Set<string>): MarkVM[] {
-  return campaignMissions().map((mission, index) => {
-    if (done.has(mission.id)) return 'done';
-    return missionUnlocked(index, done) ? 'open' : 'locked';
-  });
-}
-
-/** "Normal · 32×32 · 30 dias": el ajuste elegido para la partida rapida. */
-function quickSummary(options: NewGameOptions): string {
-  const presetName = t(`preset${options.preset[0]!.toUpperCase()}${options.preset.slice(1)}` as TextKey);
-  const dayLimit = options.dayLimit ? ` · ${options.dayLimit} ${t('days')}` : '';
-  return `${presetName} · ${options.size}×${options.size}${dayLimit}`;
-}
+/** Las pestañas de arriba (Jugar es esta pantalla) y los enlaces de abajo, en el orden en que se recorren. */
+const TOP_LINKS: HomeLink[] = ['news', 'help', 'options'];
+const FOOT_LINKS: HomeLink[] = ['credits', 'web'];
 
 export class HomeScreen {
-  focus = 'quick';
+  focus: string = 'skirmish';
 
   constructor(private readonly host: HomeHost) {}
 
@@ -79,9 +58,14 @@ export class HomeScreen {
     };
   }
 
+  /** Lo primero elegido al abrir el menu: seguir la partida guardada si la hay. */
+  focusFirst(): void {
+    this.focus = this.host.save ? 'continue' : 'campaign';
+  }
+
   /**
    * Pasa a Inicio: se enseña y, si se puede jugar en linea y tienes partidas apuntadas, pregunta como
-   * estan (sin ninguna, la tarjeta no tiene nada que contar del servidor).
+   * estan (sin ninguna, «En línea» no tiene nada que contar del servidor).
    */
   open(): void {
     if (this.canPlayOnline() && readOnlineRooms().length > 0) this.host.onlineRooms.start(() => this.publish());
@@ -94,16 +78,7 @@ export class HomeScreen {
   }
 
   publish(): void {
-    ui.set({
-      home: {
-        focus: this.focus,
-        save: this.savedGameCard(),
-        quick: quickSummary(this.host.options),
-        online: this.onlineCard(),
-        campaign: this.campaignCard(),
-        credits: ui.get().home.credits,
-      },
-    });
+    ui.set({ home: { focus: this.focus, entries: this.entries(), credits: ui.get().home.credits } });
   }
 
   command(command: MenuCommand): void {
@@ -115,56 +90,41 @@ export class HomeScreen {
     this.publish();
   }
 
+  /** Arriba las pestañas, luego la lista (una entrada por fila) y abajo los enlaces. */
+  private rows(): string[][] {
+    return [TOP_LINKS, ...this.entries().map((entry) => [entry.id]), FOOT_LINKS];
+  }
+
+  private entries(): HomeEntryVM[] {
+    const save = this.savedGameEntry();
+    const online = this.onlineEntry();
+    return [
+      ...(save ? [save] : []),
+      { id: 'campaign', title: t('campaign'), note: campaignNote(), urgent: false },
+      { id: 'skirmish', title: t('skirmish'), note: t('homeSkirmishNote'), urgent: false },
+      ...(online ? [online] : []),
+    ];
+  }
+
   /** Hay servidor de partidas por la red. */
   private canPlayOnline(): boolean {
     return serverUrl() !== null;
   }
 
-  /** Las tarjetas lado a lado, cada una en dos filas (`CardColumn`), y debajo el pie. */
-  private rows(): HomeCard[][] {
-    const cards: CardColumn[] = [];
-    if (this.host.save) cards.push(['continue', 'continue']);
-    cards.push(['quick', 'custom']);
-    if (this.canPlayOnline()) cards.push(['online', 'online']);
-    cards.push(['campaign', 'campaign']);
-    return [cards.map(([top]) => top), cards.map(([, bottom]) => bottom), FOOTER_ROW];
-  }
-
-  private onlineCard() {
+  /** «En línea»: si te toca en alguna partida (y entonces pide jugar), cuantas hay en marcha o de que va. */
+  private onlineEntry(): HomeEntryVM | null {
     if (!this.canPlayOnline()) return null;
     const rooms = this.host.onlineRooms;
-    return onlineCardOf(readOnlineRooms(), (code) => rooms.lookOf(code));
+    const card = onlineCardOf(readOnlineRooms(), (code) => rooms.lookOf(code));
+    return { id: 'online', title: t('onlineCardTitle'), note: card.yourTurn ?? card.status, urgent: card.yourTurn !== null };
   }
 
-  private savedGameCard() {
+  /** «Continuar», con lo que es la guardada: «Escaramuza · día 12» o la mision y su dia. */
+  private savedGameEntry(): HomeEntryVM | null {
     const save = this.host.save;
     if (!save) return null;
-    const savedMission = save.mission;
-    const mission = savedMission
-      ? (campaignMissions().find((candidate) => candidate.id === savedMission.id)?.title[settings.lang] ?? null)
-      : null;
-    return {
-      thumb: mapThumb(save, this.host.palette, { units: 'own' }),
-      day: save.day,
-      funds: teamState(save, playerTeam(save)).funds,
-      size: mapGrid(save).width,
-      mission,
-      limit: save.settings.dayLimit,
-    };
-  }
-
-  private campaignCard() {
-    const done = completedMissions();
-    const marks = missionMarks(done);
-    const nextIndex = nextMissionIndex(done);
-    const next = nextIndex >= 0 ? campaignMissions()[nextIndex]! : null;
-    return {
-      done: marks.filter((mark) => mark === 'done').length,
-      total: campaignMissions().length,
-      next: next ? `${nextIndex + 1}. ${next.title[settings.lang]}` : null,
-      thumb: next ? this.host.missionThumb(nextIndex) : null,
-      marks,
-    };
+    const day = t('homeDay').replace('{n}', String(save.day));
+    return { id: 'continue', title: t('continueGame'), note: `${savedGameKind(save)} · ${day}`, urgent: false };
   }
 
   private setCredits(isShown: boolean): void {
@@ -173,31 +133,39 @@ export class HomeScreen {
 
   private pick(): void {
     if (this.host.leaving) return;
-    switch (this.focus as HomeCard) {
-      case 'continue':
-        if (this.host.save) this.host.continueGame();
-        return;
-      case 'quick':
-        return this.host.startNew(randomSeed());
-      case 'custom':
-        return this.host.openSetup();
-      case 'campaign':
-        return this.host.openCampaign();
-      case 'online':
-        return this.host.openOnline();
-      case 'news':
-        return openNotes();
-      case 'help':
-        return ui.set({ help: true });
-      case 'options':
-        return this.host.openOptions();
-      case 'credits':
-        return this.setCredits(!ui.get().home.credits);
-      case 'web':
-        window.open(WEB_URL, '_blank', 'noopener');
-        return;
-      default:
-        return;
-    }
+    const choice = this.focus as HomeChoice;
+    if (choice in this.choices) this.choices[choice]();
   }
+
+  /** Lo que hace cada entrada y cada enlace al pulsarlo. */
+  private readonly choices: Record<HomeChoice, () => void> = {
+    continue: () => {
+      if (this.host.save) this.host.continueGame();
+    },
+    campaign: () => this.host.openCampaign(),
+    skirmish: () => this.host.openSetup(),
+    online: () => this.host.openOnline(),
+    news: () => openNotes(),
+    help: () => ui.set({ help: true }),
+    options: () => this.host.openOptions(),
+    credits: () => this.setCredits(!ui.get().home.credits),
+    web: () => void window.open(WEB_URL, '_blank', 'noopener'),
+  };
+}
+
+/** De que es la partida guardada: el nombre de su mision o, si no es de la campaña, escaramuza. */
+function savedGameKind(save: GameState): string {
+  const savedMission = save.mission;
+  if (!savedMission) return t('skirmish');
+  const mission = campaignMissions().find((candidate) => candidate.id === savedMission.id);
+  return mission?.title[settings.lang] ?? t('campaign');
+}
+
+/** Por donde va la campaña: «Misión 3 de 6», o que ya esta entera. */
+function campaignNote(): string {
+  const nextIndex = nextMissionIndex(completedMissions());
+  if (nextIndex < 0) return t('allDone');
+  return t('homeCampaignNote')
+    .replace('{n}', String(nextIndex + 1))
+    .replace('{total}', String(campaignMissions().length));
 }

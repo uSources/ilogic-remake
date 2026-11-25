@@ -18,6 +18,7 @@ export type { PickedVM, SelectionVM } from './vm/army';
 export type { ForecastVM } from './vm/combat';
 export type {
   CampaignItemVM,
+  HomeEntryVM,
   HomeVM,
   MarkVM,
   MenuItemVM,

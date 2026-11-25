@@ -29,7 +29,10 @@ export function Hud() {
   return (
     <>
       {s.screen === 'loading' && (s.intro ? <MatchIntro intro={s.intro} progress={s.loading} /> : <Loading progress={s.loading} />)}
-      {(s.screen === 'menu' || s.screen === 'setup' || s.screen === 'campaign' || s.screen === 'online') && <div class="menu-veil" />}
+      {(s.screen === 'menu' || s.screen === 'setup' || s.screen === 'campaign' || s.screen === 'online') && (
+        // En Inicio, el tablero 3D de detras se ve a la derecha: el velo solo oscurece el lado del menu.
+        <div class={s.screen === 'menu' ? 'menu-veil side' : 'menu-veil'} />
+      )}
       {s.screen === 'menu' && <Home s={s} />}
       {s.screen === 'setup' && <NewGame s={s} />}
       {s.screen === 'campaign' && <Campaign s={s} />}

@@ -1,159 +1,166 @@
-/* Inicio */
+/* Inicio: el menu clasico de texto, a la izquierda, con el tablero 3D girando detras (menuBackdrop.ts). */
+#game.menu-stage {
+  background: var(--night);
+}
+#game.menu-stage canvas {
+  animation: menu-board-in 1.6s ease-out both;
+}
+@keyframes menu-board-in {
+  from {
+    opacity: 0;
+  }
+}
+html.reduce-motion #game.menu-stage canvas {
+  animation: none;
+}
+/* El velo solo oscurece el lado del menu: la izquierda o, en una pantalla alta, arriba (la Base sale
+   a la derecha o abajo: WIDE_ASPECT en menuBackdrop.ts). */
+.menu-veil.side {
+  background: linear-gradient(90deg, var(--night-veil) 0%, rgba(18, 21, 28, 0.7) 32%, rgba(18, 21, 28, 0) 62%);
+}
+@media (max-aspect-ratio: 6/5) {
+  .menu-veil.side {
+    background: linear-gradient(180deg, var(--night-veil) 0%, rgba(18, 21, 28, 0.7) 45%, rgba(18, 21, 28, 0.1) 80%);
+  }
+}
 .home {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: safe center;
-  gap: 22px;
-  padding: 16px;
+  gap: 10px;
+  padding: 28px 60px 20px;
   overflow-y: auto;
   pointer-events: auto;
+}
+.home-tabs {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+}
+.home-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--menu-tab);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+.home-tab.current {
+  color: var(--panel);
+  border-bottom-color: var(--menu-gold);
+  cursor: default;
+}
+.home-tab.sel {
+  color: var(--menu-gold);
+  outline: 2px solid var(--menu-gold);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.home-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 28px;
+  margin-top: 10px;
 }
 .home .logo {
   width: 320px;
   height: 128px;
-  image-rendering: pixelated;
   flex: none;
-  animation: bob 1.8s steps(2) infinite alternate;
+  filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.5));
 }
-.home-cards {
-  display: flex;
-  gap: 18px;
-  align-items: stretch;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-.card {
-  width: 250px;
+.home-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px;
-  cursor: pointer;
-  transition: transform 0.12s steps(2);
 }
-.card.sel {
-  transform: translateY(-4px);
-  border-color: var(--gold);
-  box-shadow:
-    inset 0 -3px 0 var(--lo),
-    0 0 0 3px var(--gold),
-    var(--lift);
-}
-.card .label {
-  color: var(--gold);
-}
-.card .thumb {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: contain;
-  image-rendering: pixelated;
-  background: var(--ink);
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-sm);
+.home-entry {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 16px;
+  padding: 6px 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.home-arrow {
+  width: 28px;
   font-family: var(--display);
-  font-size: 48px;
-  color: var(--green);
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--menu-gold);
+  visibility: hidden;
 }
-.card-info {
+.home-entry.sel .home-arrow {
+  visibility: visible;
+}
+.home-entry-text {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 1;
 }
-.card .px-btn {
-  justify-content: center;
+.home-entry-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 36px;
+  line-height: 1;
+  color: var(--menu-title);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7);
+  transition: font-size 0.1s ease-out;
 }
-.card-continue {
-  width: 280px;
+.home-entry.sel .home-entry-title {
+  font-size: 44px;
+  color: var(--panel);
 }
-.card-art {
-  flex: 1;
-  min-height: 120px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 4px;
-  background: linear-gradient(#24314d, #1a2a1a);
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-sm);
-  padding-bottom: 12px;
+.home-entry-note {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--menu-note);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
 }
-.card-art img {
-  width: 64px;
-  height: 64px;
+.home-entry.sel .home-entry-note {
+  color: var(--menu-gold);
 }
-.card.sel .card-art img {
-  animation: hop 0.5s steps(2) infinite alternate;
-}
-.card.sel .card-art img:nth-child(2) {
-  animation-delay: 0.25s;
-}
-@keyframes hop {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(-4px);
-  }
-}
-.card-btns {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-/* En línea: azul contra rojo en pequeño, y «¡Te toca!» en una chapa amarilla (la de los numeros) */
-.card-online .army {
-  gap: 2px;
-}
-.card-online .army img {
-  width: 36px;
-  height: auto;
-}
-.card-online .army .tank {
-  width: 44px;
-}
-.card-online .versus {
-  font-size: 22px;
-}
-.card-online .turn-note {
+/* Te toca en una partida en linea: la chapa amarilla de «¡Te toca!» (la de los numeros, toy.css). */
+.home-entry.urgent .home-entry-note {
   align-self: flex-start;
-  padding: 3px 10px;
+  margin-top: 4px;
+  padding: 1px 10px;
   border: 2px solid var(--ink);
   border-radius: 999px;
   background: #ffd23f;
   color: var(--ink);
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 14px;
+  text-shadow: none;
 }
-.marks {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
+.home-hint {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--menu-note);
 }
-.marks i {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--ink);
-  background: var(--slot);
-}
-.marks i.done {
-  background: var(--green);
-}
-.marks i.open {
-  background: var(--gold);
+/* Con el dedo no hay flechas ni Enter. */
+@media (pointer: coarse) {
+  .home-hint {
+    display: none;
+  }
 }
 .home-foot {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
-  justify-content: center;
+  margin-top: auto;
+  margin-left: -10px;
+}
+.home-foot .link {
+  color: var(--menu-note);
 }
 .link {
   background: none;
@@ -184,28 +191,37 @@
   margin: 6px 0 0;
   line-height: 1.4;
 }
-@media (max-width: 860px) {
+@media (max-width: 600px) {
   .home {
-    justify-content: flex-start;
+    padding: 16px 16px 12px;
+  }
+  .home-tabs {
+    gap: 6px 14px;
+  }
+  .home-tab {
+    font-size: 15px;
+  }
+  .home-main {
+    gap: 20px;
+  }
+  .home .logo {
+    width: 240px;
+    height: 96px;
+  }
+  .home-entry-title {
+    font-size: 30px;
+  }
+  .home-entry.sel .home-entry-title {
+    font-size: 36px;
+  }
+}
+@media (max-height: 640px) {
+  .home-main {
+    gap: 14px;
+    margin-top: 0;
   }
   .home .logo {
     width: 200px;
     height: 80px;
-  }
-  .home-cards {
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
-  .card,
-  .card-continue {
-    width: min(340px, 100%);
-  }
-  .card .thumb {
-    aspect-ratio: auto;
-    height: 120px;
-  }
-  .card-art {
-    min-height: 80px;
   }
 }

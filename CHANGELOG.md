@@ -14,6 +14,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **El reloj del turno**: en las partidas en línea con tiempo por turno, bajo el día sale lo que queda, con un anillo que se vacía. Los últimos 15 segundos se pone en rojo, hace tic y «Fin del turno» parpadea; mientras juega otro, se ve el tiempo que le queda a él.
 
 ### Interfaz
+- **Nuevo menú de inicio**: una lista de texto a la izquierda (Continuar, Campaña, Escaramuza y En línea, cada una con lo que hay detrás: el día de tu partida guardada, la misión por la que vas) y, detrás, el juego en 3D: la cámara da vueltas despacio alrededor de la base de una partida de la IA. Novedades, Aprender y Opciones, arriba a la derecha.
 - Cuando «Buscar rival» te empareja, la partida carga detrás de «¡Rival encontrado!»: los dos ejércitos frente a frente, quién empieza, el mapa y el tiempo por turno.
 
 ### Cambios de juego
@@ -29,6 +30,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **Turn clock**: in online games with a time per turn, the time left shows under the day, with a ring that empties. In the last 15 seconds it turns red, ticks and “End turn” blinks; while someone else plays, you see the time they have left.
 
 ### Interface
+- **New start menu**: a text list on the left (Continue, Campaign, Skirmish and Online, each with what's behind it: the day of your saved game, the mission you're on) and, behind it, the game in 3D: the camera slowly circles the base of an AI game. What's new, Learn and Options, top right.
 - When “Find an opponent” pairs you up, the game loads behind an “Opponent found!” screen: both armies face to face, who goes first, the map and the time per turn.
 
 ### Gameplay
