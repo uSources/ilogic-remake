@@ -78,7 +78,7 @@ export function* diamond(board: GridBounds, center: Pos, minRadius: number, maxR
 
 /**
  * Casillas del cuadrado de lado 2*radius+1 alrededor de `center` (columna a columna) que caen dentro
- * de `board`. Zonas de los puntos de control y alrededores en el generador.
+ * de `board`. Los alrededores de una casilla en el generador.
  */
 export function squareArea(board: GridBounds, center: Pos, radius: number): Pos[] {
   const tiles: Pos[] = [];

@@ -30,7 +30,6 @@ export const BUILDING_INCOME: RuleModule = {
   id: 'buildingIncome',
   isOn: (settings) => settings.incomeScale > 0,
   hooks: {
-    // Antes que los puntos de control (RULE_MODULES): primero se cobra lo de los edificios.
     roundPhases: [{ id: 'buildingIncome', stage: 'income', run: collectBuildingIncome }],
   },
 };

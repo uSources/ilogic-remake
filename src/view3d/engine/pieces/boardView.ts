@@ -1,5 +1,5 @@
 /**
- * Las piezas 3D del tablero (unidades, edificios y zonas de control), tal como dice systems/board/boardScene.ts que se
+ * Las piezas 3D del tablero (unidades y edificios), tal como dice systems/board/boardScene.ts que se
  * ven: `sync` pone las que faltan, quita las que ya no estan, deja cada una en su casilla y pone sus
  * marcas (las chapas de vida y de captura; y lo que perderia el enemigo al que se apunta, `previewHit`). Aqui no se decide nada de la partida: solo se crean y se mueven objetos (las
  * animaciones mueven las piezas y despues `sync` las deja donde dice la partida).
@@ -15,7 +15,6 @@ import { tileToWorld } from '../core/space';
 import type { TerrainView } from '../terrain/terrain';
 import { boardScene, woundedUnits, type BuildingLook, type HitLook, type UnitLook } from '../../systems/board/boardScene';
 import { chimneyOf, makeRoom, newBuildingPiece, type BuildingPiece } from './buildingPiece';
-import { ControlZonesView } from './controlZones';
 import { growIn, startPopping } from './growIn';
 import { CAPTURE_COLOR } from './sidePaint';
 import { tint } from './tint';
@@ -35,8 +34,6 @@ const SAME_SPOT = 0.05;
 
 export class BoardView {
   readonly object = new THREE.Group();
-  /** Las zonas de los puntos de control: van aparte de `object` (lo que se toca) para que el raton las atraviese. */
-  readonly controlZones = new ControlZonesView(this);
   private readonly units = new Map<number, UnitPiece>();
   private readonly buildings = new Map<string, BuildingPiece>();
   /** El enemigo al que se apunta ahora: su barra enseña lo que perderia (hasta que se deja de apuntar). */
@@ -130,7 +127,6 @@ export class BoardView {
     this.terrain.showSeen(scene.seen);
     this.syncBuildings(scene.buildings);
     this.syncUnits(scene.units);
-    this.controlZones.sync(scene.controlZones);
   }
 
   /** La barra del enemigo al que se apunta enseña lo que perderia; con null, todas vuelven a la suya. */
@@ -167,7 +163,6 @@ export class BoardView {
       makeRoom(piece, cameraForward, seconds);
       if (piece.popping !== null) growIn(piece, seconds);
     }
-    this.controlZones.update(seconds);
   }
 
   private syncBuildings(looks: readonly BuildingLook[]): void {

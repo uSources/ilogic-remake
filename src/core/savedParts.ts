@@ -259,10 +259,6 @@ function cleanSquads(frame: SaveFrame, saved: SavedGame): void {
   for (const unit of objectsIn(saved.units)) if (unit.squad !== undefined && !isInItsSquad(unit)) delete unit.squad;
 }
 
-/** Un punto de control en el mapa, de un equipo o de nadie. */
-const isControlPoint = (frame: SaveFrame, point: unknown): boolean =>
-  isObject(point) && isPosOn(frame.board, point) && (point.owner === null || isTeam(frame, point.owner));
-
 /** Un movimiento que se puede deshacer: de una unidad, desde una casilla del mapa, con la captura que perdio. */
 function isValidUndoableMove(frame: SaveFrame, move: unknown): boolean {
   if (!isObject(move) || !isUid(move.uid) || !isPosOn(frame.board, move.from)) return false;
@@ -277,7 +273,6 @@ export function cleanOptionalParts(frame: SaveFrame, saved: SavedGame): void {
   dropIfInvalid(saved, 'weather', (weather) => isValidWeather(frame, weather));
   cleanSquads(frame, saved);
   dropIfInvalid(saved, 'elevation', (elevation) => isElevationGrid(frame.board, elevation));
-  dropIfInvalid(saved, 'controlPoints', (points) => Array.isArray(points) && points.every((point) => isControlPoint(frame, point)));
   // Si esta roto, solo no se puede deshacer.
   dropIfInvalid(saved, 'undoableMoves', (moves) => Array.isArray(moves) && moves.every((move) => isValidUndoableMove(frame, move)));
 }

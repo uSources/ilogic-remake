@@ -19,5 +19,4 @@ export const PLAIN_SETTINGS: MatchSettings = settingsWith(defaultContent(), {
   commandPoints: null,
   upkeep: 0,
   weather: false,
-  controlPoints: 0,
 });

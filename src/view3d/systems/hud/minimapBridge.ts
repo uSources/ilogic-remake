@@ -31,7 +31,7 @@ export class MinimapBridge {
   publishMap(s: GameState): void {
     const view = { viewer: this.viewer, vis: visibility(s, this.viewer), hidden: NOTHING_HIDDEN };
     const minimap = minimapVM(this.palette, s, view);
-    const key = JSON.stringify([minimap.units, minimap.buildings, minimap.fog, minimap.points]);
+    const key = JSON.stringify([minimap.units, minimap.buildings, minimap.fog]);
     if (key === this.shownMap) return;
     this.shownMap = key;
     ui.set({ minimap });

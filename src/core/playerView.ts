@@ -285,7 +285,7 @@ export function knownFoes(s: GameState, team: TeamId): Unit[] {
 }
 
 /** Las listas de la partida que mas se recorren, ya con la niebla. */
-const LISTS = ['units', 'buildings', 'teams', 'squads', 'controlPoints', 'undoableMoves'] as const;
+const LISTS = ['units', 'buildings', 'teams', 'squads', 'undoableMoves'] as const;
 
 /**
  * Lo que ve ahora el equipo de las listas de la partida (con la niebla de FOG): listas congeladas

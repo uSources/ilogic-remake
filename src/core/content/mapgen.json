@@ -16,13 +16,5 @@
   "minLandTiles": 200,
   "landMovement": "foot",
   "passMovement": "vehicle",
-  "minSpawnDistance": 14,
-  "controlPoints": {
-    "minLandShare": 0.6,
-    "minSpawnShare": 0.25,
-    "scoreNoise": 1.5,
-    "maxScore": 4,
-    "minGap": 3,
-    "gapShareOfSide": 0.25
-  }
+  "minSpawnDistance": 14
 }

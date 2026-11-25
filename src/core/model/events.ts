@@ -95,8 +95,8 @@ export interface ModuleEvents {}
 
 /**
  * De donde sale un ingreso del fin de ronda (`income.source`): 'buildings', lo de cualquier partida,
- * o el nombre del modulo de reglas que paga (el de los puntos de control, 'controlPoints'). Cada
- * modulo que paga anade el suyo ampliandola (`declare module`), como ModuleEvents.
+ * o el nombre del modulo de reglas que paga. Cada modulo que paga anade el suyo ampliandola
+ * (`declare module`), como ModuleEvents.
  */
 export interface IncomeSources {
   buildings: true;
@@ -139,7 +139,7 @@ export type CoreGameEvent =
   | { kind: 'captureDropped'; actor: null; at: Pos; uid: number; team: TeamId }
   /** Al acabar una accion o la ronda: el dinero de un equipo que pasaba del maximo y se ha perdido. */
   | { kind: 'fundsCapped'; actor: null; team: TeamId; lost: number }
-  /** Fin de ronda: lo que cobra un equipo por sus edificios o por sus puntos de control. */
+  /** Fin de ronda: lo que cobra un equipo (por sus edificios o lo que pague un modulo). */
   | { kind: 'income'; actor: null; team: TeamId; amount: number; source: IncomeSource }
   /** Fin de ronda: una unidad curada en un edificio propio. */
   | { kind: 'heal'; actor: null; uid: number; team: TeamId; amount: number }

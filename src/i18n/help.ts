@@ -49,6 +49,3 @@ export const percent = (fraction: number): number => Math.round(fraction * 100);
 
 /** Junta las frases que salen (las vacias son reglas que no estan activas). */
 export const joinSentences = (...sentences: string[]): string => sentences.filter(Boolean).join(' ');
-
-/** Lado de la zona de un punto de control: el radio a cada lado mas la casilla del centro. */
-export const controlZoneSide = (settings: MatchSettings): number => 2 * settings.controlRadius + 1;

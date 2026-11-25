@@ -116,23 +116,6 @@ describe('la niebla de los sucesos: lo que ve un equipo de un paso', () => {
     expect(attack.target).toBe(mine.uid);
   });
 
-  it('un punto de control disputado solo lo esta para quien ve a quien lo disputa', () => {
-    const s = blankState({ fog: true, controlPoints: 1, controlRadius: 1 });
-    s.controlPoints = [{ x: 20, y: 20, owner: 1 }];
-    newUnit(s, SOLDIER, 0, { x: 2, y: 2 });
-    newUnit(s, SOLDIER, 0, { x: 20, y: 21 });
-    newUnit(s, SOLDIER, 1, { x: 20, y: 19 });
-    giveTurn(s, 1);
-    const { seen: shown, events } = seenBy(s, 0, () => act(s, 1, { kind: 'endTurn' }));
-    const point = events.find((event) => event.kind === 'controlPoint');
-    expect(point).toMatchObject({ contested: true });
-    // El equipo 0 ve al enemigo de al lado: disputado. Un tercero que no viera nada, no.
-    expect(shown.find((event) => event.kind === 'controlPoint')).toMatchObject({ contested: true });
-    const blind = knowledgeOf(blankState({ fog: true }), 0);
-    const far = { ...blind, state: { ...blind.state, controlPoints: s.controlPoints } };
-    expect(eventsSeenBy([point!], { before: far, after: far })).toMatchObject([{ contested: false }]);
-  });
-
   it('las ordenes y las escuadras de los enemigos no se ven; las de los aliados, si', () => {
     const s = blankState({ fog: true }, [
       { controller: 'human', alliance: 0 },
@@ -277,14 +260,14 @@ describe('la niebla de los sucesos en partidas enteras: cada equipo solo ve lo q
     expect(playChecking([{ controller: 'ai' }, { controller: 'ai' }], { fog: false }, 14, 8)).toBeGreaterThan(50);
   }, 60_000);
 
-  it('con clima y puntos de control, en dos alianzas', () => {
+  it('con clima, en dos alianzas', () => {
     const teams: MatchTeam[] = [
       { controller: 'ai', alliance: 0 },
       { controller: 'ai', alliance: 1 },
       { controller: 'ai', alliance: 0 },
       { controller: 'ai', alliance: 1 },
     ];
-    expect(playChecking(teams, { fog: true, weather: true, controlPoints: 2 }, 15, 8)).toBeGreaterThan(50);
+    expect(playChecking(teams, { fog: true, weather: true }, 15, 8)).toBeGreaterThan(50);
   }, 60_000);
 
   it('con emboscadas y bosques que esconden, tres equipos', () => {

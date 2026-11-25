@@ -195,7 +195,6 @@ describe('los pasos que cambian la partida no se usan para decidir ni mirar (APP
     'core/mapgen/buildings.ts#placeStartingUnits': 'el generador de mapas, en la partida que crea',
     'core/mapgen/buildings.ts#placeStartingBuildings': 'el generador de mapas, en la partida que crea',
     'core/mapgen/buildings.ts#placeNeutralBuildings': 'el generador de mapas, en la partida que crea',
-    'core/mapgen/controlPoints.ts#placeControlPoints': 'el generador de mapas, en la partida que crea',
     'core/dice.ts#diceOf': 'tira los dados de la partida: DECIDERS_ONLY_PROPOSE',
     'core/actions/dispatch.ts#dispatch': 'manda una accion: DECIDERS_ONLY_PROPOSE',
     'core/actions/combat.ts#resolveAttack': 'el combate sin comprobar: UNCHECKED_ATTACK_ONLY_IN_MEASURE',

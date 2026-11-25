@@ -210,10 +210,10 @@ partida (caen sus unidades), la cuenta la invariante sin actor. Los numeros de e
 reutilizan (`nextSquadId`). Con ellos
 se anima (`EVENT_STEPS`, view3d/systems/events/eventSteps.ts), se cuentan las estadisticas (`recordEvents` en dispatch, por el `actor`) y se resume el
 fin de ronda (`roundReport(s, events)`: lo que enseña la vista; cada parte del resumen es una
-`ROUND_REPORT_PARTS` de siempre, ingresos y curas, o una `roundReportParts` de su modulo: control,
+`ROUND_REPORT_PARTS` de siempre, ingresos y curas, o una `roundReportParts` de su modulo:
 mantenimiento, clima; el resumen solo tiene la parte de un modulo si este la ha apuntado, y cada
 modulo dice su forma ampliando `RoundReportParts` con `declare module`). `endRound` devuelve los suyos:
-`income`, `heal`, `upkeep`, `controlPoint`, `newDay`, `weather` (cada paso del fin de ronda, `roundPhasesOf`, da los
+`income`, `heal`, `upkeep`, `newDay`, `weather` (cada paso del fin de ronda, `roundPhasesOf`, da los
 que tiene; el ultimo, 'army', apunta el valor de cada ejercito del dia nuevo) y, al final, los de
 las `INVARIANTS`, que `endRound` tambien repasa (`fundsCapped`...). Van dentro de los del 'endTurn'
 que acaba la ronda.
@@ -402,7 +402,7 @@ la regla del ataque, `attackProblem` con `from`: `view3d/systems/turn/attackPlan
 | `transport`, `supply` | unir y transportes (`mergeProblem`, `loadProblem`, `unloadProblem` y como se hacen); reparar |
 | `economy` | ingresos, mantenimiento, limite del ejercito, comprar (`buyProblem`, `buildUnit`) |
 | `production` | como sacan unidades los edificios: el puerto que elige el modo (`Production`; la de la partida, `productionOf` de `economy`); comprar con dinero es `PURCHASE` |
-| `control`, `round` | puntos de control; fin de ronda (`ROUND_PHASES`, cada paso devuelve sus sucesos; `roundReport`, el resumen, con `ROUND_REPORT_PARTS` y las `roundReportParts` de los modulos) |
+| `round` | fin de ronda (`ROUND_PHASES`, cada paso devuelve sus sucesos; `roundReport`, el resumen, con `ROUND_REPORT_PARTS` y las `roundReportParts` de los modulos) |
 | `rank` | el rango por bajas (`RANK_KILLS`, `rank`: lo usa el modulo de veterania y la interfaz) |
 | `victory` | como acaba la partida, igual para todos (`matchResult(s)`, `VICTORY_RULES`; ver abajo) |
 | `turnOrder` | quien juega despues (`nextTurn`, y si con eso acaba la ronda; `takesTurn`) |
@@ -542,7 +542,7 @@ avanzar, moverse al azar), `fire` (fuego concentrado), `unitTurn` (prioridades d
     ataque (y lleva su suceso) es su campo en `AttackRecordParts` (`model/combat.ts`, con `declare
     module`, como el botin; no puede llamarse como un campo de `AttackEventBase`:
     `AttackPartsFitEvent` no compila); quien contraataca, un `counterRules`;
-  - un suceso propio de un modulo (el mantenimiento, los puntos de control, el clima) es su tipo en
+  - un suceso propio de un modulo (el mantenimiento, el clima) es su tipo en
     `ModuleEvents` (`model/events.ts`, con `declare module` desde el modulo). `GameEvent` es lo de
     cualquier partida (`CoreGameEvent`) mas esos; la vista 3D anima los que tienen entrada en
     `EVENT_STEPS` (`view3d/systems/events/eventSteps.ts`; los demas no se animan), y `npm run play` y las
@@ -608,7 +608,6 @@ modulo (`isRuleOn`) o a las reglas (`seesEverything`, `letsAlliesThrough`).
 | `flank` | `flankBonus` > 0 | rematar a quien ya ha recibido un ataque hoy (`flankBonusFor`, `wasHitToday`) |
 | `weather` | `weather` | acierto, lo que se puede gastar al moverse, el radio de vision, el cambio de clima con el dia y el clima del primer dia (`matchSetup`) |
 | `buildingIncome` | `incomeScale` > 0 | lo que pagan los edificios al acabar la ronda (la cura encima es de todas las partidas: `repair`, en `ROUND_PHASES`) |
-| `controlPoints` | `controlPoints` > 0 | lo que pagan al acabar la ronda |
 | `upkeep` | `upkeep` > 0 | pagar el mantenimiento al acabar la ronda |
 | `commandPoints` | `commandPoints` no null | el tope de puntos de mando del ejercito (`armyLimits`, detras del numero de unidades de `ARMY_LIMITS`; la cuenta, `commandUsed`) |
 | `noHealUnderFire` | `noHealUnderFire` | quien ha recibido un ataque hoy no se cura (`unhealable`) |
@@ -659,13 +658,13 @@ puesto en la lista), su `alliance`, quien lo juega (`controller`: `'human'` o `'
 estadisticas. **Ningun numero de equipo es especial**: no hay "el 0 es el jugador".
 
 - Enemigos son los de otra alianza (`isHostile`, `enemiesOf`); los de la misma comparten la vision,
-  no se atacan ni se capturan lo suyo, y un punto de control solo lo disputan enemigos.
+  y no se atacan ni se capturan lo suyo.
 - Todo lo que es de un equipo lo dice: `unit.team`, `building.owner`, `squad.team`,
   `objective.owner`. Las funciones que hacen algo por un equipo lo reciben siempre
   (`dispatch(s, team, action)`, `playerView(s, team)`, `visibility(s, team)`), sin
   valor por defecto. Como acaba la partida no es de un equipo: `matchResult(s)` dice quien gana.
-- Los sucesos dicen que equipo los ha hecho (`actor`); el resumen de la ronda (`RoundReport`,
-  `ControlReport`) lleva una lista por equipo (`perTeam`).
+- Los sucesos dicen que equipo los ha hecho (`actor`); el resumen de la ronda (`RoundReport`) lleva
+  una lista por equipo (`perTeam`).
 - Un equipo pierde si se queda sin Base o sin nada, o si se rinde (`isDefeated`); los derrotados ya
   no juegan. A quien le toca lo dice la partida (`GameState.turn`, ver "Acciones": 'endTurn' pasa al
   siguiente que juega, `nextTurn`). Lo que le queda en el mapa a un derrotado se queda a proposito y
@@ -927,7 +926,7 @@ esta en la tabla no sale):
 
 | Se ve... | Sucesos |
 |---|---|
-| siempre (la partida lo anuncia a todos) | `turnStart`, `turnEnd`, `newDay`, `weather`, `surrender`, `teamDefeated`; `controlPoint` (de quien es cada punto esta en el estado; que lo disputa alguien, solo si ve a quien lo disputa) |
+| siempre (la partida lo anuncia a todos) | `turnStart`, `turnEnd`, `newDay`, `weather`, `surrender`, `teamDefeated` |
 | si conoce a la unidad (antes o despues) | `capture`, `spawn`, `wait`, `remove`, `heal`, `captureDropped`; `supply` (sus reparaciones, solo las de unidades que conoce); `undoMove` (y ve adonde vuelve) |
 | si conoce a las dos | `merge`, `load`, `unload` |
 | si conoce a la unidad; del camino, solo las casillas que ve | `move` (y el corte, si ve donde esta lo que corto); una unidad que cruza la vision sin pararse en ella no esta en ninguna vista: no se cuenta |
@@ -942,7 +941,7 @@ dinero (`FOG`, 'foreignBooks': dirian lo que compran donde
 no se ve), un edificio sin captura a la vista va siempre sin el campo `capture` (si apareciera,
 delataria la captura escondida) y la lista de movimientos que se pueden deshacer solo esta si hay
 alguno propio. Lo prueba `tests/eventFog.test.ts` en partidas enteras de 2 a 4 equipos (con alianzas,
-clima, puntos de control, emboscadas y bosques): cada uid y cada casilla que nombra un
+clima, emboscadas y bosques): cada uid y cada casilla que nombra un
 suceso recortado se conocen antes o despues del paso (`tests/sim/eventReferences.ts` dice lo que
 nombra cada tipo), y `tests/room.test.ts` prueba por mensajes que ningun cliente recibe una unidad
 escondida y que, para cada tipo de accion, una unidad o escuadra escondida se rechaza igual que una
@@ -1164,8 +1163,8 @@ src/view3d/
 | `systems/turn/` | el turno de la persona y los de los demas paso a paso (`turnControls.ts`), con quien lleva la partida por `MatchRunner` (`matchRunner.ts`: `localRunner` en una partida de esta pantalla); «Fin del turno» con unidades sin mover, que las hace saltar y pide otra pulsacion (`endTurnGuard.ts`); que hace un clic con una unidad elegida (`clickIntent.ts`: ir, atacar, capturar al llegar, subir, unirse); que sale junto a lo elegido (`unitOptions.ts`: las fichas, solo lo que no es tocar el tablero; la rueda del clic derecho, lo poco frecuente; la orden que tiene sentido en una casilla, `orderForTile`); el camino trazado, el fantasma y si el disparo va en arco (`movePreview.ts`: `arcShotOf`); hasta donde ataca, el borde rojo (`attackReach.ts`, con `attackZone` del nucleo); que se puede elegir (`selection.ts`); desde donde atacaria (`attackPlan.ts`); textos e iconos de las fichas, la rueda y la compra (`menuItems.ts`; los pinta el HUD: `ActionChips.tsx`, `RadialMenu.tsx` y `BuyFan.tsx`, el abanico de la compra; donde va cada ficha, `fanAround` en `hud/common/placement.ts`). Esperar es implicito: la que se mueve y ya no puede hacer nada espera sola, y dejar una que se movio tambien (`leavingMovedUnit`). `MenuView.kind`: `chips`, `radial`, `prompt` (elegir casilla), `buy` o `game` (pausa) |
 | `systems/orders/` | lo que haran las ordenes al terminar el turno: cuales enseñar (`orderIntents.ts`, con `previewStandingOrders` del nucleo) |
 | `systems/threat/` | «Ver amenaza» (T o el menú de la partida): las casillas a las que puede disparar algun enemigo que se ve (`threatZone.ts`, con `threatMap` del nucleo, que no delata a los de la niebla; se ven con un velo y un borde rojos); y al señalar o elegir una unidad propia, quien podria atacarla en su turno (`threatLinesTo`: enemigos que se ven, que llegan y que le hacen daño; lo que podria pasar, no lo que hara la IA). Lo pinta el motor por `ThreatMarks` (`ports/threat.ts`: las casillas en `engine/fx/highlights.ts`, las lineas en arco en `engine/fx/threatLines.ts`) |
-| `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`; los del dia, como lo que cobra cada edificio y punto de control propio, con `DayLookup` e `incomeSpotsOf`, una entrada por fuente de ingresos), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
-| `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas, las zonas de los puntos de control (`ControlZoneLook`: de quien son y si se ven disputadas); el humo de las heridas; lo que perderia el enemigo al que se apunta (`hitLookOf`) |
+| `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`; los del dia, como lo que cobra cada edificio propio, con `DayLookup` e `incomeSpotsOf`, una entrada por fuente de ingresos), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
+| `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas; lo que perderia el enemigo al que se apunta (`hitLookOf`) |
 | `systems/camera/` | la camara de estrategia como logica (`StrategyCamera`): desplazar, acercar, girar, limites y suavizado; da su pose como datos |
 | `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`: grupos con numero, ordenes, «Ver órdenes») y raton o dedo sobre el mundo (`pointerInput.ts`: tocar, recuadro, doble clic, borde), a ordenes de la camara y del turno |
 | `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien el numero de «Fin del turno» y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`), el minimapa (`minimapBridge.ts`: lo publica solo si cambia algo que se ve en el, y el recuadro de lo que esta en pantalla, que da `MatchScene.viewedArea`) |
@@ -1175,7 +1174,7 @@ src/view3d/
 | `engine/core/` | lienzo, escena, luz cartoon (y por clima), cielo de bandas con nubes de bloques y niebla del horizonte (`sky.ts`) y bucle (`world.ts`: `onFrame`, `animate`); materiales de dos tonos (`toon.ts`); casilla ↔ mundo (`space.ts`); el recuadro de seleccion (`screenBox.ts`); texto en lienzos para texturas (`canvasText.ts`: `whenFontLoads` vuelve a pintar lo pintado antes de que cargue la letra pixelada) |
 | `engine/terrain/` | que lleva cada terreno y cada tema (`pieces.ts`: casilla, decorado, relieve y lo que vive en ella), sus copias instanciadas con la niebla (`placed.ts`), relieve de montañas y dunas (`relief.ts`; los macizos, `massif.ts`; sus colores, `reliefColors.ts`), agua, lo que rodea el mapa según el tema (`surroundings.ts`: el suelo hasta el horizonte, `surface.ts`, que es el mar con sus bajíos, `sea.ts`, el mar de dunas, `duneSea.ts`, o el mar helado, `iceSea.ts`, y los islotes, mesetas o icebergs de bloques, `islets.ts`) |
 | `engine/life/` | lo que vive en el tablero sin ser de la partida, como datos (`kinds.ts`: el polvo y los remolinos de la arena, la lagartija, las bolas rodadoras y los buitres del desierto, las luciernagas y la rana del pantano, las hojas, la ardilla, el ciervo y los pajaros del bosque, los copos, el pingüino y la foca de la nieve, las mariposas, el conejo, los peces y los gansos de la llanura): las motas que vuelan cerca de la camara (`motes.ts`, una bandada por clase: `MoteKind` dice cuantas, sus capas de puntos con sus colores, como vuelan, como brillan y si giran), los animalitos sentados en el decorado o en el suelo de la casilla (`critters.ts`: `CritterKind`, su modelo de Ashfox y como se mueve en su sitio, como posturas a lo largo del movimiento: `CritterMove.pose`, con `hopping` y `peeking` para lo comun; y otro movimiento que hace alguna vez, `sometimes`, como la zambullida del pingüino) y los que nacen en una casilla y se van (`travellers.ts`: `TravellerKind`, su modelo, como va, si bate las alas, si rueda, si se inclina al subir y bajar (`pitches`, el pez), si sale creciendo (`grows`) y si va por el suelo, subiendo y bajando con el relieve: `heightAt` del terreno, con `surfaceAt` del relieve). Motas y viajeros nacen igual, en las casillas de su clase cerca de lo que se mira (`births.ts`: cuantos, juntos o de uno en uno, cada uno con su puesto en la tanda, `rank`, como los gansos en V, y si van a otra de sus casillas, a que distancia, hacia donde y por donde, con `Landing`). Lo junta `biomeLife.ts` y lo crea el terreno (los animales se oscurecen con la niebla). Algo nuevo para un bioma: su entrada en `kinds.ts` y su sitio en la pieza (`motes`, `critters` con su `CritterSeat`, que puede ir en el suelo, `onTheGround`, y pedir el borde con otro terreno o con agua, `edge`, o `travellers`) |
-| `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`, y `previewHit` para la barra a rayas de lo que perderia; `overheadOf`, encima de la barra, para las chapas), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, chapas y barras (`badges.ts`: la vida y la captura en numero), las zonas de los puntos de control (`controlZones.ts`: borde dorado, cinta y banderines del dueño; fuera de lo que se toca), restos y rodadas |
+| `engine/pieces/` | las piezas como dice `systems/board` (`boardView.ts`: `sync`, y `previewHit` para la barra a rayas de lo que perderia; `overheadOf`, encima de la barra, para las chapas), sus modelos (`unitPiece.ts`, `buildingPiece.ts`; GLB de Ashfox en `glbModels.ts`, de bloques en `models/` y `blocks.ts`), colores de cada lado, chapas y barras (`badges.ts`: la vida y la captura en numero), restos y rodadas |
 | `engine/fx/` | los puertos de los sucesos (`pieceStage.ts`, `effectStage.ts`, `spots.ts`), efectos de un momento (`fx.ts`), humo y polvo (`particles.ts`), marcas del tablero (`highlights.ts`: losas azules con su contorno, `tileOutline.ts`; marco rojo, diana y cursor de esquinas, piezas en `markParts.ts`; sobre el relieve, apoyadas en lo mas alto de su suelo, enteras en las dunas y en trozos en las laderas: `groundFit.ts`, con `surfaceAt` del terreno), las flechas rojas de quien podria atacar (`threatLines.ts`), la flecha de bloques y el fantasma al mover (`movePreview.ts`), el visor de puntitos de la artilleria (`aimArc.ts`) y las flechas de las ordenes (`intentArrows.ts`; piezas comunes en `arrowParts.ts`), lluvia y nieve (`weather3d.ts`), el contorno de la unidad elegida y la señalada (`unitOutline.ts`: una pasada encima de la escena, `World.addOverlay`, con el stencil) |
 | `engine/camera/` | situa la camara de three.js en la pose que da `systems/camera` |
 
@@ -1347,7 +1346,7 @@ Un fichero nuevo, `src/controls/gamepad.ts`, con la misma forma que el teclado:
 | Cambiar algo de la partida en pantalla (animaciones, turno enemigo, pausa, final...) | `src/view3d/` (ver "Vista 3D": `systems/turn/`, `systems/events/`, `systems/hud/matchMenus.ts`) |
 
 | Textos | `src/i18n/es/*.ts` (un fichero por tema) y su traduccion en `src/i18n/en/` (ver "Interfaz HTML", "Textos"); `t('clave')` y `nameOf` en `src/settings.ts` |
-| Generar mapas | `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios, puntos de control; los pasos en orden en `steps.ts`, fachada `mapgen.ts`), sus numeros en `mapgen.json` y `themes.json` |
+| Generar mapas | `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios; los pasos en orden en `steps.ts`, fachada `mapgen.ts`), sus numeros en `mapgen.json` y `themes.json` |
 | Añadir un tipo de movimiento (a pie, rueda, vuelo...) | `src/core/content/movements.json` (y su coste en cada terreno, `terrain.json`) |
 | Medir el combate sin partida (laboratorio, duelos) | `src/core/measure.ts` (`uncheckedAttack`, `newUnit`: solo para medir) |
 | Cuando acaba la partida para una pantalla, quien es persona, el autoguardado | `src/core/session/screen.ts` |

@@ -299,13 +299,8 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   - El cartel del día, una **banderola de tela** en el color del bando colgada de una barra de
     madera, con cola de golondrina: cae, se balancea y vuelve a subir. Dice «Día 4» en grande, «Tu
     turno» debajo y, si el clima cambia, su icono grande en una ficha.
-  - Lo que sube del tablero (el daño, lo que cobra cada edificio o punto de control, la captura),
+  - Lo que sube del tablero (el daño, lo que cobra cada edificio, la captura),
     **chapas de crema** con el número en su color y borde de tinta, como las del HUD.
-  - Los **puntos de control**, una zona acotada (23-11-2026; antes no se veían en 3D, solo en el
-    minimapa): borde dorado con tinta por fuera (el dorado del minimapa), por dentro una cinta del
-    color del dueño y un banderín de bloques suyo en cada esquina, con la tela hacia fuera, que asoma
-    por encima del bosque. De nadie, todo dorado. Sin velo en las casillas: azul se confundía con el
-    alcance y rojo con «Ver amenaza». Disputada (se ven enemigos dentro), el borde late en rojo.
   - La compra, **fichas en abanico** alrededor de la fábrica (retrato, nombre y precio; lo que no se
     puede pagar, apagado y con lo que falta en rojo) y en el centro la chapa de la señalada: mover,
     alcance y visión con sus iconos y los retratos de contra qué es buena.

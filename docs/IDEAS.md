@@ -58,7 +58,6 @@ cosa en su PR:
 3. **Dificultad en «Nueva partida».** Fácil: la IA empieza con menos dinero y sin
    curarse. Normal: como ahora.
 4. **Modo Escaramuza.** Mapa pequeño (12×12), menos dinero, partidas de ~10 días.
-5. **Más puntos de control o con otras recompensas.** Ahora dan dinero; podrían dar visión. Ver cómo se juegan primero (PR #47).
 
 ## Campaña: la guerra por el mapamundi
 
@@ -231,6 +230,10 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
 - **«Comprar otra vez»** (repetir la última compra a un toque): comprar no es un problema que haya que
   resolver.
 - **Consejero** (botón «¿Qué hago?» que marca la mejor jugada): no gustó.
+- **Puntos de control** (zonas de 3×3 que daban dinero cada ronda, PR #47; quitados el 25-11-2026):
+  repetían lo que ya hacen las ciudades (pagaban lo mismo, 1000, y hay 8-11 ciudades neutrales por
+  mapa), pero se tomaban sin capturar y con cualquier unidad, y se disputaban aparcando una unidad
+  barata. No daban nada que un edificio no dé, así que no se leían en la partida aunque se marcaran.
 - **Piloto automático** (la IA juega tu turno entero): sería ver a la IA jugar contra sí misma.
 - **«Auto» sin destino y «defender aquí» suelto:** sustituidos por las órdenes con destino de #46;
   costaba entender qué hacían.

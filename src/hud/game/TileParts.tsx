@@ -33,14 +33,13 @@ const stepCostText = (cost: NonNullable<TileVM['terrain']['cost']>) =>
 
 /**
  * Lo que da la casilla, solo lo que tiene: la defensa siempre (tambien un 0 %, que es no cubrirse),
- * lo que cuesta entrar, lo que cobra su edificio o su punto de control y lo que le falta por capturar.
+ * lo que cuesta entrar, lo que cobra su edificio y lo que le falta por capturar.
  */
-function tileFacts({ terrain, building, point }: TileVM): Fact[] {
+function tileFacts({ terrain, building }: TileVM): Fact[] {
   const facts: (Fact | false | undefined)[] = [
     { icon: 'ui/defensa', text: defenseText(terrain.defense), title: t('defense') },
     terrain.cost && { icon: 'ui/movimiento', text: stepCostText(terrain.cost), title: t('stepCostTitle') },
     building && building.income > 0 && { icon: 'ui/dinero', text: signed(building.income), title: t('income') },
-    point && { icon: point.icon, text: signed(point.income), title: t('controlPoint'), color: ownerColor(point.owner) },
     building?.capture && {
       icon: 'ui/captura',
       text: String(building.capture.left),
@@ -140,24 +139,12 @@ function GroundName({ tile }: { tile: TileVM }) {
   );
 }
 
-/** [CAMBIO] El punto de control de la zona: de quien es, si esta disputado y para que sirve. */
-function ControlPointLine({ point }: { point: NonNullable<TileVM['point']> }) {
-  return (
-    <div class="tt-line">
-      {t('controlPoint')} · <span style={{ color: ownerColor(point.owner) }}>{ownerText(point.owner)}</span>
-      {point.contested ? ` · ${t('contested')}` : ''}
-      <div class="tt-help">{t('controlPointHelp')}</div>
-    </div>
-  );
-}
-
-/** El sitio y lo que da; con Alt, ademas, el punto de control explicado. */
-export function GroundPart({ tile, isDetailed }: { tile: TileVM; isDetailed: boolean }) {
+/** El sitio y lo que da. */
+export function GroundPart({ tile }: { tile: TileVM }) {
   return (
     <>
       <GroundName tile={tile} />
       <Facts facts={tileFacts(tile)} />
-      {isDetailed && tile.point && <ControlPointLine point={tile.point} />}
     </>
   );
 }

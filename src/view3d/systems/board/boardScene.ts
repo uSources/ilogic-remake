@@ -1,16 +1,15 @@
 /**
  * Que hay sobre el tablero y como se ve para quien mira (`viewer`): que unidades se ven (niebla), de
  * que lado es cada pieza, cuales ya han jugado, su vida, como va cada captura (sus chapas) y que
- * unidades y edificios comparten casilla (cada uno se aparta a una esquina para que no se atraviesen),
- * y las zonas de los puntos de control. Solo decide (puro, sin three.js); el motor
+ * unidades y edificios comparten casilla (cada uno se aparta a una esquina para que no se atraviesen).
+ * Solo decide (puro, sin three.js); el motor
  * (engine/pieces/boardView.ts) pone, mueve y quita los objetos para que se vea asi.
  */
 import type { MovementMotion } from '../../../core/content';
 import { MAX_LIFE } from '../../../core/data';
 import { unitTypeOf } from '../../../core/gameContent';
-import { posKey, posOf, squareArea } from '../../../core/geom';
-import { mapGrid } from '../../../core/mapGrid';
-import type { Building, ControlPoint, GameState, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
+import { posKey } from '../../../core/geom';
+import type { Building, GameState, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
 import { gotoDestination, turnEndOrderOf } from '../../../core/squads';
 import {
   buildingAt,
@@ -18,7 +17,6 @@ import {
   captureProgress,
   combatForecast,
   engagement,
-  isContested,
   isOnMap,
   isShownTo,
   visibility,
@@ -79,29 +77,12 @@ export interface BuildingLook {
   readonly isOccupied: boolean;
 }
 
-/**
- * [CAMBIO] La zona de un punto de control: se ve siempre, tambien con niebla (esta marcada en el
- * mapa, como en el minimapa), con el color de su dueño.
- */
-export interface ControlZoneLook {
-  /** El mismo punto en dos `sync` seguidos (su casilla del centro). */
-  readonly key: string;
-  readonly center: Pos;
-  /** Las casillas de la zona que caen dentro del mapa. */
-  readonly tiles: readonly Pos[];
-  /** De quien es (de quien lo tenia al acabar la ultima ronda). */
-  readonly side: OwnerSide;
-  /** Se ven dentro unidades de alianzas enemigas: si sigue asi al acabar la ronda, no paga a nadie. */
-  readonly isContested: boolean;
-}
-
 /** El tablero tal como lo ve `viewer`. */
 export interface BoardScene {
   /** Las casillas que ve (el resto, con niebla). */
   readonly seen: Grid<boolean>;
   readonly units: readonly UnitLook[];
   readonly buildings: readonly BuildingLook[];
-  readonly controlZones: readonly ControlZoneLook[];
 }
 
 export const buildingKey = (building: Pos): string => posKey(building);
@@ -114,18 +95,6 @@ export function boardScene(s: GameState, viewer: TeamId): BoardScene {
     seen,
     units,
     buildings: s.buildings.map((building) => buildingLook(s, viewer, seen, building, shownUnitTiles)),
-    controlZones: (s.controlPoints ?? []).map((point) => controlZoneLook(s, viewer, seen, point)),
-  };
-}
-
-/** Como se ve la zona de un punto de control; disputada solo por lo que se ve (no delata a los escondidos). */
-function controlZoneLook(s: GameState, viewer: TeamId, seen: Grid<boolean>, point: ControlPoint): ControlZoneLook {
-  return {
-    key: posKey(point),
-    center: posOf(point),
-    tiles: squareArea(mapGrid(s), point, s.settings.controlRadius),
-    side: ownerSideOf(s, viewer, point.owner),
-    isContested: isContested(s, point, (unit) => isShownTo(viewer, unit, (pos) => seen.at(pos))),
   };
 }
 

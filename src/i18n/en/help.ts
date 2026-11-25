@@ -1,4 +1,4 @@
-import { controlZoneSide, joinSentences, percent, type HelpTexts, type KeyLabels, type RuleFacts } from '../help';
+import { joinSentences, percent, type HelpTexts, type KeyLabels, type RuleFacts } from '../help';
 
 const capture = ({ settings }: RuleFacts) =>
   `Capturing takes points: a building has ${settings.capturePoints} (the HQ ${settings.hqCapturePoints}) and each turn the unit removes its HP ÷ 10. If it moves or is destroyed, the progress is lost. At 0 it becomes yours.`;
@@ -32,11 +32,6 @@ const armyLimits = ({ settings, on }: RuleFacts) =>
       : '',
   );
 
-const controlPoints = ({ settings, on }: RuleFacts) =>
-  on('controlPoints')
-    ? `Control points: ${controlZoneSide(settings)}×${controlZoneSide(settings)} zones marked with a border and a flag (grey if nobody holds them). At the end of the round, if only your units are inside, the zone is yours and pays you ${settings.controlIncome}; if both sides have units inside, it is contested and pays nobody; empty, it keeps paying whoever held it. Fight for them.`
-    : '';
-
 const ambush = ({ on }: RuleFacts) =>
   on('ambush') && !on('noFog')
     ? 'You can move through your own units. With fog, woods are only visible from next to them: if your path runs into a hidden enemy, the unit stops short (ambush!) and loses its turn.'
@@ -60,7 +55,6 @@ const ruleLines = (facts: RuleFacts): string[] => [
   veterancy(facts),
   attackBonuses(facts),
   armyLimits(facts),
-  controlPoints(facts),
   ambush(facts),
   buildingVision(facts),
   weather(facts),

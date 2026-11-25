@@ -36,9 +36,6 @@
         "terrainCost",
         "weather",
         "abilities",
-        "controlPoints",
-        "controlIncome",
-        "controlRadius",
         "elevation",
         "elevationHit",
         "elevationVision",
@@ -161,24 +158,6 @@
         "abilities": {
           "description": "Habilidades de las unidades (units.json, \"abilities\"): escudo, zona de control, aura, perforante.",
           "type": "boolean"
-        },
-        "controlPoints": {
-          "description": "Puntos de control en los mapas al azar (0 = ninguno): zonas que dan dinero cada ronda a su dueño, solo si no hay unidades de los dos equipos dentro.",
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 6
-        },
-        "controlIncome": {
-          "description": "Dinero que da cada punto de control por ronda.",
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 1000000
-        },
-        "controlRadius": {
-          "description": "Tamaño de la zona de cada punto de control: casillas alrededor del centro (1 = zona de 3x3).",
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 3
         },
         "elevation": {
           "description": "Elevacion: cada casilla tiene una altura (0 a 2); desde arriba se acierta y se ve mas, y subir cuesta.",

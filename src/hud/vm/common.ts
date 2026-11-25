@@ -20,7 +20,7 @@ export interface StatChipVM {
  * interfaz no sabe de numeros de equipo). Se pinta en azul lo suyo y lo aliado, en rojo lo enemigo.
  */
 export type Side = 'own' | 'ally' | 'enemy';
-/** El lado del dueño de algo que puede no tener dueño (edificio, punto de control). */
+/** El lado del dueño de algo que puede no tener dueño (un edificio). */
 export type OwnerSide = Side | 'neutral';
 
 /**

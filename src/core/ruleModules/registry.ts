@@ -11,7 +11,6 @@ import { AMBUSH } from './ambush';
 import { BOUNTY } from './bounty';
 import { BUILDING_INCOME } from './buildingIncome';
 import { COMMAND_POINTS } from './commandPoints';
-import { CONTROL_POINTS } from './controlPoints';
 import { ELEVATION } from './elevation';
 import { COUNTERATTACK } from './counterattack';
 import { FLANK } from './flank';
@@ -37,7 +36,6 @@ export const RULE_MODULES: readonly RuleModule[] = [
   FLANK,
   WEATHER,
   BUILDING_INCOME,
-  CONTROL_POINTS,
   UPKEEP,
   COMMAND_POINTS,
   NO_HEAL_UNDER_FIRE,
