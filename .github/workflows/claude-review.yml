@@ -2,11 +2,20 @@
 # ilogic-code y ashfox) y mejoras. Lo que se puede mirar con reglas fijas lo miran tambien otros:
 # los secretos, gitleaks (secretos.yml); lo marcado obsoleto en los tipos, ESLint (no-deprecated,
 # en npm run check). Necesita el mismo secreto que claude.yml; sin el, no hace nada.
+#
+# Un solo comentario por PR (use_sticky_comment), que cada revision reescribe con lo pendiente.
+# Antes se guarda la revision anterior en .revision-anterior.md para no repetir lo ya dicho ni
+# volver sobre lo ya arreglado. Una revision por PR a la vez: la siguiente espera, sin cortar la
+# que va, para que el comentario no se quede a medias y se pierda lo anterior.
 name: Revision de Claude
 
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 jobs:
   review:
@@ -29,12 +38,29 @@ jobs:
         if: steps.auth.outputs.ok
         with:
           fetch-depth: 1
+      - name: Revision anterior
+        if: steps.auth.outputs.ok
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          {
+            echo "# Ultimo resumen"
+            gh pr view "$PR" --repo "$REPO" --json comments \
+              --jq '[.comments[] | select(.author.login == "claude")] | last | .body // "ninguno"'
+            echo
+            echo "# Comentarios en linea (con sus respuestas)"
+            gh api --paginate "repos/$REPO/pulls/$PR/comments" \
+              --jq '.[] | "- \(.user.login) \(.path):\(.line // .original_line) (id \(.id), responde a \(.in_reply_to_id // "-")): \(.body)"'
+          } > .revision-anterior.md
       - uses: anthropics/claude-code-action@v1
         if: steps.auth.outputs.ok
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           track_progress: true
+          use_sticky_comment: true
           prompt: |
             REPO: ${{ github.repository }}
             PR: ${{ github.event.pull_request.number }}
@@ -43,28 +69,36 @@ jobs:
             docs/ESTILO.md y .claude/skills/ilogic-code/SKILL.md (y .claude/skills/ashfox/SKILL.md si
             toca modelos 3D). Mira solo lo que cambia el PR (gh pr diff).
 
-            1. Secretos (bloqueante): claves, tokens, contraseñas, URLs con credenciales, ficheros .env
-               o claves privadas. gitleaks ya busca los conocidos; tu mira lo que una regla no ve: uno
-               troceado, en base64, en un JSON de configuracion o en un comentario. Si hay uno, no lo
-               copies en tu comentario: di fichero y linea, y que hay que revocarlo (el repo es publico).
-            2. Codigo obsoleto: APIs que estan de salida (three.js, Preact, Web Audio, DOM, Node, Vite,
-               Vitest), dependencias nuevas obsoletas o sin mantener, y apaños para navegadores viejos
-               que ya no hacen falta. ESLint ya pilla lo marcado @deprecated en los tipos; tu mira lo que
-               no esta en los tipos y cada `eslint-disable` de no-deprecated: ¿su porque sigue valiendo?
-            3. Normas del proyecto:
-               - Capas: src/core sin three.js/DOM/interfaz; logica nueva en core con test.
-               - Reglas o IA cambiadas: ¿se ha actualizado tests/aiGolden.test.ts a proposito y se explica por que?
-               - Vista 3D (src/view3d): nada creado por fotograma (geometrias, materiales, vectores en bucles calientes).
-               - Numeros en el contenido (core/content/*.json), textos en src/i18n (es y en).
-               - Ficheros generados editados a mano (atlas, assetList, .ashfox, GLB): deben salir de sus generadores.
-               - Si cambia algo que ve el jugador: CHANGELOG.md a juego.
-            4. Mejoras: lo que pide docs/ESTILO.md (nombres claros, funciones cortas, salir pronto,
-               piezas comunes en vez de bucles a mano), codigo repetido o que ya existia en otro sitio,
-               fallos probables (casos sin tratar, `!` o `as` que pueden fallar, promesas perdidas) y lo
-               que quede mas simple. Solo lo que merezca la pena, no gustos.
+            Lee tambien .revision-anterior.md (tu resumen anterior y los comentarios en linea, con
+            las respuestas del autor):
+            - Lo ya arreglado no se vuelve a nombrar, ni para decir que esta arreglado.
+            - Lo ya comentado en linea no se comenta otra vez.
+            - Si el autor contesto que no lo cambia, no insistas.
 
-            Comentarios en linea para problemas concretos, con la propuesta (un bloque `suggestion` si
-            es corta). Al final, un resumen corto con cuatro apartados (Secretos, Obsoleto, Normas,
-            Mejoras), "nada" en los que no tengan. Sin elogios de relleno.
+            Que buscar:
+            1. Secretos (bloqueante): claves, tokens, contraseñas, URLs con credenciales, .env o claves
+               privadas, tambien troceados, en base64, en un JSON o en un comentario (gitleaks ya busca
+               los conocidos). No copies el secreto: fichero y linea, y que hay que revocarlo.
+            2. Obsoleto: APIs de salida (three.js, Preact, Web Audio, DOM, Node, Vite, Vitest),
+               dependencias nuevas obsoletas o sin mantener, apaños para navegadores viejos, y cada
+               `eslint-disable` de no-deprecated cuyo porque ya no valga.
+            3. Normas: src/core sin three.js/DOM/interfaz y con test; tests/aiGolden.test.ts cambiado a
+               proposito si cambian reglas o IA; nada creado por fotograma en src/view3d; numeros en
+               core/content/*.json y textos en src/i18n (es y en); ficheros generados (atlas, assetList,
+               .ashfox, GLB) salidos de su generador; CHANGELOG.md si cambia algo que ve el jugador.
+            4. Mejoras: lo que pide docs/ESTILO.md, codigo repetido o que ya existia, fallos probables
+               (casos sin tratar, `!` o `as` que pueden fallar, promesas perdidas). Solo lo que merezca
+               la pena, no gustos.
+
+            Como escribir (conciso y claro, sin explicaciones):
+            - Solo problemas. Nada de lo que esta bien, ni de lo que has mirado, ni de lo que no has
+              hecho (npm run check, etc.).
+            - Cada problema en una linea: `fichero:linea`: que falla → que hacer. Sin razonamientos,
+              matices ni "si es barato".
+            - Comentarios en linea solo para problemas nuevos, con un bloque `suggestion` si el arreglo
+              es corto.
+            - Resumen final, sin titulo: lo que sigue pendiente (nuevo, o de antes y sin arreglar),
+              agrupado en Secretos, Obsoleto, Normas y Mejoras, solo los apartados que tengan algo.
+              Si no queda nada: "Sin problemas." y nada mas.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
