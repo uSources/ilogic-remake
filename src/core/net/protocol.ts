@@ -71,7 +71,7 @@ export type RoomStatus = 'waiting' | 'playing' | 'ended';
  * y no en la hora a la que vence, porque el reloj del cliente y el del servidor no tienen por que ir a
  * la par (a quien se le va un minuto veria un minuto de mas o de menos).
  */
-export interface TurnClock {
+export interface TurnTimeLeft {
   leftMs: number;
   totalMs: number;
 }
@@ -131,7 +131,7 @@ export type ServerMessage =
    * A quien se espera ahora (su turno, o el de otra persona), el dia y, si la sala tiene reloj, el de
    * ese turno. La sala no sabe de relojes (manda `clock: null`): lo pone el servidor, que los lleva.
    */
-  | { kind: 'turn'; step: number; team: TeamId; day: number; clock: TurnClock | null }
+  | { kind: 'turn'; step: number; team: TeamId; day: number; clock: TurnTimeLeft | null }
   /**
    * La sala ha acabado: la partida se ha decidido (`result`), o ya no juega ninguna persona
    * (`abandoned`: todas se han rendido o se han ido; la partida, si sigue, se queda sin jugar).

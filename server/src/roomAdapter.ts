@@ -20,7 +20,7 @@ import {
   type RoomStatus,
   type SeatId,
   type ServerMessage,
-  type TurnClock,
+  type TurnTimeLeft,
 } from '@core/net';
 import { newToken, sameToken } from './codes';
 import type { RoomRequest } from './roomRequest';
@@ -147,7 +147,7 @@ export class RoomAdapter {
    * Los mensajes, con el reloj en los `turn` del turno en curso (la sala no sabe de relojes: los lleva
    * el servidor). Un `turn` de un turno que ya ha pasado en el mismo lote se queda sin el: ya no corre.
    */
-  withTurnClock(outgoing: Outgoing[], clock: TurnClock | null): Outgoing[] {
+  withTurnClock(outgoing: Outgoing[], clock: TurnTimeLeft | null): Outgoing[] {
     const awaited = this.room.awaiting;
     if (!clock || !awaited || this.room.status !== 'playing') return outgoing;
     const isCurrentTurn = (message: ServerMessage) =>

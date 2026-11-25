@@ -3,7 +3,7 @@ import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
 import type { Pos, Unit } from '@core/model';
-import { CURRENT_PROTOCOL, Room, type Outgoing, type RoomContext, type ServerMessage, type TurnClock } from '@core/net';
+import { CURRENT_PROTOCOL, Room, type Outgoing, type RoomContext, type ServerMessage, type TurnTimeLeft } from '@core/net';
 import { canMoveNow, moveRange, reachableTiles, unitAt, unitById } from '@core/rules';
 import { ui } from '../src/hud/store';
 import { mirrorSession } from '../src/net/mirrorSession';
@@ -30,11 +30,11 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 const NOW = 1_000_000;
 
 /** Lo que hace el servidor con reloj: cada `turn` lleva lo que le queda (la sala del nucleo manda `clock: null`). */
-const withClock = (message: ServerMessage, clock: TurnClock | null): ServerMessage =>
+const withClock = (message: ServerMessage, clock: TurnTimeLeft | null): ServerMessage =>
   message.kind === 'turn' && clock ? { ...message, clock } : message;
 
 /** `clock`: el reloj que pone el servidor en cada `turn` (null: la sala no tiene reloj). */
-async function onlineMatch(clock: TurnClock | null = null) {
+async function onlineMatch(clock: TurnTimeLeft | null = null) {
   const config = skirmishConfig({
     seed: 21,
     size: 16,

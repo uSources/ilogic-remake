@@ -1003,7 +1003,7 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
 - **Una alarma, varios relojes** (`timers.ts`, datos puros; el objeto pone la alarma del primero que
   vence, `nextAlarm`): caducar a los 30 dias sin actividad (se borra todo y se cierran las
   conexiones), el turno de quien se espera (`endTurnOf`; otro dia u otro asiento es otro reloj, y
-  cada `turn` que sale lleva lo que le queda, `TurnClock`: lo pone el servidor, `withTurnClock`),
+  cada `turn` que sale lleva lo que le queda, `TurnTimeLeft`: lo pone el servidor, `withTurnClock`),
   la espera a los que no llegan (`replaceWithAi` a cada asiento vacio y la partida empieza) y seguir
   una partida a medias (`isMidway()` tras cada paso → alarma ya → `continueMatch()` desde ella: cada
   llamada tiene su tiempo de CPU, y un turno largo de la IA se reparte en varias).

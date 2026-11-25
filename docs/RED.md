@@ -340,7 +340,7 @@ que le queda al turno de quien se espera:
 
 1. La sala no sabe de relojes: su `turn` sale con `clock: null`. El servidor, en `HostedRoom.sync`,
    pone el reloj al dia (`withTurnOf`) y, al repartir, cada `turn` del turno en curso (a todos, y a
-   quien entra o vuelve) lleva lo que le queda y lo que dura (`turnClockOf` → `TurnClock`:
+   quien entra o vuelve) lleva lo que le queda y lo que dura (`turnClockOf` → `TurnTimeLeft`:
    `{ leftMs, totalMs }`; `RoomAdapter.withTurnClock`). Va en tiempo que queda, no en hora: el reloj
    del navegador puede no ir a la par del servidor.
 2. `RoomClient` lo pasa a hora de aqui al llegar (`TurnDeadline`: `endsAt`, `totalMs`) y lo lleva en
