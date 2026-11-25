@@ -5,7 +5,7 @@ import type { GameEvent } from '@core/model';
 import { localRunner } from '../src/view3d/systems/turn/matchRunner';
 import { TurnControls } from '../src/view3d/systems/turn/turnControls';
 import { blankState, ENEMY, PLAYER, unitTypeNamed } from './helpers';
-import { FakeEvents, FakeMarks, FakePreview, FakeSounds } from './sim/turnPorts';
+import { FakeBoard, FakeEvents, FakeMarks, FakePreview, FakeSounds } from './sim/turnPorts';
 
 /** El turno 3D sin navegador: las marcas, los sucesos y los sonidos son puertos falsos que apuntan lo que se les pide. */
 
@@ -21,7 +21,8 @@ async function myTurn() {
   const s = blankState();
   const soldier = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 5 });
   const marks = new FakeMarks();
-  const events = new FakeEvents();
+  const board = new FakeBoard(s);
+  const events = new FakeEvents(board);
   const sounds = new FakeSounds();
   const preview = new FakePreview();
   const session = new GameSession(s, [humanController(), passiveController()]);
@@ -34,11 +35,12 @@ async function myTurn() {
     sounds,
     // Toda la partida se ve en la pantalla de prueba.
     screen: { isOnScreen: () => true },
-    refresh: () => {},
+    refresh: () => board.sync(),
+    publish: () => {},
     onOver: () => {},
   });
   await controls.runUntilInput();
-  return { s, soldier, marks, preview, events, sounds, controls };
+  return { s, soldier, marks, preview, events, sounds, board, controls };
 }
 
 describe('turno 3D con puertos', () => {
@@ -128,6 +130,27 @@ describe('turno 3D con puertos', () => {
     expect(marks.targets).toContainEqual(expect.objectContaining({ x: 10, y: 13 }));
     await controls.tap({ x: 10, y: 13 });
     expect(events.played.map(kindsOf)).toEqual([expect.arrayContaining(['move']), expect.arrayContaining(['attack'])]);
+  });
+
+  it('el enemigo que cae se anima con su pieza: el tablero se pone al dia al acabar', async () => {
+    const { s, soldier, events, board, controls } = await myTurn();
+    const enemy = newUnit(s, SOLDIER, ENEMY, { x: 6, y: 5 });
+    enemy.life = 1;
+    await controls.tap(soldier);
+    await controls.tap(enemy);
+    expect(events.played.flat()).toContainEqual(expect.objectContaining({ kind: 'attack', killed: true }));
+    expect(events.piecesWhenPlayed.at(-1)?.has(enemy.uid)).toBe(true);
+    expect(board.pieces.has(enemy.uid)).toBe(false);
+  });
+
+  it('la propia que cae al contraatacarle tambien sigue en el tablero mientras se anima', async () => {
+    const { s, soldier, events, controls } = await myTurn();
+    soldier.life = 5;
+    const enemy = newUnit(s, SOLDIER, ENEMY, { x: 6, y: 5 });
+    await controls.tap(soldier);
+    await controls.tap(enemy);
+    expect(events.played.flat()).toContainEqual(expect.objectContaining({ kind: 'attack', attackerKilled: true }));
+    expect(events.piecesWhenPlayed.at(-1)?.has(soldier.uid)).toBe(true);
   });
 });
 

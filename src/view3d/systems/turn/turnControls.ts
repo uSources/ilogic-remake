@@ -112,6 +112,8 @@ export interface TurnHost {
   touch?: boolean;
   /** La partida o lo elegido ha cambiado: volver a pintar piezas e interfaz. */
   refresh(): void;
+  /** Volver a pintar solo la interfaz: mientras se anima una accion propia, las piezas siguen como antes de ella. */
+  publish(): void;
   /** La partida se ha acabado (tras el cartel de victoria o derrota). */
   onOver(): void;
 }
@@ -130,6 +132,8 @@ export class TurnControls {
   private isRunning = false;
   /** La partida ha seguido sin quien mira mientras se animaba algo: al acabar, a mirar a los demas. */
   private isOthersDue = false;
+  /** Se hace y se anima una accion propia (`perform`): las piezas no se ponen al dia hasta que acaba. */
+  private isActing = false;
 
   constructor(private readonly host: TurnHost) {}
 
@@ -193,8 +197,13 @@ export class TurnControls {
     void this.runUntilInput();
   }
 
-  /** La partida que se ve ha cambiado desde fuera (por la red, una vista nueva): lo elegido ya no vale. */
+  /**
+   * La partida que se ve ha cambiado desde fuera (por la red, una vista nueva): lo elegido ya no vale.
+   * Durante una accion propia (su respuesta, o lo que llegue mientras se anima) no se pinta: quitaria
+   * las piezas de lo que cae antes de su animacion; las pone al dia `perform` al acabar.
+   */
   viewReplaced(): void {
+    if (this.isActing) return;
     if (this.isBusy) return this.host.refresh();
     this.setMode({ kind: 'idle' });
   }
@@ -540,20 +549,25 @@ export class TurnControls {
 
   /**
    * Manda la accion y anima lo que ha pasado. false si no vale (y dice por que). Mientras contesta
-   * quien lleva la partida (por la red, el servidor) no se atiende la entrada.
+   * quien lleva la partida (por la red, el servidor) no se atiende la entrada. Se anima con las piezas
+   * como estaban antes (la partida ya va por despues: sin la unidad que cae, ni su pieza para su
+   * disparo y su caida) y despues se ponen al dia.
    */
   private async perform(action: GameAction): Promise<boolean> {
     this.isBusy = true;
+    this.isActing = true;
     const reply = await this.host.runner.act(action);
     if (!reply.ok) {
       this.isBusy = false;
+      this.isActing = false;
       showToast(reply.notice);
       this.host.sounds.play('ui_error');
       return false;
     }
-    this.host.refresh();
+    this.host.publish();
     await this.host.events.play(reply.events);
     this.isBusy = false;
+    this.isActing = false;
     this.host.refresh();
     const isOver = this.host.runner.session.result.status !== 'playing';
     if (isOver || this.isOthersDue) void this.runUntilInput();
