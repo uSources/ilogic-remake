@@ -19,7 +19,7 @@ export type ShowEvents = (events: GameEvent[]) => Promise<void>;
 export interface MatchRunner {
   /** La sesion con la partida que se ve (por la red, la espejo de la ultima vista: cambia con cada una). */
   readonly session: GameSession;
-  /** Hace una accion de quien mira. */
+  /** Hace una accion de quien mira. La partida que se ve ya queda como despues; las piezas las pone al dia quien la anima, al acabar. */
   act(action: GameAction): Promise<RunnerReply>;
   /** Quien mira acaba su turno. */
   finishTurn(): void;

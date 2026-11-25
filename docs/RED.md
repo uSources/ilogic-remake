@@ -137,8 +137,10 @@ La persona de la pantalla ataca con una unidad. Lo que pasa, en orden, nombrando
     resuelve (puede ser de antes de la accion: la de un `resync`); solo hace de eco a lo que ya valio
     o se perdio en un corte. `OnlinePlay.askRoom` recibe la respuesta (si no vale: `resync` y el
     aviso «La sala no lo ha aceptado») y adopta el eco como la partida que se ve (`adopt`: `fillWith`
-    en el mismo objeto, sesion espejo nueva y `TurnControls.viewReplaced`); `TurnControls.perform`
-    anima los sucesos del `result` como en una partida de esta pantalla (`events.play`).
+    en el mismo objeto, sesion espejo nueva y `TurnControls.viewReplaced`, que durante una accion
+    propia no pinta); `TurnControls.perform` anima los sucesos del `result` como en una partida de
+    esta pantalla (`events.play`), con las piezas de antes (asi sigue la de lo que cae), y despues las
+    pone al dia.
 14. **Un aliado** recibe su `events` al momento (es de su alianza): `eventsArrived` lo pone en la cola
     como jugada `'events'` (con `before` y `after`). Su pantalla esta mirando la cola
     (`OnlinePlay.untilInput` → `showBatch`): pone en la partida que se ve `animationView(before,

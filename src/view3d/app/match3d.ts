@@ -168,6 +168,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     sounds,
     touch: window.matchMedia('(pointer: coarse)').matches,
     refresh,
+    publish,
     onOver: () => showEndSoon(),
   });
   /** La siguiente unidad sin mover (Tab o el numero de «Fin del turno»): elegirla y llevar la camara. */

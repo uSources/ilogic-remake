@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
-import type { Pos, Unit } from '@core/model';
+import { manhattan } from '@core/geom';
+import { newUnit } from '@core/measure';
+import type { GameState, Pos, Unit } from '@core/model';
 import { CURRENT_PROTOCOL, Room, type Outgoing, type RoomContext, type ServerMessage, type TurnTimeLeft } from '@core/net';
 import { canMoveNow, moveRange, reachableTiles, unitAt, unitById } from '@core/rules';
 import { ui } from '../src/hud/store';
@@ -11,8 +13,9 @@ import { RoomClient } from '../src/net/roomClient';
 import { OnlinePlay, type OnlineRoom } from '../src/view3d/systems/net/onlinePlay';
 import type { TimedTurn } from '../src/view3d/systems/net/turnClock';
 import { TurnControls } from '../src/view3d/systems/turn/turnControls';
+import { unitTypeNamed } from './helpers';
 import { tokenCounter } from './sim/netClient';
-import { FakeEvents, FakeMarks, FakePreview, FakeSounds } from './sim/turnPorts';
+import { FakeBoard, FakeEvents, FakeMarks, FakePreview, FakeSounds } from './sim/turnPorts';
 
 /**
  * La partida por la red en la vista 3D sin red ni navegador: la sala de verdad del nucleo, el cliente
@@ -21,6 +24,8 @@ import { FakeEvents, FakeMarks, FakePreview, FakeSounds } from './sim/turnPorts'
  */
 
 const PERSON = 0;
+const FOE = 1;
+const SOLDIER = unitTypeNamed('Soldier');
 const context = (): RoomContext => ({ content: defaultContent(), newToken: tokenCounter() });
 
 /** Deja acabar lo que va por promesas (las jugadas de la sala, las animaciones falsas). */
@@ -77,7 +82,8 @@ async function onlineMatch(clock: TurnTimeLeft | null = null) {
   if (!joined.ok) throw new Error(joined.error);
   deliver(joined.messages);
   const session = mirrorSession(cloneState(client.state!), PERSON);
-  const events = new FakeEvents();
+  const board = new FakeBoard(session.state);
+  const events = new FakeEvents(board);
   const ended: boolean[] = [];
   let ownTurns = 0;
   const clocks: (TimedTurn | null)[] = [];
@@ -97,7 +103,8 @@ async function onlineMatch(clock: TurnTimeLeft | null = null) {
     events,
     sounds: new FakeSounds(),
     screen: { isOnScreen: () => true },
-    refresh: () => undefined,
+    refresh: () => board.sync(),
+    publish: () => undefined,
     onOver: () => ended.push(true),
   });
   online.listen();
@@ -109,6 +116,7 @@ async function onlineMatch(clock: TurnTimeLeft | null = null) {
     online,
     controls,
     events,
+    board,
     sent,
     deliver,
     hold,
@@ -127,6 +135,15 @@ function moverAndGoal(units: readonly Unit[], s: Parameters<typeof moveRange>[0]
   const goal = reachableTiles(moveRange(s, unit)).find((tile) => !unitAt(s, tile));
   if (!goal) throw new Error('La unidad no llega a ninguna casilla vacia');
   return { unit, goal };
+}
+
+/** Un soldado propio y una casilla vacia a su lado a la que llega (alli se le pone un enemigo, a mano en la sala). */
+function soldierAndNeighbour(s: GameState): { soldier: Unit; beside: Pos } {
+  const soldier = s.units.find((unit) => unit.team === PERSON && unit.type === SOLDIER.id);
+  if (!soldier) throw new Error('Sin soldado propio');
+  const beside = reachableTiles(moveRange(s, soldier)).find((tile) => manhattan(tile, soldier) === 1 && !unitAt(s, tile));
+  if (!beside) throw new Error('El soldado no tiene al lado ninguna casilla vacia a la que llegue');
+  return { soldier, beside };
 }
 
 const playedKinds = (events: FakeEvents): string[] => events.played.flat().map((event) => event.kind);
@@ -153,6 +170,22 @@ describe('la partida por la red en 3D (OnlinePlay)', () => {
     expect(unitById(shown, unit.uid)).toMatchObject(goal);
     expect(online.session.state).toBe(shown);
     expect(playedKinds(events)).toContain('move');
+  });
+
+  it('el enemigo que cae se anima con su pieza: el eco no pone el tablero al dia hasta acabar', async () => {
+    const { room, client, controls, events, board, shown } = await onlineMatch();
+    const { soldier, beside } = soldierAndNeighbour(room.state);
+    const enemy = newUnit(room.state, SOLDIER, FOE, beside);
+    enemy.life = 1;
+    client.resync();
+    await settle();
+    await controls.tap(soldier);
+    await controls.tap(beside);
+    await settle();
+    expect(playedKinds(events)).toContain('attack');
+    expect(unitById(shown, enemy.uid)).toBeUndefined();
+    expect(events.piecesWhenPlayed.at(-1)?.has(enemy.uid)).toBe(true);
+    expect(board.pieces.has(enemy.uid)).toBe(false);
   });
 
   it('la vista de un resync que llega detras de una accion no la deshace en la pantalla', async () => {

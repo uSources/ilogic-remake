@@ -1180,7 +1180,10 @@ src/view3d/
 | `engine/camera/` | situa la camara de three.js en la pose que da `systems/camera` |
 
 - **La partida cambia con acciones**: `TurnControls` manda por la sesion (`session.act`) y enseña los
-  sucesos que devuelve (`EventPlayer`); despues `sync` deja cada pieza donde dice la partida. Lo que
+  sucesos que devuelve (`EventPlayer`) con las piezas como estaban, asi sigue la de lo que cae (su
+  disparo y su caida); despues `sync` deja cada pieza donde dice la partida. Por la red, la vista que
+  trae la respuesta tampoco se pinta hasta entonces (`viewReplaced`), y los lotes de los demas se
+  animan sobre `animationView` (la vista de despues con lo que cayo). Lo que
   se ofrece lo dice siempre el nucleo (`availableActions`, `reachableTiles`, `attackTargets`,
   `buyOptions`...). La vista no juega a los demas equipos: pide pasos a la sesion (`step`).
 - **La animacion de un `GameEvent`**: su entrada en `EVENT_STEPS` (`systems/events/eventSteps.ts`),
