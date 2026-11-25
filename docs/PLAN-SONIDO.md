@@ -157,7 +157,9 @@ Descargados (21-11-2026) en `~/ComfyUI-Shared/models`:
   pesado, antiaereo, lanzamisiles, bomba), las orugas, las 7 voces y los 18 ambientes (9 de zona, 5 de
   fondo y 4 de clima). **Elegidos (23-11-2026)**, a ojo por medidas (el usuario lo delego): el trueno,
   los 9 de los animales, el motor del jeep y el de los camiones, sus arranques y sus bocinas, y las 7
-  voces otra vez (un balbuceo menos chillon; el piloto, por radio). **Faltan por generar y elegir**: los
+  voces otra vez (un balbuceo menos chillon; el piloto, por radio). **Elegidos (25-11-2026)**, por
+  medidas: subir y bajar del transporte (`load`, `unload`; los mismos para el camion y el helicoptero,
+  sin motor ni rotor, que ya suenan al moverse). **Faltan por generar y elegir**: los
   otros efectos (helices y helicoptero, pasos por suelo, impactos, caidas, interfaz, sucesos), la musica
   de cada tema, `briefing`, `enemy_turn` y los jingles; `npm run sonidos -- lista` dice cuales tienen
   candidatos.
