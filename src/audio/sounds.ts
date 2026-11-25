@@ -9,6 +9,17 @@ import type { SoundId, SoundName } from './soundNames';
 
 export type { SoundId, SoundName } from './soundNames';
 
+/**
+ * Como suena un efecto esta vez: a que parte de su volumen (0 a 1) y a que velocidad (1: tal cual; mas,
+ * mas agudo y corto). Los animales lo usan para sonar flojos y no siempre igual.
+ */
+export interface SoundTone {
+  readonly volume: number;
+  readonly rate: number;
+}
+
+export const PLAIN_TONE: SoundTone = { volume: 1, rate: 1 };
+
 /** Pedir que suene un efecto. Si no puede (ajustes, navegador), no pasa nada. */
 export interface SoundPort {
   play(sound: SoundName): void;

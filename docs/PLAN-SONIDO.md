@@ -174,13 +174,20 @@ Descargados (21-11-2026) en `~/ComfyUI-Shared/models`:
   - ambiente por zonas (los 3 mas cercanos a la camara, cada uno desde un solo sitio y apagandose antes
     que los efectos con la distancia), fondo del tema, clima con fundido y truenos con cada relampago
     (su volumen en Opciones). El fondo y las zonas se oyen con la camara baja y casi nada desde arriba
-    (`ambienceZoomLevel`); el clima, siempre. Cada ambiente tiene su volumen (`AMBIENT_VOLUMES`): el agua,
-    un murmullo de orilla (ni el hielo ni el borde del tablero suenan a agua);
+    (`ambienceZoomLevel`); los de animales, solo al acercarla (`animalZoomLevel`); el clima, siempre.
+    Cada ambiente tiene su volumen (`AMBIENT_VOLUMES`): el agua, un murmullo de orilla (ni el hielo ni
+    el borde del tablero suenan a agua);
   - musica de batalla por tema (si aun no esta, la de siempre).
   - (23-11-2026) con mal tiempo los animales se callan: los ambientes de pajaros, grillos y ranas bajan
     con lluvia o nevada y se apagan con tormenta o arena (`weatherLevelOf`, `ambience.ts`); los
     animalitos del tablero dicen lo suyo al moverse cerca de la camara (`animal_*`, `animalCalls.ts`);
     el jeep y los camiones, con su motor, su arranque y su bocina al elegirlos (`soundCues.ts`).
+  - (25-11-2026) los animales, con mas variantes (de 5 a 7; la rana sigue con 4: de sus 8 candidatos,
+    los otros salen cortados) y flojitos: solo se oyen a menos de 7 casillas del oyente, casi nada en el
+    borde y mas al acercarse (`callVolumeOf`, `animalCalls.ts`), y cada vez con un tono algo distinto;
+    ningun efecto repite la variante de la vez anterior. Y solo al acercar la camara, ellos y los
+    ambientes de animales (pajaros, grillos, ranas, del fondo y de las zonas): desde la vista de empezar
+    la partida no se oye ninguno, que se oian en todas partes (`animalZoomLevel`, `listener.ts`).
   - Todo se pide por nombre aunque no haya WAV (`src/audio/soundNames.ts`): hasta que se elija, suena su
     sustituto o nada. Lo que falta es **generar y elegir** los sonidos; lo que queda por enchufar, en
     `docs/IDEAS.md` ("Sonido").

@@ -1242,11 +1242,17 @@ ella se mueve (sin crear nada por fotograma). Lo
 de la interfaz suena sin sitio (`SoundPort`). El ambiente tambien decide puro: que suena en cada sitio
 del mapa (`systems/sound/ambience.ts`: costa, bosque, cumbres, cienaga, fabricas...) y cuales quedan
 cerca del oyente; `ambiencePlayer.ts` los enciende y apaga con un `LoopPort` (`src/audio/loops.ts`) y
-les baja el volumen al alejar la camara (`ambienceZoomLevel`, `listener.ts`) y, a los de animales, con
-mal tiempo (`weatherLevelOf`). Los animalitos del tablero cuentan lo que hacen
+les baja el volumen al alejar la camara (`ambienceZoomLevel`, `listener.ts`). A los de animales (pajaros,
+grillos, ranas: `isAnimalAmbient`), ademas, con mal tiempo (`weatherLevelOf`), y de lejos los calla: solo
+se oyen al acercar la camara (`animalZoomLevel`), como lo que dicen los animalitos. Los animalitos del tablero cuentan lo que hacen
 (`BiomeLife.onAnimal`, un `AnimalMoment` de `ports/life.ts`: la rana que salta, el pajaro que sale de una
 copa) y un sistema decide si dicen algo y que (`systems/sound/animalCalls.ts`: cerca del oyente, que el
-motor no filtra; uno cada poco, con la camara baja y buen tiempo); suenan por el canal del ambiente (los efectos `animal_*`, `sfx.ts`).
+motor no filtra; uno cada poco, con buen tiempo y solo al acercar la camara: desde la vista de empezar,
+ninguno, `animalZoomLevel`, `listener.ts`) y como: flojos, y mas cuanto mas cerca
+(`callVolumeOf`: casi nada en el borde de lo que se oye), y cada vez con un tono algo distinto (un
+`SoundTone`, `src/audio/sounds.ts`). Suenan por el canal del ambiente (los efectos `animal_*`, `sfx.ts`),
+con un panner que solo los pone a su lado (`PAN_ONLY`, `spatial.ts`): lo flojo por la distancia ya viene
+en su tono. Ningun efecto repite la variante de la vez anterior (`variants.ts`).
 Los efectos se piden por nombre aunque aun no haya WAV (`src/audio/soundNames.ts`): mientras, suena
 su sustituto.
 

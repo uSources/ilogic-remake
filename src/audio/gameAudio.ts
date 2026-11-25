@@ -7,12 +7,13 @@ import type { LoopPort } from './ambientNames';
 import { audioMixer, setChannelLevel } from './audioContext';
 import { webAudioLoops } from './loops';
 import { playSoundAt, recentSounds, webAudioSounds, type HeardSound } from './sfx';
-import type { SoundName, SoundPort } from './sounds';
+import type { SoundName, SoundPort, SoundTone } from './sounds';
 import { setListener, type ListenerPose, type Point3 } from './spatial';
 
 export interface GameAudio {
   readonly sounds: SoundPort;
-  playAt(sound: SoundName, at: Point3 | null): void;
+  /** Un efecto con sitio (o sin el, con null); `tone`: mas flojo o con otro tono (los animales). */
+  playAt(sound: SoundName, at: Point3 | null, tone?: SoundTone): void;
   readonly loops: LoopPort;
   moveListener(pose: ListenerPose): void;
   /** El volumen de los efectos del tablero, de 0 a 1 de lo normal (baja al alejar la camara). */

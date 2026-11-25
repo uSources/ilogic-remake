@@ -2,8 +2,9 @@
  * Donde oye el jugador: en el punto al que mira la camara, un poco por encima, y mirando hacia donde
  * mira ella en horizontal. Asi lo que pasa a un lado de la pantalla suena a ese lado y lo que queda fuera
  * suena mas flojo. Si el oyente fuera la camara de verdad, al alejarla todo se apagaria; en vez de eso el
- * tablero baja un poco con `zoomLevel`, y el ambiente mucho mas (`ambienceZoomLevel`): el viento, los
- * pajaros o el agua se oyen con la camara baja, cerca del suelo. Puro (datos de la camara, sin three.js
+ * tablero baja un poco con `zoomLevel`, y el ambiente mucho mas (`ambienceZoomLevel`): el viento o el
+ * agua se oyen con la camara baja, cerca del suelo. Lo de animales (pajaros, grillos, ranas, y lo que
+ * dicen los animalitos), solo al acercarla (`animalZoomLevel`). Puro (datos de la camara, sin three.js
  * ni Web Audio).
  */
 import type { ListenerPose } from '../../../audio/spatial';
@@ -17,6 +18,11 @@ const FAR_LEVEL = 0.6;
 /** El ambiente suena entero con la camara pegada al suelo y baja hasta `AMBIENCE_FAR_LEVEL` a esta distancia (casillas). */
 const AMBIENCE_FAR_DISTANCE = 28;
 const AMBIENCE_FAR_LEVEL = 0.15;
+/**
+ * Lo de animales se oye entero con la camara pegada al suelo y nada desde esta distancia (casillas): por
+ * debajo de la de empezar la partida (13), que desde ahi se oirian en todas partes y no al acercarse.
+ */
+const ANIMALS_FAR_DISTANCE = 11;
 
 const UP = { x: 0, y: 1, z: 0 };
 
@@ -64,4 +70,12 @@ export function zoomLevel(distance: number): number {
 /** Lo fuerte que suena el ambiente (no el clima) con la camara a `distance`: 1 pegada al suelo, casi nada desde arriba. */
 export function ambienceZoomLevel(distance: number): number {
   return 1 - farnessOf(distance, MIN_DISTANCE, AMBIENCE_FAR_DISTANCE) * (1 - AMBIENCE_FAR_LEVEL);
+}
+
+/**
+ * Lo que se oye a los animales (sus ambientes y lo que dicen) con la camara a `distance`: 1 pegada al
+ * suelo, nada desde `ANIMALS_FAR_DISTANCE`.
+ */
+export function animalZoomLevel(distance: number): number {
+  return 1 - farnessOf(distance, MIN_DISTANCE, ANIMALS_FAR_DISTANCE);
 }

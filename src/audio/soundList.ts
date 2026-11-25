@@ -1,15 +1,15 @@
 // Generado por tools/audio/soundList.mjs desde los WAV de public/assets/sfx. No editar a mano.
 /** Los efectos de sonido (public/assets/sfx/<id>_<n>.wav) y cuantas variantes tiene cada uno. */
 export const SOUND_VARIANTS = {
-  animal_bird: 4,
-  animal_deer: 3,
+  animal_bird: 7,
+  animal_deer: 6,
   animal_frog: 4,
-  animal_goose: 3,
-  animal_penguin: 3,
-  animal_seal: 3,
-  animal_splash: 3,
-  animal_squirrel: 3,
-  animal_vulture: 3,
+  animal_goose: 5,
+  animal_penguin: 5,
+  animal_seal: 5,
+  animal_splash: 5,
+  animal_squirrel: 6,
+  animal_vulture: 5,
   capture: 1,
   capture_done: 1,
   defeat: 1,

@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { SOUND_IDS } from '../src/audio/sounds';
 import { SOUND_VARIANTS } from '../src/audio/soundList';
+import { nextVariant } from '../src/audio/variants';
 import { defaultContent } from '@core/content/default';
 import {
   captureSound,
@@ -22,6 +23,13 @@ describe('efectos de sonido', () => {
       Array.from({ length: SOUND_VARIANTS[sound] }, (_, index) => `public/assets/sfx/${sound}_${index + 1}.wav`),
     ).filter((path) => !existsSync(path));
     expect(missing).toEqual([]);
+  });
+
+  it('una variante al azar, nunca la misma dos veces seguidas', () => {
+    const rolls = [0, 0.3, 0.6, 0.99];
+    expect(new Set(rolls.map((roll) => nextVariant(5, 3, roll)))).toEqual(new Set([1, 2, 4, 5]));
+    expect(rolls.map((roll) => nextVariant(4, 0, roll))).toEqual([1, 2, 3, 4]);
+    expect(rolls.map((roll) => nextVariant(1, 1, roll))).toEqual([1, 1, 1, 1]);
   });
 
   it('cada unidad tiene sus sonidos, y solo dispara la que ataca', () => {
