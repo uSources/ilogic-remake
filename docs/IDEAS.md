@@ -142,13 +142,14 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     en el servidor, `server/src/matchmaker.ts`). Queda: pedir asiento con el código,
     `POST /rooms/:code/seat`, sin tope por IP (quien sabe el código de una sala que espera puede
     gastar sus asientos libres, y el código es el único secreto; las de la búsqueda no se reparten,
-    pero su código sale en «Mis partidas» de los dos), avisos fuera de la pestaña (notificaciones del navegador: más aún con «Buscar rival»
-    por turnos, que empieza sin que estés) y que el final sepa las cuentas de todos: cada uno solo ve las suyas
-    (`withoutBooks`, `core/playerView.ts`), así que en la pantalla final las del rival salen a 0 y
-    su gráfica del valor del ejército solo tiene el último día; al acabar ya no hay nada que
-    esconder y la sala podría mandar la partida entera. Decidido: el servidor manda (las acciones pasan por la sesión
-    como las de cualquiera, la IA rival y los dados juegan allí) y un cliente nunca recibe más que la
-    vista de su equipo (si no, se puede mirar a través de la niebla). Las clasificatorias, después.
+    pero su código sale en «Mis partidas» de los dos), avisos fuera de la pestaña (notificaciones
+    del navegador: más aún con «Buscar rival» por turnos, que empieza sin que estés) y que el final
+    sepa las cuentas de todos: cada uno solo ve las suyas (`withoutBooks`, `core/playerView.ts`),
+    así que en la pantalla final las del rival salen a 0 y su gráfica del valor del ejército solo
+    tiene el último día; al acabar ya no hay nada que esconder y la sala podría mandar la partida
+    entera. Decidido: el servidor manda (las acciones pasan por la sesión como las de cualquiera, la
+    IA rival y los dados juegan allí) y un cliente nunca recibe más que la vista de su equipo (si
+    no, se puede mirar a través de la niebla). Las clasificatorias, después.
 17. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
 18. **Repensar la interfaz del juego en línea** (`src/menu/online/`: crear, unirse, sala): darle una
     vuelta al aspecto y al recorrido de las pantallas, para que encajen con el menú 3D.
