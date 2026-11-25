@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { BED_AMBIENTS, WEATHER_AMBIENTS, ZONE_AMBIENTS } from '../src/audio/ambientNames';
 import { SOUND_FALLBACKS } from '../src/audio/soundNames';
 import { CATALOG, type SoundKind, type SoundSpec } from '../tools/audio/catalog';
+import { soft } from '../tools/audio/catalog/spec';
 import { generationGraph, withNumberedNodes } from '../tools/audio/comfyGraphs';
 import { generatedSecondsFor, isEffect, KINDS, promptFor } from '../tools/audio/soundKinds';
 import {
@@ -58,6 +59,14 @@ describe('shaping: dejar listo un audio generado', () => {
 
   it('el silencio se queda como esta', () => {
     expect(lengthOf(normalizePeak(mono(silence(3)), -1))).toBe(3);
+  });
+
+  it('un efecto queda con el pico casi arriba; uno suave (el tic del reloj del turno), bastante mas flojo', () => {
+    const click = mono([...silence(20), ...Array.from({ length: 60 }, (_, i) => 0.3 * 0.95 ** i * (i % 2 ? -1 : 1))]);
+    const spec: SoundSpec = { id: 'x', kind: 'sfx', prompt: 'A click', seconds: 0.1 };
+    const loud = toDb(peakOf(KINDS.sfx.shape(click, spec)));
+    expect(loud).toBeCloseTo(-1, 5);
+    expect(toDb(peakOf(KINDS.sfx.shape(click, soft(spec))))).toBeLessThan(loud - 6);
   });
 });
 

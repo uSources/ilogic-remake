@@ -36,6 +36,7 @@ import { anyStandingOrder, OrderIntents } from '../systems/orders/orderIntents';
 import { ThreatZone } from '../systems/threat/threatZone';
 import { localRunner, type MatchRunner } from '../systems/turn/matchRunner';
 import { OnlinePlay } from '../systems/net/onlinePlay';
+import { TurnClock } from '../systems/net/turnClock';
 import { notifyTurn } from '../systems/net/turnNotice';
 import { backToMenu, type StartedGame } from './gameStart';
 import type { GroupMode } from '../../controls/inputCommands';
@@ -58,16 +59,23 @@ const MS_PER_SECOND = 1000;
 export function playMatch({ session, viewer, room }: StartedGame, images: GameImages, glbModels: GlbLibrary, audio: GameAudio): void {
   /** La partida que se ve: el mismo objeto toda la partida (por la red, cada vista se mete en el). */
   const state = session.state;
+  const scene = new MatchScene(document.getElementById('game')!, state, viewer, glbModels, images);
+  /** El reloj del turno por la red (si la sala lo tiene: `OnlinePlay` le dice que turno se ve). */
+  const turnClock = new TurnClock(state, viewer, {
+    now: () => Date.now(),
+    onFrame: (listener) => scene.onFrame(listener),
+    sounds: audio.sounds,
+  });
   const online = room
     ? new OnlinePlay(room, session, viewer, {
         viewReplaced: () => controls.viewReplaced(),
         othersGoOn: () => controls.othersGoOn(),
         ownTurn: notifyTurn,
+        showClock: (turn) => turnClock.follow(turn),
         quit: backToMenu,
       })
     : null;
   const runner: MatchRunner = online ?? localRunner(session, viewer);
-  const scene = new MatchScene(document.getElementById('game')!, state, viewer, glbModels, images);
   const { board } = scene;
   const camera = startingCamera(scene, state, viewer);
   const anchorOf = (pos: Pos) => scene.anchorOf(pos);

@@ -21,6 +21,8 @@ export interface SoundSpec {
   readonly seconds: number;
   /** Cuantas variantes usa el juego (efectos y voces; ambientes y musica, una). */
   readonly variants?: number;
+  /** El pico de un efecto, en dB (soundKinds.ts): sin decirlo, casi arriba, como todos; `soft`, mas flojo. */
+  readonly peakDb?: number;
 }
 
 /**
@@ -45,6 +47,14 @@ export const effect = (id: string, seconds: number, frequency: Frequency, prompt
   seconds,
   variants: VARIANTS_BY_FREQUENCY[frequency],
 });
+
+/**
+ * Lo que suena muchas veces seguidas y no debe tapar nada (el tic del reloj del turno) queda mas flojo
+ * que los demas efectos, como los de la interfaz que hace Ashfox.
+ */
+const SOFT_PEAK_DB = -10;
+
+export const soft = (spec: SoundSpec): SoundSpec => ({ ...spec, peakDb: SOFT_PEAK_DB });
 
 export const nature = (id: string, seconds: number, frequency: Frequency, prompt: string): SoundSpec => ({
   ...effect(id, seconds, frequency, prompt),

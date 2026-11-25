@@ -163,7 +163,7 @@ Lo comun (`src/`):
 | `roomHost.ts`    | lo que la sala pide a quien la aloja (`RoomHost`): guardar con su alarma, cargar, borrar, sus conexiones (`RoomSocket`) y la hora                                    |
 | `roomAdapter.ts` | el unico que toca la `Room` del nucleo: lo que el objeto necesita de ella, con nombres del servidor; el vestibulo (`lobby`) y pedir asiento (`claimSeat`)                       |
 | `roomRequest.ts` | la forma de lo que se pide al crear una sala, comprobada campo a campo contra el contenido del juego                                                                 |
-| `timers.ts`      | los relojes como datos puros: caducar, el turno, la espera, seguir una partida a medias; `nextAlarm` elige la unica alarma                                           |
+| `timers.ts`      | los relojes como datos puros: caducar, el turno, la espera, seguir una partida a medias; `nextAlarm` elige la unica alarma; `turnClockOf`, lo que le queda al turno (va en cada `turn`)                                           |
 | `limits.ts`      | todos los topes y tiempos, con nombre                                                                                                                               |
 | `rateLimit.ts`   | la ventana de rechazos por asiento y el tope de peticiones por direccion (`RequestLimit`)                                                                            |
 | `codes.ts`       | codigos de sala al azar (sin letras que se confundan; su forma, `isRoomCode`, es del nucleo: `src/core/net/roomCode.ts`), fichas (192 bits de `crypto.getRandomValues`) y su comparacion en tiempo constante                                   |

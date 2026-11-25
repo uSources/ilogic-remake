@@ -39,6 +39,7 @@ export const SOUND_VARIANTS = {
   step_tracks: 4,
   step_truck: 4,
   thunder: 3,
+  turn_clock_tick: 4,
   turn_start: 1,
   ui_back: 1,
   ui_move: 1,

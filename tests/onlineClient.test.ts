@@ -212,12 +212,12 @@ describe('ServerLink', () => {
     const socket = opened(h);
     const view = { kind: 'view', step: 4, view: {} } as unknown as ServerMessage;
     socket.reply(view);
-    socket.reply({ kind: 'turn', step: 5, team: 0, day: 1 });
-    socket.reply({ kind: 'turn', step: 7, team: 1, day: 1 });
+    socket.reply({ kind: 'turn', step: 5, team: 0, day: 1, clock: null });
+    socket.reply({ kind: 'turn', step: 7, team: 1, day: 1, clock: null });
     expect(h.received.map((message) => message.kind)).toEqual(['welcome', 'view', 'turn']);
     expect(socket.messages.at(-1)).toEqual({ kind: 'resync' });
     socket.reply({ kind: 'view', step: 9, view: {} } as unknown as ServerMessage);
-    socket.reply({ kind: 'turn', step: 10, team: 1, day: 1 });
+    socket.reply({ kind: 'turn', step: 10, team: 1, day: 1, clock: null });
     expect(h.received).toHaveLength(5);
   });
 

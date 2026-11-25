@@ -19,6 +19,8 @@ import {
   type RoomSnapshot,
   type RoomStatus,
   type SeatId,
+  type ServerMessage,
+  type TurnTimeLeft,
 } from '@core/net';
 import { newToken, sameToken } from './codes';
 import type { RoomRequest } from './roomRequest';
@@ -139,6 +141,18 @@ export class RoomAdapter {
   awaiting(): AwaitedSeat | null {
     const seat = this.room.awaiting;
     return seat && this.room.status === 'playing' ? { seat: seat.id, day: this.room.state.day } : null;
+  }
+
+  /**
+   * Los mensajes, con el reloj en los `turn` del turno en curso (la sala no sabe de relojes: los lleva
+   * el servidor). Un `turn` de un turno que ya ha pasado en el mismo lote se queda sin el: ya no corre.
+   */
+  withTurnClock(outgoing: Outgoing[], clock: TurnTimeLeft | null): Outgoing[] {
+    const awaited = this.room.awaiting;
+    if (!clock || !awaited || this.room.status !== 'playing') return outgoing;
+    const isCurrentTurn = (message: ServerMessage) =>
+      message.kind === 'turn' && message.team === awaited.team && message.day === this.room.state.day;
+    return outgoing.map((sent) => (isCurrentTurn(sent.message) ? { ...sent, message: { ...sent.message, clock } } : sent));
   }
 
   /** Un saludo (`hello`) de una conexion nueva. */

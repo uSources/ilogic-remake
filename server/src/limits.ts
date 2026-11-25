@@ -6,7 +6,8 @@
  * antes de leerlo (bytes) y los del tiempo.
  */
 
-const SECOND = 1000;
+/** Un segundo, en ms (los relojes del servidor van en ms; lo que pide el creador, en segundos). */
+export const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;

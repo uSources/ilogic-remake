@@ -1,5 +1,5 @@
-/** Barra de arriba: desglose del dinero y del dia, y el clima. */
-import type { BySide } from './common';
+/** Barra de arriba: desglose del dinero y del dia, el clima y el reloj del turno. */
+import type { BySide, Side } from './common';
 
 /** Una fila del desglose: "3 × Ciudad   +3.000". */
 export interface BreakdownLineVM {
@@ -42,4 +42,23 @@ export interface WeatherVM {
   effects: string;
   /** Pronostico: el clima que entra mañana, o null si sigue igual. */
   next: string | null;
+}
+
+/**
+ * Como va el reloj: el turno propio con tiempo de sobra (azul), sus ultimos segundos (rojo, con un tic
+ * cada segundo y «Fin del turno» que parpadea) o el turno de otro (oscuro: no es su momento).
+ */
+export type TurnClockMood = 'calm' | 'hurry' | 'waiting';
+
+/** El reloj del turno de una partida en linea con reloj (la pastilla bajo el dia). */
+export interface TurnClockVM {
+  /** Lo que queda: «1:26» (en un turno de horas, «23:59:12»). */
+  time: string;
+  /** Lo que queda del turno, de 1 (entero) a 0: lo lleno del anillo. */
+  left: number;
+  mood: TurnClockMood;
+  /** Debajo del tiempo: «Día 4 · Te toca», «Se acaba tu turno», «Juega el rojo». */
+  caption: string;
+  /** De quien es el turno (el color del anillo mientras juega otro). */
+  side: Side;
 }

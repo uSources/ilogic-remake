@@ -38,7 +38,8 @@ npm run sonidos -- grafo shot_flak                # el grafo para abrirlo a mano
   (`listeningServer.ts`, con rangos de bytes, que Safari pide) y la pagina avisa si no la sirve nadie.
 - **Candidatos** en `tools/audio/out/<id>/` (fuera de git): `<n>.wav` ya recortado, `raw/<n>.flac` tal
   cual salio y `candidates.json` (semilla y texto de cada uno). Se numeran seguidos entre tandas.
-- **Elegir** deja: efectos en `public/assets/sfx/<id>_<n>.wav` (mono 48 kHz, pico -1 dB) y rehace
+- **Elegir** deja: efectos en `public/assets/sfx/<id>_<n>.wav` (mono 48 kHz, pico -1 dB; -10 los
+  `soft` del catalogo, que suenan muchas veces seguidas: el pico se pone al generar) y rehace
   `src/audio/soundList.ts` desde los WAV de la carpeta (`tools/audio/soundList.mjs`, la misma que usa
   Ashfox: ninguna herramienta borra de la lista los de la otra); ambientes en
   `public/assets/ambient/<id>.ogg|mp3` y musica en `public/assets/music/<id>.ogg|mp3` (bucle cerrado
@@ -61,7 +62,9 @@ npm run sonidos -- grafo shot_flak                # el grafo para abrirlo a mano
 - **Small SFX no vale**: con ComfyUI 0.45.3 en Mac solo da ruido, con cualquier muestreador.
 - El texto acaba en `Length: N seconds` (entero): asi se entreno. Se genera algo mas largo (la cola, o
   el fundido del bucle) y luego se recorta.
-- "Single", "one short burst" ayudan a que salga uno solo (si no, rafagas o varios pasos seguidos).
+- "Single", "one short burst" ayudan a que salga uno solo (si no, rafagas o varios pasos seguidos). Un
+  tic de reloj sin "single" sale casi siempre como tic-tac pegado (un segundo clic a unos 40 ms): con
+  "A single ... tick, one short click" salen limpios uno de cada tres o cuatro.
 - Ambientes (lo vimos con la nieve): pedir algo cercano y en miniatura ("close and focused",
   "miniature") llena el viento de chasquidos que suenan a crujido de bicho; por eso el estilo de zona
   dice "toy diorama landscape, smooth, airy". "Snow", "frozen" o "icy" tambien tiran a crujir, y

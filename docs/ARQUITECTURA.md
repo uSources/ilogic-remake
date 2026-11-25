@@ -1002,7 +1002,8 @@ de la raiz acaba con sus tipos y sus tests. Las decisiones:
   almacen del objeto despues de cada mensaje atendido; asi nada se pierde si el objeto muere.
 - **Una alarma, varios relojes** (`timers.ts`, datos puros; el objeto pone la alarma del primero que
   vence, `nextAlarm`): caducar a los 30 dias sin actividad (se borra todo y se cierran las
-  conexiones), el turno de quien se espera (`endTurnOf`; otro dia u otro asiento es otro reloj),
+  conexiones), el turno de quien se espera (`endTurnOf`; otro dia u otro asiento es otro reloj, y
+  cada `turn` que sale lleva lo que le queda, `TurnTimeLeft`: lo pone el servidor, `withTurnClock`),
   la espera a los que no llegan (`replaceWithAi` a cada asiento vacio y la partida empieza) y seguir
   una partida a medias (`isMidway()` tras cada paso → alarma ya → `continueMatch()` desde ella: cada
   llamada tiene su tiempo de CPU, y un turno largo de la IA se reparte en varias).
@@ -1108,9 +1109,11 @@ archivo y por donde pasa cada cosa, en `docs/RED.md`. Las decisiones:
 - **Lo que no vale por la red**: guardar no esta en el menu de pausa (`PauseHost.savesHere`; la
   partida sigue desde el servidor: «Mis partidas en línea», el enlace o recargar), rendirse lo decide
   la sala, el final solo ofrece volver al menu (la revancha seria otra sala) y no hay autoguardado.
+- **El reloj del turno**: con `turnSeconds`, la pastilla bajo el dia cuenta lo que le queda al
+  turno que se ve (`TurnClock`, `src/view3d/systems/net/turnClock.ts`; lo que pinta, `turnClockVM`):
+  azul, rojo con un tic por segundo los ultimos 15 s («Fin del turno» parpadea) y oscuro en el de otro.
 - **Limites de hoy**: lo que hacen los demas durante el turno propio (rendirse) no se anima, solo se
-  ve; el reloj por turno corre en el servidor sin cuenta atras en la pantalla; el final no sabe las
-  cuentas de los demas (no estan en la vista: `docs/IDEAS.md`).
+  ve; el final no sabe las cuentas de los demas (no estan en la vista: `docs/IDEAS.md`).
 
 `tests/visual/online.mjs` (`npm run online`) lo prueba de punta a punta: arranca el servidor de Node
 (salas en una carpeta temporal) y vite en puertos libres, y dos navegadores con el servidor en

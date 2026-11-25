@@ -7,8 +7,9 @@
  * pasos: `isMidway`, `continueMatch`). Lo de cada sitio (el almacen, los sockets, la alarma) lo pone
  * su `RoomHost` (roomHost.ts).
  *
- * Por los sockets solo pasa lo que la sala devuelve para cada asiento (`Outgoing`): el servidor no
- * mira la partida ni la manda nunca.
+ * Por los sockets solo pasa lo que la sala devuelve para cada asiento (`Outgoing`), con lo unico que
+ * pone el servidor: lo que le queda al reloj del turno, en cada `turn` (`withTurnClock`). El servidor
+ * no mira la partida ni la manda nunca.
  */
 import type { ClaimError, JoinResult, NetError, Outgoing, SeatId } from '@core/net';
 import { isObject } from '@core/util/validation';
@@ -24,6 +25,7 @@ import {
   nextAlarm,
   timedOutSeat,
   touched,
+  turnClockOf,
   withContinuation,
   withTurnOf,
   type TimerSettings,
@@ -228,14 +230,17 @@ export class HostedRoom {
     return this.sync(adapter, outgoing, now);
   }
 
-  /** Tras un paso: los relojes segun como queda la sala, todo guardado, y los mensajes a sus sockets. */
+  /**
+   * Tras un paso: los relojes segun como queda la sala, todo guardado, y los mensajes a sus sockets
+   * (los que dicen a quien se espera, con lo que le queda de reloj).
+   */
   private async sync(adapter: RoomAdapter, outgoing: Outgoing[], now: number): Promise<void> {
     if (!this.meta) return;
     let timers = withTurnOf(this.meta.timers, adapter.awaiting(), this.meta.settings, now);
     if (adapter.status !== 'waiting') timers = doneWaiting(timers);
     this.meta.timers = withContinuation(timers, adapter.isMidway(), now);
     await this.save(adapter, this.meta);
-    this.deliver(outgoing);
+    this.deliver(adapter.withTurnClock(outgoing, turnClockOf(this.meta.timers, this.meta.settings, now)));
   }
 
   private save(adapter: RoomAdapter, meta: RoomMeta): Promise<void> {

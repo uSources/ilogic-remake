@@ -90,7 +90,9 @@ describe('las alarmas', () => {
 
   it('con reloj de turno, al vencer el turno pasa al siguiente', async () => {
     const { code, clients } = await joinedRoom(cloudflare, { turnSeconds: 60 });
-    await Promise.all(clients.map((client) => client.take(['turn'])));
+    const turns = await Promise.all(clients.map((client) => client.take(['turn'])));
+    // Los dos saben lo que le queda al turno (y lo que dura), no solo quien lo tiene.
+    for (const turn of turns) expect(turn).toMatchObject({ clock: { totalMs: 60_000 } });
     const first = clients.find((client) => client.net.isMyTurn)!;
     const other = clients.find((client) => client !== first)!;
     const stored = await storedOf(code);

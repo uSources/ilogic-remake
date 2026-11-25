@@ -74,7 +74,7 @@ describe('la sala: una partida por la red como logica pura', () => {
     expect(two.ok && kindsTo(two.messages, 0)).toEqual(['events', 'turn']);
     expect(two.ok && kindsTo(two.messages, 1)).toEqual(['welcome', 'view', 'events', 'turn']);
     const turn = two.ok ? toSeat(two.messages, 1).find((message) => message.kind === 'turn') : undefined;
-    expect(turn).toEqual({ kind: 'turn', step: 3, team: 0, day: 1 });
+    expect(turn).toEqual({ kind: 'turn', step: 3, team: 0, day: 1, clock: null });
     const welcome = two.ok ? toSeat(two.messages, 1)[0] : undefined;
     expect(welcome).toMatchObject({ kind: 'welcome', seat: 1, team: 1, status: 'waiting', lastSeq: 0 });
   });

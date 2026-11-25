@@ -142,19 +142,18 @@ recibiría un cliente. Por fases, para no apostarlo todo de golpe:
     en el servidor, `server/src/matchmaker.ts`). Queda: pedir asiento con el código,
     `POST /rooms/:code/seat`, sin tope por IP (quien sabe el código de una sala que espera puede
     gastar sus asientos libres, y el código es el único secreto; las de la búsqueda no se reparten,
-    pero su código sale en «Mis partidas» de los dos), la cuenta atrás del reloj por turno en la
-    pantalla (como el tablero «5 · Reloj de turno» del lienzo de diseño «Ilogic · Rediseño de Jugar
-    en línea»: junto al día, azul con tiempo, rojo los últimos 15 s, oscuro en el turno del rival; la
-    partida aún no sabe cuándo vence el turno), lo que queda de ese lienzo (practicar contra la IA
-    mientras se busca rival, con aviso si llega alguien; en la sala, sus reglas en chapas y «Cambiar
-    reglas», que el vestíbulo aún no sabe: `LobbyInfo` no las trae; en «Mis partidas», la barra de
-    lo que queda de turno, que pide saber cuánto dura), avisos fuera de la pestaña (notificaciones del navegador: más aún con «Buscar rival»
-    por turnos, que empieza sin que estés) y que el final sepa las cuentas de todos: cada uno solo ve las suyas
-    (`withoutBooks`, `core/playerView.ts`), así que en la pantalla final las del rival salen a 0 y
-    su gráfica del valor del ejército solo tiene el último día; al acabar ya no hay nada que
-    esconder y la sala podría mandar la partida entera. Decidido: el servidor manda (las acciones pasan por la sesión
-    como las de cualquiera, la IA rival y los dados juegan allí) y un cliente nunca recibe más que la
-    vista de su equipo (si no, se puede mirar a través de la niebla). Las clasificatorias, después.
+    pero su código sale en «Mis partidas» de los dos), lo que queda del lienzo de diseño «Ilogic ·
+    Rediseño de Jugar en línea» (practicar contra la IA mientras se busca rival, con aviso si llega
+    alguien; en la sala, sus reglas en chapas y «Cambiar reglas», que el vestíbulo aún no sabe:
+    `LobbyInfo` no las trae; en «Mis partidas», la barra de lo que queda de turno, que pide saber
+    cuánto dura), avisos fuera de la pestaña (notificaciones del navegador: más aún con «Buscar
+    rival» por turnos, que empieza sin que estés) y que el final sepa las cuentas de todos: cada uno
+    solo ve las suyas (`withoutBooks`, `core/playerView.ts`), así que en la pantalla final las del
+    rival salen a 0 y su gráfica del valor del ejército solo tiene el último día; al acabar ya no hay
+    nada que esconder y la sala podría mandar la partida entera. Decidido: el servidor manda (las
+    acciones pasan por la sesión como las de cualquiera, la IA rival y los dados juegan allí) y un
+    cliente nunca recibe más que la vista de su equipo (si no, se puede mirar a través de la niebla).
+    Las clasificatorias, después.
 17. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
 
 Para competir hará falta: equilibrio estricto, mapas simétricos o probados (los de azar

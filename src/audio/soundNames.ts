@@ -147,6 +147,7 @@ export const SOUND_FALLBACKS = {
   net_reconnecting: 'ui_error',
   net_lost: 'ui_error',
   match_begins: 'turn_start',
+  turn_clock_tick: 'ui_move',
   // El campo: el trueno de la tormenta y lo que dicen los animalitos del tablero (sin los suyos, nada)
   thunder: null,
   animal_frog: null,

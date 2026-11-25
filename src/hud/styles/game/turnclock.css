@@ -1,0 +1,131 @@
+/* El reloj del turno por la red (TurnClock.tsx): una pastilla bajo la del dia (topbar.css), donde va la
+   linea de la conexion (online.css), con un anillo que se vacia. Azul con tiempo de sobra, rojo los
+   ultimos segundos (y «Fin del turno» parpadea) y oscuro en el turno de otro, con el anillo de su color. */
+.turnclock {
+  --tc-fill: var(--blue-btn);
+  --tc-track: var(--lo);
+  position: absolute;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+  gap: 12px;
+  padding: 8px 18px 8px 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  /* Sin z-index: el cartel del dia (notices.css), que cuelga en el mismo sitio un momento, va encima. */
+}
+.turnclock .tc-ring {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  /* El trazo de un circulo empieza a las tres: asi empieza arriba y se vacia en el sentido del reloj. */
+  transform: rotate(-90deg);
+}
+.turnclock .tc-track,
+.turnclock .tc-fill {
+  fill: none;
+}
+.turnclock .tc-track {
+  stroke: var(--tc-track);
+}
+.turnclock .tc-fill {
+  stroke: var(--tc-fill);
+  /* Se publica una vez por segundo: el anillo baja seguido entre medias. */
+  transition: stroke-dashoffset 1s linear;
+}
+.turnclock .tc-text {
+  display: flex;
+  flex-direction: column;
+}
+.turnclock .tc-time {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1;
+}
+.turnclock .tc-caption {
+  font-family: var(--body);
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* El aviso de los ultimos segundos para un lector de pantalla: no se ve. */
+.turnclock .tc-alert {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Los ultimos segundos del turno propio. */
+.turnclock.hurry {
+  --tc-fill: var(--red);
+  border-color: var(--red-lo);
+  box-shadow: 0 4px 0 var(--red-lo);
+}
+.turnclock.hurry .tc-time,
+.turnclock.hurry .tc-caption {
+  color: var(--red-lo);
+}
+
+/* El turno de otro: no es su momento (se puede mirar el mapa y abrir la pausa). */
+.turnclock.waiting {
+  --tc-track: #4a3f63;
+  background: var(--ink);
+  color: var(--panel);
+  box-shadow: 0 4px 0 #000;
+}
+.turnclock.waiting.side-enemy {
+  --tc-fill: var(--red);
+}
+.turnclock.waiting.side-enemy .tc-caption {
+  color: #ffb0ab;
+}
+.turnclock.waiting.side-ally .tc-caption {
+  color: var(--blue-hi);
+}
+
+/* Si ademas va la linea de la conexion (reconectando), debajo del reloj. */
+.turnclock + .netline {
+  top: 150px;
+}
+/* En el movil la barra de arriba sube (narrow.css): el reloj, con ella. */
+@media (max-width: 720px) {
+  .turnclock {
+    top: 70px;
+  }
+  .turnclock + .netline {
+    top: 144px;
+  }
+}
+
+/* «Fin del turno» parpadea cuando se acaba el tiempo (endturn.css). */
+.chip.end.hurry {
+  animation: end-hurry 1s steps(1, end) infinite;
+}
+@keyframes end-hurry {
+  50% {
+    background: var(--red-btn);
+    box-shadow:
+      inset 0 -4px 0 var(--red-lo),
+      var(--lift);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turnclock .tc-fill {
+    transition: none;
+  }
+  .chip.end.hurry {
+    animation: none;
+    background: var(--red-btn);
+  }
+}
+
+/* La opcion de menos movimiento acorta cada animacion a nada (reduce-motion.css): sin parpadeo, en rojo. */
+html.reduce-motion .chip.end.hurry {
+  animation-name: none;
+  background: var(--red-btn);
+}
