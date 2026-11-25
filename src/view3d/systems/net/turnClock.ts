@@ -50,6 +50,7 @@ export class TurnClock {
     this.turn = turn;
     this.shownSeconds = null;
     if (!turn) return this.stop();
+    // Una pastilla a 0:00 ya no miraba los fotogramas: el turno nuevo vuelve a contar.
     this.stopFrames ??= this.host.onFrame(() => this.update());
     this.update();
   }
@@ -64,12 +65,18 @@ export class TurnClock {
     const side = sideOf(this.s, this.viewer, turn.team);
     const clock = turnClockVM({ side, day: turn.day, secondsLeft, totalSeconds: turn.deadline.totalMs / MS_PER_SECOND });
     ui.set({ turnClock: clock });
-    if (clock.mood === 'hurry' && secondsLeft > 0) this.host.sounds.play('turn_clock_tick');
+    if (secondsLeft === 0) return this.stopCounting();
+    if (clock.mood === 'hurry') this.host.sounds.play('turn_clock_tick');
+  }
+
+  /** Deja de mirar cada fotograma; la pastilla se queda como esta (a 0:00, hasta el `turn` que sigue). */
+  private stopCounting(): void {
+    this.stopFrames?.();
+    this.stopFrames = null;
   }
 
   private stop(): void {
-    this.stopFrames?.();
-    this.stopFrames = null;
+    this.stopCounting();
     ui.set({ turnClock: null });
   }
 }

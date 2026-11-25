@@ -128,4 +128,16 @@ describe('el reloj del turno: la cuenta', () => {
     expect(ui.get().turnClock).toMatchObject({ time: '1:38', mood: 'calm' });
     expect(frames.size).toBe(1);
   });
+
+  it('a 0:00 deja de mirar los fotogramas y se queda asi hasta el turno que sigue, que vuelve a contar', () => {
+    const { clock, frames, wait } = clockHarness();
+    clock.follow(turnOf(0, 2));
+    wait(2 * MS_PER_SECOND);
+    expect(ui.get().turnClock?.time).toBe('0:00');
+    expect(frames.size).toBe(0);
+    clock.follow(turnOf(1, 100));
+    expect(frames.size).toBe(1);
+    wait(MS_PER_SECOND);
+    expect(ui.get().turnClock).toMatchObject({ time: '1:37', mood: 'waiting' });
+  });
 });
