@@ -15,7 +15,7 @@ import type { GameImages } from '../../atlas';
 import { gameTrackOf, playMusic } from '../../audio/music';
 import type { GameAudio } from '../../audio/gameAudio';
 import { AmbiencePlayer } from '../systems/sound/ambiencePlayer';
-import { ambienceZoomLevel, CameraListener, zoomLevel } from '../systems/sound/listener';
+import { CameraListener, zoomLevel } from '../systems/sound/listener';
 import { helpPanel } from '../../menu/helpPanel';
 import { OptionsPanel } from '../../menu/optionsPanel';
 import { MatchScene } from '../engine/matchScene';
@@ -345,7 +345,7 @@ function startingCamera(scene: MatchScene, state: GameState, viewer: TeamId): St
 function startAmbience(scene: MatchScene, state: GameState, audio: GameAudio): AmbiencePlayer {
   const ambience = new AmbiencePlayer({
     loops: audio.loops,
-    playAt: (sound, at) => audio.playAt(sound, at),
+    playAt: (sound, at, tone) => audio.playAt(sound, at, tone),
     later: (seconds, run) => void setTimeout(run, seconds * MS_PER_SECOND),
     random: Math.random,
   });
@@ -372,7 +372,7 @@ function playEachFrame({ scene, camera, audio, ambience, minimap }: FrameParts, 
     if (hearing.follow(camera.pose)) {
       audio.moveListener(hearing.pose);
       audio.setBoardLevel(zoomLevel(camera.pose.distance));
-      ambience.setZoomLevel(ambienceZoomLevel(camera.pose.distance));
+      ambience.setCameraDistance(camera.pose.distance);
     }
     ambience.update(seconds, hearing.pose.position);
     scene.render(seconds, camera.pose);

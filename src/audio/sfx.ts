@@ -2,7 +2,8 @@
  * Los efectos de sonido (disparos, pasos, menus...) con Web Audio: la implementacion de `SoundPort`
  * (sounds.ts). Los hace Ashfox (tools/art/ashfox/sounds.mjs) o la IA (tools/audio) y se guardan en WAV.
  * Suenan con Web Audio para que varios se mezclen sin cortarse; cada sonido tiene variantes y cada vez
- * se elige una al azar, para que no suene siempre igual. Lo del tablero suena desde su sitio
+ * se elige una al azar, nunca la de la vez anterior (variants.ts), para que no suene siempre igual. Lo
+ * del tablero suena desde su sitio
  * (`playSoundAt`, spatial.ts); lo de la interfaz, sin sitio. Se pide por nombre: si aun no hay WAV,
  * suena su sustituto (soundNames.ts).
  */
@@ -10,9 +11,10 @@ import { asset, assetsAvailable } from '../assets';
 import { settings } from '../settings';
 import { audioMixer, runningMixer, unlockOnGesture, whenUnlocked, type Channel, type Mixer } from './audioContext';
 import { SOUND_NAMES, resolveSound, type SoundId, type SoundName } from './soundNames';
-import { SOUND_IDS, type SoundPort } from './sounds';
+import { PLAIN_TONE, SOUND_IDS, type SoundPort, type SoundTone } from './sounds';
 import { SOUND_VARIANTS } from './soundList';
-import { AMBIENT_FALLOFF, EFFECT_FALLOFF, pannerAt, type Falloff, type Point3 } from './spatial';
+import { EFFECT_FALLOFF, PAN_ONLY, pannerAt, type Falloff, type Point3 } from './spatial';
+import { nextVariant } from './variants';
 import { isAudible, type VolumeChannel } from './volumes';
 
 /** Un mismo sonido no se repite antes de esto (segundos): dos a la vez solo suenan mas fuerte. */
@@ -47,19 +49,21 @@ const PREVIEW_SOUNDS: Readonly<Record<VolumeChannel, { name: SoundName; channel:
   interface: { name: 'ui_select', channel: 'interface' },
 };
 
-/** Un efecto pedido: que nombre, que sono de verdad (null: nada) y desde donde. */
+/** Un efecto pedido: que nombre, que sono de verdad (null: nada), desde donde y a que parte de su volumen. */
 export interface HeardSound {
   readonly name: SoundName;
   readonly played: SoundId | null;
   readonly at: Point3 | null;
+  readonly volume: number;
 }
 
 const buffers = new Map<string, Promise<AudioBuffer | null>>();
 const lastPlayed = new Map<SoundId, number>();
+const lastVariants = new Map<SoundId, number>();
 const recent: HeardSound[] = [];
 let lastVoiceAt = -Infinity;
 let lastPreviewAt = -Infinity;
-let pending: { name: SoundName; at: Point3 | null; askedAt: number } | null = null;
+let pending: { name: SoundName; at: Point3 | null; tone: SoundTone; askedAt: number } | null = null;
 
 /** Por donde sale un sonido: un canal, o directo al general (la muestra de su volumen). */
 type Output = Channel | 'master';
@@ -80,7 +84,12 @@ function bufferOf(audio: AudioContext, path: string): Promise<AudioBuffer | null
   return loading;
 }
 
-const randomVariant = (sound: SoundId): number => 1 + Math.floor(Math.random() * SOUND_VARIANTS[sound]);
+/** Una variante de `sound` al azar, que no sea la que acaba de sonar. */
+function randomVariant(sound: SoundId): number {
+  const variant = nextVariant(SOUND_VARIANTS[sound], lastVariants.get(sound) ?? 0, Math.random());
+  lastVariants.set(sound, variant);
+  return variant;
+}
 
 /** Los que van por su propio canal, por como empieza su nombre: las voces y lo que dicen los animales (el ambiente). */
 const CHANNEL_PREFIXES: readonly (readonly [prefix: string, channel: Channel])[] = [
@@ -98,27 +107,30 @@ const isVoice = (sound: string): boolean => ownChannelOf(sound) === 'voices';
  */
 const channelOf = (sound: string, at: Point3 | null): Channel => ownChannelOf(sound) ?? (at ? 'effects' : 'interface');
 
-/** Que suene `name` (una de sus variantes) en `at`, o sin sitio con null. Con su canal callado en Opciones, nada. */
-export function playSoundAt(name: SoundName, at: Point3 | null): void {
+/**
+ * Que suene `name` (una de sus variantes) en `at`, o sin sitio con null, con `tone` (entero y tal cual si
+ * no se dice). Con su canal callado en Opciones, nada.
+ */
+export function playSoundAt(name: SoundName, at: Point3 | null, tone: SoundTone = PLAIN_TONE): void {
   const played = resolveSound(name);
   if (!isAudible(settings.volumes, channelOf(played ?? name, at))) return;
-  remember({ name, played, at });
+  remember({ name, played, at, volume: tone.volume });
   const mixer = runningMixer();
-  if (mixer) playNow(mixer, name, played, at);
-  else pending = { name, at, askedAt: performance.now() };
+  if (mixer) playNow(mixer, name, played, at, tone);
+  else pending = { name, at, tone, askedAt: performance.now() };
 }
 
 /** Suena ya `played` (lo que sale de `name`), salvo que acabe de sonar. */
-function playNow(mixer: Mixer, name: SoundName, played: SoundId | null, at: Point3 | null): void {
+function playNow(mixer: Mixer, name: SoundName, played: SoundId | null, at: Point3 | null, tone: SoundTone): void {
   if (!played || tooSoon(name, played, mixer.context.currentTime)) return;
-  playVariant(mixer, played, channelOf(played, at), at);
+  playVariant(mixer, played, channelOf(played, at), at, tone);
 }
 
 /** Una variante de `sound` al azar, por `channel` (en cuanto este bajada). */
-function playVariant(mixer: Mixer, sound: SoundId, channel: Output, at: Point3 | null): void {
+function playVariant(mixer: Mixer, sound: SoundId, channel: Output, at: Point3 | null, tone: SoundTone = PLAIN_TONE): void {
   const [path] = assetsAvailable([pathOf(sound, randomVariant(sound))]);
   if (!path) return;
-  void bufferOf(mixer.context, path).then((buffer) => buffer && start(mixer, buffer, channel, at));
+  void bufferOf(mixer.context, path).then((buffer) => buffer && start(mixer, buffer, { channel, at, tone }));
 }
 
 /** Una muestra de `volume` (Opciones), para oir como queda; si se acaba de oir otra, no. */
@@ -143,16 +155,34 @@ function tooSoon(name: SoundName, sound: SoundId, now: number): boolean {
   return false;
 }
 
-/** Lo del ambiente (los animales) se apaga antes con la distancia, como sus bucles. */
-const falloffOf = (channel: Output): Falloff => (channel === 'ambience' ? AMBIENT_FALLOFF : EFFECT_FALLOFF);
+/**
+ * Lo unico del ambiente que suena por aqui son los animales, y ya llegan flojos segun lo lejos que esten
+ * (`tone`, animalCalls.ts): el panner solo los pone a su lado, que apagarlos otra vez seria contarlo dos veces.
+ */
+const falloffOf = (channel: Output): Falloff => (channel === 'ambience' ? PAN_ONLY : EFFECT_FALLOFF);
 
-function start(mixer: Mixer, buffer: AudioBuffer, channel: Output, at: Point3 | null): void {
-  const source = mixer.context.createBufferSource();
+/** Por donde y como suena una vez un efecto. */
+interface Placement {
+  readonly channel: Output;
+  readonly at: Point3 | null;
+  readonly tone: SoundTone;
+}
+
+function start(mixer: Mixer, buffer: AudioBuffer, { channel, at, tone }: Placement): void {
+  const { context } = mixer;
+  const source = context.createBufferSource();
   source.buffer = buffer;
-  const output = outputOf(mixer, channel);
-  if (at) source.connect(pannerAt(mixer.context, at, falloffOf(channel))).connect(output);
-  else source.connect(output);
+  source.playbackRate.value = tone.rate;
+  const toned = tone.volume === 1 ? source : source.connect(gainOf(context, tone.volume));
+  const placed = at ? toned.connect(pannerAt(context, at, falloffOf(channel))) : toned;
+  placed.connect(outputOf(mixer, channel));
   source.start();
+}
+
+function gainOf(context: AudioContext, volume: number): GainNode {
+  const gain = context.createGain();
+  gain.gain.value = volume;
+  return gain;
 }
 
 function remember(heard: HeardSound): void {
@@ -180,7 +210,7 @@ function playPending(mixer: Mixer): void {
   const request = pending;
   pending = null;
   if (request && performance.now() - request.askedAt <= PENDING_MAX_AGE_MS)
-    playNow(mixer, request.name, resolveSound(request.name), request.at);
+    playNow(mixer, request.name, resolveSound(request.name), request.at, request.tone);
 }
 
 /** Los efectos del juego sin sitio (menus, interfaz), por Web Audio. */

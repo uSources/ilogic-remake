@@ -30,6 +30,8 @@ export interface Falloff {
 export const EFFECT_FALLOFF: Falloff = { reference: 6, rolloff: 0.8 };
 /** Los ambientes se apagan antes: manda lo que tienes al lado, no todo lo que hay en pantalla. */
 export const AMBIENT_FALLOFF: Falloff = { reference: 3, rolloff: 1 };
+/** A un lado u otro, sin apagarse: para lo que ya llega flojo segun lo lejos que esta (los animales). */
+export const PAN_ONLY: Falloff = { reference: 1, rolloff: 0 };
 /** Mas alla de esto (casillas) ya no baja mas. */
 const MAX_DISTANCE = 40;
 

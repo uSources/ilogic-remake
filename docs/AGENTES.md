@@ -54,8 +54,8 @@ mira), `online` (por la red, `OnlinePlay`; si no, null), `board` (las piezas),
 `controls` (la entrada del turno: `tap(pos)`, `endTurn()`, `focusUnit(uid)`), `camera` (la camara de
 estrategia como logica: `lookAt({ x, y, z })`, `pose`), `world` (escena, `setWeather(id)`), `weather`, `stages` (los puertos con los que se
 anima un suceso: `stages.pieces.walk(uid, de, a)`, `stages.effects.sparks(sitio, 1)`...; los pasos de cada
-suceso los decide `src/view3d/systems/events/eventSteps.ts`), `wrecks`, `recentSounds()` (los ultimos efectos pedidos: nombre, el que sono de verdad y desde
-donde; para comprobar el sonido sin oirlo), `ambience` (los emisores de ambiente y cuales suenan), `life` (lo que vive en el tablero: `life.swarms`, las motas de cada clase; `life.critters`, los animalitos sentados (pingüinos y focas incluidos), y `life.travellers`, los que se van: pajaros, buitres, bolas rodadoras, mariposas, peces, gansos), `pause` (el menu de pausa) y `ui` (el estado de la
+suceso los decide `src/view3d/systems/events/eventSteps.ts`), `wrecks`, `recentSounds()` (los ultimos efectos pedidos: nombre, el que sono de verdad, desde
+donde y a que parte de su volumen, `volume`; para comprobar el sonido sin oirlo), `ambience` (los emisores de ambiente y cuales suenan), `life` (lo que vive en el tablero: `life.swarms`, las motas de cada clase; `life.critters`, los animalitos sentados (pingüinos y focas incluidos), y `life.travellers`, los que se van: pajaros, buitres, bolas rodadoras, mariposas, peces, gansos), `pause` (el menu de pausa) y `ui` (el estado de la
 interfaz: `ui.get()`, y sus botones: `ui.actions`). Usar estos y no `import()` desde la consola: tras una
 recarga en caliente, `import()` puede dar otra copia del modulo.
 

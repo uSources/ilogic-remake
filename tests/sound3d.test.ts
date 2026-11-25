@@ -23,8 +23,8 @@ import {
   type AmbientEmitter,
 } from '../src/view3d/systems/sound/ambience';
 import { AmbiencePlayer } from '../src/view3d/systems/sound/ambiencePlayer';
-import { AnimalCalls, type Hearing } from '../src/view3d/systems/sound/animalCalls';
-import { ambienceZoomLevel, CameraListener, zoomLevel } from '../src/view3d/systems/sound/listener';
+import { AnimalCalls, callVolumeOf, type Hearing } from '../src/view3d/systems/sound/animalCalls';
+import { ambienceZoomLevel, animalZoomLevel, CameraListener, zoomLevel } from '../src/view3d/systems/sound/listener';
 import { CATALOG } from '../tools/audio/catalog';
 import { blankState } from './helpers';
 
@@ -88,6 +88,14 @@ describe('el oyente sigue a la camara', () => {
     expect(ambienceZoomLevel(13)).toBeLessThan(1);
     expect(ambienceZoomLevel(13)).toBeGreaterThan(ambienceZoomLevel(20));
     expect(ambienceZoomLevel(40)).toBeCloseTo(0.15);
+  });
+
+  it('los animalitos, solo al acercar la camara: desde la vista de empezar, nada', () => {
+    expect(animalZoomLevel(6)).toBe(1);
+    expect(animalZoomLevel(8)).toBeGreaterThan(0);
+    expect(animalZoomLevel(8)).toBeLessThan(1);
+    expect(animalZoomLevel(13)).toBe(0);
+    expect(animalZoomLevel(40)).toBe(0);
   });
 });
 
@@ -242,15 +250,35 @@ describe('el ambiente de la partida', () => {
     const loops = new FakeLoops();
     const { player } = playerWith(loops);
     const s = blankState();
-    paint(s, { x: 2, y: 14 }, 4, 'Woods');
+    s.theme = 'Desert';
+    paint(s, { x: 2, y: 14 }, 4, 'GrassMountain');
     player.load(s);
     player.setWeather('Rain');
     player.update(1, point(4, 16));
     const before = new Map(loops.levels);
-    player.setZoomLevel(0.2);
-    expect(loops.levels.get('amb_plains')).toBeCloseTo(before.get('amb_plains')! * 0.2);
-    expect(loops.levels.get('amb_woods')).toBeCloseTo(before.get('amb_woods')! * 0.2);
+    player.setCameraDistance(40);
+    expect(loops.levels.get('amb_desert')).toBeCloseTo(before.get('amb_desert')! * ambienceZoomLevel(40));
+    expect(loops.levels.get('amb_peaks')).toBeCloseTo(before.get('amb_peaks')! * ambienceZoomLevel(40));
     expect(loops.levels.get('amb_rain')).toBe(before.get('amb_rain'));
+  });
+
+  it('lo de animales (el bosque, el fondo de la llanura) solo al acercar la camara; el viento de las cumbres, no', () => {
+    const loops = new FakeLoops();
+    const { player } = playerWith(loops);
+    const s = blankState();
+    paint(s, { x: 2, y: 14 }, 4, 'Woods');
+    paint(s, { x: 10, y: 14 }, 4, 'GrassMountain');
+    player.load(s);
+    player.update(1, point(6, 16));
+    const near = new Map(loops.levels);
+    player.setCameraDistance(13);
+    expect(loops.levels.get('amb_woods')).toBe(0);
+    expect(loops.levels.get('amb_plains')).toBe(0);
+    expect(loops.levels.get('amb_peaks')).toBeCloseTo(near.get('amb_peaks')! * ambienceZoomLevel(13));
+    player.setCameraDistance(8);
+    expect(loops.levels.get('amb_woods')).toBeCloseTo(near.get('amb_woods')! * animalZoomLevel(8));
+    player.setCameraDistance(6);
+    expect(loops.levels.get('amb_woods')).toBeCloseTo(near.get('amb_woods')!);
   });
 
   it('con mal tiempo los animales se callan: bajan el bosque y el fondo de la llanura, no el viento ni el clima', () => {
@@ -288,6 +316,20 @@ describe('el ambiente de la partida', () => {
     expect(heard).toEqual(['animal_frog']);
   });
 
+  it('los animales del tablero, solo con la camara cerca: desde la vista de empezar, ni uno', () => {
+    const loops = new FakeLoops();
+    const { player, heard } = playerWith(loops, () => 0);
+    player.load(blankState());
+    player.update(1, point(10, 10));
+    const frog: AnimalMoment = { animal: 'frog', act: 'move', at: { x: 11, y: 0, z: 10 } };
+    player.setCameraDistance(13);
+    player.animal(frog);
+    expect(heard).toEqual([]);
+    player.setCameraDistance(6);
+    player.animal(frog);
+    expect(heard).toEqual(['animal_frog']);
+  });
+
   it('cada relampago trae su trueno, despues', () => {
     const loops = new FakeLoops();
     const { player, thunders, later } = playerWith(loops);
@@ -303,30 +345,45 @@ describe('el ambiente de la partida', () => {
 describe('lo que dicen los animales', () => {
   const sunny: Hearing = { listener: point(0, 0), zoomLevel: 1, weather: null };
   const moment = (animal: string, act: AnimalMoment['act'], x = 1): AnimalMoment => ({ animal, act, at: { x, y: 0, z: 0 } });
+  const soundOf = (calls: AnimalCalls, ...args: Parameters<AnimalCalls['callOf']>) => calls.callOf(...args)?.sound ?? null;
 
   it('cada uno lo suyo; lo que no tiene voz calla', () => {
     const calls = new AnimalCalls(() => 0);
-    expect(calls.callOf(moment('goose', 'leave'), sunny, 0)).toBe('animal_goose');
-    expect(calls.callOf(moment('penguin', 'splash'), sunny, 10)).toBe('animal_splash');
-    expect(calls.callOf(moment('butterfly_yellow', 'leave'), sunny, 20)).toBeNull();
-    expect(calls.callOf(moment('frog', 'leave'), sunny, 30)).toBeNull();
+    expect(soundOf(calls, moment('goose', 'leave'), sunny, 0)).toBe('animal_goose');
+    expect(soundOf(calls, moment('penguin', 'splash'), sunny, 10)).toBe('animal_splash');
+    expect(soundOf(calls, moment('butterfly_yellow', 'leave'), sunny, 20)).toBeNull();
+    expect(soundOf(calls, moment('frog', 'leave'), sunny, 30)).toBeNull();
   });
 
   it('uno cada poco, no un coro', () => {
     const calls = new AnimalCalls(() => 0);
-    expect(calls.callOf(moment('frog', 'move'), sunny, 0)).toBe('animal_frog');
-    expect(calls.callOf(moment('seal', 'move'), sunny, 0.5)).toBeNull();
-    expect(calls.callOf(moment('seal', 'move'), sunny, 2)).toBe('animal_seal');
+    expect(soundOf(calls, moment('frog', 'move'), sunny, 0)).toBe('animal_frog');
+    expect(soundOf(calls, moment('seal', 'move'), sunny, 0.5)).toBeNull();
+    expect(soundOf(calls, moment('seal', 'move'), sunny, 2)).toBe('animal_seal');
   });
 
   it('ni lejos, ni con la camara arriba, ni con tormenta; con lluvia, menos veces', () => {
     const calls = new AnimalCalls(() => 0.15);
-    expect(calls.callOf(moment('frog', 'move', 30), sunny, 0)).toBeNull();
-    expect(calls.callOf(moment('frog', 'move'), { ...sunny, zoomLevel: 0 }, 0)).toBeNull();
-    expect(calls.callOf(moment('frog', 'move'), { ...sunny, weather: 'Storm' }, 0)).toBeNull();
-    expect(calls.callOf(moment('frog', 'move'), { ...sunny, weather: 'Rain' }, 0)).toBeNull();
-    expect(calls.callOf(moment('frog', 'move'), sunny, 0)).toBe('animal_frog');
-    expect(new AnimalCalls(() => 0).callOf(moment('frog', 'move'), { ...sunny, listener: null }, 0)).toBeNull();
+    expect(soundOf(calls, moment('frog', 'move', 30), sunny, 0)).toBeNull();
+    expect(soundOf(calls, moment('frog', 'move'), { ...sunny, zoomLevel: 0 }, 0)).toBeNull();
+    expect(soundOf(calls, moment('frog', 'move'), { ...sunny, weather: 'Storm' }, 0)).toBeNull();
+    expect(soundOf(calls, moment('frog', 'move'), { ...sunny, weather: 'Rain' }, 0)).toBeNull();
+    expect(soundOf(calls, moment('frog', 'move'), sunny, 0)).toBe('animal_frog');
+    expect(soundOf(new AnimalCalls(() => 0), moment('frog', 'move'), { ...sunny, listener: null }, 0)).toBeNull();
+  });
+
+  it('flojos, y mas fuertes cuanto mas cerca; con la camara arriba, casi nada', () => {
+    expect(callVolumeOf(0, 1)).toBeLessThan(0.6);
+    expect(callVolumeOf(1, 1)).toBeGreaterThan(callVolumeOf(4, 1) * 3);
+    expect(callVolumeOf(7, 1)).toBe(0);
+    expect(callVolumeOf(1, 0.15)).toBeLessThan(callVolumeOf(1, 1) / 5);
+  });
+
+  it('cada vez con un tono algo distinto', () => {
+    const low = new AnimalCalls(() => 0).callOf(moment('frog', 'move'), sunny, 0)!;
+    const high = new AnimalCalls(() => 0.49).callOf(moment('frog', 'move'), sunny, 0)!;
+    expect(low.tone.rate).toBeLessThan(1);
+    expect(high.tone.rate).toBeCloseTo(1, 1);
   });
 });
 
