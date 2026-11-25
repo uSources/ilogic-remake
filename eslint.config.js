@@ -173,7 +173,6 @@ const STEPS_BY_MODULE = {
   'rules/invariants': ['restoreInvariants'],
   'rules/undo': ['forgetUndoableMoves', 'rememberMove', 'dropLastUndoableMove', 'dropStaleUndoableMoves'],
   'rules/falls': ['recordFalls'],
-  'rules/control': ['controlRound'],
   'squads/standingOrderSteps': ['giveStandingOrder', 'cancelStandingOrder', 'finishStandingOrder', 'keepCapturing', 'liftStandingOrder'],
   'squads/membership': ['pruneSquads', 'formSquad', 'setGroup', 'addToGroup', 'leaveSquad', 'renameSquad', 'disbandSquad'],
   weather: ['advanceWeather', 'ensureWeather'],

@@ -21,7 +21,7 @@ function useDelayed(ms: number): boolean {
 /**
  * La ficha de la casilla señalada, junto a ella (docs/PLAN-INTERFAZ.md, fase 5): sale al parar el
  * raton un momento, con lo justo (la unidad, el sitio y lo que da); con Alt pulsado, la misma ficha
- * crece con el resto (de quien es la unidad, sus datos, carga, habilidades, el punto de control).
+ * crece con el resto (de quien es la unidad, sus datos, carga, habilidades).
  */
 export function TileTip({ tile, at }: { tile: TileVM; at: Anchor }) {
   const isReady = useDelayed(TIP_DELAY_MS);
@@ -30,7 +30,7 @@ export function TileTip({ tile, at }: { tile: TileVM; at: Anchor }) {
   return (
     <Popover anchor={at} prefer="right" class={`tile-tip ${isDetailed ? 'detailed' : ''}`}>
       {tile.unit && <UnitPart unit={tile.unit} isDetailed={isDetailed} />}
-      <GroundPart tile={tile} isDetailed={isDetailed} />
+      <GroundPart tile={tile} />
     </Popover>
   );
 }

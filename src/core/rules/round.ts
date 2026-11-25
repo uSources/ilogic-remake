@@ -59,14 +59,14 @@ export const ROUND_STAGES: readonly RoundStage[] = ['start', 'income', 'repair',
 
 /**
  * Los pasos del fin de ronda de cualquier partida, cada uno en su momento. Lo que depende de la
- * partida (ingresos de los edificios, puntos de control, mantenimiento, clima) lo aportan sus modulos de reglas
+ * partida (ingresos de los edificios, mantenimiento, clima) lo aportan sus modulos de reglas
  * (`roundPhasesOf`). Un sistema nuevo que actua cada ronda (moral, suministro...) es un paso de su
  * modulo, en el momento que le toque.
  */
 export const ROUND_PHASES: readonly RoundPhase[] = [
   // Las unidades vuelven a poder actuar en la ronda nueva.
   { id: 'refresh', stage: 'start', run: refreshUnits },
-  // Ya cobrado todo (los edificios y los puntos de control son modulos): la cura sobre edificios propios.
+  // Ya cobrado todo (los edificios son un modulo): la cura sobre edificios propios.
   { id: 'repair', stage: 'repair', run: healOnBuildings },
   { id: 'day', stage: 'newDay', run: nextDay },
   // Con el dia ya empezado: el valor del ejercito de cada equipo ese dia (la grafica del final).
@@ -95,7 +95,7 @@ export function endRound(s: GameState): GameEvent[] {
 
 /**
  * Lo que va en el resumen de cualquier ronda: lo cobrado y lo curado. Lo de los modulos (el
- * mantenimiento, los puntos de control, el clima) lo apuntan sus `roundReportParts`.
+ * mantenimiento, el clima) lo apuntan sus `roundReportParts`.
  */
 export const ROUND_REPORT_PARTS: readonly RoundReportPart[] = [
   {

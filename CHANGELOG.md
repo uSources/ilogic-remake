@@ -17,6 +17,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **Nuevo menú de inicio**: una lista de texto a la izquierda (Continuar, Campaña, Escaramuza y En línea, cada una con lo que hay detrás: el día de tu partida guardada, la misión por la que vas) y, detrás, el juego en 3D: la cámara da vueltas despacio alrededor de la base de una partida de la IA. Novedades, Aprender y Opciones, arriba a la derecha.
 - Cuando «Buscar rival» te empareja, la partida carga detrás de «¡Rival encontrado!»: los dos ejércitos frente a frente, quién empieza, el mapa y el tiempo por turno.
 
+### Cambios de juego
+- **Fuera los puntos de control**: las zonas de 3×3 que daban dinero repetían lo que ya hacen las ciudades, y se tomaban solo con dejar una unidad dentro. Para ganar dinero, a capturar edificios.
+
 ### Arreglos
 - El menú de la partida (☰ o Esc) también se abre mientras juegan los demás, para salir o rendirte: antes no hacía nada hasta tu turno.
 
@@ -29,6 +32,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Interface
 - **New start menu**: a text list on the left (Continue, Campaign, Skirmish and Online, each with what's behind it: the day of your saved game, the mission you're on) and, behind it, the game in 3D: the camera slowly circles the base of an AI game. What's new, Learn and Options, top right.
 - When “Find an opponent” pairs you up, the game loads behind an “Opponent found!” screen: both armies face to face, who goes first, the map and the time per turn.
+
+### Gameplay
+- **Control points are gone**: the 3×3 areas that paid money did the same job as cities, and you took them just by leaving a unit inside. To earn money, capture buildings.
 
 ### Fixes
 - The game menu (☰ or Esc) also opens while others are playing, so you can leave or surrender: before, it did nothing until your turn.

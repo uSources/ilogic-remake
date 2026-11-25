@@ -250,7 +250,6 @@ export interface RuleModuleIds {
   flank: true;
   weather: true;
   buildingIncome: true;
-  controlPoints: true;
   upkeep: true;
   commandPoints: true;
   noHealUnderFire: true;

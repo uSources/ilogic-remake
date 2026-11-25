@@ -14,16 +14,14 @@
  *
  * Lo que es de cada tipo de suceso es una entrada de `EVENT_FOG` (el compilador exige una por tipo,
  * tambien para los de los modulos: un suceso nuevo no compila sin la suya). Publico queda lo que la
- * partida anuncia a todos: los turnos, el dia, el clima, las rendiciones y las caidas, los puntos de
- * control.
+ * partida anuncia a todos: los turnos, el dia, el clima, las rendiciones y las caidas.
  * Privado de cada alianza: sus ordenes, sus escuadras, sus ingresos y su mantenimiento, lo que pierde
  * por el tope de dinero y quien va dentro de sus transportes.
  */
 import { foggedCopy } from '../playerView';
-import { inControlZone } from '../rules/control';
 import { unitById } from '../rules/queries';
 import { sightOf, type Sight } from '../rules/visibility';
-import { areAllied, isHostile } from '../teams';
+import { areAllied } from '../teams';
 import type { GameEvent, GameEventKind, GameEventOf, GameState, Pos, TeamId } from '../model';
 
 /** Lo que sabe un equipo en un momento: la partida tal como la sabe (`foggedCopy`) y lo que ve. */
@@ -53,8 +51,6 @@ interface Witness {
   sees(pos: Pos): boolean;
   isAlly(team: TeamId | null): boolean;
   knowsSquad(squad: number): boolean;
-  /** Conoce algun enemigo dentro de la zona del punto de control de `center`. */
-  knowsFoeInZone(center: Pos): boolean;
   /** Lo de la lista que es de unidades que conoce. */
   knownOf<Entry extends { uid: number }>(list: readonly Entry[]): Entry[];
 }
@@ -68,8 +64,6 @@ function witnessOf({ before, after }: Vantage): Witness {
     sees: (pos) => before.sees(pos) || after.sees(pos),
     isAlly: (team) => team !== null && areAllied(after.state, before.team, team),
     knowsSquad: (squad) => states.some((s) => s.squads?.some((known) => known.id === squad)),
-    knowsFoeInZone: (center) =>
-      states.some((s) => s.units.some((unit) => isHostile(s, before.team, unit.team) && inControlZone(s, center, unit))),
     knownOf: (list) => list.filter((entry) => knows(entry.uid)),
   };
 }
@@ -152,8 +146,6 @@ const EVENT_FOG: { readonly [K in GameEventKind]: EventFogRule<K> } = {
   turnEnd: isPublic,
   weather: isPublic,
   upkeep: alliesOnly((event) => event.team),
-  // De quien es cada punto es publico (esta en el estado); que lo disputa alguien, solo si lo ve.
-  controlPoint: (event, witness) => ({ ...event, contested: event.contested && witness.knowsFoeInZone(event.at) }),
 };
 
 /** Un suceso que no esta en la tabla (el de un modulo de un modo que no se conoce aqui): lo prudente es no mandarlo. */

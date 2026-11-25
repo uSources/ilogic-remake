@@ -51,12 +51,6 @@ export interface MatchSettings {
   weather: boolean;
   /** Habilidades de las unidades (units.json, "abilities"). */
   abilities: boolean;
-  /** [CAMBIO] Puntos de control en los mapas al azar (0 = ninguno): casillas que dan dinero cada ronda a quien las tiene. */
-  controlPoints: number;
-  /** [CAMBIO] Dinero que da cada punto de control por ronda. */
-  controlIncome: number;
-  /** [CAMBIO] Tamaño de la zona de cada punto: casillas alrededor del centro (1 = zona de 3×3). */
-  controlRadius: number;
   /**
    * [CAMBIO] Elevacion: cada casilla tiene una altura (`GameState.elevation`, de 0 a 2). Desde arriba
    * se acierta y se ve mas, y subir cuesta. El original era plano; la altura se lee en la vista 3D.

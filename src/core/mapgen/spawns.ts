@@ -31,16 +31,16 @@ export function findSpawn(s: GameState, fromTheEnd: boolean, accept: (pos: Pos) 
 }
 
 /** Una zona de salida y los pasos a pie desde ella a cada casilla. */
-export interface SpawnDistances {
+interface SpawnDistances {
   spawn: Pos;
   distances: DistanceMap;
 }
 
 /** Los pasos a pie desde `spawn` (sin unidades en medio). */
-export const walkingFrom = (s: GameState, spawn: Pos): SpawnDistances => ({ spawn, distances: distanceMap(s, spawn, landMovementOf(s)) });
+const walkingFrom = (s: GameState, spawn: Pos): SpawnDistances => ({ spawn, distances: distanceMap(s, spawn, landMovementOf(s)) });
 
 /** Se llega a pie a `pos` desde la salida (y no es la propia salida). */
-export function walksTo(from: SpawnDistances, pos: Pos): boolean {
+function walksTo(from: SpawnDistances, pos: Pos): boolean {
   const steps = from.distances.at(pos);
   return steps > 0 && steps < Infinity;
 }

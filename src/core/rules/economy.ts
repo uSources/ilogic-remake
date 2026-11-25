@@ -67,7 +67,7 @@ export function buildingIncome(s: GameState, buildingType: BuildingType): number
 
 /**
  * Lo que ganara el equipo la ronda que viene si nada cambia: lo que pagan sus edificios menos el
- * mantenimiento de sus unidades (sin puntos de control: lo que se sabe seguro).
+ * mantenimiento de sus unidades.
  */
 export function projectedIncome(s: GameState, team: TeamId): number {
   const income = s.buildings.reduce(

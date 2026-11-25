@@ -30,7 +30,7 @@ const SETTING_SETS: readonly Partial<MatchSettings>[] = [
   {},
   { fog: false, counterattack: false, veterancy: false },
   { ambush: false, terrainCost: false, weather: false, passAllies: false },
-  { abilities: false, controlPoints: 0, noHealUnderFire: false, forestHides: false },
+  { abilities: false, noHealUnderFire: false, forestHides: false },
 ];
 
 const MAP_SIZES = [16, 24, 32] as const;

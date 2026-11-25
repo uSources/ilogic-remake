@@ -10,7 +10,7 @@ import type { MovementMotion } from '../../../core/content';
 import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
 import { posOf } from '../../../core/geom';
 import type { GameEvent, GameState, IncomeSource, Pos, TeamId } from '../../../core/model';
-import { buildingIncome, isContested, visibility } from '../../../core/rules';
+import { buildingIncome, visibility } from '../../../core/rules';
 import { t } from '../../../settings';
 import type { PieceLookup, ShownPiece, Spot } from '../../ports/stage';
 import { captureSound, hitSound, shotSound, spawnSound, stepSounds, surfaceOf, unitSounds, type Surface } from '../sound/soundCues';
@@ -42,7 +42,7 @@ const DEFAULT_SURFACE: Surface = 'grass';
 
 /**
  * Lo que hace falta saber de la partida para los sucesos del dia: quien mira (lo que cobra, solo lo
- * suyo) y lo que paga cada sitio de un equipo por cada fuente de ingresos (edificios, puntos de control).
+ * suyo) y lo que paga cada sitio de un equipo por cada fuente de ingresos (los edificios).
  */
 export interface DayLookup {
   readonly viewer: TeamId;
@@ -56,7 +56,7 @@ export interface BoardLookup {
   motionOf(unitType: string): MovementMotion;
 }
 
-/** Un sitio que cobra al empezar el dia (un edificio, un punto de control): donde esta y cuanto. */
+/** Un sitio que cobra al empezar el dia (un edificio): donde esta y cuanto. */
 export interface IncomeSpot {
   readonly pos: Pos;
   readonly amount: number;
@@ -70,17 +70,9 @@ function buildingSpots(s: GameState, team: TeamId): IncomeSpot[] {
     .filter((spot) => spot.amount > 0);
 }
 
-/** [CAMBIO] (en 2013 no habia puntos de control) Los que le han pagado: los suyos sin disputar (se mira tras el fin de ronda). */
-function controlPointSpots(s: GameState, team: TeamId): IncomeSpot[] {
-  return (s.controlPoints ?? [])
-    .filter((point) => point.owner === team && !isContested(s, point))
-    .map((point) => ({ pos: posOf(point), amount: s.settings.controlIncome }));
-}
-
 /** De donde sale lo que cobra un equipo, por cada fuente de ingresos del fin de ronda. */
 const INCOME_SPOTS: Readonly<Record<IncomeSource, (s: GameState, team: TeamId) => IncomeSpot[]>> = {
   buildings: buildingSpots,
-  controlPoints: controlPointSpots,
 };
 
 /** Los sitios de un equipo que cobran por esa fuente, con lo que paga cada uno. */
@@ -240,7 +232,7 @@ function captureSteps(event: EventOf<'capture'>, { pieces, day }: StepContext): 
 
 /**
  * Al empezar el dia, lo tuyo: sobre cada sitio que cobra, a la vez, una chapa dorada con lo que paga
- * («+1000»); primero los edificios y despues los puntos de control (un suceso por fuente).
+ * («+1000»), un suceso por fuente de ingresos.
  */
 function incomeSteps(event: EventOf<'income'>, { day }: StepContext): AnimationStep[] {
   if (!day || event.team !== day.viewer) return [];

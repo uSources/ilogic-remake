@@ -1,7 +1,7 @@
 /**
  * Generador de mapas aleatorios (RandomMap.java), como una lista de pasos (`MAP_STEPS`): el tema,
- * el terreno, las montañas, el agua, las zonas de inicio, los edificios y unidades de cada salida, los neutrales y
- * los puntos de control. [CAMBIO] las zonas de inicio se buscan al final, deben existir, estar
+ * el terreno, las montañas, el agua, las zonas de inicio, los edificios y unidades de cada salida, y los
+ * neutrales. [CAMBIO] las zonas de inicio se buscan al final, deben existir, estar
  * conectadas por tierra y separadas; si no, se genera otro mapa (en el original podian faltar o
  * solaparse).
  *
@@ -21,7 +21,6 @@ import { raiseMountains } from './mountains';
 import { growTerrain, shapeWater } from './terrain';
 import { findMoreSpawns, findSpawn } from './spawns';
 import { placeNeutralBuildings, placeStartingBuildings, placeStartingUnits } from './buildings';
-import { placeControlPoints } from './controlPoints';
 
 function emptyState(size: number, options: NewMapOptions, seeds: MatchSeeds): GameState {
   // El terreno de partida no importa: el generador pone todas las casillas.
@@ -134,13 +133,6 @@ const MAP_STEPS: readonly MapStep[] = [
     name: 'edificios neutrales',
     run: (draft) => {
       placeNeutralBuildings(draft.s, draft.rng);
-      return true;
-    },
-  },
-  {
-    name: 'puntos de control',
-    run: (draft) => {
-      placeControlPoints(draft.s, spawnsOf(draft), draft.rng);
       return true;
     },
   },

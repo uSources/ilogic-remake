@@ -48,7 +48,6 @@ const EVENT_REFERENCES: { readonly [K in GameEventKind]: ReferencesOf<K> } = {
   turnEnd: () => NOTHING,
   weather: () => NOTHING,
   upkeep: (event) => ({ privateTo: [event.team] }),
-  controlPoint: () => NOTHING,
 };
 
 /** Lo que nombra el suceso (ver EventReferences). */

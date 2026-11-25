@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { changeSettings } from '@core/gameState';
 import { aiController } from '@core/controllers';
 import { GameSession, runMatch } from '@core/session';
 import { skirmishConfig } from '@core/match';
@@ -22,9 +21,7 @@ import {
   threatMap,
   unitById,
   visibility,
-  roundReport,
 } from '@core/rules';
-import { controlRound } from '@core/rules/control';
 import { newUnit } from '@core/measure';
 import { restoreInvariants } from '@core/rules/invariants';
 import { deserialize, serialize } from '@core/save';
@@ -160,13 +157,9 @@ describe('cuatro equipos en dos alianzas', () => {
     expect(canCapture(s, newUnit(s, SOLDIER, 0, { x: 12, y: 10 }))).toBe(true);
   });
 
-  it('cada equipo cobra lo suyo al acabar la ronda; un punto de control lo disputan solo los enemigos', () => {
+  it('cada equipo cobra lo suyo al acabar la ronda', () => {
     const s = fourCorners();
     s.buildings.push({ type: 'City', owner: 3, x: 12, y: 10, capture: null });
-    s.controlPoints = [{ x: 20, y: 20, owner: null }];
-    changeSettings(s, { ...s.settings, controlRadius: 1, controlIncome: 500 });
-    newUnit(s, SOLDIER, 0, { x: 20, y: 20 });
-    newUnit(s, SOLDIER, 2, { x: 21, y: 20 });
     const before = s.teams.map((team) => team.funds);
     const report = endRoundReport(s);
     expect(report.income).toHaveLength(4);
@@ -174,10 +167,6 @@ describe('cuatro equipos en dos alianzas', () => {
     expect(s.teams.map((team, id) => team.funds - before[id]!)).toEqual(
       perTeam(s, (team) => report.income[team]! - (report.upkeep?.[team] ?? 0)),
     );
-    // Dos aliados en la zona: no la disputan, es del primero que la tiene.
-    expect(s.controlPoints[0]!.owner).toBe(0);
-    newUnit(s, SOLDIER, 1, { x: 20, y: 21 });
-    expect(roundReport(s, controlRound(s)).control!.contested).toBe(1);
   });
 
   it('gana la alianza que deja sin nada a todas las enemigas', () => {
@@ -304,7 +293,7 @@ describe('mapas al azar para mas de dos equipos', () => {
       const teams: TeamSetup[] = Array.from({ length: count }, () => ({ controller: 'ai' }));
       const s = generateGame(seededRng(seed), {
         size: 32,
-        settings: settingsWith(defaultContent(), { controlPoints: 2 }),
+        settings: settingsWith(defaultContent()),
         content: defaultContent(),
         teams,
       });

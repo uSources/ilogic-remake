@@ -73,11 +73,11 @@ describe('pasos del fin de ronda (ROUND_PHASES y los de los modulos)', () => {
   it('tienen nombres distintos y van por momentos: se cobra todo antes de curar, y el dia cambia antes que el clima', () => {
     const ids = roundPhasesOf(blankState(TEST_SETTINGS)).map((roundPhase) => roundPhase.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(['refresh', 'buildingIncome', 'control', 'repair', 'upkeep', 'day', 'weather', 'army']);
+    expect(ids).toEqual(['refresh', 'buildingIncome', 'repair', 'upkeep', 'day', 'weather', 'army']);
   });
 
   it('sin los modulos solo quedan los de siempre', () => {
-    const s = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0, incomeScale: 0 }));
+    const s = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0, incomeScale: 0 }));
     expect(roundPhasesOf(s).map((roundPhase) => roundPhase.id)).toEqual(['refresh', 'repair', 'day', 'army']);
     expect(ROUND_PHASES.map((roundPhase) => roundPhase.stage)).toEqual(['start', 'repair', 'newDay', 'record']);
   });
@@ -167,15 +167,15 @@ describe('lo que pasa en un ataque (COMBAT_RESOLUTION y los pasos de los modulos
 });
 
 describe('partes del resumen de la ronda (ROUND_REPORT_PARTS y las de los modulos)', () => {
-  it('lo de siempre (cobrado y curado) y lo de cada modulo puesto (mantenimiento, puntos de control, clima)', () => {
+  it('lo de siempre (cobrado y curado) y lo de cada modulo puesto (mantenimiento, clima)', () => {
     expect(ROUND_REPORT_PARTS.map((part) => part.id)).toEqual(['income', 'healed']);
-    expect(hooksOf(blankState(TEST_SETTINGS), 'roundReportParts').map((part) => part.id)).toEqual(['weather', 'control', 'upkeep']);
-    const plain = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0 }));
+    expect(hooksOf(blankState(TEST_SETTINGS), 'roundReportParts').map((part) => part.id)).toEqual(['weather', 'upkeep']);
+    const plain = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0 }));
     expect(hooksOf(plain, 'roundReportParts')).toEqual([]);
   });
 
   it('cada modulo pone su parte solo si la apunta: sin ellos, el resumen solo tiene lo de siempre', () => {
-    const plain = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0, controlPoints: 0 }));
+    const plain = blankState(settingsWith(defaultContent(), { weather: false, upkeep: 0 }));
     expect(Object.keys(endRoundReport(plain)).sort()).toEqual(['healed', 'income']);
   });
 });

@@ -9,11 +9,10 @@ import { isHq } from '../gameContent';
 import { diamond, samePos } from '../geom';
 import { mapGrid } from '../mapGrid';
 import { canDamage } from '../rules/weapons';
-import { isContested } from '../rules/control';
 import { reachableTiles, type MoveRange } from '../rules/movement';
 import { buildingAt, isEnemyHq, unitAt } from '../rules/queries';
 import { knownFoes, sightIn } from '../playerView';
-import type { ActionPlan, Building, ControlPoint, GameState, Pos, Rng, Unit } from '../model';
+import type { ActionPlan, Building, GameState, Pos, Rng, Unit } from '../model';
 import { minBy } from '../util/pick';
 import { pick } from '../util/random';
 import { bestMoveToward, doMove, finish, stepsMap, type PlayCtx } from '../autopilot/context';
@@ -64,8 +63,6 @@ export function* tryCapture(s: GameState, play: PlayCtx, unit: Unit, range: Move
  * estuvieran mas cerca.
  */
 function advanceHeadStart(s: GameState, play: PlayCtx, unit: Unit, goal: Pos): number {
-  // [CAMBIO] Puntos de control que no son suyos: cuentan como si estuvieran mas cerca.
-  if (s.controlPoints?.some((point) => samePos(point, goal))) return play.profile.weights.controlPointHeadStart;
   const building = buildingAt(s, goal);
   if (!building || !isCapturer(s, unit) || building.owner === null) return 0;
   return isHq(s, building) ? play.profile.weights.enemyHqPreference : play.profile.weights.ownedBuildingPreference;
@@ -73,16 +70,12 @@ function advanceHeadStart(s: GameState, play: PlayCtx, unit: Unit, goal: Pos): n
 
 /**
  * A donde puede avanzar: las que capturan, a edificios ajenos; las demas, a enemigos visibles a
- * los que puedan danar y a la Base enemiga. Todas, a puntos de control que no son suyos o que
- * estan disputados (sus zonas: ver controlRound) y libres.
+ * los que puedan danar y a la Base enemiga.
  */
 function advanceGoals(s: GameState, play: PlayCtx, unit: Unit): Pos[] {
-  const isOpenPoint = (point: ControlPoint): boolean =>
-    (!isAlliedOwner(s, point.owner, play.me) || isContested(s, point)) && !unitAt(s, point);
-  const points: Pos[] = (s.controlPoints ?? []).filter(isOpenPoint);
-  if (isCapturer(s, unit)) return [...s.buildings.filter((building) => !isAlliedOwner(s, building.owner, play.me)), ...points];
+  if (isCapturer(s, unit)) return s.buildings.filter((building) => !isAlliedOwner(s, building.owner, play.me));
   const targets = knownFoes(s, play.me).filter((foe) => canDamage(s, unit, foe));
-  return [...targets, ...s.buildings.filter((building) => isEnemyHq(s, building, play.me)), ...points];
+  return [...targets, ...s.buildings.filter((building) => isEnemyHq(s, building, play.me))];
 }
 
 /** Pasos hasta `goal` o, si no se puede llegar a esa casilla (ocupada), hasta su vecina mas cercana. */

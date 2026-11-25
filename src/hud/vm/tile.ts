@@ -1,6 +1,6 @@
 import type { OwnerSide, Side, StatChipVM } from './common';
 
-/** Fichas de abajo: la casilla señalada (terreno, edificio, punto de control) y su unidad. */
+/** Fichas de abajo: la casilla señalada (terreno y edificio) y su unidad. */
 
 /** Habilidad de una unidad: nombre y explicacion (con sus numeros). */
 export interface AbilityVM {
@@ -45,6 +45,4 @@ export interface TileVM {
   terrain: { key: string; name: string; defense: number; cost?: { foot: number | null; vehicle: number | null } };
   building?: BuildingVM;
   unit?: UnitVM;
-  /** [CAMBIO] Punto de control en la casilla: de quien es y lo que da por ronda. */
-  point?: { owner: OwnerSide; income: number; contested: boolean; icon: string };
 }

@@ -33,15 +33,5 @@ export function minimapVM(
     units: s.units
       .filter((unit) => !hidden.has(unit.uid) && isShownTo(viewer, unit, seen))
       .map((unit) => ({ x: unit.x, y: unit.y, side: sideOf(s, viewer, unit.team) })),
-    ...(s.controlPoints
-      ? {
-          points: s.controlPoints.map((controlPoint) => ({
-            x: controlPoint.x,
-            y: controlPoint.y,
-            owner: ownerSideOf(s, viewer, controlPoint.owner),
-            r: s.settings.controlRadius,
-          })),
-        }
-      : {}),
   };
 }

@@ -17,7 +17,6 @@
     "enemyHqPreference",
     "ownedBuildingPreference",
     "minCapturers",
-    "controlPointHeadStart",
     "guardRadius",
     "focusFireBonus",
     "squadSpread",
@@ -88,11 +87,6 @@
       "type": "number",
       "minimum": 0,
       "description": "Unidades que capturan que intenta tener siempre."
-    },
-    "controlPointHeadStart": {
-      "type": "number",
-      "minimum": 0,
-      "description": "Puntos de control ajenos: cuantas casillas mas cerca cuentan al elegir adonde avanzar."
     },
     "focusFireBonus": {
       "type": "number",

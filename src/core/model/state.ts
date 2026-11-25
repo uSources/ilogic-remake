@@ -1,4 +1,4 @@
-import type { Building, ControlPoint } from './building';
+import type { Building } from './building';
 import type { GameModeId } from './match';
 import type { Objective } from './objective';
 import type { TeamId, TeamState } from './team';
@@ -19,7 +19,7 @@ export interface MatchContent {}
 /** Una partida: lo guardado (serializable a JSON) y su contenido, que no se guarda. */
 export interface GameState {
   /** Version del formato guardado: la de ahora (SAVE_VERSION, saveVersion.ts, tiene que ser esta). */
-  version: 14;
+  version: 15;
   /** Terreno: map[x][y] = id del terreno (terrain.json, ver terrainAt). El tamaño del mapa sale de aqui. */
   map: string[][];
   /** Tema del mapa (id de themes.json, ver themeOf): elige las imagenes de orilla y el clima. */
@@ -82,13 +82,6 @@ export interface GameState {
    * pone el modulo al empezar la partida y no cambia; sin poner, todo es llano (ver core/elevation.ts).
    */
   elevation?: number[][];
-  /**
-   * [CAMBIO] Puntos de control: zonas (rules.controlRadius alrededor del centro) que dan
-   * rules.controlIncome cada ronda a su dueño. Al acabar la ronda: si dentro solo hay unidades de una
-   * alianza, el punto es suyo y paga; si hay de alianzas enemigas, esta disputado y no paga a nadie; si
-   * no hay nadie, sigue siendo de quien era y paga.
-   */
-  controlPoints?: ControlPoint[];
   /**
    * Los movimientos que aun se pueden deshacer, el ultimo al final (ver UndoableMove y la accion
    * 'undoMove'). Vacia o sin poner: no hay nada que deshacer.
