@@ -14,7 +14,7 @@ import { reducedMotion } from '../../ui/motion';
 import { MatchScene } from '../engine/matchScene';
 import type { GlbLibrary } from '../engine/pieces/glbModels';
 import type { Point3 } from '../ports/camera';
-import { orbitPose, type OrbitPath, type ScreenSpot } from '../systems/camera/orbitCamera';
+import { OrbitCamera, type ScreenSpot } from '../systems/camera/orbitCamera';
 
 const degreesToRadians = (value: number): number => (value * Math.PI) / 180;
 
@@ -38,19 +38,21 @@ export function showMenuBoard(stage: HTMLElement, models: GlbLibrary, images: Ga
   const [viewer] = duelTeams(state);
   const scene = new MatchScene(stage, state, viewer, models, images);
   scene.sync(null);
-  const path: Omit<OrbitPath, 'spot'> = {
+  const camera = new OrbitCamera({
     center: orbitCenter(scene, state, viewer),
     distance: DISTANCE,
     pitch: PITCH,
     lapSeconds: LAP_SECONDS,
     startYaw: Math.random() * 2 * Math.PI,
-  };
+  });
+  // Lo que se mira en cada fotograma se cambia en el sitio: nada nuevo por fotograma.
+  const screen = { verticalFov: scene.verticalFov, aspect: 1 };
   let elapsed = 0;
   scene.onFrame((seconds) => {
     if (!reducedMotion()) elapsed += seconds;
-    const screen = { verticalFov: scene.verticalFov, aspect: scene.canvas.clientWidth / Math.max(scene.canvas.clientHeight, 1) };
-    const spot = screen.aspect >= WIDE_ASPECT ? WIDE_SPOT : TALL_SPOT;
-    scene.render(seconds, orbitPose({ ...path, spot }, elapsed, screen));
+    screen.aspect = scene.canvas.clientWidth / Math.max(scene.canvas.clientHeight, 1);
+    camera.moveTo(elapsed, screen, screen.aspect >= WIDE_ASPECT ? WIDE_SPOT : TALL_SPOT);
+    scene.render(seconds, camera.pose);
   });
   scene.start();
 }

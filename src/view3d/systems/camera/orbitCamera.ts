@@ -29,7 +29,6 @@ export interface OrbitPath {
   readonly lapSeconds: number;
   /** El giro con el que empieza (radianes). */
   readonly startYaw: number;
-  readonly spot: ScreenSpot;
 }
 
 /** Lo que ve la camara del motor: su apertura vertical (grados) y la forma de la pantalla (ancho / alto). */
@@ -38,21 +37,39 @@ export interface OrbitScreen {
   readonly aspect: number;
 }
 
-/** Donde esta la camara tras `seconds` dando vueltas: lo mismo cada `lapSeconds`. */
-export function orbitPose(path: OrbitPath, seconds: number, screen: OrbitScreen): CameraPose {
-  const yaw = path.startYaw + FULL_TURN * ((seconds % path.lapSeconds) / path.lapSeconds);
-  const halfHeight = path.distance * Math.tan(degreesToRadians(screen.verticalFov / 2));
-  const rightShift = path.spot.right * halfHeight * screen.aspect;
-  // Un paso por el suelo hacia el fondo se ve mas corto en la pantalla cuanto mas tumbada esta la camara.
-  const downShift = (path.spot.down * halfHeight) / Math.sin(path.pitch);
-  // La derecha de la pantalla y el fondo, en el suelo, con ese giro (ver engine/camera/cameraView.ts):
-  // mirar a la izquierda y mas al fondo que el punto lo deja a la derecha y abajo.
-  const right = { x: Math.cos(yaw), z: -Math.sin(yaw) };
-  const forward = { x: -Math.sin(yaw), z: -Math.cos(yaw) };
-  const target = {
-    x: path.center.x - right.x * rightShift + forward.x * downShift,
-    y: path.center.y,
-    z: path.center.z - right.z * rightShift + forward.z * downShift,
-  };
-  return { target, distance: path.distance, yaw, pitch: path.pitch };
+/** La pose que se mueve: en la vuelta solo cambian el giro y el punto al que se mira. */
+interface OrbitPose extends CameraPose {
+  readonly target: Point3;
+  yaw: number;
+}
+
+export class OrbitCamera {
+  private readonly current: OrbitPose;
+
+  constructor(private readonly path: OrbitPath) {
+    const { center, distance, pitch, startYaw } = path;
+    this.current = { target: { x: center.x, y: center.y, z: center.z }, distance, yaw: startYaw, pitch };
+  }
+
+  /** Donde esta ahora (para el motor). Es siempre el mismo objeto: se mueve en cada fotograma sin crear nada. */
+  get pose(): CameraPose {
+    return this.current;
+  }
+
+  /** La lleva a donde esta tras `seconds` dando vueltas (lo mismo cada `lapSeconds`), con el punto en `spot`. */
+  moveTo(seconds: number, screen: OrbitScreen, spot: ScreenSpot): void {
+    const { path, current } = this;
+    const yaw = path.startYaw + FULL_TURN * ((seconds % path.lapSeconds) / path.lapSeconds);
+    const halfHeight = path.distance * Math.tan(degreesToRadians(screen.verticalFov / 2));
+    const rightShift = spot.right * halfHeight * screen.aspect;
+    // Un paso por el suelo hacia el fondo se ve mas corto en la pantalla cuanto mas tumbada esta la camara.
+    const downShift = (spot.down * halfHeight) / Math.sin(path.pitch);
+    // Con ese giro, la derecha de la pantalla en el suelo es (cos, -sin) y el fondo, (-sin, -cos) (ver
+    // engine/camera/cameraView.ts): mirar a la izquierda y mas al fondo que el punto lo deja a la derecha y abajo.
+    const sin = Math.sin(yaw);
+    const cos = Math.cos(yaw);
+    current.yaw = yaw;
+    current.target.x = path.center.x - cos * rightShift - sin * downShift;
+    current.target.z = path.center.z + sin * rightShift - cos * downShift;
+  }
 }
