@@ -212,6 +212,19 @@ function describeMatch(serverOf: () => TestServer): void {
       expect(stored?.meta.timers.expiresAt).toBeGreaterThan(Date.now());
     });
 
+    it('con reloj, cada `turn` dice lo que le queda al turno; sin reloj, nada', async () => {
+      const timed = await joinedRoom(serverOf(), { turnSeconds: 120 });
+      for (const turn of await Promise.all(timed.clients.map((client) => client.take(['turn'])))) {
+        const clock = turn.kind === 'turn' ? turn.clock : null;
+        expect(clock?.totalMs).toBe(120_000);
+        expect(clock?.leftMs).toBeGreaterThan(100_000);
+        expect(clock?.leftMs).toBeLessThanOrEqual(120_000);
+      }
+      const untimed = await joinedRoom(serverOf());
+      for (const turn of await Promise.all(untimed.clients.map((client) => client.take(['turn']))))
+        expect(turn).toMatchObject({ clock: null });
+    });
+
     it('un mensaje repetido (el mismo numero de orden) no se hace dos veces', async () => {
       const { clients } = await joinedRoom(serverOf());
       await Promise.all(clients.map((client) => client.take(['turn'])));

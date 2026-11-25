@@ -42,6 +42,7 @@ export {
   type ServerMessage,
   type ServerMessageKind,
   type ServerMessageOf,
+  type TurnTimeLeft,
   type ViewChange,
   type ViewSnapshot,
 } from './net/protocol';

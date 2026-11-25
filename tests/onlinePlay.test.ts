@@ -3,12 +3,13 @@ import { defaultContent } from '@core/content/default';
 import { cloneState } from '@core/gameContent';
 import { skirmishConfig } from '@core/match';
 import type { Pos, Unit } from '@core/model';
-import { CURRENT_PROTOCOL, Room, type Outgoing, type RoomContext } from '@core/net';
+import { CURRENT_PROTOCOL, Room, type Outgoing, type RoomContext, type ServerMessage, type TurnTimeLeft } from '@core/net';
 import { canMoveNow, moveRange, reachableTiles, unitAt, unitById } from '@core/rules';
 import { ui } from '../src/hud/store';
 import { mirrorSession } from '../src/net/mirrorSession';
 import { RoomClient } from '../src/net/roomClient';
 import { OnlinePlay, type OnlineRoom } from '../src/view3d/systems/net/onlinePlay';
+import type { TimedTurn } from '../src/view3d/systems/net/turnClock';
 import { TurnControls } from '../src/view3d/systems/turn/turnControls';
 import { tokenCounter } from './sim/netClient';
 import { FakeEvents, FakeMarks, FakePreview, FakeSounds } from './sim/turnPorts';
@@ -25,7 +26,15 @@ const context = (): RoomContext => ({ content: defaultContent(), newToken: token
 /** Deja acabar lo que va por promesas (las jugadas de la sala, las animaciones falsas). */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-async function onlineMatch() {
+/** La hora de la pantalla (fija: el reloj del turno se cuenta desde ella). */
+const NOW = 1_000_000;
+
+/** Lo que hace el servidor con reloj: cada `turn` lleva lo que le queda (la sala del nucleo manda `clock: null`). */
+const withClock = (message: ServerMessage, clock: TurnTimeLeft | null): ServerMessage =>
+  message.kind === 'turn' && clock ? { ...message, clock } : message;
+
+/** `clock`: el reloj que pone el servidor en cada `turn` (null: la sala no tiene reloj). */
+async function onlineMatch(clock: TurnTimeLeft | null = null) {
   const config = skirmishConfig({
     seed: 21,
     size: 16,
@@ -52,9 +61,11 @@ async function onlineMatch() {
       },
     },
     defaultContent(),
+    {},
+    () => NOW,
   );
   const deliver = (outgoing: readonly Outgoing[]) => {
-    for (const { seat, message } of outgoing) if (seat === PERSON) client.receive(message);
+    for (const { seat, message } of outgoing) if (seat === PERSON) client.receive(withClock(message, clock));
   };
   const hold = () => (held = []);
   const release = () => {
@@ -69,11 +80,13 @@ async function onlineMatch() {
   const events = new FakeEvents();
   const ended: boolean[] = [];
   let ownTurns = 0;
+  const clocks: (TimedTurn | null)[] = [];
   const link: OnlineRoom = { client, link: { status: 'online' }, listener: {}, close: () => undefined };
   const online = new OnlinePlay(link, session, PERSON, {
     viewReplaced: () => controls.viewReplaced(),
     othersGoOn: () => controls.othersGoOn(),
     ownTurn: () => (ownTurns += 1),
+    showClock: (turn) => clocks.push(turn),
     quit: () => undefined,
   });
   const controls = new TurnControls({
@@ -89,7 +102,22 @@ async function onlineMatch() {
   });
   online.listen();
   await controls.runUntilInput();
-  return { room, client, online, controls, events, sent, deliver, hold, release, ended, shown: session.state, ownTurns: () => ownTurns };
+  const ownTurnCount = () => ownTurns;
+  return {
+    room,
+    client,
+    online,
+    controls,
+    events,
+    sent,
+    deliver,
+    hold,
+    release,
+    ended,
+    shown: session.state,
+    ownTurns: ownTurnCount,
+    clocks,
+  };
 }
 
 /** Una unidad propia que aun se mueve y una casilla vacia a la que llega. */
@@ -186,6 +214,30 @@ describe('la partida por la red en 3D (OnlinePlay)', () => {
       expect(controls.busy).toBe(false);
     }
     expect(ownTurns()).toBe(3);
+  });
+
+  it('con reloj, cada turno que se ve lo cuenta desde que llego; se quita al acabar el turno propio', async () => {
+    const { controls, clocks } = await onlineMatch({ leftMs: 90_000, totalMs: 120_000 });
+    const deadline = { endsAt: NOW + 90_000, totalMs: 120_000 };
+    expect(clocks).toEqual([{ team: PERSON, day: 1, deadline }]);
+    controls.endTurn();
+    await settle();
+    // Al acabarlo, ninguno; el de la IA no lleva (no se la espera) y el siguiente propio, el suyo.
+    expect(clocks.slice(1)).toEqual([null, { team: PERSON, day: 2, deadline }]);
+  });
+
+  it('si se le acaba el tiempo, el reloj se quita en cuanto la partida sigue sin el, y vuelve con el turno siguiente', async () => {
+    const { room, deliver, clocks } = await onlineMatch({ leftMs: 0, totalMs: 120_000 });
+    deliver(room.endTurnOf(PERSON));
+    await settle();
+    expect(clocks.slice(1).map((turn) => turn && turn.day)).toEqual([null, 2]);
+  });
+
+  it('sin reloj, ninguno: solo se dice que no corre', async () => {
+    const { controls, clocks } = await onlineMatch();
+    controls.endTurn();
+    await settle();
+    expect(clocks.every((turn) => turn === null)).toBe(true);
   });
 
   it('rendirse sin otra persona que juegue acaba la sala: llega su final y la pantalla lo enseña', async () => {

@@ -4,9 +4,10 @@
 // verdad: A crea la sala, B entra por el enlace de la sala (pide un asiento con el codigo), juegan
 // turnos (los dos tienen que ver lo mismo), «Mis partidas» de A dice que le toca, B recarga la pagina a
 // mitad (vuelve a la sala sola) y A se rinde (los dos ven el final, y «Mis partidas», que acabo).
-// Despues, «Buscar rival»: C busca por turnos y espera en su sala, D busca y se queda su asiento (los
-// dos ven «¡Rival encontrado!» mientras carga; la partida empieza en los dos y juega primero D), y E
-// busca en vivo y cancela (la sala se cierra).
+// La sala de A no tiene reloj: no sale el reloj del turno. Despues, «Buscar rival»: C busca por turnos
+// y espera en su sala, D busca y se queda su asiento (los dos ven «¡Rival encontrado!» mientras carga;
+// la partida empieza en los dos, juega primero D y los dos ven su reloj de un dia contar), y E busca en
+// vivo y cancela (la sala se cierra).
 //
 //   npm run online
 //   ILOGIC_SERVER_URL=https://ilogic-servidor.<cuenta>.workers.dev npm run online   # contra el publicado
@@ -173,6 +174,15 @@ const ownTurnReady = () => {
   return game?.online && game.session.awaitingInput === game.viewer && !game.controls.busy;
 };
 
+/** El reloj del turno que se ve en la pantalla (la pastilla bajo el dia), o null si no sale. */
+const turnClock = () => window.ilogic3d.ui.get().turnClock;
+
+/** El reloj, cuando ya ha cambiado de lo que enseñaba (`time`): cuenta. */
+const clockMovedFrom = (time) => {
+  const clock = window.ilogic3d.ui.get().turnClock;
+  return clock && clock.time !== time ? clock : null;
+};
+
 /** Lo que tienen que ver igual los dos (sin niebla): dia, turno, unidades y dueños de los edificios. */
 const comparable = () => {
   const s = window.ilogic3d.session.state;
@@ -326,6 +336,11 @@ async function playOnline(browser, gameUrl, server) {
   const waiting = await until(b, () => window.ilogic3d.ui.get().net?.waiting, null, 'el cartel de espera en B');
   check(/1/.test(waiting), `B espera al equipo 1 («${waiting}»)`);
   await until(a, ownTurnReady, null, 'el primer turno de A');
+  const clocks = await Promise.all([a.evaluate(turnClock), b.evaluate(turnClock)]);
+  check(
+    clocks.every((clock) => clock === null),
+    'la sala no tiene reloj: no sale el reloj del turno en ninguna pantalla',
+  );
   await Promise.all([shot(a, 'a-su-turno'), shot(b, 'b-espera')]);
   await checkMyRooms(a, gameUrl, lobby.code, 'yourTurn', 'mis-partidas-te-toca');
   await b.setViewportSize(PHONE);
@@ -398,6 +413,7 @@ async function searchRivals(browser, gameUrl, server) {
   await until(d, ownTurnReady, null, 'el primer turno de D (quien llega juega primero)');
   await sameMatch(c, d, 'al emparejar', comparableInFog);
   await shot(d, 'd-emparejado');
+  await checkTurnClocks(d, c);
 
   const e = await openPlayer(browser, 'E', gameUrl, server);
   await openOnline(e, 'E');
@@ -412,6 +428,25 @@ async function searchRivals(browser, gameUrl, server) {
   check((await fetch(`${server}/rooms/${live.code}`)).status === 404, 'al cancelar, la sala de E se cierra en el servidor');
   const rooms = (await menuState(e)).online.rooms;
   check(!rooms.some((room) => room.code === live.code), 'y sale de «Mis partidas» de E');
+}
+
+/**
+ * Por turnos, el reloj (un dia) sale y cuenta en las dos pantallas: en la de quien juega, azul con el
+ * dia; en la del rival, oscuro («Juega el rojo»).
+ */
+async function checkTurnClocks(player, rival) {
+  const [own, other] = await Promise.all([player.evaluate(turnClock), rival.evaluate(turnClock)]);
+  check(own?.mood === 'calm' && /^2[34]:\d\d:\d\d$/.test(own.time), `D ve su reloj de un dia («${own?.time} · ${own?.caption}»)`);
+  check(other?.mood === 'waiting' && other.side === 'enemy', `C ve el reloj del turno de D («${other?.time} · ${other?.caption}»)`);
+  const [ownLater, otherLater] = await Promise.all([
+    until(player, clockMovedFrom, own?.time ?? '', 'que el reloj de D cuente'),
+    until(rival, clockMovedFrom, other?.time ?? '', 'que el reloj de C cuente'),
+  ]);
+  check(
+    ownLater.time < own.time && otherLater.time < other.time,
+    `los dos relojes cuentan hacia atras (${ownLater.time}, ${otherLater.time})`,
+  );
+  await Promise.all([shot(player, 'd-reloj'), shot(rival, 'c-reloj')]);
 }
 
 const roomServer = await roomServerToUse();

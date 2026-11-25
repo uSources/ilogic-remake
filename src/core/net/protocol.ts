@@ -32,7 +32,7 @@ import type { ActionResult, GameAction, GameEvent, MatchResult, SavedGameState, 
 import { isInt, isObject } from '../util/validation';
 
 /** La version de este protocolo (la forma de los mensajes). */
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 /** Las dos versiones con las que se entienden cliente y servidor: la del protocolo y la del formato de la partida. */
 export interface ProtocolVersion {
@@ -65,6 +65,16 @@ export type ViewChange = Omit<ViewSnapshot, FixedViewKey>;
 
 /** Como esta la sala: esperando a que entren todos, jugando o acabada. */
 export type RoomStatus = 'waiting' | 'playing' | 'ended';
+
+/**
+ * El reloj de un turno, en milisegundos: lo que le queda y lo que dura entero. Va en tiempo que queda
+ * y no en la hora a la que vence, porque el reloj del cliente y el del servidor no tienen por que ir a
+ * la par (a quien se le va un minuto veria un minuto de mas o de menos).
+ */
+export interface TurnTimeLeft {
+  leftMs: number;
+  totalMs: number;
+}
 
 /** Lo que manda un cliente. */
 export type ClientMessage =
@@ -117,8 +127,11 @@ export type ServerMessage =
   | { kind: 'events'; step: number; actor: TeamId; events: GameEvent[]; view: ViewChange }
   /** Lo que ha dicho la partida de una accion suya (`seq`, la suya; si vale, sus sucesos tal como los ve). */
   | { kind: 'result'; seq: number; result: ActionResult }
-  /** A quien se espera ahora (su turno, o el de otra persona), y el dia. */
-  | { kind: 'turn'; step: number; team: TeamId; day: number }
+  /**
+   * A quien se espera ahora (su turno, o el de otra persona), el dia y, si la sala tiene reloj, el de
+   * ese turno. La sala no sabe de relojes (manda `clock: null`): lo pone el servidor, que los lleva.
+   */
+  | { kind: 'turn'; step: number; team: TeamId; day: number; clock: TurnTimeLeft | null }
   /**
    * La sala ha acabado: la partida se ha decidido (`result`), o ya no juega ninguna persona
    * (`abandoned`: todas se han rendido o se han ido; la partida, si sigue, se queda sin jugar).

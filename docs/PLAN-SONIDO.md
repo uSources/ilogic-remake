@@ -108,7 +108,9 @@ suaves de diorama; música orquestal ligera o de banda militar de juguete.
 
 ### Formatos
 
-- Efectos: WAV mono 48 kHz, pico a −1 dB, sin silencio delante (como los de Ashfox), 0,2–2 s.
+- Efectos: WAV mono 48 kHz, pico a −1 dB, sin silencio delante (como los de Ashfox), 0,2–2 s. Lo que
+  suena muchas veces seguidas y no debe tapar nada (el tic del reloj del turno), `soft` en el
+  catalogo: pico a −10 dB, como los de la interfaz que hace Ashfox.
 - Ambientes y música: OGG y MP3, bucle sin corte. La versión de un solo fichero lleva solo el MP3.
 - Peso: hoy 1,9 MB de efectos y 1,5 MB de música; los ambientes añadirían unos 5 MB.
 
@@ -138,7 +140,7 @@ Descargados (21-11-2026) en `~/ComfyUI-Shared/models`:
    en ingles, duracion y variantes. El estilo de cada clase, en `soundKinds.ts`.
 2. **Generar**: por cada sonido manda a ComfyUI el grafo de Stable Audio 3 (tandas de 4 candidatos),
    baja el FLAC, lo pasa a WAV con `afconvert` y lo recorta segun su clase: los efectos sin silencio
-   delante ni cola muda, con fundido y pico a −1 dB, en mono a 48 kHz; los ambientes y la musica, con
+   delante ni cola muda, con fundido y pico a −1 dB (−10 los `soft`), en mono a 48 kHz; los ambientes y la musica, con
    el final fundido sobre el principio para que el bucle no corte, y los ambientes igual de fuertes.
 3. **Escuchar**: `npm run sonidos -- escuchar` abre la pagina de candidatos en el navegador (la sirve
    en `http://localhost:5180`; abierta como fichero no suena y lo avisa), o `npm run sonidos -- oir <id>`

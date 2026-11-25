@@ -18,6 +18,9 @@
  *   nuevo); lo que dice que el turno ya ha pasado (se le acabo el tiempo: el `turn` de otro, o un
  *   lote que pasa de turno) o el final sacan del turno (`OnlineHooks.othersGoOn`) y lo atiende la
  *   espera, en orden.
+ * - **El reloj del turno** (si la sala lo tiene): cada `turn` trae cuando acaba; al atenderlo, la
+ *   pantalla lo cuenta (`OnlineHooks.showClock`, turnClock.ts). Se quita al acabar el turno propio,
+ *   cuando la partida sigue sin el (se le acabo el tiempo) y al final.
  * - **La conexion** se enseña en la linea de arriba; un cierre sin arreglo avisa y vuelve al menu.
  *
  * Todo lo que manda la sala pasa por un solo sitio, en orden (`pump`), y lo que llega mientras se
@@ -37,6 +40,7 @@ import { animationView, type RoomClient, type RoomPlay } from '../../../net/room
 import type { FatalClose, LinkStatus } from '../../../net/serverLink';
 import { t } from '../../../settings';
 import type { MatchRunner, RunnerReply, RunnerStop, ShowEvents } from '../turn/matchRunner';
+import type { TimedTurn } from './turnClock';
 
 /** Lo que se deja leer el aviso de que la sala ha cerrado antes de volver al menu. */
 const ROOM_CLOSED_QUIT_MS = 2500;
@@ -65,11 +69,14 @@ export interface OnlineHooks {
   othersGoOn(): void;
   /** Vuelve a tocar a quien mira (si no mira la pestaña, avisarle). */
   ownTurn(): void;
+  /** El turno que se ve ahora y cuando acaba (null: no corre ningun reloj). */
+  showClock(turn: TimedTurn | null): void;
   /** La sala ya no deja seguir (otra pestaña, otra version, ya no existe): al menu. */
   quit(): void;
 }
 
 type EventsPlay = Extract<RoomPlay, { kind: 'events' }>;
+type TurnPlay = Extract<RoomPlay, { kind: 'turn' }>;
 
 export class OnlinePlay implements MatchRunner {
   session: GameSession;
@@ -136,6 +143,7 @@ export class OnlinePlay implements MatchRunner {
   /** Se le dice a la sala que el turno acabo (si no se acaba de rendir: entonces ya lo sabe). */
   finishTurn(): void {
     this.isOwnTurn = false;
+    this.hooks.showClock(null);
     if (!teamState(this.state, this.viewer).resigned) this.room.client.endTurn();
   }
 
@@ -159,6 +167,7 @@ export class OnlinePlay implements MatchRunner {
         await this.showBatch(play, show);
         return null;
       case 'turn':
+        this.showClockOf(play);
         return play.team === this.viewer ? this.ownTurnStarts() : this.waitFor(play.team);
       case 'ended':
         return this.ended(play.result);
@@ -195,6 +204,7 @@ export class OnlinePlay implements MatchRunner {
     const last = this.room.client.state;
     if (last) this.adopt(last);
     this.setWaiting(null);
+    this.hooks.showClock(null);
     return { kind: 'over', result };
   }
 
@@ -213,6 +223,7 @@ export class OnlinePlay implements MatchRunner {
     if (!this.isOwnTurn) return this.toWatcher(play);
     if (!this.endsOwnTurn(play)) return this.duringOwnTurn(play);
     this.isOwnTurn = false;
+    this.hooks.showClock(null);
     this.toWatcher(play);
     this.hooks.othersGoOn();
   }
@@ -237,9 +248,11 @@ export class OnlinePlay implements MatchRunner {
   /**
    * En el turno propio, una vista o un lote (tras un corte, la rendicion de otro) ponen la partida al
    * dia con la ultima del cliente, no con la suya: la de un `resync` puede llegar detras del eco de
-   * una accion posterior, y volver a ella desharia esa accion en la pantalla.
+   * una accion posterior, y volver a ella desharia esa accion en la pantalla. El `turn` propio que
+   * llega otra vez (al volver tras un corte) trae su reloj al dia.
    */
   private duringOwnTurn(play: RoomPlay): void {
+    if (play.kind === 'turn') return this.showClockOf(play);
     const latest = this.room.client.state;
     if ((play.kind === 'view' || play.kind === 'events') && latest) this.adopt(latest);
   }
@@ -270,6 +283,11 @@ export class OnlinePlay implements MatchRunner {
     fillWith(this.state, cloneState(view));
     this.session = mirrorSession(this.state, this.viewer);
     this.hooks.viewReplaced();
+  }
+
+  /** El reloj de ese turno, si lo tiene (si no, ninguno). */
+  private showClockOf(play: TurnPlay): void {
+    this.hooks.showClock(play.deadline && { team: play.team, day: play.day, deadline: play.deadline });
   }
 
   /** «Esperando al equipo N…» en la linea de la conexion (null: el turno es propio). */

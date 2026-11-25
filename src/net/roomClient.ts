@@ -19,7 +19,16 @@
  * en la partida, `OnlinePlay` (src/view3d/systems/net/onlinePlay.ts).
  */
 import type { GameContent } from '../core/content';
-import { loadView, mergeView, type RoomStatus, type SeatId, type ServerMessage, type ViewChange, type ViewSnapshot } from '../core/net';
+import {
+  loadView,
+  mergeView,
+  type RoomStatus,
+  type SeatId,
+  type ServerMessage,
+  type ServerMessageOf,
+  type ViewChange,
+  type ViewSnapshot,
+} from '../core/net';
 import type { ActionResult, GameAction, GameEvent, GameState, MatchResult, TeamId } from '../core/model';
 import type { OrderedMessage } from './serverLink';
 
@@ -29,14 +38,24 @@ export interface RoomSender {
   resync(): void;
 }
 
+/**
+ * Cuando acaba un turno con reloj, en la hora de este navegador (ms desde 1970), y lo que dura entero.
+ * El servidor dice lo que le queda; se pasa a hora de aqui al llegar, para que corra desde ya aunque
+ * la jugada se atienda mas tarde (detras de lo que se este animando).
+ */
+export interface TurnDeadline {
+  endsAt: number;
+  totalMs: number;
+}
+
 /** Lo que la escena anima o atiende, en orden. */
 export type RoomPlay =
   /** Un lote de pasos de los demas: se anima contra `before` y deja `after`. `actor`, el equipo del ultimo paso. */
   | { kind: 'events'; events: GameEvent[]; actor: TeamId; before: GameState; after: GameState }
   /** La vista entera otra vez (al entrar, al volver, tras un hueco): punto de partida nuevo. */
   | { kind: 'view'; state: GameState }
-  /** A quien se espera. */
-  | { kind: 'turn'; team: TeamId; day: number }
+  /** A quien se espera, y cuando se le acaba el turno (null: la sala no tiene reloj). */
+  | { kind: 'turn'; team: TeamId; day: number; deadline: TurnDeadline | null }
   | { kind: 'ended'; result: MatchResult; abandoned: boolean };
 
 /**
@@ -70,10 +89,12 @@ export class RoomClient {
    */
   private readonly echoDue = new Map<number, GameEvent[]>();
 
+  /** `now`: la hora de aqui (ms desde 1970), para el reloj del turno. */
   constructor(
     private readonly sender: RoomSender,
     private readonly content: GameContent,
     private readonly listener: RoomClientListener = {},
+    private readonly now: () => number = () => Date.now(),
   ) {}
 
   /** Ya se puede jugar: hay vista y se sabe a quien se espera (o que la partida ha acabado). */
@@ -128,9 +149,7 @@ export class RoomClient {
       case 'result':
         return this.resultArrived(message.seq, message.result);
       case 'turn':
-        this.turn = { team: message.team, day: message.day };
-        this.status = 'playing';
-        return this.enqueue({ kind: 'turn', team: message.team, day: message.day });
+        return this.turnArrived(message);
       case 'ended':
         this.ended = { result: message.result, abandoned: message.abandoned };
         this.status = 'ended';
@@ -139,6 +158,13 @@ export class RoomClient {
         if (message.seq !== undefined) this.reply(message.seq, { ok: false, reason: message.error });
         return;
     }
+  }
+
+  private turnArrived({ team, day, clock }: ServerMessageOf<'turn'>): void {
+    this.turn = { team, day };
+    this.status = 'playing';
+    const deadline = clock && { endsAt: this.now() + clock.leftMs, totalMs: clock.totalMs };
+    this.enqueue({ kind: 'turn', team, day, deadline });
   }
 
   private ordered(message: OrderedMessage): Promise<RoomReply> {

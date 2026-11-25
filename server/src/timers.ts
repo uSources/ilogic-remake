@@ -6,8 +6,8 @@
  * pasos de una llamada: se sigue en otra, desde la alarma, con su tiempo de CPU aparte). Aqui se
  * calcula; quien lo cumple es roomObject.ts.
  */
-import type { SeatId } from '@core/net';
-import { ROOM_EXPIRY_MS } from './limits';
+import type { SeatId, TurnTimeLeft } from '@core/net';
+import { ROOM_EXPIRY_MS, SECOND } from './limits';
 import type { AwaitedSeat } from './roomAdapter';
 
 /** El reloj del turno de alguien: su asiento y su dia (otro dia es otro turno, con reloj nuevo) y cuando vence. */
@@ -35,7 +35,7 @@ export type TimerKind = 'expiry' | 'waiting' | 'turn' | 'continue';
 
 /** Los relojes de una sala recien creada. */
 export function initialTimers(settings: TimerSettings, now: number): Timers {
-  const waitingUntil = settings.waitingSeconds === undefined ? null : now + settings.waitingSeconds * 1000;
+  const waitingUntil = settings.waitingSeconds === undefined ? null : now + settings.waitingSeconds * SECOND;
   return { expiresAt: now + ROOM_EXPIRY_MS, turn: null, waitingUntil, continueAt: null };
 }
 
@@ -52,7 +52,7 @@ export const doneWaiting = (timers: Timers): Timers => ({ ...timers, waitingUnti
 export function withTurnOf(timers: Timers, awaited: AwaitedSeat | null, settings: TimerSettings, now: number): Timers {
   if (!awaited || settings.turnSeconds === undefined) return { ...timers, turn: null };
   const sameTurn = timers.turn?.seat === awaited.seat && timers.turn.day === awaited.day;
-  return sameTurn ? timers : { ...timers, turn: { ...awaited, at: now + settings.turnSeconds * 1000 } };
+  return sameTurn ? timers : { ...timers, turn: { ...awaited, at: now + settings.turnSeconds * SECOND } };
 }
 
 /** La partida se ha quedado a medias (o no): seguirla cuanto antes, en otra llamada. */
@@ -77,6 +77,13 @@ export function dueTimers(timers: Timers, now: number): TimerKind[] {
   if (timers.turn && timers.turn.at <= now) due.push('turn');
   if (timers.continueAt !== null && timers.continueAt <= now) due.push('continue');
   return due;
+}
+
+/** El reloj del turno en curso como lo ve el cliente (lo que le queda y lo que dura), o null si no corre ninguno. */
+export function turnClockOf(timers: Timers, settings: TimerSettings, now: number): TurnTimeLeft | null {
+  if (!timers.turn || settings.turnSeconds === undefined) return null;
+  // Vencido y sin atender aun (la alarma aun no ha sonado): no le queda nada, no tiempo de menos.
+  return { leftMs: Math.max(0, timers.turn.at - now), totalMs: settings.turnSeconds * SECOND };
 }
 
 /** El asiento al que se le ha acabado el turno (si el reloj del turno ha vencido). */

@@ -12,4 +12,5 @@ export { buyBlockedText, dayInfoVM, economyVM } from './models/economy';
 export { armyChartVM, endScoreVM, endStatsVM } from './models/end';
 export { minimapVM } from './models/minimap';
 export { abilitiesVM, abilityVM, captureHintText, tileVM, unitStatChips, unitStatsText } from './models/tile';
+export { clockText, HURRY_SECONDS, secondsLeftOf, turnClockVM, type ClockedTurn } from './models/turnClock';
 export { weatherEffectsText, weatherVM } from './models/weather';

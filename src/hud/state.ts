@@ -9,7 +9,7 @@ import type { MinimapVM } from './vm/minimap';
 import type { NotesVM } from './vm/notes';
 import type { HandoffVM, MatchIntroVM } from './vm/notices';
 import type { TileVM } from './vm/tile';
-import type { DayInfoVM, EconomyVM, WeatherVM } from './vm/topBar';
+import type { DayInfoVM, EconomyVM, TurnClockVM, WeatherVM } from './vm/topBar';
 
 /**
  * Forma del estado de la interfaz y su valor al arrancar. Cada campo es lo que enseña una pantalla o
@@ -25,6 +25,8 @@ export interface UIState {
   online: OnlineVM;
   /** La conexion con el servidor en una partida por la red (null en una partida de esta pantalla). */
   net: NetVM | null;
+  /** El reloj del turno en una partida por la red con reloj (null: sin reloj, o no corre ninguno). */
+  turnClock: TurnClockVM | null;
   campaign: {
     items: CampaignItemVM[];
     selected: number;
@@ -141,6 +143,7 @@ export const initialState: UIState = {
     busy: false,
   },
   net: null,
+  turnClock: null,
   options: null,
   campaign: { items: [], selected: 0, brief: '', objective: '' },
   mission: null,
