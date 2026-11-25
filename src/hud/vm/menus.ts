@@ -172,8 +172,8 @@ export interface OnlineSeatVM {
   status: string | null;
   /** Si la persona esta dentro, aun no ha entrado, o es la IA. */
   presence: 'in' | 'out' | 'ai';
-  /** Quien creo la sala puede darlo a la IA (una persona que no ha entrado, mientras se espera). */
-  canHandToAi: boolean;
+  /** El foco del boton de darlo a la IA, o null si no se puede (solo quien creo la sala, a una persona que no ha entrado, mientras se espera). */
+  handToAiId: string | null;
 }
 
 /** En que esta una sala para quien la mira: le toca, le toca a otro, esperan a que entren, acabada, ya no existe, o no se sabe. */
@@ -189,8 +189,12 @@ export interface OnlineRoomVM {
   detail: string;
   /** El boton para entrar («Jugar» si le toca, «Ver» si juega otro o acabo, «Entrar» si espera), o null si la sala ya no existe. */
   enter: string | null;
+  /** El foco del boton de entrar (null si no lo hay). */
+  enterId: string | null;
   /** El de quitarla de la lista: «Quitar», o «Cancelar» si es la propia busqueda de rival (la cierra en el servidor); null si se esta jugando. */
   forget: string | null;
+  /** El foco de la × (null si no la hay). */
+  forgetId: string | null;
 }
 
 /** El vestibulo de una sala: el codigo y el enlace para invitar, quien hay y la conexion. */
@@ -225,8 +229,8 @@ export interface OnlineSearchVM {
   title: string;
   /** «Reglas normales, mapa de 20×20 al azar y 2 min por turno. Los dos conectados a la vez.» */
   note: string;
-  /** El otro ritmo: su id y el enlace («o una partida por turnos (1 día por turno)»). */
-  other: { pace: string; label: string };
+  /** El otro ritmo: su id, el foco de su enlace y lo que dice («o una partida por turnos (1 día por turno)»). */
+  other: { pace: string; id: string; label: string };
 }
 
 /** La pantalla de «Jugar en línea»: el menu (buscar rival, crear, entrar con el codigo y mis partidas), crear una partida o el vestibulo. */

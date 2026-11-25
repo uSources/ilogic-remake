@@ -10,12 +10,10 @@ import { isSearchPace, PACE_RULES, SEARCH_PACES, type SearchPace } from '../../c
 import type { OnlineSearchVM, OnlineVM } from '../../hud/store';
 import { forgetRoom, parseRoomLink, readOnlineRooms, type OnlineRoomEntry } from '../../net/onlineRooms';
 import { t, type TextKey } from '../../settings';
-import { isSearching, roomLines } from './roomLines';
+import { FORGET_PREFIX, isSearching, ROOM_PREFIX, roomLines } from './roomLines';
 import { paceTurnText, type OnlineScreens } from './shared';
 import { Visits } from './visits';
 
-const ROOM_PREFIX = 'room-';
-const FORGET_PREFIX = 'forget-';
 const PACE_PREFIX = 'pace-';
 
 /** Lo que tiene el foco al abrir el menu: buscar rival, lo primero que se viene a hacer. */
@@ -40,7 +38,7 @@ function searchOf(pace: SearchPace): OnlineSearchVM {
   const other = otherPace(pace);
   const note = t(text.note).replace('{size}', `${size}×${size}`).replace('{time}', paceTurnText(pace));
   const label = t(PACE_TEXT[other].link).replace('{time}', paceTurnText(other));
-  return { pace, title: t(text.title), note, other: { pace: other, label } };
+  return { pace, title: t(text.title), note, other: { pace: other, id: `${PACE_PREFIX}${other}`, label } };
 }
 
 /** La clase del cuadro del codigo: mientras tiene el foco, las teclas son suyas (se esta escribiendo). */
@@ -87,13 +85,9 @@ export class MenuScreen {
    * columna de «Mis partidas» (entrar, si aun existe, y quitarla).
    */
   rows(): string[][] {
-    const rooms = this.vm().rooms.map((room) => {
-      const enter = room.enter === null ? [] : [`${ROOM_PREFIX}${room.code}`];
-      const forget = room.forget === null ? [] : [`${FORGET_PREFIX}${room.code}`];
-      return [...enter, ...forget];
-    });
-    const other = `${PACE_PREFIX}${otherPace(this.pace)}`;
-    return [['back'], ['search', 'create'], [other, 'codeText', 'codeGo'], ...rooms];
+    const { search, rooms } = this.vm();
+    const roomRows = rooms.map((room) => [room.enterId, room.forgetId].filter((id): id is string => id !== null));
+    return [['back'], ['search', 'create'], [search.other.id, 'codeText', 'codeGo'], ...roomRows];
   }
 
   /** Lo que se ha escrito en el cuadro del codigo. */

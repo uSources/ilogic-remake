@@ -6,7 +6,7 @@
  * (azul contra rojo), «Con amigos» (un enlace) y «Mis partidas»; la sala, el codigo en teclas y una
  * ficha por equipo frente a frente; buscando rival, «Tú» contra un «?» que late. Crear sala es un
  * panel, como «Nueva partida». En el movil, una tarjeta encima de otra y lo que te toca, arriba.
- * Sin logica: lo que se puede pulsar y lo que dice cada cosa ya viene decidido en el VM.
+ * Sin logica: lo que se puede pulsar (con su foco) y lo que dice cada cosa ya viene decidido en el VM.
  */
 import { Fragment } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
@@ -115,7 +115,7 @@ function menuConnection(online: OnlineVM): Connection | null {
 /** Buscar rival: azul contra rojo, lo que se buscara, «Buscar rival» y el enlace al otro ritmo. */
 function SearchCard({ online }: { online: OnlineVM }) {
   const { focus, search } = online;
-  const otherId = `pace-${search.other.pace}`;
+  const otherId = search.other.id;
   return (
     <div class={`px card on-card on-search ${cardSel(focus, ['search', otherId])}`}>
       <span class="label">{t('onlineSearch')}</span>
@@ -194,8 +194,7 @@ function RoomBadge({ state }: { state: OnlineRoomVM['state'] }) {
 
 /** Una sala: su cuadrado, como esta (con su codigo, el dia y lo que queda), entrar y, si no se esta jugando, quitarla (la × de la esquina). */
 function RoomRow({ room, focus }: { room: OnlineRoomVM; focus: string }) {
-  const enterId = `room-${room.code}`;
-  const forgetId = `forget-${room.code}`;
+  const { enterId, forgetId } = room;
   const detail = [`${t('onlineRoom')} ${room.code}`, room.detail].filter((part) => part !== '').join(' · ');
   return (
     <div class={`on-room ${room.state}`}>
@@ -206,7 +205,7 @@ function RoomRow({ room, focus }: { room: OnlineRoomVM; focus: string }) {
         <span class="on-room-title">{room.title}</span>
         <span class="on-room-detail">{detail}</span>
       </span>
-      {room.enter && (
+      {room.enter && enterId && (
         <Btn
           sel={focus === enterId}
           cls={room.state === 'yourTurn' ? 'px-btn on-room-go' : 'px-btn plain on-room-go'}
@@ -216,7 +215,7 @@ function RoomRow({ room, focus }: { room: OnlineRoomVM; focus: string }) {
           {room.enter}
         </Btn>
       )}
-      {room.forget && (
+      {room.forget && forgetId && (
         <Btn sel={focus === forgetId} cls="on-x" label={room.forget} onHover={hover(forgetId)} onPick={pick(forgetId)}>
           <Icon name="close" size={14} />
         </Btn>
@@ -225,7 +224,8 @@ function RoomRow({ room, focus }: { room: OnlineRoomVM; focus: string }) {
   );
 }
 
-const roomIds = (rooms: OnlineRoomVM[]): string[] => rooms.flatMap((room) => [`room-${room.code}`, `forget-${room.code}`]);
+const roomIds = (rooms: OnlineRoomVM[]): string[] =>
+  rooms.flatMap((room) => [room.enterId, room.forgetId]).filter((id): id is string => id !== null);
 
 /** Mis partidas: cuantas te tocan, las salas apuntadas (lo que pide hacer algo arriba) y donde se guardan. */
 function RoomsCard({ online }: { online: OnlineVM }) {
@@ -411,7 +411,7 @@ function SeatAvatar({ seat }: { seat: OnlineSeatVM }) {
 
 /** Un equipo: su color a la izquierda, su tanque, quien lo juega, de quien es y si esta dentro; si se puede, darselo a la IA. */
 function SeatCard({ seat, focus, aiLabel }: { seat: OnlineSeatVM; focus: string; aiLabel: string }) {
-  const id = `ai-${seat.seat}`;
+  const id = seat.handToAiId;
   return (
     <div class={`on-seat ${seat.isYou ? 'own' : 'rival'} ${seat.presence}`}>
       <SeatAvatar seat={seat} />
@@ -419,7 +419,7 @@ function SeatCard({ seat, focus, aiLabel }: { seat: OnlineSeatVM; focus: string;
         <span class="on-seat-who">{seat.who}</span>
         <span class="on-seat-team">{seat.team}</span>
         {seat.status && <span class="on-seat-tag">{seat.status}</span>}
-        {seat.canHandToAi && (
+        {id && (
           <Btn sel={focus === id} cls="link on-seat-ai" onHover={hover(id)} onPick={pick(id)}>
             {aiLabel}
           </Btn>
@@ -479,8 +479,7 @@ function Elapsed({ since }: { since: number }) {
 /** Buscando rival: el ritmo que se busca, desde cuando, tu ejercito contra un «?» y jugar contra la IA, cancelar o salir. */
 function Searching({ online, lobby }: { online: OnlineVM; lobby: OnlineLobbyVM }) {
   const { focus } = online;
-  const aiSeat = lobby.seats.find((seat) => seat.canHandToAi);
-  const aiId = aiSeat ? `ai-${aiSeat.seat}` : null;
+  const aiId = lobby.seats.find((seat) => seat.handToAiId !== null)?.handToAiId ?? null;
   return (
     <div class="on-screen on-searching-screen" role="dialog" aria-label={t('onlineSearchingTitle')}>
       <Problem online={online} />

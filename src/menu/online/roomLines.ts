@@ -32,6 +32,10 @@ export function isSearching(entry: OnlineRoomEntry, look: RoomLook): boolean {
   return look.kind === 'unknown' && entry.status === 'waiting';
 }
 
+/** Los focos de cada sala de la lista: entrar y quitarla (los lee menuScreen.ts al pulsarlos). */
+export const ROOM_PREFIX = 'room-';
+export const FORGET_PREFIX = 'forget-';
+
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
@@ -132,14 +136,17 @@ const isForgettable = (state: OnlineRoomState): boolean => state !== 'yourTurn' 
 /** La linea de una sala en la lista. */
 export function roomLineOf(entry: OnlineRoomEntry, look: RoomLook, now: number): OnlineRoomVM {
   const state = roomStateOf(entry, look);
+  const enter = enterLabel(state);
   const forget = isForgettable(state) ? t(isSearching(entry, look) ? 'onlineCancel' : 'onlineForget') : null;
   return {
     code: entry.code,
     state,
     title: titleOf(entry, look, state),
     detail: detailOf(entry, look, now),
-    enter: enterLabel(state),
+    enter,
+    enterId: enter === null ? null : `${ROOM_PREFIX}${entry.code}`,
     forget,
+    forgetId: forget === null ? null : `${FORGET_PREFIX}${entry.code}`,
   };
 }
 

@@ -177,7 +177,7 @@ export class LobbyScreen {
    */
   rows(): string[][] {
     const lobby = this.vm();
-    const handToAi = (lobby?.seats ?? []).filter((seat) => seat.canHandToAi).map((seat) => `${AI_PREFIX}${seat.seat}`);
+    const handToAi = (lobby?.seats ?? []).map((seat) => seat.handToAiId).filter((id): id is string => id !== null);
     if (lobby?.searching) return [[...handToAi, 'cancelSearch', 'leave']];
     const invite = lobby?.canInvite ? [[lobby.canShare ? 'share' : 'copy'], ['copyCode']] : [];
     return [['leave'], ...invite, ...handToAi.map((id) => [id])];
@@ -202,6 +202,7 @@ export class LobbyScreen {
     const isPerson = seat.kind === 'person';
     const presence = !isPerson ? 'ai' : this.isIn(seat) ? 'in' : 'out';
     const isSearching = status === 'waiting' && entry.search !== undefined;
+    const canHandToAi = isCreator && status === 'waiting' && isPerson && !seat.joined && !isMe;
     return {
       seat: seat.seat,
       team: seatTeam(seat, isMe, isDuel),
@@ -209,7 +210,7 @@ export class LobbyScreen {
       isYou: isMe,
       status: seatStatus(presence, isSearching && !isMe),
       presence,
-      canHandToAi: isCreator && status === 'waiting' && isPerson && !seat.joined && !isMe,
+      handToAiId: canHandToAi ? `${AI_PREFIX}${seat.seat}` : null,
     };
   }
 

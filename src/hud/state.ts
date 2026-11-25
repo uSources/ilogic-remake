@@ -132,7 +132,7 @@ export const initialState: UIState = {
   online: {
     mode: 'menu',
     focus: 'search',
-    search: { pace: 'live', title: '', note: '', other: { pace: 'daily', label: '' } },
+    search: { pace: 'live', title: '', note: '', other: { pace: 'daily', id: 'pace-daily', label: '' } },
     rooms: [],
     code: { text: '', error: null },
     create: { seats: [], presets: [], preset: 'normal', presetNote: '', options: [], timers: [], thumb: '', mapInfo: '' },

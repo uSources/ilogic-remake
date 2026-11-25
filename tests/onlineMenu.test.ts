@@ -52,6 +52,15 @@ describe('las salas de «Mis partidas»', () => {
     expect(gone.enter).toBeNull();
   });
 
+  it('cada boton de la linea trae su foco, y sin boton no hay foco', () => {
+    const waiting = roomLineOf(entry('AAAAAA'), info('waiting', null, [true, false]), NOW);
+    expect([waiting.enterId, waiting.forgetId]).toEqual(['room-AAAAAA', 'forget-AAAAAA']);
+    const playing = roomLineOf(entry('AAAAAA', 1), info('playing', { seat: 1, day: 1, endsAt: null }), NOW);
+    expect([playing.enterId, playing.forgetId]).toEqual(['room-AAAAAA', null]);
+    const gone = roomLineOf(entry('AAAAAA'), { kind: 'gone' }, NOW);
+    expect([gone.enterId, gone.forgetId]).toEqual([null, 'forget-AAAAAA']);
+  });
+
   it('la propia busqueda de rival: «Buscando rival» con su ritmo, y quitarla es cancelarla (solo mientras espera)', () => {
     const searching = { ...entry('AAAAAA'), status: 'waiting' as const, search: 'daily' as const };
     const line = roomLineOf(searching, info('waiting', null, [false, false]), NOW);

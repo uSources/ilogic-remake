@@ -413,7 +413,7 @@ async function searchRivals(browser, gameUrl, server) {
   await menuAction(c, 'onlinePick', 'search');
   const daily = await until(c, searchingLobby, null, 'el vestibulo de la busqueda de C');
   check(!daily.canInvite, 'buscando rival no se invita: no hay enlace que repartir');
-  check(daily.seats[1]?.canHandToAi === true, `C puede jugar contra la IA mientras espera («${daily.handToAiLabel}»)`);
+  check((daily.seats[1]?.handToAiId ?? null) !== null, `C puede jugar contra la IA mientras espera («${daily.handToAiLabel}»)`);
   await shot(c, 'buscando');
   await c.setViewportSize(PHONE);
   await shot(c, 'buscando-movil');

@@ -27,7 +27,7 @@ export function Versus({ cls = '' }: { cls?: string }) {
   );
 }
 
-/** Los dos ejercitos frente a frente, azul contra rojo (la tarjeta «En línea» y «Buscar rival»). */
+/** Los dos ejercitos frente a frente, azul contra rojo (la tarjeta «En línea» de Inicio). */
 export function Faceoff() {
   return (
     <div class="faceoff" aria-hidden="true">

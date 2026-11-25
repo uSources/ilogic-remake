@@ -121,7 +121,7 @@ describe('LobbyScreen', () => {
     await settle();
 
     const vm = lobby.vm();
-    expect(vm?.seats.map((seat) => [seat.presence, seat.canHandToAi])).toEqual([
+    expect(vm?.seats.map((seat) => [seat.presence, seat.handToAiId !== null])).toEqual([
       ['in', false],
       ['out', true],
     ]);
