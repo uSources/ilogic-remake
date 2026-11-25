@@ -49,7 +49,7 @@ function shapeEffect(pcm: Pcm, spec: SoundSpec): Pcm {
   const trimmed = trimEnd(trimStart(pcm, SILENCE_BEFORE_DB), SILENCE_AFTER_DB);
   const limited = limitLength(trimmed, spec.seconds * EFFECT_LENGTH_ALLOWANCE);
   const fadeSeconds = Math.max(MIN_FADE_SECONDS, secondsOf(limited) * EFFECT_FADE_SHARE);
-  return normalizePeak(fadeOut(limited, fadeSeconds), PEAK_DB);
+  return normalizePeak(fadeOut(limited, fadeSeconds), spec.peakDb ?? PEAK_DB);
 }
 
 const shapeAmbient = (pcm: Pcm): Pcm => normalizeRms(loopWithCrossfade(pcm, AMBIENT_CROSSFADE_SECONDS), AMBIENT_RMS_DB, PEAK_DB);

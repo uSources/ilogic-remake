@@ -3,7 +3,7 @@
  * Suenan a cosas de una caja de juguetes (madera, plastico, papel, hojalata), cortos y flojos: se oyen
  * muchas veces.
  */
-import { effect, type SoundSpec } from './spec';
+import { effect, soft, type SoundSpec } from './spec';
 
 const BOARD_INTERFACE: SoundSpec[] = [
   effect('cursor_tick', 0.1, 'constant', 'A tiny soft plastic tick, like a toy block lightly tapped'),
@@ -69,7 +69,8 @@ const ONLINE: SoundSpec[] = [
   effect('net_reconnecting', 1, 'rare', 'An old radio dial searching through static with short squelches'),
   effect('net_lost', 0.8, 'rare', 'A radio cutting out: a crackle of static dropping to silence'),
   effect('match_begins', 1.5, 'rare', 'A drill sergeant whistle blown once, sharp and short'),
-  effect('turn_clock_tick', 0.1, 'constant', 'A tiny soft tick of a wooden toy clock, gentle and dry'),
+  // Un tic por segundo los ultimos del turno: flojo, y de un solo golpe (sin "single" salia un tic-tac pegado).
+  soft(effect('turn_clock_tick', 0.1, 'constant', 'A single tiny soft tick of a wooden toy clock, one short click, gentle and dry')),
 ];
 
 export const INTERFACE_SOUNDS: readonly SoundSpec[] = [...BOARD_INTERFACE, ...MENU_INTERFACE, ...ONLINE];
