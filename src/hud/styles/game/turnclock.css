@@ -49,6 +49,15 @@
   font-size: 12px;
   color: var(--muted);
 }
+/* El aviso de los ultimos segundos para un lector de pantalla: no se ve. */
+.turnclock .tc-alert {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* Los ultimos segundos del turno propio. */
 .turnclock.hurry {

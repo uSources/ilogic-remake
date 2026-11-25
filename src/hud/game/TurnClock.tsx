@@ -40,6 +40,10 @@ export function TurnClockPill({ clock }: { clock: TurnClockVM }) {
         <b class="tc-time num">{clock.time}</b>
         <span class="tc-caption">{clock.caption}</span>
       </span>
+      {/* Un `timer` no se lee solo: al entrar en los ultimos segundos, se avisa una vez («Se acaba tu turno»). */}
+      <span class="tc-alert" aria-live="assertive">
+        {clock.mood === 'hurry' ? clock.caption : ''}
+      </span>
     </Pill>
   );
 }
