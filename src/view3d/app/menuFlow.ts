@@ -2,15 +2,14 @@
  * El menu principal del juego 3D: reparte las ordenes entre sus pantallas (inicio, partida nueva,
  * campaña y «Jugar en línea», cada una en `src/menu/` con su `...Host`), las opciones, las notas y la
  * ayuda, y empieza la partida elegida (gameStart.ts). Un enlace de sala en la direccion
- * (`#/sala/CODIGO`, o el de un asiento con su ficha) entra directo en esa sala. Detras, la imagen del
- * menu de siempre.
+ * (`#/sala/CODIGO`, o el de un asiento con su ficha) entra directo en esa sala. Detras, un tablero
+ * 3D que gira (menuBackdrop.ts; lo empieza main.ts en cuanto estan los modelos).
  */
 import { defaultContent } from '../../core/content/default';
 import { loadGame } from '../../core/defaultGames';
 import { settingsWith } from '../../core/matchSettings';
 import type { Mission } from '../../core/missions';
 import type { GameState } from '../../core/model';
-import { imgUrl } from '../../assets';
 import { playMusic } from '../../audio/music';
 import type { SoundPort } from '../../audio/sounds';
 import { menuKeyCommand, type MenuCommand, type MenuContext } from '../../controls/menu';
@@ -75,19 +74,12 @@ export class MenuFlow {
       toHome: () => this.toHome(),
       startOnline: (match) => this.startOnline(match),
     });
-    const setup = this.setup;
     this.home = new HomeScreen({
       save: this.save,
-      palette: this.palette,
-      get options() {
-        return setup.options;
-      },
       get leaving() {
         return exit.leaving;
       },
-      missionThumb: (index) => this.campaign.missionThumb(index),
       continueGame: () => this.leave({ start: 'load' }),
-      startNew: (seed) => this.startNew(seed),
       openSetup: () => this.openSetup(),
       openCampaign: () => this.openCampaign(),
       openOnline: () => this.openOnline(),
@@ -97,9 +89,9 @@ export class MenuFlow {
 
   /** Enseña el menu y empieza a atender teclas y botones. */
   open(): void {
-    showMenuBackground();
+    showMenuGround();
     this.setup.loadOptions();
-    this.home.focus = this.save ? 'continue' : 'quick';
+    this.home.focusFirst();
     Object.assign(ui.actions, this.home.actions(), this.setup.actions(), this.campaign.actions(), this.online.actions());
     // La ayuda del menu cuenta las reglas de una partida nueva de las de siempre.
     ui.set({
@@ -220,15 +212,7 @@ export class MenuFlow {
   }
 }
 
-/** Detras del menu, la imagen de siempre cubriendo la pantalla. */
-function showMenuBackground(): void {
-  const stage = document.getElementById('game');
-  const image = imgUrl('menubackground');
-  if (!stage || !image) return;
-  Object.assign(stage.style, {
-    backgroundImage: `url(${image})`,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    imageRendering: 'pixelated',
-  });
+/** Detras del menu, el fondo de noche (home.css) hasta que sale el tablero 3D, que aparece poco a poco. */
+function showMenuGround(): void {
+  document.getElementById('game')?.classList.add('menu-stage');
 }

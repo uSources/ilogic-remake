@@ -43,6 +43,13 @@
   --gold: #b97800;
   --green: #36b45a;
   --sel: #d6e6ff;
+  /* Inicio, sobre la noche y el tablero 3D que gira: textos claros y un oro mas vivo que --gold. */
+  --night: #171b24;
+  --night-veil: rgba(18, 21, 28, 0.92);
+  --menu-gold: #f5c04a;
+  --menu-title: #d6cbe3;
+  --menu-note: #b8aecb;
+  --menu-tab: #e8dff5;
   /* Forma de las fichas: radio, grosor del borde y la sombra dura de plastico. */
   --radius: 16px;
   --radius-sm: 10px;

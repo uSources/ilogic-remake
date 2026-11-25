@@ -109,14 +109,16 @@ export interface OptionsVM {
 
 export type MarkVM = 'done' | 'open' | 'locked';
 
+/** Una entrada de la lista de Inicio: su nombre y, debajo, lo que hay detras (el dia de la guardada, por donde va la campaña). */
+export interface HomeEntryVM {
+  id: string;
+  title: string;
+  note: string;
+}
+
 export interface HomeVM {
   focus: string;
-  save: { thumb: string; day: number; funds: number; size: number; mission: string | null; limit: number | null } | null;
-  /** Resumen de las ultimas opciones (lo que hara "Rapida"). */
-  quick: string;
-  /** Hay servidor de partidas por la red: sale «Jugar en línea». */
-  online: boolean;
-  campaign: { done: number; total: number; next: string | null; thumb: string | null; marks: MarkVM[] };
+  entries: HomeEntryVM[];
   credits: boolean;
 }
 

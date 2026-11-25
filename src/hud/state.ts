@@ -111,14 +111,7 @@ export const initialState: UIState = {
   screen: 'loading',
   loading: 0,
   intro: null,
-  home: {
-    focus: 'quick',
-    save: null,
-    quick: '',
-    online: false,
-    campaign: { done: 0, total: 0, next: null, thumb: null, marks: [] },
-    credits: false,
-  },
+  home: { focus: 'skirmish', entries: [], credits: false },
   setup: {
     focus: 'start',
     preset: 'normal',

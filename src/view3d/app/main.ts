@@ -7,7 +7,7 @@ import '@fontsource/pixelify-sans/latin-400.css';
 import '../../hud/hud.css';
 import { render, h } from 'preact';
 import { asset } from '../../assets';
-import { loadGameImages } from '../../atlas';
+import { loadGameImages, type GameImages } from '../../atlas';
 import { defaultContent } from '../../core/content/default';
 import { installTabGuard } from '../../controls/browserKeys';
 import { Hud } from '../../hud/Hud';
@@ -22,6 +22,7 @@ import { takeIntro } from '../../net/matchIntro';
 import { GlbLibrary } from '../engine/pieces/glbModels';
 import { playMatch } from './match3d';
 import { MenuFlow } from './menuFlow';
+import { showMenuBoard } from './menuBackdrop';
 import { TERRAIN_MODEL_FILES } from '../engine/terrain/terrain';
 
 const hudRoot = document.getElementById('hud')!;
@@ -57,14 +58,25 @@ const introShown = intro
   : null;
 // Una partida por la red tarda lo que tarde la sala en mandarla: mientras, se cargan las imagenes.
 const [opened, images] = await Promise.all([start ? openGame(start) : null, imagesLoaded, introShown]);
-if (opened?.ok) playMatch(opened.game, images, await GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES), webAudio);
-else openMenu(opened?.notice ?? null);
+if (opened?.ok) playMatch(opened.game, images, await loadModels(), webAudio);
+else openMenu(opened?.notice ?? null, images);
 
-/** El menu principal, con el aviso de por que no ha empezado la partida apuntada (si lo hay). */
-function openMenu(notice: string | null): void {
+/** Los modelos 3D de las unidades, los edificios y el terreno. */
+function loadModels(): Promise<GlbLibrary> {
+  return GlbLibrary.load(MODEL_TYPES, TERRAIN_MODEL_FILES);
+}
+
+/**
+ * El menu principal, con el aviso de por que no ha empezado la partida apuntada (si lo hay). Sale ya;
+ * el tablero 3D de detras, en cuanto estan los modelos (sin el, si el navegador no puede, queda el fondo oscuro).
+ */
+function openMenu(notice: string | null, images: GameImages): void {
   ui.set({ intro: null });
   new MenuFlow(webAudioSounds).open();
   if (notice) showToast(notice);
+  loadModels()
+    .then((models) => showMenuBoard(document.getElementById('game')!, models, images))
+    .catch((error: unknown) => console.warn('El menu se queda sin el tablero 3D de fondo:', error));
 }
 
 // Instalar como app y jugar sin conexion (solo en la web publicada).

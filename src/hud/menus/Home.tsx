@@ -1,20 +1,10 @@
+import type { ComponentChildren } from 'preact';
 import { imgUrl } from '../../assets';
-import { fmtNum, t } from '../../settings';
+import { t } from '../../settings';
 import { Btn } from '../common/buttons';
 import type { UIState } from '../state';
 import { ui } from '../store';
-import type { HomeVM, MarkVM } from '../vm/menus';
-
-/** Marcas de las misiones de la campaña (hecha, abierta, cerrada). */
-function Marks({ marks }: { marks: MarkVM[] }) {
-  return (
-    <span class="marks" aria-hidden="true">
-      {marks.map((mark) => (
-        <i class={mark} />
-      ))}
-    </span>
-  );
-}
+import type { HomeEntryVM } from '../vm/menus';
 
 /** Corazon pixel (7×6), en rojo. */
 function Heart() {
@@ -26,9 +16,6 @@ function Heart() {
   );
 }
 
-/** Enlaces del pie de Inicio (ademas de Novedades, que lleva su aviso). */
-const FOOT_LINKS = ['help', 'options', 'credits', 'web'] as const;
-
 /** Lo que se le pasa a cada pieza de Inicio: que esta elegido y que hacer al pasar o pulsar. */
 interface Focus {
   focused: string;
@@ -36,101 +23,52 @@ interface Focus {
   pick: (id: string) => () => void;
 }
 
-const isFocused = (focus: Focus, ...ids: string[]) => ids.includes(focus.focused);
-const cardSelClass = (focus: Focus, ...ids: string[]) => (isFocused(focus, ...ids) ? 'sel' : '');
-
-function ContinueCard({ save, focus }: { save: NonNullable<HomeVM['save']>; focus: Focus }) {
+/** Un enlace de las pestañas de arriba o del pie: elegido con el teclado o al pasar el raton. */
+function HomeLink({ id, focus, cls, children }: { id: string; focus: Focus; cls: string; children: ComponentChildren }) {
   return (
-    <div
-      class={`px card card-continue ${cardSelClass(focus, 'continue')}`}
-      onMouseEnter={focus.hover('continue')}
-      onClick={focus.pick('continue')}
-    >
-      <span class="label">{t('savedGame')}</span>
-      <img class="thumb" src={save.thumb} alt="" />
-      <div class="card-info">
-        <span class="big">
-          {t('day')} {save.day}
-          {save.limit ? <span class="muted"> / {save.limit}</span> : null}
-        </span>
-        <span class="gold num">{fmtNum(save.funds)}</span>
-        <span class="muted">{save.mission ?? `${save.size}×${save.size}`}</span>
-      </div>
-      <Btn sel={isFocused(focus, 'continue')} onPick={focus.pick('continue')}>
-        {t('continueGame')} <span class="key">Enter</span>
-      </Btn>
-    </div>
+    <Btn sel={focus.focused === id} cls={cls} onHover={focus.hover(id)} onPick={focus.pick(id)}>
+      {children}
+    </Btn>
   );
 }
 
-function NewGameCard({ quickSummary, online, focus }: { quickSummary: string; online: boolean; focus: Focus }) {
+/** Arriba a la derecha: Jugar (esta pantalla), Novedades (con la version nueva o un punto si hay notas sin leer), Aprender y Opciones. */
+function Tabs({ s, focus }: { s: UIState; focus: Focus }) {
   return (
-    <div class={`px card card-new ${cardSelClass(focus, 'quick', 'custom', 'online')}`}>
-      <span class="label">{t('newGame')}</span>
-      <div class="card-art" aria-hidden="true">
-        <img class="px-icon" src={imgUrl('b_Soldier')} alt="" />
-        <img class="px-icon" src={imgUrl('b_Tank')} alt="" />
-        <img class="px-icon" src={imgUrl('r_Artillery')} alt="" />
-      </div>
-      <span class="muted small">{quickSummary}</span>
-      <div class="card-btns">
-        <Btn sel={isFocused(focus, 'quick')} onHover={focus.hover('quick')} onPick={focus.pick('quick')}>
-          {t('quickGame')} ▸
-        </Btn>
-        <Btn sel={isFocused(focus, 'custom')} cls="px-btn plain" onHover={focus.hover('custom')} onPick={focus.pick('custom')}>
-          {t('customGame')}
-        </Btn>
-        {online && (
-          <Btn sel={isFocused(focus, 'online')} cls="px-btn plain" onHover={focus.hover('online')} onPick={focus.pick('online')}>
-            {t('online')}
-          </Btn>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CampaignCard({ campaign, focus }: { campaign: HomeVM['campaign']; focus: Focus }) {
-  return (
-    <div
-      class={`px card card-campaign ${cardSelClass(focus, 'campaign')}`}
-      onMouseEnter={focus.hover('campaign')}
-      onClick={focus.pick('campaign')}
-    >
-      <span class="label">{t('campaign')}</span>
-      {campaign.thumb ? <img class="thumb" src={campaign.thumb} alt="" /> : <div class="thumb done">✓</div>}
-      <div class="card-info">
-        <span class="big">
-          {campaign.done} {t('of')} {campaign.total}
-        </span>
-        <span class="muted">{campaign.next ? `${t('nextMission')}: ${campaign.next}` : t('allDone')}</span>
-        <Marks marks={campaign.marks} />
-      </div>
-      <Btn sel={isFocused(focus, 'campaign')} cls="px-btn plain" onPick={focus.pick('campaign')}>
-        {t('campaign')} ▸
-      </Btn>
-    </div>
-  );
-}
-
-/** Pie: Novedades (con la version nueva o un punto si hay notas sin leer) y los enlaces. */
-function FootLinks({ s, focus }: { s: UIState; focus: Focus }) {
-  return (
-    <div class="home-foot">
-      <Btn sel={isFocused(focus, 'news')} cls="link news-link" onHover={focus.hover('news')} onPick={focus.pick('news')}>
+    <nav class="home-tabs">
+      <span class="home-tab current" aria-current="page">
+        {t('play')}
+      </span>
+      <HomeLink id="news" focus={focus} cls="home-tab news-link">
         {t('news')}
         {s.updateAvailable ? (
           <span class="news-badge">v{s.updateAvailable}</span>
         ) : s.newsBadge ? (
           <span class="news-dot" aria-label={t('notesNew')} />
         ) : null}
-      </Btn>
-      {FOOT_LINKS.map((id) => (
-        <Btn key={id} sel={isFocused(focus, id)} cls="link" onHover={focus.hover(id)} onPick={focus.pick(id)}>
-          {t(id === 'web' ? 'website' : id)}
-        </Btn>
-      ))}
-    </div>
+      </HomeLink>
+      <HomeLink id="help" focus={focus} cls="home-tab">
+        {t('learn')}
+      </HomeLink>
+      <HomeLink id="options" focus={focus} cls="home-tab">
+        {t('options')}
+      </HomeLink>
+    </nav>
+  );
+}
+
+/** Una entrada de la lista: la elegida, en grande, con la flecha delante y lo de debajo en oro. */
+function Entry({ entry, focus }: { entry: HomeEntryVM; focus: Focus }) {
+  return (
+    <HomeLink id={entry.id} focus={focus} cls="home-entry">
+      <span class="home-arrow" aria-hidden="true">
+        ▸
+      </span>
+      <span class="home-entry-text">
+        <span class="home-entry-title">{entry.title}</span>
+        <span class="home-entry-note">{entry.note}</span>
+      </span>
+    </HomeLink>
   );
 }
 
@@ -147,7 +85,7 @@ function Credits({ onClose }: { onClose: () => void }) {
   );
 }
 
-/** Inicio: partida guardada, partida nueva, campaña y los enlaces de abajo. */
+/** Inicio, el menu clasico de texto: el logo, la lista de lo que se juega, las pestañas de arriba y el pie. */
 export function Home({ s }: { s: UIState }) {
   const home = s.home;
   const focus: Focus = {
@@ -157,13 +95,24 @@ export function Home({ s }: { s: UIState }) {
   };
   return (
     <div class="home">
-      <img class="px-icon logo" src={imgUrl('logoilogic')} alt="Ilogic" />
-      <div class="home-cards">
-        {home.save && <ContinueCard save={home.save} focus={focus} />}
-        <NewGameCard quickSummary={home.quick} online={home.online} focus={focus} />
-        <CampaignCard campaign={home.campaign} focus={focus} />
+      <Tabs s={s} focus={focus} />
+      <div class="home-main">
+        <img class="px-icon logo" src={imgUrl('logoilogic')} alt="Ilogic" />
+        <nav class="home-list" aria-label={t('mainMenu')}>
+          {home.entries.map((entry) => (
+            <Entry key={entry.id} entry={entry} focus={focus} />
+          ))}
+        </nav>
+        <span class="home-hint">{t('homeHint')}</span>
       </div>
-      <FootLinks s={s} focus={focus} />
+      <div class="home-foot">
+        <HomeLink id="credits" focus={focus} cls="link">
+          {t('credits')}
+        </HomeLink>
+        <HomeLink id="web" focus={focus} cls="link">
+          {t('website')}
+        </HomeLink>
+      </div>
       {home.credits && <Credits onClose={focus.pick('credits')} />}
     </div>
   );
