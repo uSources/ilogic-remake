@@ -100,7 +100,7 @@
       "command": 3,
       "move": 4,
       "vision": 6,
-      "modelSize": 0.65,
+      "modelSize": 0.55,
       "movement": "vehicle",
       "captures": false,
       "attack": {
