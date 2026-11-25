@@ -32,14 +32,14 @@ describe('ayuda', () => {
     expect(en.colors(keys).map(([color]) => color)).toEqual(es.colors(keys).map(([color]) => color));
     expect(en.goalBasics(keys).length).toBe(es.goalBasics(keys).length);
     const ruleLineIsShown = (lines: string[]) => lines.map((line) => line !== '');
-    const facts = ruleFactsOf(helpRulesForSettingsOnly(defaultContent().defaultSettings));
+    const facts = ruleFactsOf(helpRulesForSettingsOnly(defaultContent().defaultSettings, defaultContent().units.list));
     expect(ruleLineIsShown(en.ruleLines(facts))).toEqual(ruleLineIsShown(es.ruleLines(facts)));
   });
 
   it('las frases de un modulo salen si la partida lo lleva (lo dice el modulo, no la ayuda)', () => {
     const { es } = HELP_TEXTS;
     const lines = (changes: Parameters<typeof settingsWith>[1]) =>
-      es.ruleLines(ruleFactsOf(helpRulesForSettingsOnly(settingsWith(defaultContent(), changes))));
+      es.ruleLines(ruleFactsOf(helpRulesForSettingsOnly(settingsWith(defaultContent(), changes), defaultContent().units.list)));
     const weatherLine = (text: string[]) => text.some((line) => line.startsWith('Clima'));
     expect(weatherLine(lines({ weather: true }))).toBe(true);
     expect(weatherLine(lines({ weather: false }))).toBe(false);

@@ -1,4 +1,4 @@
-import type { HelpRules } from '../i18n/help';
+import type { HelpRules, HelpTopic } from '../i18n/help';
 import type { TextKey } from '../settings';
 import type { EndOutcome, EndStatsVM } from './vm/end';
 import type { Anchor, BySide, Side } from './vm/common';
@@ -100,6 +100,8 @@ export interface UIState {
   minimapView: { x: number; y: number; w: number; h: number };
   minimapOn: boolean;
   help: boolean;
+  /** El tema de Aprender que se lee (HELP_TOPICS). */
+  helpTopic: HelpTopic;
   notes: NotesVM | null;
   /** Hay notas de parche sin leer. */
   newsBadge: boolean;
@@ -165,6 +167,7 @@ export const initialState: UIState = {
   minimap: null,
   minimapView: { x: 0, y: 0, w: 0, h: 0 },
   help: false,
+  helpTopic: 'goal',
   notes: null,
   newsBadge: false,
   updateAvailable: null,

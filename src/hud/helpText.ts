@@ -1,3 +1,4 @@
+import type { UnitType } from '../core/content';
 import type { GameState, MatchSettings } from '../core/model';
 import { gameModulesFor } from '../core/rules';
 import { HELP_TEXTS } from '../i18n';
@@ -9,12 +10,17 @@ import { currentKeyLabels } from './keyLabels';
 export const helpRulesOfMatch = (s: GameState): HelpRules => ({
   settings: s.settings,
   modules: s.ruleset.modules.map((module) => module.id),
+  units: s.content.units.list,
 });
 
-/** La ayuda sin partida (el menu): solo hay ajustes, asi que cuenta los modulos del juego que van con ellos. */
-export const helpRulesForSettingsOnly = (matchSettings: Readonly<MatchSettings>): HelpRules => ({
+/**
+ * La ayuda sin partida (el menu): solo hay ajustes, asi que cuenta los modulos del juego que van con
+ * ellos, y las unidades del contenido.
+ */
+export const helpRulesForSettingsOnly = (matchSettings: Readonly<MatchSettings>, units: readonly UnitType[]): HelpRules => ({
   settings: matchSettings,
   modules: gameModulesFor(matchSettings),
+  units,
 });
 
 /** Lo que reciben las frases: los ajustes y si un modulo esta entre los que cuenta la ayuda. */

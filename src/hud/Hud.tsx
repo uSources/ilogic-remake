@@ -3,6 +3,7 @@ import { GameHud } from './game/GameHud';
 import { Campaign } from './menus/Campaign';
 import { EndScreen } from './menus/EndScreen';
 import { Home } from './menus/Home';
+import { isPageOpen } from './menus/MenuPage';
 import { NewGame } from './menus/NewGame';
 import { Online } from './menus/Online';
 import { Options } from './menus/Options';
@@ -33,14 +34,15 @@ export function Hud() {
         // En Inicio, el tablero 3D de detras se ve a la derecha: el velo solo oscurece el lado del menu.
         <div class={s.screen === 'menu' ? 'menu-veil side' : 'menu-veil'} />
       )}
-      {s.screen === 'menu' && <Home s={s} />}
+      {/* Debajo de una pagina, las pestañas de Inicio se verian dos veces. */}
+      {s.screen === 'menu' && !isPageOpen(s) && <Home s={s} />}
       {s.screen === 'setup' && <NewGame s={s} />}
       {s.screen === 'campaign' && <Campaign s={s} />}
       {s.screen === 'online' && <Online s={s} />}
       {s.screen === 'game' && <GameHud s={s} />}
       {s.screen === 'end' && s.end && <EndScreen end={s.end} />}
       {s.options && <Options options={s.options} />}
-      {s.help && s.helpRules && <Help rules={s.helpRules} />}
+      {s.help && s.helpRules && <Help rules={s.helpRules} topic={s.helpTopic} />}
       {s.rename && <RenameSquad rename={s.rename} />}
       {s.handoff && s.screen === 'game' && <Handoff handoff={s.handoff} />}
       {s.notes && <PatchNotes notes={s.notes} />}

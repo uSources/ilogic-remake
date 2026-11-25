@@ -5,6 +5,7 @@ import { Btn } from '../common/buttons';
 import type { UIState } from '../state';
 import { ui } from '../store';
 import type { HomeEntryVM } from '../vm/menus';
+import { MenuTabs } from './MenuTabs';
 
 /** Corazon pixel (7×6), en rojo. */
 function Heart() {
@@ -29,31 +30,6 @@ function HomeLink({ id, focus, cls, children }: { id: string; focus: Focus; cls:
     <Btn sel={focus.focused === id} cls={cls} onHover={focus.hover(id)} onPick={focus.pick(id)}>
       {children}
     </Btn>
-  );
-}
-
-/** Arriba a la derecha: Jugar (esta pantalla), Novedades (con la version nueva o un punto si hay notas sin leer), Aprender y Opciones. */
-function Tabs({ s, focus }: { s: UIState; focus: Focus }) {
-  return (
-    <nav class="home-tabs">
-      <span class="home-tab current" aria-current="page">
-        {t('play')}
-      </span>
-      <HomeLink id="news" focus={focus} cls="home-tab news-link">
-        {t('news')}
-        {s.updateAvailable ? (
-          <span class="news-badge">v{s.updateAvailable}</span>
-        ) : s.newsBadge ? (
-          <span class="news-dot" aria-label={t('notesNew')} />
-        ) : null}
-      </HomeLink>
-      <HomeLink id="help" focus={focus} cls="home-tab">
-        {t('learn')}
-      </HomeLink>
-      <HomeLink id="options" focus={focus} cls="home-tab">
-        {t('options')}
-      </HomeLink>
-    </nav>
   );
 }
 
@@ -98,7 +74,7 @@ export function Home({ s }: { s: UIState }) {
   };
   return (
     <div class="home">
-      <Tabs s={s} focus={focus} />
+      <MenuTabs current="play" focused={home.focus} onHover={(id) => ui.actions.homeHover(id)} onPick={(id) => ui.actions.homePick(id)} />
       <div class="home-main">
         <img class="px-icon logo" src={imgUrl('logoilogic')} alt="Ilogic" />
         <nav class="home-list" aria-label={t('mainMenu')}>

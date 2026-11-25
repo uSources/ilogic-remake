@@ -14,7 +14,16 @@ lienzo «Ilogic · Rediseño de Jugar en línea», página «Menú inicial») y 
   (`src/menu/menuBoard.ts`) con la cámara dando vueltas de cerca a una Base, una vuelta cada dos
   minutos y medio (`src/view3d/app/menuBackdrop.ts`). Con «Menos movimiento», quieta. Antes de 3D era
   una partida en 2D; luego hubo un tiempo la imagen de 2013.
-- **Opciones:** pantalla propia por grupos, la misma desde el menú y desde la partida (tecla O). Añade tamaño de la interfaz, reducir movimiento y ver siempre la amenaza.
+- **Novedades, Aprender y Opciones:** páginas del mismo diseño (`src/hud/menus/MenuPage.tsx`): toda
+  la pantalla sobre la noche, arriba el logo y las pestañas de Inicio (en la partida, su título y
+  «Cerrar»), y dentro fichas crema. Novedades, como texto para leer: las notas de la versión elegida
+  en grande y a la derecha las otras versiones (en el móvil, una fila de chapas encima). Aprender: a
+  la izquierda los temas (objetivo y reglas, colores del mapa, controles y unidades, con ↑ ↓) y a la
+  derecha lo que cuenta el elegido; las unidades, en fichas con retrato, precio, movimiento, alcance
+  y visión. Las lecciones con «Practicar» y la tabla de daño del lienzo quedan para más adelante.
+- **Opciones:** pantalla propia por grupos, la misma desde el menú y desde la partida (tecla O), con
+  las pestañas en una barra de pastilla y cada grupo en su ficha. Añade tamaño de la interfaz,
+  reducir movimiento y ver siempre la amenaza.
 - **Nueva partida:** vista previa del mapa que se va a jugar, "Otro mapa" (R), código, y los ajustes Normal / Rápida / Clásica 2013 / Personalizada con botones de segmento.
 - **Campaña:** tarjetas con miniatura, tipo de objetivo, estado y mejor marca en días.
 - **Pausa:** panel centrado con el día, el código del mapa y el objetivo de la misión.

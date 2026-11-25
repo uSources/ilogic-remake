@@ -118,8 +118,9 @@ describe('adaptador de teclado en los menus', () => {
     expect(menuKeyCommand(k('KeyN'), 'notes')?.kind).toBe('notes');
     expect(menuKeyCommand(k('KeyR'), 'setup')?.kind).toBe('reroll');
     expect(menuKeyCommand(k('KeyH'), 'help')?.kind).toBe('help');
-    // En la ayuda las flechas no hacen nada.
-    expect(menuKeyCommand(k('ArrowDown'), 'help')).toBeNull();
+    // En la ayuda arriba y abajo cambian de tema; los lados no hacen nada.
+    expect(menuKeyCommand(k('ArrowDown'), 'help')).toEqual({ kind: 'move', dx: 0, dy: 1 });
+    expect(menuKeyCommand(k('ArrowLeft'), 'help')).toBeNull();
   });
 
   it('escribiendo el codigo del mapa las letras y el Retroceso son del cuadro de texto', () => {

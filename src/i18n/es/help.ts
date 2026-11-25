@@ -87,6 +87,13 @@ export const help: HelpTexts = {
     ],
   ],
   controlsTitle: 'Controles',
+  unitsTitle: 'Unidades',
+  topicNotes: {
+    goal: 'Cómo se gana y las reglas de la partida',
+    colors: 'Lo que marca cada color en el tablero',
+    controls: 'Teclado, ratón y dedos',
+    units: 'Precio, movimiento, alcance y visión',
+  },
   head: ['Acción', 'Teclado', 'Ratón / táctil'],
   controls: (keys: KeyLabels) => [
     ['Elegir una unidad', '—', 'Clic en ella'],

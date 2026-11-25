@@ -85,6 +85,13 @@ export const help: HelpTexts = {
     ],
   ],
   controlsTitle: 'Controls',
+  unitsTitle: 'Units',
+  topicNotes: {
+    goal: 'How to win and the rules of the match',
+    colors: 'What each colour on the board means',
+    controls: 'Keyboard, mouse and touch',
+    units: 'Price, movement, range and vision',
+  },
   head: ['Action', 'Keyboard', 'Mouse / touch'],
   controls: (keys: KeyLabels) => [
     ['Select a unit', '—', 'Click it'],

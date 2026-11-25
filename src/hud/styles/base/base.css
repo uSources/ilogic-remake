@@ -50,6 +50,15 @@
   --menu-title: #d6cbe3;
   --menu-note: #b8aecb;
   --menu-tab: #e8dff5;
+  /* Paginas del menu (Novedades, Aprender, Opciones): la noche casi tapa el tablero; fichas crema con
+     sombra negra, su etiqueta en ocre y el texto de leer un poco mas suave que la tinta. */
+  --page-veil: rgba(18, 21, 28, 0.9);
+  --card-shadow: 0 6px 0 #000;
+  --eyebrow: #8a5a00;
+  --reading: #3b3352;
+  --menu-line: #3a3550;
+  --menu-date: #8a82a0;
+  --unit-slot: #26324d;
   /* Forma de las fichas: radio, grosor del borde y la sombra dura de plastico. */
   --radius: 16px;
   --radius-sm: 10px;

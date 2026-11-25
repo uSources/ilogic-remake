@@ -1,4 +1,5 @@
 import { Fragment, type ComponentChild } from 'preact';
+import { isPageOpen } from '../menus/MenuPage';
 import { Pause } from '../menus/Pause';
 import { t } from '../../settings';
 import type { UIState } from '../state';
@@ -67,7 +68,8 @@ const GAME_PANELS: GamePanel[] = [
   { id: 'endTurn', render: (s) => <EndTurnChip s={s} /> },
 
   { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },
-  { id: 'menu', render: (s) => s.menu && <MatchMenu menu={s.menu} /> },
+  // La pausa no se ve a traves de Opciones o de la ayuda, que se abren desde ella.
+  { id: 'menu', render: (s) => s.menu && !isPageOpen(s) && <MatchMenu menu={s.menu} /> },
 ];
 
 /** Lo que sale junto a lo elegido o encima de todo: fichas, rueda, compra, pausa o el aviso de elegir casilla. */

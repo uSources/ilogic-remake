@@ -1,0 +1,377 @@
+/* Paginas del menu clasico (MenuPage.tsx): Novedades, Aprender y Opciones ocupan la pantalla entera
+   sobre la noche, con el tablero 3D apenas visible detras (en la partida, sobre el juego). Arriba, el
+   logo y las pestañas de Inicio (o el titulo y «Cerrar»); dentro, fichas crema con sombra negra. */
+.menu-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 40px 26px;
+  background: var(--page-veil);
+  pointer-events: auto;
+}
+.page-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: none;
+}
+.page-head .home-tabs {
+  margin-left: auto;
+}
+.page-logo {
+  width: 140px;
+  height: 56px;
+  flex: none;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.5));
+}
+.page-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 28px;
+  color: var(--panel);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7);
+}
+.page-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--menu-tab);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+.page-close:hover,
+.page-close.sel {
+  color: var(--menu-gold);
+}
+.page-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 30px;
+}
+.page-card {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 28px;
+  background: var(--panel);
+  border: var(--outline) solid var(--ink);
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+  color: var(--ink);
+}
+.page-eyebrow {
+  display: block;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--eyebrow);
+}
+.page-hint {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--menu-note);
+}
+/* Con el dedo no hay flechas ni Esc. */
+@media (pointer: coarse) {
+  .page-hint.keys-hint,
+  .help-topics .page-hint,
+  .options-page .opt-tabs-keys {
+    display: none;
+  }
+}
+
+/* ---- Aprender (Help.tsx): los temas a la izquierda y lo que cuenta el elegido a la derecha ---- */
+.help-topics {
+  width: 420px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+.help-topic {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--hi);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.help-topic.sel {
+  border-color: var(--blue-btn);
+  box-shadow: inset 0 0 0 1px var(--blue-btn);
+}
+.help-topic-number {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--slot);
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--muted);
+}
+.help-topic.sel .help-topic-number {
+  background: var(--blue-btn);
+  color: var(--hi);
+}
+.help-topic-text {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.help-topic-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 16px;
+}
+.help-topic-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+.help-topic-arrow {
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--blue-btn);
+}
+.help-topics .page-hint {
+  margin-top: auto;
+  color: var(--muted);
+}
+.help-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--reading);
+  user-select: text;
+}
+.help-text p {
+  margin: 10px 0 0;
+}
+.help-text .legend {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.help-text .legend li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.help-text .legend i {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+}
+.help-text table {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.help-text th {
+  padding: 4px 10px 6px 0;
+  text-align: left;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.help-text td {
+  padding: 6px 10px 6px 0;
+  border-top: 2px solid var(--lo);
+  vertical-align: top;
+}
+.help-text td.kbd {
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.help-units {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.help-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px;
+  background: var(--hi);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+}
+.help-unit-portrait {
+  width: 100%;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--unit-slot);
+}
+.help-unit-portrait .px-icon {
+  width: 56px;
+  height: 56px;
+}
+.help-unit-name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  text-align: center;
+}
+.help-unit-cost {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--eyebrow);
+}
+.help-unit-stats {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.help-unit-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.help-unit-stat .px-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* ---- Opciones (Options.tsx): las pestañas en una barra de pastilla y cada grupo en su ficha ---- */
+.options-body {
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+.options-page .opt-tabs {
+  align-self: flex-start;
+  padding: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 16px;
+}
+.options-page .opt-tab {
+  padding: 8px 16px;
+  background: none;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: none;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--menu-title);
+}
+.options-page .opt-tab.on {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 4px 0 #000;
+}
+.options-page .opt-tabs-keys {
+  margin: 0 6px 0 10px;
+  color: var(--menu-note);
+}
+/* Como el texto de Novedades: una fila de lado a lado de la pantalla no se sigue con la vista. */
+.options-page .opt-groups {
+  width: 100%;
+  max-width: 1000px;
+  min-height: 0;
+}
+.options-page .opt-card {
+  padding: 14px 18px;
+  background: var(--panel);
+  border: var(--outline) solid var(--ink);
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+}
+.options-page .opt-card .label {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--eyebrow);
+}
+
+/* ---- Pantalla estrecha (el movil): sin logo, y lo de cada pagina en columna ---- */
+@media (max-width: 720px) {
+  .menu-page {
+    gap: 12px;
+    padding: 16px 16px 18px;
+  }
+  .page-logo {
+    display: none;
+  }
+  .page-body {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .page-card {
+    padding: 18px;
+  }
+  .help-topics {
+    width: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px;
+  }
+  .help-topics .page-eyebrow,
+  .help-topics .page-hint,
+  .help-topic-note,
+  .help-topic-arrow {
+    display: none;
+  }
+  .help-topic {
+    padding: 8px;
+    gap: 8px;
+  }
+  .help-text {
+    font-size: 15px;
+  }
+  .help-units {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+  /* La tabla de controles (tres columnas) cabe en el ancho: columnas fijas y el texto se parte. */
+  .help-text table {
+    table-layout: fixed;
+  }
+  .help-text td.kbd {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .options-page .opt-tab {
+    padding: 6px 10px;
+    font-size: 15px;
+  }
+}

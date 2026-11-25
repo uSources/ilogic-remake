@@ -1,4 +1,5 @@
 /** Forma de la ayuda ("Cómo se juega") y piezas para escribir sus frases en cada idioma. */
+import type { UnitType } from '../core/content';
 import type { MatchSettings } from '../core/model';
 import type { RuleModuleId } from '../core/rules';
 import type { KeyLabels } from '../controls/keyNames';
@@ -14,11 +15,12 @@ export type ControlRow = readonly [action: string, keyboard: string, pointerOrTo
 /**
  * Las reglas que cuenta la ayuda, como datos (van en el estado de la interfaz): los ajustes (las
  * cifras) y los modulos de reglas que van (que frases salen). En una partida, los que lleva (con los
- * de su modo); en el menu, los del juego que van con esos ajustes.
+ * de su modo); en el menu, los del juego que van con esos ajustes. Y sus unidades (Aprender las enseña).
  */
 export interface HelpRules {
   readonly settings: Readonly<MatchSettings>;
   readonly modules: readonly RuleModuleId[];
+  readonly units: readonly UnitType[];
 }
 
 /** Lo que reciben las frases de la ayuda: los ajustes y si un modulo va (sale de HelpRules). */
@@ -41,8 +43,15 @@ export interface HelpTexts {
   head: ControlRow;
   /** La tabla de controles con las teclas del jugador (`keys`: lo que pone en la tecla de cada orden). */
   controls: (keys: KeyLabels) => ControlRow[];
+  unitsTitle: string;
+  /** Debajo del nombre de cada tema de Aprender, lo que hay en el (en el orden de HELP_TOPICS). */
+  topicNotes: Readonly<Record<HelpTopic, string>>;
   close: string;
 }
+
+/** Los temas de Aprender, en el orden de la lista. */
+export const HELP_TOPICS = ['goal', 'colors', 'controls', 'units'] as const;
+export type HelpTopic = (typeof HELP_TOPICS)[number];
 
 /** 0.05 → 5 (las reglas guardan los porcentajes como fraccion). */
 export const percent = (fraction: number): number => Math.round(fraction * 100);

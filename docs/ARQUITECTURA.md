@@ -730,7 +730,7 @@ pone la vista. Cada pieza en su sitio:
 | Calculo de esos datos a partir de la partida (puro, con test) | `src/ui/models/<panel>.ts`, reexportado en `src/ui/hudModels.ts` |
 | Raiz: pantalla en curso, dialogos y avisos | `Hud.tsx` |
 | Paneles de la partida y donde va cada uno | `game/*.tsx`, colocados en `game/GameHud.tsx` (lista `GAME_PANELS`) |
-| Pantallas del menu, pausa y final | `menus/*.tsx` |
+| Pantallas del menu, pausa y final | `menus/*.tsx`; Novedades, Aprender y Opciones son paginas enteras con el mismo marco (`menus/MenuPage.tsx`: en el menu, el logo y las pestañas de Inicio, `MenuTabs.tsx`; en la partida, su titulo y «Cerrar»), y mientras hay una abierta no se pinta lo de debajo (`isPageOpen`) |
 | Dialogos (ayuda, novedades, nombre de escuadra) y avisos (carga, aviso, resumen, cartel) | `overlays/*.tsx` |
 | Piezas compartidas | `common/`: `Pill`, `Chip` y `Badge` (`toy.tsx`, las piezas "caja de juguete": pastillas de esquina, fichas que se pulsan y chapas sobre una casilla, como las de la prevision: numero y color en `ui/models/forecastBadges.ts`), `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
 | Estilos | `styles/<grupo>/<panel>.css`, juntados en orden por `hud.css` |
