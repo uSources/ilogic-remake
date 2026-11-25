@@ -83,6 +83,7 @@ export class MenuFlow {
       openSetup: () => this.openSetup(),
       openCampaign: () => this.openCampaign(),
       openOnline: () => this.openOnline(),
+      onlineRooms: this.online.rooms,
       openOptions: () => this.options.open(),
     });
   }
@@ -101,7 +102,7 @@ export class MenuFlow {
       banner: null,
       helpRules: helpRulesForSettingsOnly(settingsWith(defaultContent())),
     });
-    this.home.publish();
+    this.home.open();
     this.openRoomFromHash();
     window.addEventListener('keydown', (event) => this.onKey(event));
     playMusic('menu');
@@ -159,20 +160,23 @@ export class MenuFlow {
     this.mode = 'home';
     blurFocusedElement();
     ui.set({ screen: 'menu' });
-    this.home.publish();
+    this.home.open();
   }
 
   private openSetup(): void {
+    this.home.close();
     this.mode = 'setup';
     this.setup.open();
   }
 
   private openCampaign(): void {
+    this.home.close();
     this.mode = 'campaign';
     this.campaign.open();
   }
 
   private openOnline(): void {
+    this.home.close();
     this.mode = 'online';
     this.online.open();
   }
@@ -185,6 +189,7 @@ export class MenuFlow {
     const link = parseRoomLink(location.hash);
     if (!link) return;
     history.replaceState(null, '', location.pathname + location.search);
+    this.home.close();
     this.mode = 'online';
     this.online.openRoom(link.code, link.token);
   }

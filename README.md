@@ -52,24 +52,26 @@ jugar con un servidor propio sin recompilar). Sin servidor, Inicio no ofrece «J
 Para tenerlo todo en casa: `npm run selfhost` compila el juego y arranca el servidor de Node, que
 sirve el juego y las salas en la misma direccion (`http://<tu-equipo>:8787`).
 
-- **Buscar rival**: Inicio → «Jugar en línea» → «Buscar rival», con el ritmo: **por turnos** (un
-  dia por turno: juegas cuando puedes) o **en vivo** (dos minutos por turno, los dos a la vez). Es 1
+- **Buscar rival**: Inicio → «En línea» → «Buscar rival», **en vivo** (dos minutos por turno, los
+  dos a la vez) o, con el enlace de debajo, **por turnos** (un dia por turno: juegas cuando puedes). Es 1
   contra 1, con las reglas normales y un mapa al azar. Si alguien espera con ese ritmo, la partida
   empieza ya; si no, tu sala queda «Buscando rival» y empieza cuando llegue alguien: por turnos
-  puedes cerrar el juego y te la encuentras en «Mis partidas en línea»; en vivo solo te emparejan
+  puedes cerrar el juego y te la encuentras en «Mis partidas»; en vivo solo te emparejan
   mientras estas en la sala, y si no quieres esperar puedes jugar contra la IA. «Cancelar búsqueda»
-  (o «Cancelar» en «Mis partidas») la cierra.
-- **Con amigos, crear partida**: Inicio → «Jugar en línea» → «Crear partida». De 2 a 4 equipos y quien juega
+  (o la × de su fila en «Mis partidas») la cierra.
+- **Con amigos, crear sala**: Inicio → «En línea» → «Crear sala». De 2 a 4 equipos y quien juega
   cada uno (una persona o la IA), las reglas (los ajustes de «Nueva partida» o «Personalizada»), y si
   se quiere un reloj por turno (al acabarse, el turno pasa solo) y cuanto esperar a los que no entran
   (pasado, su asiento lo juega la IA). La partida da un codigo de 6 letras y un enlace, el mismo para
-  todos: copialo (o compartelo desde el movil). Empieza cuando han entrado todos; mientras, quien la
-  creo puede dar a la IA un asiento que sigue vacio.
+  todos: copia el enlace o el codigo (o comparte el enlace desde el movil). Empieza sola cuando han
+  entrado todos; mientras, quien la creo puede jugar con la IA un asiento que sigue vacio.
 - **Unirse**: con el enlace (abre el juego directamente en la sala) o escribiendo el codigo (o
   pegando el enlace) en «Con amigos»: el servidor da el primer asiento libre.
-- **Mis partidas en línea** recuerda las salas de este navegador y dice como va cada una: «Te toca»
+- **Mis partidas** recuerda las salas de este navegador y dice como va cada una: «Te toca»
   (con el dia y lo que queda de turno, si hay reloj), el turno de otro equipo, esperando jugadores,
-  buscando rival, acabada o ya no existe. Lo que pide jugar va arriba.
+  buscando rival, acabada o ya no existe. Lo que pide jugar va arriba (en el movil, encima de todo) y
+  la tarjeta «En línea» de Inicio dice en cuantas te toca. Una partida en juego no se puede quitar
+  de la lista; lo que espera, acabo o ya no existe, si (la × de la esquina).
 - **En la partida**: tu turno se juega como siempre (cada accion la confirma el servidor); en los
   demas sale «Esperando al equipo N…» y lo que hacen llega animado cuando acaban. Si cambias de
   pestaña, el titulo avisa de que te toca. La pastilla bajo la del dia dice como va la conexion: si

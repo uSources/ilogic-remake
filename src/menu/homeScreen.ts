@@ -1,7 +1,8 @@
 /**
  * Pantalla de inicio del menu, el menu clasico de texto: la lista de lo que se juega (Continuar,
  * Campaña, Escaramuza, En línea), cada entrada con lo que hay detras en una linea; arriba, Novedades,
- * Aprender y Opciones, y abajo, Creditos y la web. Pide a la escena lo poco que usa (`HomeHost`).
+ * Aprender y Opciones, y abajo, Creditos y la web. Mientras se ve, pregunta como estan tus partidas en
+ * linea («En línea» dice si te toca). Pide a la escena lo poco que usa (`HomeHost`).
  */
 import type { MenuCommand } from '../controls/menu';
 import type { GameState } from '../core/model';
@@ -10,8 +11,11 @@ import { ui, type HomeEntryVM, type UIActions } from '../hud/store';
 import { WEB_URL } from '../layout';
 import { openNotes } from '../patchNotes';
 import { settings, t } from '../settings';
+import { readOnlineRooms } from '../net/onlineRooms';
 import { serverUrl } from '../net/serverUrl';
 import { navGrid } from './nav';
+import { onlineCardOf } from './online/roomLines';
+import type { RoomWatch } from './online/roomWatch';
 
 export interface HomeHost {
   /** La partida guardada, si la hay (la entrada Continuar). */
@@ -22,8 +26,9 @@ export interface HomeHost {
   /** Escaramuza: la pantalla de partida nueva (alli se elige el mapa y las reglas y se empieza). */
   openSetup(): void;
   openCampaign(): void;
-  /** Abre «Jugar en línea»; sin ella (la vista 3D aun no juega por la red) no sale esa entrada. */
-  openOnline?(): void;
+  openOnline(): void;
+  /** Lo que dice el servidor de tus partidas en linea (la misma que mira «Jugar en línea»). */
+  readonly onlineRooms: RoomWatch;
   openOptions(): void;
 }
 
@@ -58,6 +63,20 @@ export class HomeScreen {
     this.focus = this.host.save ? 'continue' : 'campaign';
   }
 
+  /**
+   * Pasa a Inicio: se enseña y, si se puede jugar en linea y tienes partidas apuntadas, pregunta como
+   * estan (sin ninguna, «En línea» no tiene nada que contar del servidor).
+   */
+  open(): void {
+    if (this.canPlayOnline() && readOnlineRooms().length > 0) this.host.onlineRooms.start(() => this.publish());
+    this.publish();
+  }
+
+  /** Se sale de Inicio: nada queda preguntando por las partidas en linea. */
+  close(): void {
+    this.host.onlineRooms.stop();
+  }
+
   publish(): void {
     ui.set({ home: { focus: this.focus, entries: this.entries(), credits: ui.get().home.credits } });
   }
@@ -78,18 +97,26 @@ export class HomeScreen {
 
   private entries(): HomeEntryVM[] {
     const save = this.savedGameEntry();
-    const online = this.canPlayOnline() ? [{ id: 'online', title: t('homeOnline'), note: t('homeOnlineNote') }] : [];
+    const online = this.onlineEntry();
     return [
       ...(save ? [save] : []),
-      { id: 'campaign', title: t('campaign'), note: campaignNote() },
-      { id: 'skirmish', title: t('skirmish'), note: t('homeSkirmishNote') },
-      ...online,
+      { id: 'campaign', title: t('campaign'), note: campaignNote(), urgent: false },
+      { id: 'skirmish', title: t('skirmish'), note: t('homeSkirmishNote'), urgent: false },
+      ...(online ? [online] : []),
     ];
   }
 
-  /** Hay servidor y quien muestra el menu sabe abrir «Jugar en línea». */
+  /** Hay servidor de partidas por la red. */
   private canPlayOnline(): boolean {
-    return serverUrl() !== null && this.host.openOnline !== undefined;
+    return serverUrl() !== null;
+  }
+
+  /** «En línea»: si te toca en alguna partida (y entonces pide jugar), cuantas hay en marcha o de que va. */
+  private onlineEntry(): HomeEntryVM | null {
+    if (!this.canPlayOnline()) return null;
+    const rooms = this.host.onlineRooms;
+    const card = onlineCardOf(readOnlineRooms(), (code) => rooms.lookOf(code));
+    return { id: 'online', title: t('onlineCardTitle'), note: card.yourTurn ?? card.status, urgent: card.yourTurn !== null };
   }
 
   /** «Continuar», con lo que es la guardada: «Escaramuza · día 12» o la mision y su dia. */
@@ -97,7 +124,7 @@ export class HomeScreen {
     const save = this.host.save;
     if (!save) return null;
     const day = t('homeDay').replace('{n}', String(save.day));
-    return { id: 'continue', title: t('continueGame'), note: `${savedGameKind(save)} · ${day}` };
+    return { id: 'continue', title: t('continueGame'), note: `${savedGameKind(save)} · ${day}`, urgent: false };
   }
 
   private setCredits(isShown: boolean): void {
@@ -117,7 +144,7 @@ export class HomeScreen {
     },
     campaign: () => this.host.openCampaign(),
     skirmish: () => this.host.openSetup(),
-    online: () => this.host.openOnline?.(),
+    online: () => this.host.openOnline(),
     news: () => openNotes(),
     help: () => ui.set({ help: true }),
     options: () => this.host.openOptions(),

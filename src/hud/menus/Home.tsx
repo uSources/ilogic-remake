@@ -57,10 +57,13 @@ function Tabs({ s, focus }: { s: UIState; focus: Focus }) {
   );
 }
 
-/** Una entrada de la lista: la elegida, en grande, con la flecha delante y lo de debajo en oro. */
+/**
+ * Una entrada de la lista: la elegida, en grande, con la flecha delante y lo de debajo en oro. Si pide
+ * jugar (te toca en linea), lo de debajo va en una chapa amarilla aunque no este elegida.
+ */
 function Entry({ entry, focus }: { entry: HomeEntryVM; focus: Focus }) {
   return (
-    <HomeLink id={entry.id} focus={focus} cls="home-entry">
+    <HomeLink id={entry.id} focus={focus} cls={`home-entry entry-${entry.id} ${entry.urgent ? 'urgent' : ''}`}>
       <span class="home-arrow" aria-hidden="true">
         ▸
       </span>

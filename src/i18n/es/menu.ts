@@ -5,8 +5,6 @@ export const menu = {
   website: 'GitHub',
   skirmish: 'Escaramuza',
   homeSkirmishNote: 'Contra la IA',
-  homeOnline: 'En línea',
-  homeOnlineNote: 'Contra otra persona',
   homeCampaignNote: 'Misión {n} de {total}',
   homeDay: 'día {n}',
   learn: 'Aprender',

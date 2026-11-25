@@ -46,14 +46,6 @@
   border-top-color: var(--red);
   animation-name: intro-in-right;
 }
-.match-intro .intro-army {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-}
-.match-intro .intro-army.mirrored {
-  transform: scaleX(-1);
-}
 .match-intro .intro-army .soldier {
   width: clamp(48px, 7vw, 80px);
   height: auto;
@@ -88,10 +80,7 @@
   color: var(--red-lo);
 }
 .match-intro .intro-vs {
-  font-family: var(--display);
-  font-weight: 700;
   font-size: clamp(36px, 6vw, 64px);
-  color: #f5c04a;
   text-shadow: 0 4px 0 #000;
   animation: intro-pop 0.4s 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both;
 }

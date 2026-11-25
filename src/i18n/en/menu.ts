@@ -7,8 +7,6 @@ export const menu: Translation<typeof es> = {
   website: 'GitHub',
   skirmish: 'Skirmish',
   homeSkirmishNote: 'Against the AI',
-  homeOnline: 'Online',
-  homeOnlineNote: 'Against another person',
   homeCampaignNote: 'Mission {n} of {total}',
   homeDay: 'day {n}',
   learn: 'Learn',

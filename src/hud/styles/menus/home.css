@@ -131,6 +131,17 @@ html.reduce-motion #game.menu-stage canvas {
 .home-entry.sel .home-entry-note {
   color: var(--menu-gold);
 }
+/* Te toca en una partida en linea: la chapa amarilla de «¡Te toca!» (la de los numeros, toy.css). */
+.home-entry.urgent .home-entry-note {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 1px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #ffd23f;
+  color: var(--ink);
+  text-shadow: none;
+}
 .home-hint {
   font-size: 13px;
   font-weight: 700;

@@ -276,6 +276,26 @@ async function foundIntro() {
   return s.screen === 'loading' && s.intro ? s.intro : null;
 }
 
+/** La entrada «En línea» de Inicio, cuando ya dice que te toca (null si aun no). */
+async function homeEntryYourTurn() {
+  const entry = (await import('/src/hud/store.ts')).ui.get().home.entries.find((candidate) => candidate.id === 'online');
+  return entry?.urgent ? entry : null;
+}
+
+/** El tablero 3D del fondo del menu ya se ve: tiene lienzo y despues ha pasado un fotograma entero. */
+const menuBoardDrawn = () =>
+  document.querySelector('#game canvas') !== null &&
+  new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve(true))));
+
+/**
+ * El menu de inicio de `who`, ya listo: con la entrada «En línea» y el tablero del fondo dibujado (montar
+ * la escena 3D bloquea la pagina un rato, mucho mas sin GPU: hasta entonces ni se pulsa ni se captura).
+ */
+async function menuReady(page, who) {
+  await until(page, () => document.querySelector('.entry-online') !== null, null, `el menu en ${who}`);
+  await until(page, menuBoardDrawn, null, `el tablero del fondo del menu en ${who}`, MATCH_START_MS);
+}
+
 /** «Jugar en línea» esta en su menu (no en el vestibulo de una sala). */
 const isOnlineMenu = async () => (await import('/src/hud/store.ts')).ui.get().online?.mode === 'menu';
 
@@ -288,11 +308,37 @@ async function knownRoomLine(code) {
 
 // --- El guion ------------------------------------------------------------------------------------
 
-/** Del menu de inicio a «Jugar en línea». */
-async function openOnline(page, who) {
-  await until(page, () => document.querySelector('button') !== null, null, `el menu en ${who}`);
+/** Donde se pulsa la entrada «En línea» de Inicio: su nombre o la linea de debajo (el clic sube al mismo boton). */
+const ONLINE_ENTRY_SPOTS = {
+  title: { selector: '.entry-online .home-entry-title', name: 'su nombre' },
+  note: { selector: '.entry-online .home-entry-note', name: 'la linea de debajo' },
+};
+
+/** Cuantas veces se usa algo de Inicio desde ahora (lo que hace la entrada al pulsarla). */
+async function countHomePicks(page) {
+  await page.evaluate(async () => {
+    const { ui } = await import('/src/hud/store.ts');
+    const homePick = ui.actions.homePick;
+    window.homePicks = 0;
+    ui.actions.homePick = (id) => {
+      window.homePicks++;
+      homePick(id);
+    };
+  });
+}
+
+/**
+ * Del menu de inicio a «Jugar en línea», con un clic de verdad en su entrada: se usa una sola vez
+ * (pulsar el texto de dentro sube hasta el boton, y no tiene que abrirse dos veces).
+ */
+async function openOnline(page, who, spot = 'title') {
+  await menuReady(page, who);
   check((await menuState(page)).screen === 'menu', `${who} esta en el menu de inicio`);
-  await menuAction(page, 'homePick', 'online');
+  await countHomePicks(page);
+  const { selector, name } = ONLINE_ENTRY_SPOTS[spot];
+  await page.click(selector);
+  const picks = await page.evaluate(() => window.homePicks);
+  check(picks === 1, `pulsar ${name} de «En línea» la usa una vez en ${who} (${picks})`);
   check((await menuState(page)).online?.error === null, `con servidor, «Jugar en línea» se abre sin aviso en ${who}`);
 }
 
@@ -300,6 +346,9 @@ async function openOnline(page, who) {
 async function createRoom(a) {
   await openOnline(a, 'A');
   await shot(a, 'menu');
+  await a.setViewportSize(PHONE);
+  await shot(a, 'menu-movil');
+  await a.setViewportSize(VIEWPORT);
   await menuAction(a, 'onlinePick', 'create');
   const create = (await menuState(a)).online.create;
   check(create.seats[1]?.index === 0, 'sin tocar nada, el otro asiento es de una persona (no de la IA)');
@@ -307,16 +356,27 @@ async function createRoom(a) {
   await menuAction(a, 'onlinePick', 'start');
   const lobby = await until(a, lobbyWithSeats, null, 'el vestibulo con el enlace de la sala');
   await shot(a, 'vestibulo');
+  await a.setViewportSize(PHONE);
+  await shot(a, 'vestibulo-movil');
+  await a.setViewportSize(VIEWPORT);
   check(/^[A-Z2-9]{6}$/.test(lobby.code), `la sala tiene codigo (${lobby.code})`);
   check(lobby.link.endsWith(`#/sala/${lobby.code}`), 'el enlace de la sala lleva el codigo y ninguna ficha');
   return lobby;
 }
 
-/** «Mis partidas» de A en otra pestaña (sin entrar en la sala): la linea de la sala dice `state`. */
+/**
+ * «Mis partidas» de A en otra pestaña (sin entrar en la sala): la linea de la sala dice `state` y, si
+ * le toca, ya lo dice la entrada «En línea» de Inicio.
+ */
 async function checkMyRooms(a, gameUrl, code, state, name) {
   const page = await a.context().newPage();
   await page.goto(gameUrl);
-  await until(page, () => document.querySelector('button') !== null, null, 'el menu en otra pestaña de A');
+  await menuReady(page, 'otra pestaña de A');
+  if (state === 'yourTurn') {
+    const entry = await until(page, homeEntryYourTurn, null, 'que la entrada «En línea» de Inicio diga que le toca');
+    check(true, `la entrada «En línea» de Inicio de A dice «${entry.note}»`);
+    await shot(page, 'inicio-te-toca');
+  }
   await menuAction(page, 'homePick', 'online');
   const line = await until(page, knownRoomLine, code, `la sala en «Mis partidas» (${state})`);
   check(line.state === state, `«Mis partidas» de A dice «${line.title}» (${line.detail})`);
@@ -377,11 +437,12 @@ async function playOnline(browser, gameUrl, server) {
 /** «Buscar rival»: C espera por turnos y D llega (la partida empieza, y juega primero D); E busca en vivo y cancela. */
 async function searchRivals(browser, gameUrl, server) {
   const c = await openPlayer(browser, 'C', gameUrl, server);
-  await openOnline(c, 'C');
+  await openOnline(c, 'C', 'note');
+  await menuAction(c, 'onlinePick', 'pace-daily');
   await menuAction(c, 'onlinePick', 'search');
   const daily = await until(c, searchingLobby, null, 'el vestibulo de la busqueda de C');
   check(!daily.canInvite, 'buscando rival no se invita: no hay enlace que repartir');
-  check(daily.seats[1]?.canHandToAi === true, `C puede jugar contra la IA mientras espera («${daily.handToAiLabel}»)`);
+  check((daily.seats[1]?.handToAiId ?? null) !== null, `C puede jugar contra la IA mientras espera («${daily.handToAiLabel}»)`);
   await shot(c, 'buscando');
   await c.setViewportSize(PHONE);
   await shot(c, 'buscando-movil');
@@ -389,6 +450,7 @@ async function searchRivals(browser, gameUrl, server) {
 
   const d = await openPlayer(browser, 'D', gameUrl, server);
   await openOnline(d, 'D');
+  await menuAction(d, 'onlinePick', 'pace-daily');
   await menuAction(d, 'onlinePick', 'search');
   // Al emparejar, la carga de la partida de los dos es «¡Rival encontrado!» (se ve un rato corto: se captura al verla).
   const [introD, introC] = await Promise.all([
