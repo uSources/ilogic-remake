@@ -3,12 +3,13 @@
  * (`POST /rooms`), pedir un asiento con el codigo (`POST /rooms/:code/seat`), lo que sabe cualquiera
  * de una sala (`GET /rooms/:code`: quien esta y de quien es el turno, sin nada de la partida), dar un
  * asiento vacio a la IA (`POST /rooms/:code/ai`, solo quien creo la sala), cerrarla antes de que
- * empiece (`POST /rooms/:code/close`, lo mismo) y buscar rival (`POST /match`). Todo JSON; lo que llega se
+ * empiece (`POST /rooms/:code/close`, lo mismo), buscar rival (`POST /match`) y si el servidor
+ * contesta (`GET /health`). Todo JSON; lo que llega se
  * comprueba por encima (que tenga la forma), porque viene de fuera. Lo usan las pantallas de
  * «Jugar en línea» (src/menu/online/); la partida va aparte, por el WebSocket (serverLink.ts).
  */
 import type { SkirmishChoices } from '../core/match';
-import type { RoomStatus, SearchPace, SeatId } from '../core/net';
+import type { ProtocolVersion, RoomStatus, SearchPace, SeatId } from '../core/net';
 import type { TeamId } from '../core/model';
 import { isInt, isObject } from '../core/util/validation';
 
@@ -140,6 +141,13 @@ export const claimSeat = (base: string, code: string): Promise<ApiResult<SeatTic
 
 export const lobbyOf = (base: string, code: string): Promise<ApiResult<LobbyInfo>> =>
   request(`${base}/rooms/${code}`, { method: 'GET' }, isLobbyInfo);
+
+const isProtocolVersion = (value: unknown): value is ProtocolVersion =>
+  isObject(value) && isInt(value.protocol, 0, MAX_VERSION) && isInt(value.save, 0, MAX_VERSION);
+
+/** Si el servidor contesta y que version habla (sin mirar ninguna sala). */
+export const serverHealth = (base: string): Promise<ApiResult<ProtocolVersion>> =>
+  request(`${base}/health`, { method: 'GET' }, isProtocolVersion);
 
 const isOk = (value: unknown): value is { ok: true } => isObject(value) && value.ok === true;
 

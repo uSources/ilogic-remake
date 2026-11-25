@@ -309,6 +309,33 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   - La compra, **fichas en abanico** alrededor de la fábrica (retrato, nombre y precio; lo que no se
     puede pagar, apagado y con lo que falta en rojo) y en el centro la chapa de la señalada: mover,
     alcance y visión con sus iconos y los retratos de contra qué es buena.
+- **Jugar en línea** (24-11-2026, decidido con el usuario): las pantallas son las del lienzo de diseño
+  «Ilogic · Rediseño de Jugar en línea» (página «Jugar en línea»); lo que cambie se cambia allí
+  primero. A ellas se llega por una tarjeta más de Inicio, «En línea», con azul contra rojo (un
+  soldado y un tanque de cada bando, el rojo de espejo para que mire al azul, y «VS» dorado en
+  medio: `Army`, `Versus` y `Faceoff`, `common/Army.tsx`, los de «¡Rival encontrado!»), una chapa
+  amarilla «¡Te toca en N!» si te toca en alguna y cuántas siguen «en marcha».
+  - **El menú**: una barra arriba (volver a Inicio con su tecla, el título y una pastilla con un punto
+    verde si el servidor contesta) y tres tarjetas de igual ancho que llenan el alto: «Buscar rival»
+    (marco dorado al elegirla, los dos ejércitos sobre azul noche, «1 contra 1, en vivo» y de qué va,
+    el botón azul grande y debajo, como enlace, el otro ritmo), «Con amigos» (un dibujo crema con un
+    eslabón y «Pasa un enlace o un código de 6 letras», «Tu sala, tus reglas», «Crear sala» crema y
+    «¿Te han pasado un código?» con su cuadro blanco) y «Mis partidas» (una chapa roja con cuántas te
+    tocan; cada fila, un cuadrado con el tanque de quien juega, qué pasa, la sala y el día, y su
+    botón: azul «Jugar» si te toca, crema si no; la que te toca, blanca con borde dorado; la × es
+    una chapa redonda en la esquina, y solo la llevan las que se pueden quitar).
+  - **La sala**: la barra (salir de la sala, «Tu sala», la conexión), el código en **teclas de
+    juguete** blancas, una por letra (se lee y se dicta sin confundirse), con «Compartir enlace» (o
+    «Copiar enlace») y «Copiar código» al lado, y una ficha por equipo en fila con su color a la
+    izquierda y su tanque, frente a frente con «VS»: la tuya azul, las demás rojas; quien aún no ha
+    llegado es un hueco de raya con un «?» que late y «Jugar este asiento con la IA» en dorado.
+  - **Buscando rival**: centrado, el ritmo en una pastilla dorada con su punto latiendo, «Buscando
+    rival…» y cuánto se lleva; tu ficha (azul arriba, «Ejército azul · Listo») contra un hueco de raya
+    con un «?» grande que late, «VS» en medio, y los botones grandes debajo.
+  - **En el móvil** (390 de ancho), una cosa encima de otra: la barra solo con iconos (la flecha y el
+    punto), lo que te toca arriba del todo, las tarjetas sin dibujo (en «Buscar rival», los dos
+    tanques pequeños junto al título) y, en la sala y buscando, las fichas a lo ancho con su color a la
+    izquierda. Crear sala sigue siendo el panel de «Nueva partida».
 - Todo sale de las variables de `src/hud/styles/base/base.css` y de las piezas de
   `src/hud/common/toy.tsx` (`Pill`, `Chip`, `Badge`): un color o una forma nuevos se añaden ahí, no sueltos en
   un componente.

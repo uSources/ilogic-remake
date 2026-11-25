@@ -1,16 +1,16 @@
 /**
  * Las rutas publicas del servidor de partidas, las mismas en Cloudflare y en Node: crear una sala
  * (`POST /rooms`: devuelve su codigo y el asiento de quien la crea, con su ficha), lo que puede saber
- * cualquiera de una sala (`GET /rooms/:code`), pedir un asiento con el codigo (`POST
- * /rooms/:code/seat`: lo que hace quien recibe el enlace de la sala o escribe su codigo), dar a la IA
- * un asiento vacio (`POST /rooms/:code/ai`), cerrar una sala que aun no ha empezado (`POST
+ * cualquiera de una sala (`GET /rooms/:code`), si el servidor contesta y que version habla
+ * (`GET /health`), pedir un asiento con el codigo (`POST /rooms/:code/seat`: lo que hace quien
+ * recibe el enlace de la sala o escribe su codigo), dar a la IA un asiento vacio (`POST /rooms/:code/ai`), cerrar una sala que aun no ha empezado (`POST
  * /rooms/:code/close`), buscar rival (`POST /match`: el emparejador, matchmaker.ts) y la conexion de
  * una partida (`GET /rooms/:code/ws`, una subida a WebSocket; el saludo con la ficha va como primer
  * mensaje). Las salas las busca por su codigo quien aloja el servidor (`RoomDirectory`,
  * roomDirectory.ts). Las rutas son una lista (`ROUTES`); una ruta nueva es una entrada mas.
  */
 import { defaultContent } from '@core/content/default';
-import { isRoomCode, isToken } from '@core/net';
+import { CURRENT_PROTOCOL, isRoomCode, isToken } from '@core/net';
 import { isInt, isObject } from '@core/util/validation';
 import { corsHeaders, isOriginAllowed } from './cors';
 import { MAX_MESSAGE_BYTES, MAX_ROOM_TEAMS } from './limits';
@@ -121,6 +121,11 @@ async function createRoom(request: Request, { rooms }: ServerSetup): Promise<Res
   return created.ok ? json(created.ticket, 201) : refuse(created.error);
 }
 
+/** Que el servidor contesta, con la version del protocolo y de las partidas que habla (sin mirar ninguna sala). */
+function health(): Promise<Response> {
+  return Promise.resolve(json(CURRENT_PROTOCOL));
+}
+
 async function lobbyOf(_request: Request, { rooms }: ServerSetup, code: string): Promise<Response> {
   const info = await rooms.info(code);
   return info ? json(info) : refuse('noSuchRoom');
@@ -188,6 +193,7 @@ async function connect(request: Request, { rooms }: ServerSetup, code: string): 
 
 const ROUTES: readonly Route[] = [
   { method: 'POST', pattern: /^\/rooms$/, run: createRoom },
+  { method: 'GET', pattern: /^\/health$/, run: health },
   { method: 'GET', pattern: /^\/rooms\/([^/]+)$/, run: lobbyOf },
   { method: 'POST', pattern: /^\/rooms\/([^/]+)\/seat$/, run: claimSeat },
   { method: 'POST', pattern: /^\/rooms\/([^/]+)\/ai$/, run: handToAi },

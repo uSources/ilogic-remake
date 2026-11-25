@@ -109,13 +109,21 @@ export interface OptionsVM {
 
 export type MarkVM = 'done' | 'open' | 'locked';
 
+/** La tarjeta «En línea» de Inicio: si te toca en alguna partida (entonces se resalta) y cuantas hay en marcha. */
+export interface OnlineCardVM {
+  /** «¡Te toca en 2!», o null si no te toca en ninguna. */
+  yourTurn: string | null;
+  /** «3 en marcha» o, sin ninguna, de que va. */
+  status: string;
+}
+
 export interface HomeVM {
   focus: string;
   save: { thumb: string; day: number; funds: number; size: number; mission: string | null; limit: number | null } | null;
   /** Resumen de las ultimas opciones (lo que hara "Rapida"). */
   quick: string;
-  /** Hay servidor de partidas por la red: sale «Jugar en línea». */
-  online: boolean;
+  /** La tarjeta «En línea» (si hay servidor de partidas por la red; si no, null). */
+  online: OnlineCardVM | null;
   campaign: { done: number; total: number; next: string | null; thumb: string | null; marks: MarkVM[] };
   credits: boolean;
 }
@@ -154,14 +162,18 @@ export interface CampaignItemVM {
 /** Un asiento de una sala por la red, como se ve en el vestibulo. */
 export interface OnlineSeatVM {
   seat: number;
-  /** "Equipo 1". */
-  label: string;
-  /** «Tú · dentro», «Persona · sin entrar», «La IA». */
-  detail: string;
+  /** «Ejército azul» (el tuyo), «Ejército rojo» (el rival, en un duelo) o «Equipo 3». */
+  team: string;
+  /** Quien lo juega: «Tú», «Rival», «Persona» o «La IA». */
+  who: string;
+  /** Es el asiento de quien mira: se pinta en azul (los demas, en rojo). */
+  isYou: boolean;
+  /** «dentro», «sin entrar» o, buscando rival, «por llegar»; la IA, nada. */
+  status: string | null;
   /** Si la persona esta dentro, aun no ha entrado, o es la IA. */
   presence: 'in' | 'out' | 'ai';
-  /** Quien creo la sala puede darlo a la IA (una persona que no ha entrado, mientras se espera). */
-  canHandToAi: boolean;
+  /** El foco del boton de darlo a la IA, o null si no se puede (solo quien creo la sala, a una persona que no ha entrado, mientras se espera). */
+  handToAiId: string | null;
 }
 
 /** En que esta una sala para quien la mira: le toca, le toca a otro, esperan a que entren, acabada, ya no existe, o no se sabe. */
@@ -175,14 +187,20 @@ export interface OnlineRoomVM {
   title: string;
   /** «Día 4 · quedan 3 h · 2 equipos». */
   detail: string;
-  /** El boton para entrar («Jugar» si le toca, «Entrar» si no), o null si la sala ya no existe. */
+  /** El boton para entrar («Jugar» si le toca, «Ver» si juega otro o acabo, «Entrar» si espera), o null si la sala ya no existe. */
   enter: string | null;
-  /** El de quitarla de la lista: «Quitar», o «Cancelar» si es la propia busqueda de rival (la cierra en el servidor). */
-  forget: string;
+  /** El foco del boton de entrar (null si no lo hay). */
+  enterId: string | null;
+  /** El de quitarla de la lista: «Quitar», o «Cancelar» si es la propia busqueda de rival (la cierra en el servidor); null si se esta jugando. */
+  forget: string | null;
+  /** El foco de la × (null si no la hay). */
+  forgetId: string | null;
 }
 
 /** El vestibulo de una sala: el codigo y el enlace para invitar, quien hay y la conexion. */
 export interface OnlineLobbyVM {
+  /** «Tu sala» (quien la creo) o «Sala». */
+  title: string;
   code: string;
   /** El enlace de la sala (quien lo abre se queda con un asiento libre). */
   link: string;
@@ -190,26 +208,29 @@ export interface OnlineLobbyVM {
   canInvite: boolean;
   /** El sistema sabe compartir (movil): se ofrece ademas de copiar. */
   canShare: boolean;
-  /** Si es la propia busqueda de rival, aun esperando: su ritmo («Por turnos · 1 día por turno»); se puede cancelar. Si no, null. */
+  /** Si es la propia busqueda de rival, aun esperando: su ritmo («En vivo · 2 min por turno»); se puede cancelar. Si no, null. */
   searching: string | null;
+  /** Desde cuando se busca rival (ms, `Date.now()`; aunque se haya salido y vuelto): el reloj de «Buscando rival…». */
+  searchingSince: number | null;
   seats: OnlineSeatVM[];
   /** El boton de dar un asiento a la IA: «Sustituir por IA», o «Jugar contra la IA» si se busca rival. */
   handToAiLabel: string;
   note: string;
+  /** «Conectado», «Conectando…», «Sin conexión: reconectando…»... */
   connection: string;
+  /** Como esta la conexion (el color de su punto). */
+  linkState: 'connecting' | 'online' | 'reconnecting' | 'closed';
 }
 
-/** Un ritmo de «Buscar rival»: «Por turnos» o «En vivo». */
-export interface OnlinePaceVM {
-  id: string;
-  label: string;
-}
-
-/** «Buscar rival»: los ritmos, el elegido y lo que trae («1 día por turno · Juega cuando puedas…»). */
+/** «Buscar rival»: lo que se buscara con el ritmo elegido y el enlace para buscar con el otro. */
 export interface OnlineSearchVM {
-  paces: OnlinePaceVM[];
   pace: string;
+  /** «1 contra 1, en vivo». */
+  title: string;
+  /** «Reglas normales, mapa de 20×20 al azar y 2 min por turno. Los dos conectados a la vez.» */
   note: string;
+  /** El otro ritmo: su id, el foco de su enlace y lo que dice («o una partida por turnos (1 día por turno)»). */
+  other: { pace: string; id: string; label: string };
 }
 
 /** La pantalla de «Jugar en línea»: el menu (buscar rival, crear, entrar con el codigo y mis partidas), crear una partida o el vestibulo. */
@@ -236,6 +257,8 @@ export interface OnlineVM {
   error: string | null;
   /** Esperando al servidor (crear, entrar). */
   busy: boolean;
+  /** Si el servidor contesta (lo dice la ultima vuelta de «Mis partidas»), o null si aun no se sabe. */
+  server: 'online' | 'offline' | null;
 }
 
 /** La conexion de una partida por la red, en la partida. */

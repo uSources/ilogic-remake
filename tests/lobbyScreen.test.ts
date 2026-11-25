@@ -6,8 +6,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CURRENT_PROTOCOL, type ServerMessage } from '@core/net';
 import { LobbyScreen } from '../src/menu/online/lobbyScreen';
+import { RoomWatch } from '../src/menu/online/roomWatch';
 import type { OnlineHost, OnlineScreens } from '../src/menu/online/shared';
-import { readOnlineRooms } from '../src/net/onlineRooms';
+import { readOnlineRooms, writeOnlineRooms } from '../src/net/onlineRooms';
 import type { LobbyInfo } from '../src/net/roomApi';
 import { t } from '../src/settings';
 
@@ -72,6 +73,7 @@ const asked: string[] = [];
 
 const screens = (): OnlineScreens => ({
   host: {} as OnlineHost,
+  rooms: new RoomWatch(),
   focus: '',
   error: null,
   busy: false,
@@ -110,7 +112,7 @@ describe('LobbyScreen', () => {
     vi.useRealTimers();
   });
 
-  it('con la bienvenida antes que la respuesta del vestibulo, enseña los asientos y sigue preguntando', async () => {
+  it('con la bienvenida antes que la respuesta del vestibulo, enseña la sala y los asientos y sigue preguntando', async () => {
     lobby.join(CODE, 'ficha-0', 2, { seat: 0, team: 0 });
     expect(unanswered).toHaveLength(1);
 
@@ -119,12 +121,18 @@ describe('LobbyScreen', () => {
     await settle();
 
     const vm = lobby.vm();
-    expect(vm?.seats.map((seat) => [seat.presence, seat.canHandToAi])).toEqual([
+    expect(vm?.seats.map((seat) => [seat.presence, seat.handToAiId !== null])).toEqual([
       ['in', false],
       ['out', true],
     ]);
     expect(vm?.link).toBe(`${PAGE}#/sala/${CODE}`);
     expect(vm?.canInvite).toBe(true);
+    expect(vm).toMatchObject({ title: t('onlineYourRoom'), searchingSince: null, note: t('onlineWaitingOne') });
+    expect(vm?.seats.map((seat) => [seat.who, seat.team, seat.status])).toEqual([
+      [t('onlineYou'), t('onlineArmyBlue'), t('onlineIn')],
+      [t('onlineWaitingFriend'), t('onlineArmyRed'), null],
+    ]);
+    expect(lobby.rows()).toEqual([['leave'], ['copy'], ['copyCode'], ['ai-1']]);
     await settle(POLL_MS);
     expect(unanswered).toHaveLength(1);
   });
@@ -132,6 +140,20 @@ describe('LobbyScreen', () => {
   it('el asiento que acaba de dar el servidor apunta la sala en «Mis partidas» ya, antes de entrar', () => {
     lobby.join(CODE, 'ficha-1', 2, { seat: 1, team: 1 });
     expect(readOnlineRooms()).toMatchObject([{ code: CODE, token: 'ficha-1', seat: 1, team: 1, status: 'waiting' }]);
+  });
+
+  it('al volver a una busqueda desde «Mis partidas», «Buscando rival…» cuenta desde que empezo, no desde ahora', async () => {
+    const STARTED = 1_000;
+    writeOnlineRooms([
+      { code: CODE, token: 'ficha-0', seat: 0, team: 0, teams: 2, status: 'waiting', at: STARTED, search: 'daily', searchedAt: STARTED },
+    ]);
+    lobby.join(CODE, 'ficha-0', 2);
+    FakeSocket.last?.reply(welcome);
+    unanswered.shift()?.(waitingRoom);
+    await settle();
+
+    expect(lobby.vm()?.searchingSince).toBe(STARTED);
+    expect(readOnlineRooms()[0]?.searchedAt).toBe(STARTED);
   });
 
   it('una respuesta que llega despues de salir de la sala no la enseña ni vuelve a preguntar', async () => {
@@ -155,8 +177,10 @@ describe('LobbyScreen', () => {
     expect(vm?.searching).toContain(t('onlinePaceLive'));
     expect(vm?.note).toBe(t('onlineSearchingLive'));
     expect(vm?.handToAiLabel).toBe(t('onlinePlayAi'));
-    expect(vm?.seats[1]?.detail).toBe(`${t('onlineRival')} · ${t('onlineRivalComing')}`);
-    expect(lobby.rows()).toEqual([['ai-1'], ['cancelSearch'], ['leave']]);
+    expect(vm?.seats[1]).toMatchObject({ who: t('onlineRival'), status: t('onlineRivalComing'), isYou: false });
+    expect(vm?.searchingSince).toEqual(expect.any(Number));
+    expect(readOnlineRooms()[0]?.searchedAt).toBe(vm?.searchingSince);
+    expect(lobby.rows()).toEqual([['ai-1', 'cancelSearch', 'leave']]);
     expect(readOnlineRooms()).toMatchObject([{ code: CODE, search: 'live' }]);
 
     lobby.pick('cancelSearch');

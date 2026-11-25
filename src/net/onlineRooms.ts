@@ -22,6 +22,8 @@ export interface OnlineRoomEntry {
   at: number;
   /** Si es la sala que abrio una busqueda de rival, su ritmo: mientras espera, se esta buscando rival (se puede cancelar). */
   search?: SearchPace;
+  /** Cuando empezo esa busqueda (ms desde 1970): «Buscando rival…» cuenta desde ahi, aunque se salga y se vuelva. */
+  searchedAt?: number;
 }
 
 const STORAGE_KEY = 'ilogic.online.rooms';
@@ -39,7 +41,8 @@ const isEntry = (value: unknown): value is OnlineRoomEntry =>
   isInt(value.teams, 2, MAX_SEATS) &&
   ROOM_STATUSES.includes(value.status as RoomStatus) &&
   typeof value.at === 'number' &&
-  (value.search === undefined || isSearchPace(value.search));
+  (value.search === undefined || isSearchPace(value.search)) &&
+  (value.searchedAt === undefined || typeof value.searchedAt === 'number');
 
 /** La lista con esta sala puesta al dia (o añadida), la mas reciente primero. */
 export function withRoom(list: readonly OnlineRoomEntry[], entry: OnlineRoomEntry): OnlineRoomEntry[] {

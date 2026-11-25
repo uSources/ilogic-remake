@@ -1,6 +1,7 @@
 /**
- * Pantalla de inicio del menu: tarjetas (Continuar, Partida rapida, Personalizada, Campaña) y la fila
- * de abajo (Novedades, Ayuda, Opciones, Creditos, Web). Pide a la escena lo poco que usa (`HomeHost`).
+ * Pantalla de inicio del menu: tarjetas (Continuar, Nueva partida, En línea, Campaña) y la fila de
+ * abajo (Novedades, Ayuda, Opciones, Creditos, Web). Mientras se ve, pregunta como estan tus partidas
+ * en linea (la tarjeta «En línea» dice si te toca). Pide a la escena lo poco que usa (`HomeHost`).
  */
 import type { TerrainPalette } from '../ui/terrainColors';
 import type { MenuCommand } from '../controls/menu';
@@ -13,8 +14,11 @@ import { WEB_URL } from '../layout';
 import { openNotes } from '../patchNotes';
 import { randomSeed, type NewGameOptions } from '../setup';
 import { settings, t, type TextKey } from '../settings';
+import { readOnlineRooms } from '../net/onlineRooms';
 import { serverUrl } from '../net/serverUrl';
 import { navGrid } from './nav';
+import { onlineCardOf } from './online/roomLines';
+import type { RoomWatch } from './online/roomWatch';
 import { mapThumb } from './thumb';
 
 export interface HomeHost {
@@ -29,14 +33,18 @@ export interface HomeHost {
   startNew(seed: number): void;
   openSetup(): void;
   openCampaign(): void;
-  /** Abre «Jugar en línea»; sin ella (la vista 3D aun no juega por la red) no sale esa tarjeta. */
-  openOnline?(): void;
+  openOnline(): void;
+  /** Lo que dice el servidor de tus partidas en linea (la misma que mira «Jugar en línea»). */
+  readonly onlineRooms: RoomWatch;
   openOptions(): void;
 }
 
 type HomeCard = 'continue' | 'quick' | 'custom' | 'online' | 'campaign' | 'news' | 'help' | 'options' | 'credits' | 'web';
 
 const FOOTER_ROW: HomeCard[] = ['news', 'help', 'options', 'credits', 'web'];
+
+/** Lo que tiene el foco en cada fila de una tarjeta: Nueva partida tiene dos botones; las demas, uno que ocupa las dos. */
+type CardColumn = [top: HomeCard, bottom: HomeCard];
 
 /** Como se ve cada mision en la tarjeta de la campaña: hecha, abierta o cerrada. */
 function missionMarks(done: Set<string>): MarkVM[] {
@@ -71,13 +79,27 @@ export class HomeScreen {
     };
   }
 
+  /**
+   * Pasa a Inicio: se enseña y, si se puede jugar en linea y tienes partidas apuntadas, pregunta como
+   * estan (sin ninguna, la tarjeta no tiene nada que contar del servidor).
+   */
+  open(): void {
+    if (this.canPlayOnline() && readOnlineRooms().length > 0) this.host.onlineRooms.start(() => this.publish());
+    this.publish();
+  }
+
+  /** Se sale de Inicio: nada queda preguntando por las partidas en linea. */
+  close(): void {
+    this.host.onlineRooms.stop();
+  }
+
   publish(): void {
     ui.set({
       home: {
         focus: this.focus,
         save: this.savedGameCard(),
         quick: quickSummary(this.host.options),
-        online: this.canPlayOnline(),
+        online: this.onlineCard(),
         campaign: this.campaignCard(),
         credits: ui.get().home.credits,
       },
@@ -93,15 +115,25 @@ export class HomeScreen {
     this.publish();
   }
 
-  /** Hay servidor y quien muestra el menu sabe abrir «Jugar en línea». */
+  /** Hay servidor de partidas por la red. */
   private canPlayOnline(): boolean {
-    return serverUrl() !== null && this.host.openOnline !== undefined;
+    return serverUrl() !== null;
   }
 
+  /** Las tarjetas lado a lado, cada una en dos filas (`CardColumn`), y debajo el pie. */
   private rows(): HomeCard[][] {
-    const newGame: HomeCard[] = this.canPlayOnline() ? ['quick', 'custom', 'online'] : ['quick', 'custom'];
-    const middle = newGame.map((card): HomeCard[] => (this.host.save ? ['continue', card, 'campaign'] : [card, 'campaign']));
-    return [...middle, FOOTER_ROW];
+    const cards: CardColumn[] = [];
+    if (this.host.save) cards.push(['continue', 'continue']);
+    cards.push(['quick', 'custom']);
+    if (this.canPlayOnline()) cards.push(['online', 'online']);
+    cards.push(['campaign', 'campaign']);
+    return [cards.map(([top]) => top), cards.map(([, bottom]) => bottom), FOOTER_ROW];
+  }
+
+  private onlineCard() {
+    if (!this.canPlayOnline()) return null;
+    const rooms = this.host.onlineRooms;
+    return onlineCardOf(readOnlineRooms(), (code) => rooms.lookOf(code));
   }
 
   private savedGameCard() {
@@ -152,7 +184,7 @@ export class HomeScreen {
       case 'campaign':
         return this.host.openCampaign();
       case 'online':
-        return this.host.openOnline?.();
+        return this.host.openOnline();
       case 'news':
         return openNotes();
       case 'help':
