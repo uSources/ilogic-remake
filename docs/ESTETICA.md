@@ -284,6 +284,11 @@ y estado: `docs/PLAN-INTERFAZ.md`.
     siguiente), y al lado el minimapa en una ficha oscura.
   - Abajo a la izquierda, lo que hay bajo el cursor: el sitio con sus chapas y la unidad con su
     retrato, de quién es y su vida en diez pastillas.
+  - Con una unidad propia elegida, en ese sitio va **su ficha** (tablero 8 del lienzo «Todo en estilo
+    C», decidido con el usuario el 26-11-2026; `ChosenUnit.tsx`): retrato grande, nombre, «Vida» en
+    pastillas, «Mueve · Alcance · Visión» en texto y, en dorado, lo que sabe hacer (captura
+    edificios, sus habilidades). Con Alt, su escuadra, su orden y lo que lleva. Sin munición ni
+    combustible: el juego no los tiene.
   - Una sombra baja del borde de arriba y otra sube del de abajo: así el texto se lee sobre la hierba
     o la nieve.
 - **Sobre el tablero, chapas y bloques** (`docs/PLAN-INTERFAZ-2.md`, fases 2 y 3; probado en el
@@ -315,10 +320,22 @@ y estado: `docs/PLAN-INTERFAZ.md`.
     texto (`Callout.tsx`, `TileMenu.tsx`). Así salen lo que hace la unidad, su rueda y el aviso de
     elegir casilla.
     - La ficha va a la derecha si cabe; si no, a la izquierda. Si arriba no cabe, va debajo y el
-      tallo baja.
+      tallo baja. Nunca tapa a un enemigo a tiro (se toca para atacarle): si donde iba tapa alguno, va
+      a otro de los cuatro sitios. En el móvil prefiere tapar un poco la ficha de abajo.
     - Sale en un cuarto de segundo: el tallo crece, la ficha se abre desde su punta con un rebote
       corto y las líneas entran una detrás de otra.
     - Antes eran fichas redondas crema en fila y una rueda de fichas alrededor de la casilla.
+    - Lo que hace la unidad elegida (tablero 8, decidido con el usuario el 26-11-2026) es solo lo que
+      no se hace tocando el tablero. «Atacar», si hay enemigos a tiro, va primero y dice cuántos («2
+      al alcance»). «Capturar» sale **apagado**, con el porqué en su nota («no hay edificio aquí», «ya
+      es de los tuyos»): título lila grisáceo (`--menu-off`), icono en gris y sin flecha, porque no
+      se puede señalar ni elegir (`TextEntry`, `disabled`). Solo sale en las que capturan y si el
+      bocadillo ya sale por otra cosa: un soldado sin nada más que hacer no lo abre.
+    - Al elegir «Atacar», el bocadillo pasa a **«Elige a quién atacar»** (tablero 9): «Atacar»,
+      «Otro objetivo» (si hay más de uno) y «Atrás», cada uno con su tecla en pequeño a la derecha
+      (Intro, ← →, Esc; en el móvil no salen). La previsión sube sobre el enemigo señalado. Con el
+      ratón se señala pasando por encima y se ataca tocándolo; con el teclado, ← → pasan de uno a
+      otro, del más cercano al más lejano.
   - La previsión de combate, **cifras que suben de la casilla**, sin ficha (lo que gustó de la B del
     lienzo). Encima del enemigo va el daño en grande (blanco, o dorado si lo más probable es
     destruirlo), con la calavera y el % si puede caer, y la vida que le quedaría. A los pies de tu
