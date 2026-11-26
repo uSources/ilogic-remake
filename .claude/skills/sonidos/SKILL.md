@@ -80,4 +80,9 @@ npm run sonidos -- grafo shot_flak                # el grafo para abrirlo a mano
 - Voces: "squeaky high-pitched" salia de pito y no gusto; un balbuceo "warm mid-pitched" sale mas tonal
   (unos 350 Hz). Por walkie-talkie sale apagado y con el tono inestable: solo para el piloto. Lo que
   dura mas de lo pedido se corta con el fundido: pedir la duracion que de verdad tiene la frase.
+- Avisos (los de la partida en linea): los objetos de verdad (timbre de puerta, enchufe, silbato) no
+  gustaron nada; los juguetes con nota si (cajita de musica, campanita, corneta de hojalata). Probar
+  varias ideas a la vez (una tanda o dos de cada texto) y que el usuario elija entre ellas: la pagina
+  agrupa los candidatos por texto. "Blown once" sale como dos pitidos con un segundo entre medias;
+  "descending" no baja la nota, "sliding down in pitch" si; "a click followed by a beep" da solo el clic.
 - Licencia (Stability AI Community): lo generado es del usuario y se puede usar gratis por debajo de 1 M$ al año.

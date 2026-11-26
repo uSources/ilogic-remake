@@ -159,7 +159,9 @@ Descargados (21-11-2026) en `~/ComfyUI-Shared/models`:
   los 9 de los animales, el motor del jeep y el de los camiones, sus arranques y sus bocinas, y las 7
   voces otra vez (un balbuceo menos chillon; el piloto, por radio). **Elegidos (25-11-2026)**, por
   medidas: subir y bajar del transporte (`load`, `unload`; los mismos para el camion y el helicoptero,
-  sin motor ni rotor, que ya suenan al moverse). **Faltan por generar y elegir**: los
+  sin motor ni rotor, que ya suenan al moverse). **Elegidos (26-11-2026)**, escuchados por el usuario:
+  los de la partida en linea (`player_joined`, `match_begins`, `net_connected`, `net_reconnecting`,
+  `net_lost`). **Faltan por generar y elegir**: los
   otros efectos (helices y helicoptero, pasos por suelo, impactos, caidas, interfaz, sucesos), la musica
   de cada tema, `briefing`, `enemy_turn` y los jingles; `npm run sonidos -- lista` dice cuales tienen
   candidatos.
