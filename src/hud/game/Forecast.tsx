@@ -29,7 +29,7 @@ function EnemyLifeBar({ forecast }: { forecast: ForecastVM }) {
         <span style={{ flex: maybeLost, background: `repeating-linear-gradient(90deg, var(--red) 0 4px, ${LOST_LIFE_COLOR} 4px 8px)` }} />
       )}
       {surelyLost > 0 && <span style={{ flex: surelyLost, background: LOST_LIFE_COLOR }} />}
-      {alreadyMissing > 0 && <span style={{ flex: alreadyMissing, background: 'rgba(255, 247, 232, 0.15)' }} />}
+      {alreadyMissing > 0 && <span style={{ flex: alreadyMissing, background: 'var(--menu-empty)' }} />}
     </div>
   );
 }
