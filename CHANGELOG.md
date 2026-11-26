@@ -7,6 +7,16 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Novedades
+- **Dos personas en la misma pantalla**: con el rival «Otra persona» en Escaramuza, al acabar tu turno la partida se tapa con el aviso «Le toca al equipo 2» hasta que la otra persona pulsa «Empezar mi turno» (o Enter). Cada una ve solo lo suyo, en azul, con su niebla, y encuentra la cámara donde la dejó. Antes la partida se quedaba esperando a la segunda sin dejarla jugar.
+
+<!-- en -->
+
+### New
+- **Two people on the same screen**: with the “Another person” rival in Skirmish, when your turn ends the game is covered by a “It's the turn of team 2” notice until the other person presses “Start my turn” (or Enter). Each one only sees their own side, in blue, with their own fog, and finds the camera where they left it. Before, the game kept waiting for the second person without letting them play.
+
 ## [0.18.0] - 2026-11-26 — Buscar rival y un menú nuevo
 
 ### Novedades
