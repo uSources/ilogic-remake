@@ -1,7 +1,5 @@
 /** Turnos, dias, fin del turno, guardar, salir y avisos de la partida. */
 export const turn = {
-  enemyTurn: 'TURNO ENEMIGO',
-  allyTurn: 'TURNO ALIADO',
   yourTurn: 'TU TURNO',
   handoffTitle: 'Cambio de jugador',
   handoffTeam: 'Le toca al equipo',
