@@ -328,6 +328,18 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   Lo que se lee aparte («Cómo va», la gráfica del final) va en una ficha oscura translúcida con la
   etiqueta en mayúsculas pequeñas. Lo tuyo, en azul claro (`--menu-own`), y lo enemigo, en rojo
   claro. Los resultados: la victoria en dorado, la derrota en rojo y el empate en lila.
+  - Lo que no se puede elegir ahora sale apagado, en gris lila (`--menu-off`), sin flecha y con el
+    porqué en la nota.
+  - Un valor que se cambia va al lado del título, más pequeño y en oro, entre ◂ y ▸ («Rival ◂ La IA ▸»,
+    `ChoiceEntry`).
+  - **Escaramuza y Campaña** (26-11-2026), como la pausa: a la izquierda, lo pequeño en oro, el título
+    en grande y la lista; a la derecha, en la ficha oscura, el mapa que se va a jugar (en el móvil,
+    debajo). El velo oscurece hasta la ficha.
+  - En Escaramuza, las opciones de Personalizada van debajo del rival, más pequeñas, con una raya a
+    la izquierda y los valores en columna.
+  - En Campaña, las misiones son un **camino**: un punto por misión unido por una raya, en oro lo ya
+    andado. Las hechas, ✓ en oro; las abiertas, su número en un aro dorado (más grande la elegida);
+    las cerradas, un candado de píxeles en gris.
 - **Jugar en línea** (24-11-2026, decidido con el usuario): las pantallas son las del lienzo de diseño
   «Ilogic · Rediseño de Jugar en línea» (página «Jugar en línea»); lo que cambie se cambia allí
   primero. A ellas se llega por una tarjeta más de Inicio, «En línea», con azul contra rojo (un

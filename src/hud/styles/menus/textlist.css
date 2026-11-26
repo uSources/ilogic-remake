@@ -72,9 +72,19 @@
   --entry-size-sel: 34px;
   margin-top: 14px;
 }
+/* La apagada (lo que no se puede ahora): en gris, sin flecha y con el porque debajo. */
 .text-entry.disabled {
-  opacity: 0.5;
   cursor: default;
+}
+.text-entry.disabled .text-entry-title {
+  color: var(--menu-off);
+}
+.text-entry.disabled .text-entry-note {
+  color: var(--menu-off-note);
+}
+.text-entry.disabled .text-entry-icon {
+  filter: grayscale(1);
+  opacity: 0.6;
 }
 .text-entry.danger .text-entry-title,
 .text-entry.danger.sel .text-entry-title {
@@ -96,5 +106,48 @@
   .text-list {
     --entry-size: 30px;
     --entry-size-sel: 36px;
+  }
+}
+/* Una entrada con su valor al lado (ChoiceEntry.tsx): «Rival ◂ La IA ▸». El valor va en oro, algo mas
+   pequeño que el titulo, y crece con el; el titulo y ◂ ▸ son botones sin aspecto de boton. */
+.choice-entry {
+  cursor: default;
+}
+/* Si no cabe al lado (en el movil), el valor baja debajo del titulo, entero. */
+.choice-entry .text-entry-title {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.choice-name,
+.choice-step {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+.choice-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-left: 8px;
+  font-size: 0.72em;
+  color: var(--menu-gold);
+  white-space: nowrap;
+}
+.choice-step {
+  min-width: 1.1em;
+  opacity: 0.75;
+}
+.choice-step:hover,
+.choice-entry.sel .choice-step {
+  opacity: 1;
+}
+/* Con el dedo, ◂ y ▸ mas anchos para acertar. */
+@media (pointer: coarse) {
+  .choice-step {
+    min-width: 1.8em;
   }
 }

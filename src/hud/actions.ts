@@ -18,10 +18,13 @@ export interface UIActions {
   menuTab(id: string): void;
   setupHover(id: string): void;
   setupPick(id: string): void;
-  setupSet(id: string, index: number): void;
+  /** ◂ o ▸ (o ← →) en una entrada con valor de Escaramuza: un paso atras (-1) o adelante (1). */
+  setupStep(id: string, delta: number): void;
   setupCode(text: string): void;
   campaignHover(index: number): void;
   campaignPick(index: number): void;
+  /** El raton pasa por «Volver» de la campaña. */
+  campaignBackHover(): void;
   campaignBack(): void;
   /** Jugar en línea: pasar o pulsar un boton, cambiar una opcion de crear sala, escribir el enlace. */
   onlineHover(id: string): void;

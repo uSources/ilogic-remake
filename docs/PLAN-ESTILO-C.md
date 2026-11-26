@@ -49,10 +49,32 @@ Dos cosas valen para todas las fases. Lo que está en el lienzo se hace como est
 no dibuja se pregunta con capturas, sin suponerlo. Antes de cada fase se comparan las capturas de
 antes y después con su tablero.
 
-### Fase 2. Escaramuza y Campaña
-El lienzo no las dibuja, así que primero se dibujan en el lienzo, con la lista a la izquierda y la
-vista del mapa a la derecha, como en la pausa. Se tocan cuando el usuario las elija. Hoy son la
-tarjeta crema de antes, y se nota al salir de Inicio.
+### Fase 2. Escaramuza y Campaña (hecha)
+Se dibujaron tres formas de cada una en el lienzo, en su página «Escaramuza y Campaña». El usuario
+eligió la A de Escaramuza y la C de Campaña. Las dos van como la pausa: a la izquierda, lo pequeño
+en oro, el título en grande y la lista; a la derecha, en su ficha oscura, lo que se va a jugar
+(`MenuScreen.tsx`, `styles/menus/screen.css`). El velo de detrás oscurece hasta la ficha.
+- **Escaramuza** (A, «todo en la lista»): Empezar, «Modo ◂ Normal ▸» con lo que da debajo,
+  «Rival ◂ La IA ▸» y Atrás. En Personalizada, sus nueve opciones salen debajo del rival, más
+  pequeñas y apartadas con una raya.
+  - Cada valor se cambia con ← → o con ◂ ▸, y pulsar el nombre es un paso adelante
+    (`ChoiceEntry.tsx`, pieza nueva).
+  - A la derecha, el mapa, de qué es, su código (se puede escribir) y «Otro mapa» (R).
+- **Campaña** (C, «el camino de misiones»): las misiones son puntos unidos por una raya, en oro lo
+  ya andado.
+  - Las hechas llevan ✓ en oro; las abiertas, su número en un aro dorado (más grande la elegida); las
+    cerradas, un candado.
+  - Las cerradas salen apagadas, con «termina la anterior para abrirla» (`disabled` de `TextEntry`,
+    el mismo de la fase 4).
+  - Debajo de cada nombre va su objetivo y cómo está («hecha en 9 días»); arriba, «1 de 6 hechas».
+  - A la derecha, la ficha de la elegida: su mapa, de qué va, el objetivo en oro, la mejor marca y
+    «Jugar ▸».
+  - Las flechas saltan las cerradas y llegan a «Atrás».
+- En el móvil, la ficha va debajo de la lista. En Escaramuza, los valores de las nueve opciones van a
+  la derecha y, si no caben al lado del nombre, bajan debajo.
+- Descartadas (en `docs/IDEAS.md`, con el porqué): Escaramuza B («los modos son la lista») y C
+  («lista corta y las reglas a la vista»); Campaña A («lista y ficha de la elegida») y B («la elegida
+  se abre en la lista»).
 
 ### Fase 3. La partida: arriba y abajo (tablero «Partida: tu turno») (hecha)
 - Arriba a la izquierda, «Tu turno» con el punto del bando (o «Turno enemigo» en rojo). Debajo, el

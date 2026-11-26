@@ -247,3 +247,16 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   propio clic, que ya suena; y en plena partida el servidor no dice que alguien se va (solo el final,
   con `abandoned`), así que solo sonaría en el vestíbulo, donde casi no pasa. Los demás de la partida
   en línea sí suenan (`docs/ARQUITECTURA.md`, «Lo que suena»).
+- **Otras formas de Escaramuza en estilo C** (lienzo, página «Escaramuza y Campaña», 26-11-2026). Se
+  eligió la A: todo en una lista, con el modo como una opción más (`docs/PLAN-ESTILO-C.md`, fase 2).
+  - B, «los modos son la lista»: Normal, Rápida y Personalizada eran entradas, como en Inicio, y Enter
+    en una empezaba ya. Personalizada abría otra lista con sus nueve ajustes y su «Empezar», así que
+    había dos listas y dos «Volver».
+  - C, «lista corta y las reglas a la vista»: las nueve reglas siempre en otra ficha, también las de
+    Normal y Rápida. Eran dos fichas a la derecha, y para cambiar una regla había que entrar en ella.
+- **Otras formas de Campaña en estilo C** (el mismo lienzo). Se eligió la C, el camino de misiones,
+  que deja ver de un vistazo lo hecho, la siguiente y lo cerrado.
+  - A, «lista y ficha de la elegida»: una lista de texto como la de la pausa, sin camino. Lo hecho y
+    lo cerrado solo se leían en la nota.
+  - B, «la elegida se abre en la lista»: lo que se cuenta de la elegida iba en la propia lista. Se lee
+    en el mismo sitio, pero la lista salta al moverse.
