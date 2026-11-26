@@ -4,7 +4,8 @@
  * (engine/matchScene.ts) y con la misma sesion, reglas e interfaz HTML de siempre. Aqui no se dibuja
  * ni se decide: solo se conecta. La pausa, en systems/hud/matchMenus.ts; el final, en matchEnd.ts. Quien lleva la
  * partida es su sesion (`localRunner`) o, por la red, la sala del servidor (`OnlinePlay`): su sesion
- * espejo cambia con cada vista, asi que los sistemas la piden siempre a `runner`.
+ * espejo cambia con cada vista, asi que los sistemas la piden siempre a `runner`. Quien mira tambien
+ * puede cambiar: con varias personas en esta pantalla, la que juega (`HotSeat`), asi que se pide a `seat`.
  */
 import { mapGrid } from '../../core/mapGrid';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
@@ -35,12 +36,14 @@ import { showDestinations } from '../systems/orders/destinationFlags';
 import { anyStandingOrder, OrderIntents } from '../systems/orders/orderIntents';
 import { ThreatZone } from '../systems/threat/threatZone';
 import { localRunner, type MatchRunner } from '../systems/turn/matchRunner';
+import { HotSeat, type ScreenPass } from '../systems/turn/hotSeat';
 import { keepSaved } from '../systems/turn/saving';
 import { OnlinePlay } from '../systems/net/onlinePlay';
 import { TurnClock } from '../systems/net/turnClock';
 import { notifyTurn } from '../systems/net/turnNotice';
 import { backToMenu, type StartedGame } from './gameStart';
 import type { GroupMode } from '../../controls/inputCommands';
+import type { Point3 } from '../ports/camera';
 import type { ClickMods } from '../../controls/selection';
 import type { ScreenBox } from '../ports/pointer';
 
@@ -59,18 +62,25 @@ const END_SCREEN_DELAY_MS = 2200;
 const MS_PER_SECOND = 1000;
 
 /** Juega esa partida en la pagina (hasta que se sale al menu, que recarga). */
-export function playMatch({ session, viewer, room }: StartedGame, images: GameImages, glbModels: GlbLibrary, audio: GameAudio): void {
+export function playMatch(
+  { session, viewer: firstViewer, room }: StartedGame,
+  images: GameImages,
+  glbModels: GlbLibrary,
+  audio: GameAudio,
+): void {
   /** La partida que se ve: el mismo objeto toda la partida (por la red, cada vista se mete en el). */
   const state = session.state;
-  const scene = new MatchScene(document.getElementById('game')!, state, viewer, glbModels, images);
-  /** El reloj del turno por la red (si la sala lo tiene: `OnlinePlay` le dice que turno se ve). */
-  const turnClock = new TurnClock(state, viewer, {
+  const scene = new MatchScene(document.getElementById('game')!, state, firstViewer, glbModels, images);
+  /** Quien mira: con varias personas en esta pantalla, la que juega (al tocarle a otra, se le pasa la pantalla). */
+  const seat = new HotSeat(firstViewer, (pass) => passScreen(pass));
+  /** El reloj del turno por la red (si la sala lo tiene: `OnlinePlay` le dice que turno se ve). Por la red, quien mira no cambia. */
+  const turnClock = new TurnClock(state, firstViewer, {
     now: () => Date.now(),
     onFrame: (listener) => scene.onFrame(listener),
     sounds: audio.sounds,
   });
   const online = room
-    ? new OnlinePlay(room, session, viewer, {
+    ? new OnlinePlay(room, session, firstViewer, {
         viewReplaced: () => controls.viewReplaced(),
         othersGoOn: () => controls.othersGoOn(),
         ownTurn: notifyTurn,
@@ -79,11 +89,11 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
         sounds: audio.sounds,
       })
     : null;
-  const runner: MatchRunner = online ?? localRunner(session, viewer);
+  const runner: MatchRunner = online ?? localRunner(session, seat);
   const { board } = scene;
-  const camera = startingCamera(scene, state, viewer);
+  const camera = startingCamera(scene, state, firstViewer);
   const anchorOf = (pos: Pos) => scene.anchorOf(pos);
-  const minimap = new MinimapBridge(viewer);
+  const minimap = new MinimapBridge();
 
   let cursor: Pos | null = null;
   /**
@@ -96,7 +106,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     board.previewHit(hitLookOf(state, forecast));
     threat.focus(controls.busy ? null : threatFocus());
     const menu = pause.view(cursor ?? PAUSE_ANCHOR) ?? controls.menu();
-    publishHud(images, state, viewer, {
+    publishHud(images, state, seat.team, {
       cursor,
       busy: controls.busy,
       menu,
@@ -107,19 +117,21 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
       anchorOf,
       overheadOf: (pos) => scene.overheadOf(pos),
     });
-    minimap.publishMap(state);
+    minimap.publishMap(state, seat.team);
   }
   /** De quien se enseña quien podria atacarle: la unidad propia señalada o, si no, la elegida (sola). */
   function threatFocus(): Unit | null {
     const pointed = cursor ? unitAt(state, cursor) : undefined;
-    if (pointed?.team === viewer) return pointed;
+    if (pointed?.team === seat.team) return pointed;
     const selected = controls.selectedUnits();
     return selected.length === 1 ? selected[0]! : null;
   }
   /** «Fin del turno»: con unidades sin mover, la primera pulsacion las hace saltar y pide otra. */
   const endGuard = new EndTurnGuard({
     s: state,
-    viewer,
+    get viewer() {
+      return seat.team;
+    },
     pieces: scene.stages.pieces,
     endTurn: () => controls.endTurn(),
     changed: () => publish(),
@@ -130,24 +142,48 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     scene.sync(state.weather?.kind ?? null);
     ambience.setWeather(state.weather?.kind ?? null);
     intents.update();
-    showDestinations(state, viewer, scene.destinationMarks);
+    showDestinations(state, seat.team, scene.destinationMarks);
     threat.update();
     publish();
   }
 
+  /** Donde dejo la camara cada persona de esta pantalla, para que al volver a tocarle la encuentre alli. */
+  const cameraSpots = new Map<TeamId, Point3>();
+  /** La pantalla pasa a otra persona (tapada por el aviso): su camara y la partida como la ve ella. */
+  function passScreen({ from, to }: ScreenPass): void {
+    cameraSpots.set(from, { ...camera.pose.target });
+    camera.lookAt(cameraSpots.get(to) ?? homeSpotOf(scene, state, to));
+    scene.lookAs(to);
+    refresh();
+  }
+
   /** Los sucesos se ven con las piezas y los efectos del motor (systems/events dice que pasos lleva cada uno). */
-  const day: DayLookup = { viewer, incomeSpots: (team, source) => incomeSpotsOf(state, team, source) };
+  const day: DayLookup = {
+    get viewer() {
+      return seat.team;
+    },
+    incomeSpots: (team, source) => incomeSpotsOf(state, team, source),
+  };
   /** El ambiente: el fondo del tema, el clima, lo que suena cerca de donde mira la camara, los truenos y los animales. */
   const ambience = startAmbience(scene, state, audio);
   /** Los sonidos del tablero suenan desde su sitio, respecto a la camara. */
   const sounds = scene.soundStage(audio);
-  const stages = { ...scene.stages, sounds, day, board: boardLookupOf(state, viewer) };
+  const stages = {
+    ...scene.stages,
+    sounds,
+    day,
+    get board() {
+      return boardLookupOf(state, seat.team);
+    },
+  };
   /** Lo que haran las ordenes al terminar el turno (al señalar una unidad con orden, o todas con «Ver órdenes»). */
   const intents = new OrderIntents({
     get session() {
       return runner.session;
     },
-    viewer,
+    get viewer() {
+      return seat.team;
+    },
     marks: scene.intentMarks,
   });
   function toggleIntents(): void {
@@ -159,7 +195,9 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     get session() {
       return runner.session;
     },
-    viewer,
+    get viewer() {
+      return seat.team;
+    },
     marks: scene.threatMarks,
   });
   function toggleThreat(): void {
@@ -168,7 +206,9 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   }
   const controls = new TurnControls({
     runner,
-    viewer,
+    get viewer() {
+      return seat.team;
+    },
     marks: scene.tileMarks,
     preview: scene.movePreview,
     screen: scene,
@@ -193,7 +233,9 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     get session() {
       return runner.session;
     },
-    viewer,
+    get viewer() {
+      return seat.team;
+    },
     savesHere: !online,
     surrender: () => void surrender(),
     openOptions: () => options.open(),
@@ -201,7 +243,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     toggleIntents,
     isThreatOn: () => threat.isShowing,
     isIntentsOn: () => intents.isShowingAll,
-    hasOrders: () => anyStandingOrder(state, viewer),
+    hasOrders: () => anyStandingOrder(state, seat.team),
     refresh: () => publish(),
   });
 
@@ -209,7 +251,9 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     get session() {
       return runner.session;
     },
-    viewer,
+    get viewer() {
+      return seat.team;
+    },
     isOnline: !!online,
   });
 
@@ -254,6 +298,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     nextIdle,
     renameSquad: (id, name) => void controls.renameSquad(id, name),
     renameClose: () => ui.set({ rename: null }),
+    handoffReady: () => seat.ready(),
     pickInSelection: (uid, shift, ctrl) => controls.pickInSelection(uid, shift, ctrl),
     // El minimapa cuenta la casilla x de x a x + 1; en el mundo, su centro esta en x.
     minimapJump: (at) => camera.lookAt({ x: at.x - MINIMAP_TILE_HALF, y: camera.pose.target.y, z: at.y - MINIMAP_TILE_HALF }),
@@ -273,7 +318,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   }
 
   /** Las unidades de quien mira que estan en el tablero (para el recuadro). */
-  const ownUnitsOnBoard = () => state.units.filter((unit) => unit.team === viewer && isOnMap(unit));
+  const ownUnitsOnBoard = () => state.units.filter((unit) => unit.team === seat.team && isOnMap(unit));
 
   /** La casilla señalada: el cuadro amarillo, la ficha y la prevision de combate. */
   function hover(pos: Pos | null): void {
@@ -300,9 +345,10 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   installKeys({
     camera,
     onFrame: (listener) => scene.onFrame(listener),
-    // El final, la pausa, las opciones y la ayuda se abren encima del mapa (las opciones, tambien
-    // encima de la pausa: van antes): mientras, las teclas son suyas.
-    panels: [matchEnd, helpPanel, options, pause],
+    // El cambio de jugador, el final, la pausa, las opciones y la ayuda se abren encima del mapa (el
+    // cambio de jugador, encima de todo; las opciones, tambien encima de la pausa: van antes): mientras,
+    // las teclas son suyas.
+    panels: [seat, matchEnd, helpPanel, options, pause],
     sounds: audio.sounds,
     endTurn: () => endGuard.press(),
     nextUnit: nextIdle,
@@ -326,7 +372,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   ui.set({ screen: 'game' });
   playMusic(gameTrackOf(state.theme));
   // Se guarda sola: al salir de la pagina y, con el autoguardado, en cada turno. Por la red se sigue desde el servidor.
-  if (!online) keepSaved(session, viewer);
+  if (!online) keepSaved(session, seat);
   online?.listen();
   void controls.runUntilInput();
 
@@ -335,7 +381,10 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     get session() {
       return runner.session;
     },
-    viewer,
+    get viewer() {
+      return seat.team;
+    },
+    seat,
     online,
     board,
     controls,
@@ -357,11 +406,19 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
 function startingCamera(scene: MatchScene, state: GameState, viewer: TeamId): StrategyCamera {
   const grid = mapGrid(state);
   const bounds = { minX: 0, maxX: grid.width - 1, minZ: 0, maxZ: grid.height - 1 };
-  const home = state.buildings.find((building) => building.owner === viewer) ?? state.units.find((unit) => unit.team === viewer);
-  const startTarget = home ? scene.groundOf(home) : scene.center;
-  const camera = new StrategyCamera({ target: startTarget, distance: START_DISTANCE, yaw: START_YAW }, bounds, scene.verticalFov);
+  const camera = new StrategyCamera(
+    { target: homeSpotOf(scene, state, viewer), distance: START_DISTANCE, yaw: START_YAW },
+    bounds,
+    scene.verticalFov,
+  );
   scene.placeCamera(camera.pose);
   return camera;
+}
+
+/** A donde mira la camara de un equipo la primera vez: su Base (su primer edificio), su primera unidad o el centro. */
+function homeSpotOf(scene: MatchScene, state: GameState, team: TeamId): Point3 {
+  const home = state.buildings.find((building) => building.owner === team) ?? state.units.find((unit) => unit.team === team);
+  return home ? scene.groundOf(home) : scene.center;
 }
 
 /** El ambiente: el fondo del tema, el clima y lo que suena cerca de donde mira la camara (y los truenos). */

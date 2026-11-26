@@ -150,6 +150,11 @@ export const help: HelpTexts = {
       keys.endTurn,
       'Bottom-right button. With units that have not moved, the first press makes them hop so you see them and asks again (“End anyway?”)',
     ],
+    [
+      'Two people on this screen',
+      'Enter (on the notice)',
+      'Rival “Another person” in Skirmish: when your turn ends the game is covered until the other one presses “Start my turn”. Each one only sees their own side and finds the camera where they left it',
+    ],
   ],
 
   close: 'Close',

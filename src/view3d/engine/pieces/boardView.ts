@@ -43,10 +43,21 @@ export class BoardView {
 
   constructor(
     private readonly s: GameState,
-    private readonly viewer: TeamId,
+    private viewer: TeamId,
     private readonly terrain: TerrainView,
     private readonly glbModels: GlbLibrary,
   ) {}
+
+  /**
+   * Quien mira pasa a ser `team` (varias personas en la misma pantalla): todo cambia de lado, asi que
+   * las piezas se quitan y el siguiente `sync` las vuelve a hacer con sus colores, sin crecer.
+   */
+  lookAs(team: TeamId): void {
+    this.viewer = team;
+    this.hit = null;
+    for (const [uid, piece] of this.units) this.removeUnit(uid, piece);
+    for (const [key, piece] of this.buildings) this.removeBuilding(key, piece);
+  }
 
   /** La unidad que se ve en esa casilla (su pieza entera), o null. */
   unitObjectAt(pos: Pos): THREE.Object3D | null {

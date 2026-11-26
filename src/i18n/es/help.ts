@@ -152,6 +152,11 @@ export const help: HelpTexts = {
       keys.endTurn,
       'Botón de abajo a la derecha. Con unidades sin mover, la primera vez saltan para que las veas y pide otra pulsación («¿Terminar?»)',
     ],
+    [
+      'Dos personas en esta pantalla',
+      'Enter (en el aviso)',
+      'Rival «Otra persona» en Escaramuza: al acabar tu turno la partida se tapa hasta que la otra pulsa «Empezar mi turno». Cada una ve solo lo suyo y encuentra la cámara donde la dejó',
+    ],
   ],
 
   close: 'Cerrar',
