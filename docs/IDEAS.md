@@ -213,6 +213,14 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
 - **Cartel que se levanta de la casilla** (C, el mismo día). Va plantado en el tablero con su sombra,
   pero al girar la cámara el palito y la sombra no siguen la perspectiva, y levantarse con rebote
   cansa a la décima vez.
+- **«Esperar» y «Cancelar» en el bocadillo de la unidad** (tablero 8 del lienzo «Todo en estilo C»,
+  26-11-2026). Esperar ya es dejar la unidad (espera sola al soltarla) y está en la rueda; cancelar es
+  Esc o tocar fuera. Con ellos, el bocadillo saldría siempre, también cuando no hay nada que decidir.
+- **Munición y combustible en la ficha de la unidad elegida** (el mismo tablero): el juego no los
+  tiene.
+- **«Capturar» apagado en todas** (el mismo día). En las que no capturan (un tanque) no dice nada que
+  no se sepa, y en un soldado sin nada más que hacer abriría el bocadillo solo para decir que no
+  puede, cada vez que se mueve. Sale apagado en las que capturan y solo si el bocadillo ya sale.
 
 - **Fábrica automática** (comprar sola al terminar el turno, con posturas, reserva y resumen): llenaba
   el mapa de unidades que luego había que mover y se gastaba el dinero. Saber qué comprar es parte
