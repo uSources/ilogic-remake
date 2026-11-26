@@ -1,0 +1,243 @@
+/* La compra en una fabrica (game/BuyList.tsx; lienzo «Todo en estilo C», tablero 10): a la derecha,
+   sobre el tablero oscurecido por ese lado y sin marco, como la pausa a la izquierda. Cada unidad es
+   una entrada del menu de texto (textlist.css) con su retrato delante y su precio al final; la
+   señalada crece. Al pie, de que va la señalada y con cuanto te quedas. */
+.buy-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(270deg, rgba(18, 21, 28, 0.94) 0%, rgba(18, 21, 28, 0.8) 38%, rgba(18, 21, 28, 0) 66%);
+  pointer-events: none;
+  animation: buy-shade-in 0.16s ease-out both;
+}
+.buy-list {
+  position: absolute;
+  top: 40px;
+  right: 60px;
+  bottom: 36px;
+  width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--panel);
+  pointer-events: auto;
+  animation: buy-in 0.16s ease-out both;
+}
+@keyframes buy-shade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes buy-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+.buy-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+.buy-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 52px;
+  line-height: 1;
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.7);
+}
+.buy-funds {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--menu-note);
+}
+.buy-funds b {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.1;
+  color: var(--menu-gold);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.6);
+}
+/* Con las dos clases: textlist.css va antes, pero asi no depende del orden. Si no caben, la lista
+   corre por dentro, sin barra (la señalada se lleva a la vista: Btn, scrollTo). */
+.text-list.buy-entries {
+  --entry-size: 23px;
+  --entry-size-sel: 29px;
+  flex: 0 1 auto;
+  min-height: 0;
+  gap: 2px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.buy-entry.text-entry {
+  gap: 14px;
+  padding: 2px 0;
+  width: 100%;
+}
+.buy-entries .text-arrow {
+  width: 20px;
+  font-size: 24px;
+}
+.buy-portrait {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 3px 0 rgba(0, 0, 0, 0.5));
+}
+.buy-entry.sel .buy-portrait {
+  width: 48px;
+  height: 48px;
+}
+.buy-name {
+  flex: 1;
+  min-width: 0;
+}
+.buy-entries .text-entry-note {
+  font-size: 12px;
+  font-weight: 800;
+}
+.buy-price {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--menu-title);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7);
+}
+.buy-entry.sel .buy-price {
+  font-size: 24px;
+  color: var(--menu-gold);
+}
+/* La que no te llega: el nombre y el precio en gris (el retrato ya sale gris) y lo que falta en rojo
+   claro. No se transparenta: se puede señalar para leer de que va. */
+.buy-entry.disabled {
+  opacity: 1;
+}
+.buy-entry.disabled .text-entry-title,
+.buy-entry.disabled .buy-price {
+  color: var(--menu-off, #8a82a0);
+}
+.buy-entry.disabled .text-entry-note {
+  color: var(--menu-danger);
+}
+.buy-about {
+  flex: none;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 2px solid rgba(255, 247, 232, 0.14);
+}
+.buy-about-name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--menu-note);
+}
+.buy-about-line {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--menu-title);
+}
+.buy-balance {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--menu-gold);
+}
+.buy-balance.short {
+  color: var(--menu-danger);
+}
+/* Pantalla baja: todo mas apretado, para que quepan las diez de la fabrica sin correr la lista. */
+@media (max-height: 700px) {
+  .buy-list {
+    top: 20px;
+    bottom: 16px;
+    gap: 8px;
+  }
+  .buy-title {
+    font-size: 40px;
+  }
+  .text-list.buy-entries {
+    --entry-size: 20px;
+    --entry-size-sel: 25px;
+    gap: 0;
+  }
+  .buy-entry.text-entry {
+    padding: 1px 0;
+  }
+  .buy-portrait {
+    width: 32px;
+    height: 32px;
+  }
+  .buy-entry.sel .buy-portrait {
+    width: 40px;
+    height: 40px;
+  }
+  .buy-price {
+    font-size: 17px;
+  }
+  .buy-entry.sel .buy-price {
+    font-size: 20px;
+  }
+  .buy-about {
+    gap: 2px;
+    padding-top: 8px;
+  }
+  .buy-about-line {
+    font-size: 13px;
+  }
+}
+/* En el movil, una hoja abajo a lo ancho, con el tablero oscurecido desde abajo. */
+@media (max-width: 720px) {
+  .buy-shade {
+    background: linear-gradient(0deg, rgba(18, 21, 28, 0.94) 0%, rgba(18, 21, 28, 0.85) 55%, rgba(18, 21, 28, 0) 85%);
+  }
+  .buy-list {
+    top: auto;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    width: auto;
+    max-height: calc(100% - 140px);
+    gap: 8px;
+  }
+  .buy-title {
+    font-size: 34px;
+  }
+  .buy-funds b {
+    font-size: 22px;
+  }
+  .text-list.buy-entries {
+    --entry-size: 20px;
+    --entry-size-sel: 24px;
+    gap: 0;
+  }
+  .buy-entry.text-entry {
+    gap: 10px;
+  }
+  .buy-portrait {
+    width: 32px;
+    height: 32px;
+  }
+  .buy-entry.sel .buy-portrait {
+    width: 40px;
+    height: 40px;
+  }
+  .buy-about-line {
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .buy-shade,
+  .buy-list {
+    animation: none;
+  }
+}

@@ -10,3 +10,9 @@ export const canAct = (s: UIState) => isOwnTurn(s) && !s.busy;
  * escena), salir al menu principal (dos pulsaciones).
  */
 export const canUseMenuButton = (s: UIState) => canAct(s) || s.watching;
+
+/**
+ * Comprando en una fabrica: la lista ocupa la derecha (BuyList.tsx), asi que lo de ese lado (el enemigo
+ * y la pausa arriba; «Acabar turno» y el minimapa abajo) no sale hasta cerrarla.
+ */
+export const isBuying = (s: UIState) => s.menu?.kind === 'buy';

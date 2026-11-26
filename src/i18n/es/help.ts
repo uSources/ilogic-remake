@@ -120,7 +120,7 @@ export const help: HelpTexts = {
     [
       'Comprar',
       '—',
-      'Clic en una fábrica, ciudad o aeropuerto tuyo libre: los retratos salen en abanico y un clic compra. Lo que no puedes pagar sale apagado con lo que falta; la chapa del centro dice cómo se mueve, su alcance y contra qué es buena',
+      'Clic en una fábrica, ciudad o aeropuerto tuyo libre: a la derecha sale lo que fabrica, con su precio, y un clic (o Enter) compra. Lo que no puedes pagar sale apagado con lo que falta; abajo, la señalada dice cómo se mueve, su alcance, contra qué es fuerte y débil y con cuánto te quedas',
     ],
     [
       'Capturar si ya está encima, reparar, desembarcar',

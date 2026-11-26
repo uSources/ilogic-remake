@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { newUnit } from '@core/measure';
 import { GameSession, humanController, passiveController, type Controller } from '@core/session';
 import type { GameEvent, GameState } from '@core/model';
-import { shownTeamNumber } from '@core/teams';
+import { shownTeamNumber, teamState } from '@core/teams';
 import { ui } from '../src/hud/store';
 import { HotSeat, type ScreenPass } from '../src/view3d/systems/turn/hotSeat';
 import { localRunner } from '../src/view3d/systems/turn/matchRunner';
@@ -513,20 +513,64 @@ describe('ordenes y escuadras', () => {
   });
 });
 
-describe('comprar con fichas', () => {
-  it('tocar una fabrica propia abre la rejilla (sin «Cancelar»); un toque compra y tocar fuera cierra', async () => {
-    const { s, controls } = await myTurn();
-    s.buildings.push({ type: 'Factory', owner: PLAYER, x: 3, y: 3, capture: null });
+describe('comprar en la lista', () => {
+  /** Mi turno con una fabrica propia en (3,3) y `funds` de dinero. */
+  async function withFactory(funds: number) {
+    const turn = await myTurn();
+    turn.s.buildings.push({ type: 'Factory', owner: PLAYER, x: 3, y: 3, capture: null });
+    teamState(turn.s, PLAYER).funds = funds;
+    return turn;
+  }
+  const boughtCar = (s: GameState) => s.units.some((unit) => unit.type === 'Car' && unit.x === 3 && unit.y === 3);
+
+  it('tocar una fabrica propia abre la lista (sin «Cancelar»); un toque compra y tocar fuera cierra', async () => {
+    const { s, controls } = await withFactory(5000);
     await controls.tap({ x: 3, y: 3 });
     const menu = controls.menu();
     expect(menu?.kind).toBe('buy');
+    expect(controls.isBuying).toBe(true);
     expect(menu?.items.map((item) => item.id)).not.toContain('cancel');
     await controls.tap({ x: 9, y: 9 });
     expect(controls.menu()).toBeNull();
     await controls.tap({ x: 3, y: 3 });
     pick(controls, 'buyCar');
     await settle();
-    expect(s.units.some((unit) => unit.type === 'Car' && unit.x === 3 && unit.y === 3)).toBe(true);
+    expect(boughtCar(s)).toBe(true);
+  });
+
+  it('arriba, lo que tienes; señalada, la primera que te llega', async () => {
+    const { controls } = await withFactory(5000);
+    await controls.tap({ x: 3, y: 3 });
+    const menu = controls.menu();
+    expect(menu?.subtitle).toBe('5000');
+    expect(menu?.items[menu.selected]?.id).toBe('buyCar');
+  });
+
+  it('las flechas señalan sin pasar de la primera ni de la ultima, e Intro compra la señalada', async () => {
+    const { s, controls } = await withFactory(5000);
+    await controls.tap({ x: 3, y: 3 });
+    const count = controls.menu()?.items.length ?? 0;
+    for (let press = 0; press <= count; press++) controls.stepBuy(1);
+    expect(controls.menu()?.selected).toBe(count - 1);
+    for (let press = 0; press <= count; press++) controls.stepBuy(-1);
+    expect(controls.menu()?.selected).toBe(0);
+    controls.stepBuy(controls.menu()?.items.findIndex((item) => item.id === 'buyCar') ?? 0);
+    controls.acceptMenu();
+    await settle();
+    expect(boughtCar(s)).toBe(true);
+    expect(controls.isBuying).toBe(false);
+  });
+
+  it('Intro en una que no te llega no compra: suena que no y la lista sigue abierta', async () => {
+    const { s, controls, sounds } = await withFactory(5000);
+    await controls.tap({ x: 3, y: 3 });
+    controls.stepBuy(-2);
+    expect(controls.menu()?.items[controls.menu()?.selected ?? 0]?.disabled).toBe(true);
+    controls.acceptMenu();
+    await settle();
+    expect(sounds.heard).toContain('buy_denied');
+    expect(s.units.filter((unit) => unit.team === PLAYER)).toHaveLength(1);
+    expect(controls.isBuying).toBe(true);
   });
 });
 
