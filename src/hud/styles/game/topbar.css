@@ -184,8 +184,3 @@
   height: 32px;
   margin: -6px 0;
 }
-/* Los desgloses (Breakdown.tsx) son fichas crema: sin la sombra ni el peso del texto de la barra. */
-.turn-line .breakdown {
-  font-weight: normal;
-  text-shadow: none;
-}

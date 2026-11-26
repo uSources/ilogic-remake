@@ -275,8 +275,9 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   rueda, compra), y lo de vez en cuando va en la pausa (ver amenaza, ver órdenes) o en la rueda
   (escuadras).
   - Arriba a la izquierda, de quién es el turno en grande, con el punto del bando. Debajo, en dorado,
-    el día, el clima y el dinero con lo que entra al día. El día y el dinero tienen su desglose al
-    pasar el ratón.
+    el día, el clima y el dinero con lo que entra al día. Los tres tienen su desglose al pasar el
+    ratón (o al tocarlos), en una ficha oscura translúcida como «Cómo va»: nada de fichas crema ni
+    del globito del navegador.
   - Arriba a la derecha, el enemigo (sus edificios y, sin niebla, sus unidades) y el botón de pausa
     con su tecla.
   - Abajo a la derecha, «Acabar turno ▸» en texto grande, con «N sin mover» debajo (lleva a la

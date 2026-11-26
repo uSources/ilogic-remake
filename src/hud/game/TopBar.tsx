@@ -9,7 +9,7 @@ import type { StandingVM } from '../vm/menus';
 import type { WeatherVM } from '../vm/topBar';
 import type { Side } from '../vm/common';
 import { signed } from '../common/format';
-import { DayPanel, EconomyPanel } from './Breakdown';
+import { DayPanel, EconomyPanel, WeatherPanel } from './Breakdown';
 import { keyLabelOf } from '../keyLabels';
 import { canAct, canUseMenuButton, isOwnTurn } from './turn';
 
@@ -152,15 +152,21 @@ export function TopBar({ s }: { s: UIState }) {
   );
 }
 
-/** Clima de hoy (y el de mañana si cambia); al pasar por encima, sus efectos. */
+/** Clima de hoy (y el de mañana si cambia); al pasar por encima o tocarlo, sus efectos. */
 function WeatherChip({ weather }: { weather: WeatherVM }) {
-  const tomorrow = weather.next ? `\n${t('weatherTomorrow')}: ${weather.next}` : '';
-  const tip = `${t('weather')}: ${weather.name} — ${weather.effects}${tomorrow}`;
+  const [isOpen, toggle, close] = useTipToggle();
+  const tomorrow = weather.next ? `. ${t('weatherTomorrow')}: ${weather.next}` : '';
   return (
-    <span class={`turn-weather wx-${weather.id}`} title={tip} aria-label={tip}>
+    <span
+      class={`turn-weather has-tip wx-${weather.id} ${isOpen ? 'open' : ''}`}
+      aria-label={`${t('weather')}: ${weather.name}. ${weather.effects}${tomorrow}`}
+      onClick={toggle}
+      onPointerLeave={close}
+    >
       <WeatherIcon id={weather.id} />
       <b class="wn">{weather.name}</b>
       {weather.next && <em class="wf">→ {weather.next}</em>}
+      <WeatherPanel weather={weather} />
     </span>
   );
 }

@@ -1,6 +1,6 @@
 import { fmtNum, t } from '../../settings';
 import { signed } from '../common/format';
-import type { BreakdownLineVM, DayInfoVM, EconomyVM } from '../vm/topBar';
+import type { BreakdownLineVM, DayInfoVM, EconomyVM, WeatherVM } from '../vm/topBar';
 import { OWN, RIVALS } from '../vm/common';
 
 /** '+' ingresos, '−' gastos, '' puntos (sin color). */
@@ -81,7 +81,7 @@ function CommandSection({ points }: { points: NonNullable<EconomyVM['commandPoin
 /** Desglose del dinero (al pasar por encima o tocar el dinero de arriba). */
 export function EconomyPanel({ economy }: { economy: EconomyVM }) {
   return (
-    <div class="px breakdown" role="tooltip">
+    <div class="breakdown" role="tooltip">
       <IncomeSection income={economy.income} />
       {economy.upkeep && <UpkeepSection upkeep={economy.upkeep} />}
       <div class="row net">
@@ -131,7 +131,7 @@ function ScoreSection({ score }: { score: NonNullable<DayInfoVM['score']> }) {
 /** Desglose del dia: limite, lo que queda y los puntos si se acabase ahora. */
 export function DayPanel({ dayInfo }: { dayInfo: DayInfoVM }) {
   return (
-    <div class="px breakdown" role="tooltip">
+    <div class="breakdown" role="tooltip">
       <h4>
         {t('day')} {dayInfo.day}
         {dayInfo.limit !== null && ` ${t('dayOf')} ${dayInfo.limit}`}
@@ -140,6 +140,27 @@ export function DayPanel({ dayInfo }: { dayInfo: DayInfoVM }) {
         <span class="l">{daysLeftText(dayInfo.left)}</span>
       </div>
       {dayInfo.score && <ScoreSection score={dayInfo.score} />}
+    </div>
+  );
+}
+
+/** El clima: el de hoy con sus efectos y, si cambia, el de mañana. */
+export function WeatherPanel({ weather }: { weather: WeatherVM }) {
+  return (
+    <div class="breakdown" role="tooltip">
+      <h4>{t('weather')}</h4>
+      <div class="row">
+        <span class="l">{weather.name}</span>
+      </div>
+      <div class="note">{weather.effects}</div>
+      {weather.next && (
+        <>
+          <h4>{t('weatherTomorrow')}</h4>
+          <div class="row">
+            <span class="l">{weather.next}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }
