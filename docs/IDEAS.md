@@ -226,6 +226,16 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   mete una pieza más que sube y baja. Se eligió la «mesa de juego» (`docs/PLAN-INTERFAZ-2.md`).
 - **Interfaz «Cuartel del general»** (dirección C, al estilo Advance Wars y Fire Emblem): vuelve a
   poner información fija en pantalla, justo lo que se quitó en la 0.12.0.
+- **Línea de ayuda fija sobre el tablero** («Clic o Enter: elegir…», del tablero «Partida: tu turno»
+  del lienzo del estilo C; descartada con el usuario el 26-11-2026). Nombra teclas que en el juego
+  hacen otra cosa (Q es la orden de atacar, no girar la cámara) y vuelve a poner texto fijo en
+  pantalla, lo que se quitó en la 0.12.0. Las teclas ya salen junto a lo que hacen (Esc en el botón
+  de pausa, Tab en «N sin mover») y en «Cómo se juega».
+- **Las fichas crema de la partida** (cambiadas en la fase 3 del estilo C, #217, el 26-11-2026). La
+  barra de arriba, «Fin del turno» y el botón ☰ eran fichas crema que no casaban con el texto sobre
+  el tablero de Inicio, la pausa y el final. La ficha de la casilla salía junto a ella al parar el
+  ratón 400 ms: tapaba lo de al lado y hacía esperar. Ahora va fija abajo a la izquierda y sale al
+  momento.
 - **Generales** (un general por equipo, con una ventaja fija, una barra que se cargaba con el combate y
   poderes como el ataque aéreo o el reconocimiento): casi no se usaban y la IA apenas los aprovechaba.
   Se quitaron del juego; siguen en el historial de git si algún día vuelven.

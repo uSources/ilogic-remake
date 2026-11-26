@@ -55,9 +55,9 @@ vista del mapa a la derecha, como en la pausa. Se tocan cuando el usuario las el
 tarjeta crema de antes, y se nota al salir de Inicio.
 
 ### Fase 3. La partida: arriba y abajo (tablero «Partida: tu turno») (hecha)
-- Arriba a la izquierda, «Tu turno» con el punto del bando (o «Turno enemigo» en rojo). Debajo, el
-  día, el clima (no está en el tablero, pero no se quita) y el dinero con lo que entra al día. El día
-  y el dinero tienen su desglose al pasar el ratón.
+- Arriba a la izquierda, «Tu turno» con el punto del bando (o «Turno enemigo», con el punto rojo).
+  Debajo, el día, el clima (no está en el tablero, pero no se quita) y el dinero con lo que entra al
+  día. El día y el dinero tienen su desglose al pasar el ratón.
 - Arriba a la derecha, el enemigo: sus edificios y, sin niebla, sus unidades (`standingVM`, el mismo
   de «Cómo va»). Al lado, el botón de pausa con su tecla. Sustituye al ☰.
 - Abajo a la derecha, en fila, «Acabar turno ▸» en texto (antes «Fin del turno») y el minimapa en
@@ -67,9 +67,10 @@ tarjeta crema de antes, y se nota al salir de Inicio.
 - Abajo a la izquierda, lo que hay bajo el cursor (`TileTip.tsx`), en dos columnas de texto. Una es
   el sitio, con sus chapas; la otra, la unidad, con retrato, de quién es y su vida en diez pastillas.
   Sale al momento (ya no tapa nada) y con Alt crece.
-- La línea de ayuda de arriba del tablero («Clic o Enter: elegir…») **no se ha puesto**. En el
-  lienzo nombra teclas que en el juego hacen otra cosa (Q es la orden de atacar, no girar la
-  cámara), y la interfaz 0.12.0 quitó las líneas de ayuda fijas. Queda por decidir con el usuario.
+- La línea de ayuda de arriba del tablero («Clic o Enter: elegir…») **se descarta** (decidido con el
+  usuario el 26-11-2026; el porqué, en `docs/IDEAS.md`, «Descartado»). En el lienzo nombra teclas que
+  en el juego hacen otra cosa (Q es la orden de atacar, no girar la cámara), y la interfaz 0.12.0
+  quitó las líneas de ayuda fijas.
 
 ### Fase 4. Unidad elegida y previsión (tableros 8 y 9)
 - **Unidad elegida**: lo que puede hacer, en una lista de texto junto a ella: Atacar con cuántos
