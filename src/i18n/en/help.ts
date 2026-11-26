@@ -114,7 +114,7 @@ export const help: HelpTexts = {
     [
       'Buy',
       '—',
-      'Click a free factory, city or airport of yours: portraits fan out around it and a click buys. What you cannot afford is greyed out with what is missing; the chip in the middle shows how it moves, its range and what it is good against',
+      'Click a free factory, city or airport of yours: what it builds shows up on the right with its price, and a click (or Enter) buys. What you cannot afford is greyed out with what is missing; at the bottom, the highlighted one shows how it moves, its range, what it is strong and weak against and how much you will have left',
     ],
     [
       'Capture when already on it, repair, unload',

@@ -13,4 +13,12 @@ export const economy: Translation<typeof es> = {
   ecoShortfall: 'Not enough for all of it: only paying',
   ecoCommand: 'Command points',
   ecoFree: 'free',
+  buyFunds: 'You have',
+  buyLeft: "You'll have {n} left",
+  buyShort: 'You need {n} more',
+  buyMissing: '{n} short',
+  buyEmpties: 'leaves you at 0',
+  buyStrong: 'Strong against {list}',
+  buyWeak: 'Weak against {list}',
+  buyHint: '↑ ↓ to choose · Enter to buy · Esc to leave without buying',
 };

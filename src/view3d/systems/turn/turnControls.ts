@@ -38,7 +38,8 @@ import {
   type MoveRange,
 } from '../../../core/rules';
 import { showBanner, showToast, ui, type MenuItemVM, type StandingVM } from '../../../hud/store';
-import { buyItem, optionItems, targetItems } from './menuItems';
+import { buyItem } from './buyItems';
+import { optionItems, targetItems } from './menuItems';
 import { fmtNum, nameOf, settings, t } from '../../../settings';
 import { buyBlockedText } from '../../../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
@@ -790,7 +791,8 @@ export class TurnControls {
     const { funds } = teamState(this.s, this.host.viewer);
     const items = options.map((option) => buyItem(this.s, option, funds));
     const title = nameOf(buildingTypeOf(this.s, building));
-    const subtitle = `${t('funds')}: ${fmtNum(funds)}`;
+    // El dinero que tienes; la lista dice «Tienes» delante (game/BuyList.tsx).
+    const subtitle = fmtNum(funds);
     return { kind: 'buy', title, subtitle, items, selected, at: building };
   }
 
@@ -860,6 +862,19 @@ export class TurnControls {
     this.setMode({ kind: 'idle' });
     // Suena con su suceso (`spawn`, eventSteps.ts), como las compras de la IA.
     await this.perform({ kind: 'buy', at: { x: building.x, y: building.y }, unitType: option.unitType.id });
+  }
+
+  /** La compra esta abierta: el teclado es suyo, como en la pausa (buyKeys.ts). */
+  get isBuying(): boolean {
+    return this.mode.kind === 'buy';
+  }
+
+  /** Las flechas en la compra: señalar la unidad de encima (-1) o la de debajo (+1), sin pasar de la primera ni de la ultima. */
+  stepBuy(step: number): void {
+    const mode = this.mode;
+    if (mode.kind !== 'buy') return;
+    const last = mode.options.length - 1;
+    this.setMode({ ...mode, selected: Math.min(last, Math.max(0, mode.selected + step)) });
   }
 
   /**
