@@ -10,6 +10,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ## [Sin publicar]
 
 ### Novedades
+- **La partida en línea suena**: cuando alguien entra en tu sala y cuando empieza la partida, así te enteras aunque estés esperando en otra pestaña; y cuando la conexión se corta un rato, vuelve o se pierde. Mientras todo va bien, silencio.
 - **Dos personas en la misma pantalla**: con el rival «Otra persona» en Escaramuza, al acabar tu turno la partida se tapa con el aviso «Le toca al equipo 2» hasta que la otra persona pulsa «Empezar mi turno» (o Enter). Cada una ve solo lo suyo, en azul, con su niebla, y encuentra la cámara donde la dejó. Antes la partida se quedaba esperando a la segunda sin dejarla jugar.
 
 ### Interfaz
@@ -23,6 +24,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 <!-- en -->
 
 ### New
+- **Online games have sound**: when someone joins your room and when the match starts, so you hear it even while waiting in another tab; and when the connection drops for a while, comes back or is lost. While everything works, silence.
 - **Two people on the same screen**: with the “Another person” rival in Skirmish, when your turn ends the game is covered by a “It's the turn of team 2” notice until the other person presses “Start my turn” (or Enter). Each one only sees their own side, in blue, with their own fog, and finds the camera where they left it. Before, the game kept waiting for the second person without letting them play.
 
 ### Interface

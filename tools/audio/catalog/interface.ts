@@ -60,15 +60,16 @@ const MENU_INTERFACE: SoundSpec[] = [
   effect('news_badge', 0.3, 'rare', 'A tiny bright bell ding'),
 ];
 
-/** Suenan cuando haya partida en linea en 3D. */
+/**
+ * La partida en linea: quien entra en la sala, que empieza, la conexion y el reloj del turno. Avisan de
+ * algo, asi que mejor juguetes con nota (cajita de musica, campanita, corneta) que objetos de verdad.
+ */
 const ONLINE: SoundSpec[] = [
-  effect('room_created', 0.6, 'rare', 'A wooden door with a small shop bell swinging open, a short bell jingle'),
-  effect('player_joined', 0.6, 'often', 'A small door bell jingle as someone comes in'),
-  effect('player_left', 0.6, 'often', 'A door closing softly with a latch click'),
-  effect('net_connected', 0.5, 'rare', 'A plug pushed into a socket with a firm click and a soft electric hum'),
+  effect('player_joined', 0.6, 'rare', 'A tiny music box plays two bright rising notes'),
+  effect('net_connected', 0.5, 'rare', 'A tiny clear chime, one bright rising note, a confirmation'),
   effect('net_reconnecting', 1, 'rare', 'An old radio dial searching through static with short squelches'),
-  effect('net_lost', 0.8, 'rare', 'A radio cutting out: a crackle of static dropping to silence'),
-  effect('match_begins', 1.5, 'rare', 'A drill sergeant whistle blown once, sharp and short'),
+  effect('net_lost', 0.8, 'rare', 'Two descending electronic beeps from a toy radio, a sad disconnect'),
+  effect('match_begins', 1.5, 'rare', 'A short toy tin trumpet call, three quick rising notes, a cheerful bugle start signal'),
   // Un tic por segundo los ultimos del turno: flojo, y de un solo golpe (sin "single" salia un tic-tac pegado).
   soft(effect('turn_clock_tick', 0.1, 'constant', 'A single tiny soft tick of a wooden toy clock, one short click, gentle and dry')),
 ];

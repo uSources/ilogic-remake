@@ -169,9 +169,6 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   antiaereo (un emisor mas del ambiente, que se mueve con su pieza).
 - **Musica**: `enemy_turn` mientras juega el rival y jingles de victoria y derrota en vez de los efectos
   (`MusicTrack`, `src/audio/music.ts`).
-- **Sonidos en linea**: de los de `soundNames.ts` (`room_created`, `player_joined`, `net_lost`...)
-  solo suena el tic del reloj del turno; los demas no los pide nadie (crear la sala, que entre
-  alguien, perder la conexion...), y `net_connected` aun no tiene sonido.
 - **Mas momentos con sonido**: subir de rango, el botin, la torreta del aerodeslizador... (inventario en
   `docs/PLAN-SONIDO.md`).
 - **Silencio tras un trueno cercano.** Con mal tiempo los animales ya bajan o se callan
@@ -246,3 +243,7 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   con la cámara algo más cerca (`docs/ESTETICA.md`).
 - **Botón para abrir y cerrar el minimapa:** mejor siempre abierto (también en el móvil) y que crezca
   al pasar el ratón o al tocarlo; la tecla M lo sigue cerrando.
+- **Sonido al crear la sala y al irse alguien** (`room_created`, `player_left`): crear la sala es tu
+  propio clic, que ya suena; y en plena partida el servidor no dice que alguien se va (solo el final,
+  con `abandoned`), así que solo sonaría en el vestíbulo, donde casi no pasa. Los demás de la partida
+  en línea sí suenan (`docs/ARQUITECTURA.md`, «Lo que suena»).

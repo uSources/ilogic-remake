@@ -21,11 +21,13 @@
  * - **El reloj del turno** (si la sala lo tiene): cada `turn` trae cuando acaba; al atenderlo, la
  *   pantalla lo cuenta (`OnlineHooks.showClock`, turnClock.ts). Se quita al acabar el turno propio,
  *   cuando la partida sigue sin el (se le acabo el tiempo) y al final.
- * - **La conexion** se enseña en la linea de arriba; un cierre sin arreglo avisa y vuelve al menu.
+ * - **La conexion** se enseña en la linea de arriba y suena si se corta un rato (`LinkSounds`); un
+ *   cierre sin arreglo avisa y vuelve al menu.
  *
  * Todo lo que manda la sala pasa por un solo sitio, en orden (`pump`), y lo que llega mientras se
  * espera la respuesta a una accion propia se atiende despues de ella. El recorrido entero: docs/RED.md.
  */
+import type { SoundPort } from '../../../audio/sounds';
 import { actionProblem } from '../../../core/actions';
 import { cloneState } from '../../../core/gameContent';
 import type { GameAction, GameState, MatchResult, TeamId } from '../../../core/model';
@@ -34,6 +36,7 @@ import type { GameSession } from '../../../core/session';
 import { shownTeamNumber, teamState } from '../../../core/teams';
 import { showToast, ui, type NetVM } from '../../../hud/store';
 import { closeText } from '../../../menu/online/shared';
+import { LinkSounds } from '../../../net/linkSounds';
 import { mirrorSession } from '../../../net/mirrorSession';
 import type { OnlineListener } from '../../../net/onlineMatch';
 import { animationView, type RoomClient, type RoomPlay } from '../../../net/roomClient';
@@ -73,6 +76,8 @@ export interface OnlineHooks {
   showClock(turn: TimedTurn | null): void;
   /** La sala ya no deja seguir (otra pestaña, otra version, ya no existe): al menu. */
   quit(): void;
+  /** Lo que suena de la conexion. */
+  readonly sounds: SoundPort;
 }
 
 type EventsPlay = Extract<RoomPlay, { kind: 'events' }>;
@@ -91,6 +96,7 @@ export class OnlinePlay implements MatchRunner {
   private isClosed = false;
   /** La partida que se ve: siempre el mismo objeto, con la ultima vista dentro. */
   private readonly state: GameState;
+  private readonly linkSounds: LinkSounds;
 
   /** `session`: la espejo de la vista con la que empieza la partida (`mirrorSession`). */
   constructor(
@@ -101,21 +107,23 @@ export class OnlinePlay implements MatchRunner {
   ) {
     this.session = session;
     this.state = session.state;
+    this.linkSounds = new LinkSounds(hooks.sounds);
   }
 
   /** Empieza a atender a la sala: la conexion en la linea de arriba y cada jugada, en orden. */
   listen(): void {
     this.room.listener = {
-      onStatus: (status) => this.publishLink(status),
+      onStatus: (status) => this.linkChanged(status),
       onClosed: (reason) => this.roomClosed(reason),
     };
-    this.publishLink(this.room.link.status);
+    this.linkChanged(this.room.link.status);
     void this.pump();
   }
 
   /** Ya no se sigue la sala (la partida se ha acabado para quien mira). */
   close(): void {
     this.isClosed = true;
+    this.linkSounds.stop();
     this.room.close();
   }
 
@@ -296,6 +304,12 @@ export class OnlinePlay implements MatchRunner {
     if (net) ui.set({ net: { ...net, waiting } });
   }
 
+  /** La conexion ha cambiado: su linea y, si se corta un rato o vuelve de ese corte, su sonido. */
+  private linkChanged(status: LinkStatus): void {
+    this.publishLink(status);
+    this.linkSounds.statusChanged(status);
+  }
+
   /** La linea de la conexion (sin tocar «Esperando al equipo N…»). */
   private publishLink(status: LinkStatus): void {
     const waiting = ui.get().net?.waiting ?? null;
@@ -304,6 +318,7 @@ export class OnlinePlay implements MatchRunner {
 
   /** La sala no deja seguir: se avisa y, si la partida no ha acabado ya, se vuelve al menu. */
   private roomClosed(reason: FatalClose): void {
+    this.linkSounds.closed();
     showToast(closeText(reason));
     this.publishLink('closed');
     if (!this.isOver) setTimeout(() => this.quitUnlessClosed(), ROOM_CLOSED_QUIT_MS);

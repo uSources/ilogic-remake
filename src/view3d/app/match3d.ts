@@ -86,6 +86,7 @@ export function playMatch(
         ownTurn: notifyTurn,
         showClock: (turn) => turnClock.follow(turn),
         quit: backToMenu,
+        sounds: audio.sounds,
       })
     : null;
   const runner: MatchRunner = online ?? localRunner(session, seat);

@@ -177,6 +177,18 @@ const ownTurnReady = () => {
 /** El reloj del turno que se ve en la pantalla (la pastilla bajo el dia), o null si no sale. */
 const turnClock = () => window.ilogic3d.ui.get().turnClock;
 
+/** Los efectos que ha pedido la pagina de la partida desde que cargo (para comprobar el sonido sin oirlo). */
+const heardSounds = () => window.ilogic3d.recentSounds().map((sound) => sound.name);
+
+/** La partida suena al empezar en las dos pantallas (lo apunta el vestibulo y suena al cargar la partida). */
+async function heardBegin(first, second, when) {
+  const heard = await Promise.all([first.evaluate(heardSounds), second.evaluate(heardSounds)]);
+  check(
+    heard.every((names) => names.includes('match_begins')),
+    `${when}, suena que la partida empieza en las dos pantallas`,
+  );
+}
+
 /** El reloj, cuando ya ha cambiado de lo que enseñaba (`time`): cuenta. */
 const clockMovedFrom = (time) => {
   const clock = window.ilogic3d.ui.get().turnClock;
@@ -391,6 +403,7 @@ async function playOnline(browser, gameUrl, server) {
   await until(b, inMatch, null, 'la partida en B', MATCH_START_MS);
   await until(a, inMatch, null, 'la partida en A', MATCH_START_MS);
   check(true, 'con los dos dentro, la partida empieza en las dos pantallas');
+  await heardBegin(a, b, 'al entrar B');
   const rooms = await b.evaluate(() => JSON.parse(localStorage.getItem('ilogic.online.rooms') ?? '[]'));
   check(rooms[0]?.code === lobby.code, 'B apunta la sala en «Mis partidas en línea»');
   const waiting = await until(b, () => window.ilogic3d.ui.get().net?.waiting, null, 'el cartel de espera en B');
@@ -418,6 +431,7 @@ async function playOnline(browser, gameUrl, server) {
   await b.reload();
   await until(b, inMatch, null, 'que B vuelva a la sala tras recargar', MATCH_START_MS);
   check(true, 'B recarga la pagina y vuelve a la partida');
+  check(!(await b.evaluate(heardSounds)).includes('match_begins'), 'al volver tras recargar, B no la oye empezar otra vez');
   await shot(b, 'b-tras-recargar');
   await sameMatch(a, b, 'tras recargar B');
   await playTurn(a, b, 'A');
@@ -472,6 +486,7 @@ async function searchRivals(browser, gameUrl, server) {
   await until(d, inMatch, null, 'la partida en D', MATCH_START_MS);
   await until(c, inMatch, null, 'la partida en C', MATCH_START_MS);
   check(true, 'D se queda el asiento de la sala de C: la partida empieza en las dos pantallas');
+  await heardBegin(c, d, 'al emparejar');
   await until(d, ownTurnReady, null, 'el primer turno de D (quien llega juega primero)');
   await sameMatch(c, d, 'al emparejar', comparableInFog);
   await shot(d, 'd-emparejado');

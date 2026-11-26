@@ -88,12 +88,15 @@ async function onlineMatch(clock: TurnTimeLeft | null = null) {
   let ownTurns = 0;
   const clocks: (TimedTurn | null)[] = [];
   const link: OnlineRoom = { client, link: { status: 'online' }, listener: {}, close: () => undefined };
+  /** Lo que suena de la conexion (lo del turno lo oye el de `TurnControls`). */
+  const linkSounds = new FakeSounds();
   const online = new OnlinePlay(link, session, PERSON, {
     viewReplaced: () => controls.viewReplaced(),
     othersGoOn: () => controls.othersGoOn(),
     ownTurn: () => (ownTurns += 1),
     showClock: (turn) => clocks.push(turn),
     quit: () => undefined,
+    sounds: linkSounds,
   });
   const controls = new TurnControls({
     runner: online,
@@ -125,6 +128,8 @@ async function onlineMatch(clock: TurnTimeLeft | null = null) {
     shown: session.state,
     ownTurns: ownTurnCount,
     clocks,
+    link,
+    linkSounds,
   };
 }
 
@@ -279,5 +284,17 @@ describe('la partida por la red en 3D (OnlinePlay)', () => {
     await settle();
     expect(room.status).toBe('ended');
     expect(ended).toEqual([true]);
+  });
+
+  it('la conexion que va bien no suena; si la sala ya no deja seguir, suena en el acto', async () => {
+    const { online, link, linkSounds } = await onlineMatch();
+    link.listener.onStatus?.('online');
+    expect(linkSounds.heard).toEqual([]);
+
+    link.listener.onStatus?.('closed');
+    link.listener.onClosed?.('replaced');
+    expect(linkSounds.heard).toEqual(['net_lost']);
+    expect(ui.get().net?.status).toBe('offline');
+    online.close();
   });
 });

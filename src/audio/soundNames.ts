@@ -139,11 +139,9 @@ export const SOUND_FALLBACKS = {
   end_screen_in: null,
   new_record: null,
   news_badge: null,
-  // En linea (sonaran cuando haya partida en linea en 3D)
-  room_created: 'ui_select',
+  // En linea: quien entra en la sala, que empieza, la conexion (net/linkSounds.ts) y el reloj del turno
   player_joined: 'ui_select',
-  player_left: 'ui_back',
-  net_connected: null,
+  net_connected: 'ui_select',
   net_reconnecting: 'ui_error',
   net_lost: 'ui_error',
   match_begins: 'turn_start',

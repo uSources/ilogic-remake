@@ -47,7 +47,8 @@ const STEREO_44K: DecodeFormat = { channelCount: 2, sampleRate: 44100 };
 
 function shapeEffect(pcm: Pcm, spec: SoundSpec): Pcm {
   const trimmed = trimEnd(trimStart(pcm, SILENCE_BEFORE_DB), SILENCE_AFTER_DB);
-  const limited = limitLength(trimmed, spec.seconds * EFFECT_LENGTH_ALLOWANCE);
+  // Si el limite cae en un silencio (entre un pitido y el siguiente que sobra), ese silencio tambien sobra.
+  const limited = trimEnd(limitLength(trimmed, spec.seconds * EFFECT_LENGTH_ALLOWANCE), SILENCE_AFTER_DB);
   const fadeSeconds = Math.max(MIN_FADE_SECONDS, secondsOf(limited) * EFFECT_FADE_SHARE);
   return normalizePeak(fadeOut(limited, fadeSeconds), spec.peakDb ?? PEAK_DB);
 }
