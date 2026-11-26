@@ -7,8 +7,11 @@ export interface MenuItemVM {
   label: string;
   /** Texto a la derecha (precio, tecla...). */
   hint?: string;
+  /** La tecla que hace lo mismo, pequeña junto al titulo (en lo que sale de una casilla, ademas de `hint`). */
+  key?: string;
   /** Clave de imagen del juego (sprite de unidad, icono de la interfaz). */
   icon?: string | null;
+  /** Apagada: se ve, pero no se elige; el porque va en su nota (`hint`) o, en la compra, en `buy`. */
   disabled?: boolean;
   danger?: boolean;
   /** Linea de detalle que se muestra al pie cuando esta seleccionado. */
@@ -43,6 +46,8 @@ export interface MenuVM {
   /** La casilla del tablero de la que sale (la que lo vuelve a montar al cambiar) y su recuadro en pantalla. */
   at: { x: number; y: number };
   anchor: Anchor;
+  /** Lo que el bocadillo no tapa si puede: los enemigos a tiro, con sitio encima para la cifra que sube. */
+  avoid?: Anchor[];
 }
 
 /**

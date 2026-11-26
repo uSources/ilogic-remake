@@ -68,7 +68,9 @@ export {
   captureProgress,
   canCapture,
   canCaptureAt,
+  captureBlockAt,
   captureEvent,
+  type CaptureBlock,
   type CaptureProgress,
   type CaptureResult,
 } from './rules/capture';
