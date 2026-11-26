@@ -102,7 +102,7 @@ function PauseButton({ s }: { s: UIState }) {
   );
 }
 
-/** Por la red, en los ultimos segundos del reloj del turno propio: «Fin del turno» parpadea. */
+/** Por la red, en los ultimos segundos del reloj del turno propio: «Acabar turno» parpadea. */
 const isTurnEnding = (s: UIState) => isOwnTurn(s) && s.turnClock?.mood === 'hurry';
 
 /**

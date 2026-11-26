@@ -5,7 +5,7 @@
 import type { Side, TurnClockMood, TurnClockVM } from '../../hud/store';
 import { t } from '../../settings';
 
-/** En el turno propio, con esto o menos (segundos) el reloj se pone rojo, hace tic y «Fin del turno» parpadea. */
+/** En el turno propio, con esto o menos (segundos) el reloj se pone rojo, hace tic y «Acabar turno» parpadea. */
 export const HURRY_SECONDS = 15;
 
 const MS_PER_SECOND = 1000;

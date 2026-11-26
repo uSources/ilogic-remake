@@ -53,7 +53,7 @@ export interface UIActions {
   renameClose(): void;
   /** La siguiente persona esta lista para su turno (cambio de jugador en la misma pantalla). */
   handoffReady(): void;
-  /** La siguiente unidad sin mover (el numero de «Fin del turno»). */
+  /** La siguiente unidad sin mover (el numero de «Acabar turno»). */
   nextIdle(): void;
   /** [CAMBIO] Retrato del panel de lo elegido: solo esa (clic), quitarla (Mayusculas) o las de su tipo (Ctrl). */
   pickInSelection(uid: number, shift: boolean, ctrl: boolean): void;

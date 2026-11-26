@@ -31,7 +31,7 @@ export interface HudMoment {
   anchorOf(pos: Pos): Anchor;
   /** Lo mismo, con su borde de arriba encima de la unidad de esa casilla (para las chapas, que no tapen su barra). */
   overheadOf(pos: Pos): Anchor;
-  /** «Fin del turno» espera la segunda pulsacion (dice «¿Terminar?»). */
+  /** «Acabar turno» espera la segunda pulsacion (dice «¿Terminar?»). */
   endArmed: boolean;
   /** Quien mira mira jugar a los demas: el boton del menu abre la pausa igual (para salir). */
   watching: boolean;
@@ -50,7 +50,7 @@ export interface HudActions {
   handoffReady: () => void;
   /** Un retrato del panel de lo elegido: solo esa, quitarla (Mayusculas) o las de su tipo (Ctrl). */
   pickInSelection: (uid: number, shift: boolean, ctrl: boolean) => void;
-  /** La siguiente unidad sin mover (el numero de «Fin del turno»). */
+  /** La siguiente unidad sin mover (el numero de «Acabar turno»). */
   nextIdle: () => void;
   /** Un clic o arrastre en el minimapa: la camara va a ese punto (en casillas del minimapa). */
   minimapJump: (at: Pos) => void;

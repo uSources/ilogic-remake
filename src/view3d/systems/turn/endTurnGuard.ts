@@ -1,5 +1,5 @@
 /**
- * «Fin del turno» con unidades sin mover (docs/PLAN-INTERFAZ-2.md, fase 6): la primera pulsacion no
+ * «Acabar turno» con unidades sin mover (docs/PLAN-INTERFAZ-2.md, fase 6): la primera pulsacion no
  * termina, hace saltar a esas unidades en el tablero (para que se vean) y el boton pasa a «¿Terminar?»;
  * la segunda, si llega a tiempo, termina. Sin unidades sin mover, termina a la primera. Solo decide:
  * el salto se pide al motor (`PieceStage.hop`) y el reloj llega de fuera (se prueba sin esperar).
