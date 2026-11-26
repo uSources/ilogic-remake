@@ -127,16 +127,17 @@ function coversAny(card: Placement, box: Size, avoid: readonly Anchor[]): boolea
  * Donde va un bocadillo con tallo (lienzo «Lo que sale de las casillas», A): el tallo sube de lo alto
  * de la casilla y el bocadillo se abre en su punta, a la derecha si cabe y si no a la izquierda. Si
  * arriba no cabe (ni tapando la barra de arriba), va debajo y el tallo baja. Si asi tapa algo de
- * `avoid` (los enemigos a tiro), va al primero de los otros sitios que quepa por arriba o por abajo
- * sin taparlo (de lado se mueve lo justo para no salirse: en el movil no cabe entero a ningun lado);
- * si no hay ninguno, donde iba. Todo en px de la interfaz (ya divididos por la escala).
+ * `avoid` (los enemigos a tiro), va al primero de los otros sitios donde no lo tape: antes los que
+ * caben por arriba o por abajo y despues los que caben movidos lo justo (sin tapar su casilla). De
+ * lado siempre se mueve lo justo para no salirse: en el movil no cabe entero a ningun lado. Si no hay
+ * ninguno, donde iba. Todo en px de la interfaz (ya divididos por la escala).
  */
 export function placeCallout(tile: Anchor, box: Size, screen: Size, avoid: readonly Anchor[] = []): CalloutPlacement {
   const preferred = placeAt(tile, box, screen, preferredSpot(tile, box, screen));
   if (!coversAny(preferred, box, avoid)) return preferred;
-  const free = CALLOUT_SPOTS.filter((spot) => fitsVertically(tile, box, screen, spot.vertical))
-    .map((spot) => placeAt(tile, box, screen, spot))
-    .find((placed) => !coversAny(placed, box, avoid));
+  const fits = (spot: CalloutSpot) => fitsVertically(tile, box, screen, spot.vertical);
+  const spots = [...CALLOUT_SPOTS.filter(fits), ...CALLOUT_SPOTS.filter((spot) => !fits(spot))];
+  const free = spots.map((spot) => placeAt(tile, box, screen, spot)).find((placed) => !coversAny(placed, box, [...avoid, tile]));
   return free ?? preferred;
 }
 

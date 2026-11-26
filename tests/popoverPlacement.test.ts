@@ -74,6 +74,12 @@ describe('placeCallout sin tapar a los enemigos a tiro', () => {
     expect(placed).toMatchObject({ left: 84, top: 384, vertical: 'below' });
   });
 
+  it('si encima tapa y debajo no cabe del todo, debajo movido lo justo para caber', () => {
+    // Debajo iria de 504 a 604 y se sale por 20 px: sube a 484, aun lejos de su casilla (420 a 460).
+    const placed = placeCallout(tile(400, 420), box, screen, [tile(500, 300), tile(300, 300)]);
+    expect(placed).toMatchObject({ left: 420, top: 484, vertical: 'below' });
+  });
+
   it('si tapa algo en todos los sitios, donde iba', () => {
     const everywhere = [tile(500, 200), tile(300, 200), tile(500, 400), tile(300, 400)];
     expect(placeCallout(tile(400, 300), box, screen, everywhere)).toMatchObject({ left: 420, top: 156, vertical: 'above' });
