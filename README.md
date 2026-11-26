@@ -106,8 +106,8 @@ sirve el juego y las salas en la misma direccion (`http://<tu-equipo>:8787`).
 - Pulsa sobre una ciudad, fabrica o aeropuerto tuyo libre para comprar unidades.
 - Despues de mover, "Atras" deshace el movimiento.
 - **Aun no en la vista 3D** (estaban en la 2D): escuadras y ordenes, elegir varias, zona de amenaza,
-  minimapa, tutorial guiado, resumen de ronda, repetir el turno enemigo,
-  varias personas en la misma pantalla y gestos de dos dedos. Las reglas siguen igual.
+  minimapa, tutorial guiado, resumen de ronda, varias personas en la misma pantalla y gestos de
+  dos dedos. Las reglas siguen igual.
 - **Ejército:** cada unidad ocupa puntos de mando (la infantería 1, lo más grande hasta 5) y el
   ejército no puede pasar de 30. Cada ronda se paga de mantenimiento el 10 % del precio de tus unidades
   (si no llega, se paga lo que haya). Las dos reglas se cambian o se quitan en Nueva partida →

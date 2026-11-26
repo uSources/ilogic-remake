@@ -23,11 +23,9 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 19. **Tutorial y paneles de misión.** Las piezas están (el panel, `hud/game/MissionPanel.tsx`, y
     los pasos del tutorial, `campaign.ts`), pero la partida 3D nunca rellena `mission` en la
     interfaz: hoy el objetivo solo sale en la pausa.
-20. **Varias personas en la misma pantalla y repetir el turno enemigo.** Con rival «Persona» (Nueva
-    partida) se juega, pero la vista se queda con el primer equipo (`playerTeam`,
-    `view3d/app/gameStart.ts`) y no sale el aviso de cambio de jugador: `hud/overlays/Handoff.tsx`
-    está hecho y la vista 3D no lo enseña. Repetir el turno enemigo: con el registro de la sesión
-    (`replaySession`), como hacía el 2D.
+20. **Varias personas en la misma pantalla.** Con rival «Persona» (Nueva partida) se juega, pero la
+    vista se queda con el primer equipo (`playerTeam`, `view3d/app/gameStart.ts`) y no sale el aviso
+    de cambio de jugador: `hud/overlays/Handoff.tsx` está hecho y la vista 3D no lo enseña.
 21. **El dedo:** el pellizco está hecho (`controls/gestures/pinch.ts`, dentro de `PointerGestures`),
     pero la vista 3D usa su propio `pointerInput.ts` y no lo tiene (idea 33). Girar con dos dedos,
     aún no (`docs/PLAN-MOVIL.md`).
@@ -185,6 +183,18 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   (`ANIMALS_IN_WEATHER`, `systems/sound/ambience.ts`); falta que un trueno cerca los deje en silencio
   de golpe unos segundos.
 
+## Modo repetición (aparte, sin prisa)
+
+37. **Ver una partida entera otra vez.** El núcleo ya repite: `replaySession(partida, registro)`
+    (`core/session/replay.ts`) vuelve a mandar lo apuntado en `GameSession.log` sobre la partida de
+    antes y sale lo mismo (los dados y la semilla de las decisiones van en ella;
+    `tests/session.test.ts`). Faltaría: un archivo con la partida del principio y el registro, «Ver
+    repetición» al acabar, pausa, velocidad y saltar a un día (simulando sin animar hasta él), y
+    elegir con la vista de qué equipo se mira. Lo difícil: una repetición depende de las reglas y
+    del contenido, así que un cambio de equilibrio la desvía sin avisar (guardar la versión y una
+    huella por día, y parar si no cuadra); y por la red el cliente no tiene la partida entera ni el
+    servidor guarda el registro.
+
 ## Técnico
 
 11. **El teclado en la pantalla final.** En 3D no tiene panel de teclas (los `panels` de
@@ -232,6 +242,9 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   mapa), pero se tomaban sin capturar y con cualquier unidad, y se disputaban aparcando una unidad
   barata. No daban nada que un edificio no dé, así que no se leían en la partida aunque se marcaran.
 - **Piloto automático** (la IA juega tu turno entero): sería ver a la IA jugar contra sí misma.
+- **Repetir el turno enemigo** (lo tenía el 2D; quitado el 26-11-2026): lo que hacen los demás ya se
+  ve animado mientras juegan, y volver a verlo no compensa un botón más. Si vuelve, que sea dentro
+  del modo repetición (idea 37).
 - **«Auto» sin destino y «defender aquí» suelto:** sustituidos por las órdenes con destino de #46;
   costaba entender qué hacían.
 - **Curar cuesta dinero:** se entiende mal que te quiten dinero sin hacer nada; en su lugar, «bajo

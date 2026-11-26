@@ -846,8 +846,9 @@ sequenceDiagram
 ```
 
 - Las acciones **cambian el estado y devuelven sucesos**; las animaciones solo cuentan lo que ya ha
-  pasado. Por eso los turnos ajenos se pueden repetir (el registro de la sesion sobre una copia de
-  la partida de antes, `replaySession`; en 3D aun no hay boton) y acelerar sin cambiar nada.
+  pasado. Por eso una partida se puede repetir (el registro de la sesion sobre una copia de la
+  partida de antes, `replaySession`; en 3D no hay modo repeticion: idea 37 de `docs/IDEAS.md`) y
+  acelerar sin cambiar nada.
 - El azar: los dados de los combates van en la partida (`GameState.dice`, `diceOf(s)`) y las
   decisiones llevan su propio `Rng` con semilla. La misma semilla da el mismo mapa y la misma partida
   IA contra IA (`tests/aiGolden.test.ts` y `npm run huella` lo vigilan); cargar una partida no cambia
@@ -1200,7 +1201,7 @@ src/view3d/
 - **Depuracion**: en la consola, `window.ilogic3d` (`session`, `board`, `controls`, `camera`, `world`,
   `weather`, `stages`, `wrecks`...). Playground de modelos y animaciones: `units3d.html`
   (`src/view3d/playground/`, `window.ilogicPlayground`).
-- **Aun no en 3D** (estaban en el 2D): escuadras, ordenes permanentes, grupos y recuadro, varias personas en la misma pantalla, repetir el turno enemigo,
+- **Aun no en 3D** (estaban en el 2D): escuadras, ordenes permanentes, grupos y recuadro, varias personas en la misma pantalla,
   guardado automatico, tutorial, laboratorio de animaciones y campaña online. Cada uno entra con esta
   forma: su sistema en `systems/`, su dibujo en `engine/` y su puerto en `ports/`.
 - Colores de los lienzos de la interfaz: `PAL_CSS` en `ui/palette.ts` (los mismos que `hud.css`).
