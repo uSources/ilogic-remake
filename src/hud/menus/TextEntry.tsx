@@ -11,6 +11,8 @@ interface TextEntryProps {
   note?: string;
   /** La tecla que hace lo mismo, pequeña junto al titulo. */
   keyHint?: string;
+  /** Apagada: se ve pero no se puede señalar ni elegir; la nota dice por que. */
+  disabled?: boolean;
   sound?: SoundName;
   onHover: () => void;
   onPick: () => void;
@@ -18,11 +20,19 @@ interface TextEntryProps {
 
 /**
  * Una entrada del menu clasico de texto (Inicio, la pausa, el final): el titulo grande sobre el
- * tablero, sin marco, con una linea debajo si la hay. La señalada crece y lleva la flecha delante.
+ * tablero, sin marco, con una linea debajo si la hay. La señalada crece y lleva la flecha delante; la
+ * apagada, en gris y sin flecha.
  */
-export function TextEntry({ sel, cls, title, note, keyHint, sound, onHover, onPick }: TextEntryProps) {
+export function TextEntry({ sel, cls, title, note, keyHint, disabled, sound, onHover, onPick }: TextEntryProps) {
   return (
-    <Btn sel={sel} cls={`text-entry ${cls ?? ''}`} sound={sound} onHover={onHover} onPick={onPick}>
+    <Btn
+      sel={sel && !disabled}
+      cls={`text-entry ${disabled ? 'disabled' : ''} ${cls ?? ''}`}
+      disabled={disabled}
+      sound={sound}
+      onHover={disabled ? undefined : onHover}
+      onPick={onPick}
+    >
       <span class="text-arrow" aria-hidden="true">
         ▸
       </span>

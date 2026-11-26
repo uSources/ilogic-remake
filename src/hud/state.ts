@@ -30,6 +30,10 @@ export interface UIState {
   campaign: {
     items: CampaignItemVM[];
     selected: number;
+    /** «Volver» señalado (la ficha sigue con la mision `selected`). */
+    backSel: boolean;
+    /** «1 de 6 hechas». */
+    progress: string;
     brief: string;
     objective: string;
   };
@@ -147,7 +151,7 @@ export const initialState: UIState = {
   net: null,
   turnClock: null,
   options: null,
-  campaign: { items: [], selected: 0, brief: '', objective: '' },
+  campaign: { items: [], selected: 0, backSel: false, progress: '', brief: '', objective: '' },
   mission: null,
   funds: 0,
   economy: null,

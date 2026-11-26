@@ -1,6 +1,6 @@
 /**
- * Pantalla de la campaña: la lista de misiones con su miniatura, estado y mejor marca, y el resumen
- * de la elegida. Pide a la escena lo poco que usa (`CampaignHost`).
+ * Pantalla de la campaña: el camino de misiones (hechas, la siguiente y las cerradas, que no se pueden
+ * elegir), «Volver» y la ficha de la elegida. Pide a la escena lo poco que usa (`CampaignHost`).
  */
 import type { TerrainPalette } from '../ui/terrainColors';
 import { listStep, type MenuCommand } from '../controls/menu';
@@ -16,7 +16,7 @@ import {
   objectiveText,
   playerObjective,
 } from '../campaign';
-import { ui, type CampaignItemVM, type UIActions } from '../hud/store';
+import { ui, type CampaignItemVM, type MarkVM, type UIActions } from '../hud/store';
 import { settings, t, type TextKey } from '../settings';
 import { mapThumb } from './thumb';
 
@@ -42,8 +42,20 @@ const MISSION_THUMB_PX = 6;
 /** Semilla de los dados de la partida que solo se dibuja en miniatura (no se juega: da igual cual). */
 const THUMB_SEED = 0;
 
+/** Lo que se puede señalar en la lista: una mision abierta (su indice) o «Volver». */
+type CampaignStop = number | 'back';
+
+/** Lo que dice cada mision debajo de su nombre, despues de su objetivo: «hecha en 9 días», «la siguiente»... */
+function statusNote(status: MarkVM, best: number | null): string {
+  if (status === 'open') return t('missionNext');
+  if (status === 'locked') return t('missionLocked');
+  return best === null ? t('missionDone') : t('missionDoneIn').replace('{n}', String(best));
+}
+
 export class CampaignScreen {
   private selected = 0;
+  /** «Volver» señalado (la ficha sigue con la ultima mision elegida). */
+  private onBack = false;
   /** Miniaturas ya dibujadas, por indice de mision (se guardan mientras dure el juego). */
   private thumbs = new Map<number, string>();
 
@@ -52,15 +64,19 @@ export class CampaignScreen {
   actions(): Partial<UIActions> {
     return {
       campaignHover: (index: number) => {
-        this.selected = index;
+        this.moveTo(index);
         this.publish();
       },
       campaignPick: (index: number) => {
-        if (this.selected !== index) {
-          this.selected = index;
+        if (this.onBack || this.selected !== index) {
+          this.moveTo(index);
           return this.publish();
         }
         this.startSelected();
+      },
+      campaignBackHover: () => {
+        this.moveTo('back');
+        this.publish();
       },
       campaignBack: () => this.host.toHome(),
     };
@@ -79,6 +95,7 @@ export class CampaignScreen {
   open(): void {
     const next = nextMissionIndex();
     this.selected = next >= 0 ? next : 0;
+    this.onBack = false;
     ui.set({ screen: 'campaign' });
     this.publish();
   }
@@ -86,26 +103,60 @@ export class CampaignScreen {
   publish(): void {
     const done = completedMissions();
     const lang = settings.lang;
-    const items: CampaignItemVM[] = campaignMissions().map((mission, index) => ({
-      id: mission.id,
-      title: mission.title[lang],
-      status: done.has(mission.id) ? 'done' : missionUnlocked(index, done) ? 'open' : 'locked',
-      thumb: this.missionThumb(index),
-      kind: t(OBJECTIVE_KIND_LABEL[playerObjective(mission)?.kind ?? 'hq']),
-      best: bestDays(mission.id),
-    }));
+    const items = campaignMissions().map((mission, index): CampaignItemVM => {
+      const status = done.has(mission.id) ? 'done' : missionUnlocked(index, done) ? 'open' : 'locked';
+      const kind = t(OBJECTIVE_KIND_LABEL[playerObjective(mission)?.kind ?? 'hq']);
+      const best = bestDays(mission.id);
+      return {
+        id: mission.id,
+        title: mission.title[lang],
+        status,
+        thumb: this.missionThumb(index),
+        kind,
+        best,
+        note: `${kind} · ${statusNote(status, best)}`,
+      };
+    });
     const selected = campaignMissions()[this.selected]!;
-    ui.set({ campaign: { items, selected: this.selected, brief: selected.brief[lang], objective: objectiveText(selected) } });
+    const progress = t('campaignProgress').replace('{n}', String(done.size)).replace('{total}', String(items.length));
+    ui.set({
+      campaign: {
+        items,
+        selected: this.selected,
+        backSel: this.onBack,
+        progress,
+        brief: selected.brief[lang],
+        objective: objectiveText(selected),
+      },
+    });
   }
 
   command(command: MenuCommand): void {
     const step = listStep(command);
     if (step) {
-      this.selected = (this.selected + step + campaignMissions().length) % campaignMissions().length;
+      this.moveBy(step);
       return this.publish();
     }
-    if (command.kind === 'ok' && !command.repeat) return this.startSelected();
+    if (command.kind === 'ok' && !command.repeat) return this.onBack ? this.host.toHome() : this.startSelected();
     if (command.kind === 'back') this.host.toHome();
+  }
+
+  /** Las misiones abiertas, en orden, y «Volver» al final: lo que recorren las flechas. */
+  private stops(): CampaignStop[] {
+    const done = completedMissions();
+    const open = campaignMissions().flatMap((_, index) => (missionUnlocked(index, done) ? [index] : []));
+    return [...open, 'back'];
+  }
+
+  private moveBy(step: number): void {
+    const stops = this.stops();
+    const current = stops.indexOf(this.onBack ? 'back' : this.selected);
+    this.moveTo(stops[(current + step + stops.length) % stops.length]!);
+  }
+
+  private moveTo(stop: CampaignStop): void {
+    this.onBack = stop === 'back';
+    if (stop !== 'back') this.selected = stop;
   }
 
   private startSelected(): void {
