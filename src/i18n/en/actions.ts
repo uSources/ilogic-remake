@@ -4,6 +4,12 @@ import type { Translation } from '../translation';
 export const actions: Translation<typeof es> = {
   attack: 'Attack',
   capture: 'Capture',
+  attackTargets: '{n} in range',
+  captureNoBuilding: 'no building here',
+  captureAllied: 'already on your side',
+  captureNotCapturer: 'this unit can’t capture',
+  targetPick: 'Pick who to attack',
+  otherTarget: 'Other target',
   unload: 'Unload',
   supply: 'Repair',
   wait: 'Wait',

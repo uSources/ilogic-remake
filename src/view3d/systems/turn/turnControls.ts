@@ -16,7 +16,7 @@
 import type { SoundStage } from '../../ports/stage';
 import { availableActions, groupMoveOrder, groupMoveStep } from '../../../core/actions';
 import { boxSelect, clickSelect, type ClickMods, type Selection } from '../../../controls/selection';
-import { samePos } from '../../../core/geom';
+import { posOf, samePos } from '../../../core/geom';
 import type { Building, GameAction, GameEvent, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
 import type { GroupMode } from '../../../controls/inputCommands';
 import { exactSquad, squadById, squadByKey, squadUnits, SQUAD_NAME_MAX } from '../../../core/squads';
@@ -38,20 +38,33 @@ import {
   type MoveRange,
 } from '../../../core/rules';
 import { showBanner, showToast, ui, type MenuItemVM, type StandingVM } from '../../../hud/store';
-import { buyItem, optionItems } from './menuItems';
+import { buyItem, optionItems, targetItems } from './menuItems';
 import { fmtNum, nameOf, settings, t } from '../../../settings';
 import { buyBlockedText } from '../../../ui/hudModels';
 import { buildingTypeOf, unitTypeOf } from '../../../core/gameContent';
 import { teamState } from '../../../core/teams';
 import { endSound, selectSound } from '../sound/soundCues';
 import { feet } from '../events/steps';
-import { attackPlan, type AttackPlan } from './attackPlan';
+import { attackPlan, targetsInReach, type AttackPlan } from './attackPlan';
 import type { EventPlayer, MovePreview, ScreenView, TileMarks } from '../../ports/turn';
 import { arcShotOf, pathFor, previewAt } from './movePreview';
 import { attackReachTiles } from './attackReach';
 import { clickIntent, travelOrder, type ClickIntent } from './clickIntent';
-import { chipOptions, groupRadialOptions, optionAction, orderForTile, ORDER_KINDS, radialOptions, type UnitOption } from './unitOptions';
+import {
+  chipChoices,
+  choiceOf,
+  groupRadialOptions,
+  isEnabled,
+  optionAction,
+  orderForTile,
+  ORDER_KINDS,
+  radialOptions,
+  type UnitChoice,
+  type UnitOption,
+} from './unitOptions';
 import { isSelectable, pickedFrom } from './selection';
+import { pointAt, pointedTarget, startPick, stepPick, targetEntries, type TargetPick } from './targetPick';
+import type { MenuCommand } from '../../../controls/menu';
 import type { MatchRunner } from './matchRunner';
 
 /** Un clic sin teclas. */
@@ -63,10 +76,16 @@ type Mode =
   | { kind: 'idle' }
   /**
    * Una unidad propia elegida: `range`, a donde llega (null si ya no puede moverse); `trail`, el camino
-   * trazado con el cursor; `chips`, sus fichas; `radial`, su rueda si esta abierta; `selected`, la
-   * opcion señalada (de la rueda si esta abierta; si no, de las fichas).
+   * trazado con el cursor; `chips`, lo de su bocadillo; `radial`, su rueda si esta abierta; `selected`,
+   * la opcion señalada (de la rueda si esta abierta; si no, del bocadillo).
    */
-  | { kind: 'unit'; unit: Unit; range: MoveRange | null; trail: Pos[]; chips: UnitOption[]; radial: UnitOption[] | null; selected: number }
+  | { kind: 'unit'; unit: Unit; range: MoveRange | null; trail: Pos[]; chips: UnitChoice[]; radial: UnitOption[] | null; selected: number }
+  /**
+   * Elegir a quien ataca la unidad (tras «Atacar» en su bocadillo; targetPick.ts): `pick`, los enemigos
+   * a tiro y el señalado; `selected`, la entrada señalada del bocadillo; `range` y `trail`, como al
+   * tenerla elegida.
+   */
+  | { kind: 'target'; unit: Unit; range: MoveRange | null; trail: Pos[]; pick: TargetPick; selected: number }
   /** Varias unidades propias elegidas (Mayusculas + clic, doble clic o recuadro): un clic las lleva o ataca; su rueda, ordenes y escuadras. */
   | { kind: 'group'; units: Unit[]; radial: UnitOption[] | null; selected: number }
   /** Elegir la casilla de la orden `order` para estas unidades. */
@@ -76,6 +95,7 @@ type Mode =
   | { kind: 'buy'; building: Building; options: BuyOption[]; selected: number };
 
 type UnitMode = Extract<Mode, { kind: 'unit' }>;
+type TargetMode = Extract<Mode, { kind: 'target' }>;
 type GroupMode3D = Extract<Mode, { kind: 'group' }>;
 
 /** El menu abierto, para la interfaz (junto a la casilla `at`). */
@@ -94,6 +114,8 @@ export interface MenuView {
   items: MenuItemVM[];
   selected: number;
   at: Pos;
+  /** Lo que el bocadillo no tapa si puede: los enemigos a tiro (de la unidad elegida, o a quien elegir). */
+  avoid?: Pos[];
 }
 
 export interface TurnHost {
@@ -136,6 +158,8 @@ export class TurnControls {
   private isOthersDue = false;
   /** Se hace y se anima una accion propia (`perform`): las piezas no se ponen al dia hasta que acaba. */
   private isActing = false;
+  /** Los enemigos marcados en rojo ahora (showMarks): el bocadillo no los tapa si puede. */
+  private markedTargets: Pos[] = [];
 
   constructor(private readonly host: TurnHost) {}
 
@@ -245,6 +269,8 @@ export class TurnControls {
         return this.tapIdle(pos);
       case 'unit':
         return this.tapWithUnit(mode, pos);
+      case 'target':
+        return this.tapTarget(mode, pos);
       case 'group':
         return this.tapWithGroup(mode.units, pos);
       case 'order':
@@ -261,7 +287,7 @@ export class TurnControls {
   /** Las unidades elegidas ahora (para el panel de lo elegido). */
   selectedUnits(): readonly Unit[] {
     const mode = this.mode;
-    if (mode.kind === 'unit') return [mode.unit];
+    if (mode.kind === 'unit' || mode.kind === 'target') return [mode.unit];
     return mode.kind === 'group' || mode.kind === 'order' ? mode.units : [];
   }
 
@@ -455,10 +481,11 @@ export class TurnControls {
     const unit = this.onBoardNow(chosen);
     if (!unit || !canStillAct(unit)) return this.setMode({ kind: 'idle' });
     const range = this.rangeOf(unit);
-    const chips = chipOptions(this.s, this.host.viewer, unit);
+    const chips = chipChoices(this.s, this.host.viewer, unit, range);
     if (this.hasNothingLeft(unit, range, chips)) return void this.waitThere(unit);
     // Encima de un edificio que se puede capturar, lo normal es capturar (Intro lo hace).
-    const selected = Math.max(0, chips.indexOf('capture'));
+    const capture = chips.findIndex((choice) => choice.option === 'capture' && isEnabled(choice));
+    const selected = Math.max(0, capture);
     this.setMode({ kind: 'unit', unit, range, trail: [{ x: unit.x, y: unit.y }], chips, radial: null, selected });
   }
 
@@ -469,11 +496,12 @@ export class TurnControls {
   }
 
   /**
-   * Ya se ha movido, no puede moverse mas y no tiene fichas ni a quien atacar desde alli (y la
-   * persona quiere que espere sola: opcion «Esperar sola al soltar», `settings.autoWait`).
+   * Ya se ha movido, no puede moverse mas y no le queda nada en el bocadillo (ni a quien atacar desde
+   * alli: atacar va en el) que se pueda elegir (y la persona quiere que espere sola: opcion «Esperar
+   * sola al soltar», `settings.autoWait`).
    */
-  private hasNothingLeft(unit: Unit, range: MoveRange | null, chips: readonly UnitOption[]): boolean {
-    return settings.autoWait && unit.turnState === 'moved' && !range && !chips.length && !attackTargetsFromRange(this.s, unit, null).length;
+  private hasNothingLeft(unit: Unit, range: MoveRange | null, chips: readonly UnitChoice[]): boolean {
+    return settings.autoWait && unit.turnState === 'moved' && !range && !chips.some(isEnabled);
   }
 
   /** Esperar implicito: la unidad acaba aqui su turno (se puede deshacer su movimiento con Ctrl+Z). */
@@ -536,15 +564,102 @@ export class TurnControls {
   /** El plan de ataque a un enemigo visible en `pos` (null si no hay o no se le puede atacar). */
   private planAt(unit: Unit, range: MoveRange | null, pos: Pos): AttackPlan | null {
     const target = attackTargets(this.s, unit).find((candidate) => samePos(candidate, pos));
-    const reachable = attackTargetsFromRange(this.s, unit, range).find((candidate) => samePos(candidate, pos));
+    const reachable = targetsInReach(this.s, unit, range).find((candidate) => samePos(candidate, pos));
     const enemy = target ?? reachable;
     return enemy ? attackPlan(this.s, unit, range, enemy) : null;
   }
 
-  /** Lo que la interfaz enseña como prevision de combate al pasar por `pos` (null si no hay combate ahi). */
-  forecastAt(pos: Pos): AttackPlan | null {
+  /**
+   * Lo que la interfaz enseña como prevision de combate con el cursor en `pos`: el combate de esa
+   * casilla o, eligiendo a quien atacar, el del señalado (tambien con el teclado). null si no hay.
+   */
+  forecastAt(pos: Pos | null): AttackPlan | null {
     const mode = this.mode;
-    return mode.kind === 'unit' ? this.planAt(mode.unit, mode.range, pos) : null;
+    if (mode.kind === 'target') return this.pointedPlan(mode);
+    return mode.kind === 'unit' && pos ? this.planAt(mode.unit, mode.range, pos) : null;
+  }
+
+  // ---- Elegir a quien atacar ----
+
+  /** «Atacar» en el bocadillo: elegir a cual de los que tiene a tiro, con el mas cercano señalado. */
+  private startPicking(unit: Unit): void {
+    const range = this.rangeOf(unit);
+    const pick = startPick(this.s, unit, range);
+    if (!pick) return;
+    this.setMode({ kind: 'target', unit, range, trail: [posOf(unit)], pick, selected: 0 });
+    this.aimAtPointed();
+  }
+
+  /** Eligiendo a quien atacar, las teclas son suyas (un panel encima del mapa, keyInput.ts). */
+  get isPickingTarget(): boolean {
+    return this.mode.kind === 'target' && !this.isBusy;
+  }
+
+  /** Una tecla eligiendo a quien atacar: ← → otro enemigo, ↑ ↓ por el bocadillo, Intro elige y Esc vuelve. */
+  targetCommand(command: MenuCommand): void {
+    const mode = this.mode;
+    if (mode.kind !== 'target') return;
+    if (command.kind === 'move' && command.dx) return this.pointNext(mode, command.dx);
+    if (command.kind === 'move' && command.dy) return this.hoverMenu(this.cycledEntry(mode, command.dy));
+    if (command.kind === 'ok') return this.pickMenu(mode.selected);
+    if (command.kind === 'back') this.select(mode.unit);
+  }
+
+  /** La entrada del bocadillo de al lado de la señalada (dando la vuelta). */
+  private cycledEntry(mode: TargetMode, step: -1 | 1): number {
+    const count = targetEntries(mode.pick).length;
+    return (mode.selected + step + count) % count;
+  }
+
+  private async pickTargetEntry(mode: TargetMode, index: number): Promise<void> {
+    const entry = targetEntries(mode.pick)[index];
+    if (entry === 'attack') return this.attackPointed(mode);
+    if (entry === 'nextTarget') return this.pointNext(mode, 1);
+    if (entry === 'back') this.select(mode.unit);
+  }
+
+  private pointNext(mode: TargetMode, step: -1 | 1): void {
+    this.mode = { ...mode, pick: stepPick(mode.pick, step) };
+    this.aimAtPointed();
+  }
+
+  /** El raton sobre un enemigo a tiro lo señala (sobre otra casilla, sigue el que estaba). */
+  private pointAtTile(mode: TargetMode, pos: Pos | null): void {
+    if (pos) this.mode = { ...mode, pick: pointAt(mode.pick, pos) };
+    this.aimAtPointed();
+  }
+
+  /** Tocar un enemigo a tiro le ataca; tocar otra casilla vuelve a la unidad. */
+  private async tapTarget(mode: TargetMode, pos: Pos): Promise<void> {
+    const isTarget = mode.pick.targets.some((target) => samePos(target, pos));
+    if (!isTarget) return this.select(mode.unit);
+    await this.attackPointed({ ...mode, pick: pointAt(mode.pick, pos) });
+  }
+
+  /** El combate con el señalado (null si ya no se puede). */
+  private pointedPlan({ unit, range, pick }: TargetMode): AttackPlan | null {
+    const target = pointedTarget(pick);
+    return target ? attackPlan(this.s, unit, range, target) : null;
+  }
+
+  /** El camino hasta donde dispararia al señalado y el visor del disparo (la prevision la publica la interfaz). */
+  private aimAtPointed(): void {
+    const mode = this.mode;
+    if (mode.kind !== 'target') return;
+    const plan = this.pointedPlan(mode);
+    this.host.preview.aim(arcShotOf(plan));
+    if (!plan || !mode.range) return this.host.preview.show(null);
+    const { trail, look } = previewAt(mode.unit.uid, mode.range, mode.trail, plan.target, plan.from);
+    this.mode = { ...mode, trail };
+    this.host.preview.show(look);
+  }
+
+  /** Ataca al señalado, moviendose antes si hace falta, como al tocarlo con la unidad elegida. */
+  private async attackPointed(mode: TargetMode): Promise<void> {
+    const plan = this.pointedPlan(mode);
+    if (!plan) return this.select(mode.unit);
+    this.setMode({ kind: 'idle' });
+    if (await this.moveAndAttack(plan, mode.range, mode.trail)) this.select(mode.unit);
   }
 
   // ---- Acciones ----
@@ -630,6 +745,8 @@ export class TurnControls {
     switch (mode.kind) {
       case 'unit':
         return this.unitMenu(mode);
+      case 'target':
+        return this.targetPrompt(mode);
       case 'unload': {
         const title = t('unloadPick').replace('{name}', nameOf(unitTypeOf(this.s, mode.passenger)));
         return { kind: 'prompt', title, items: [{ id: 'back', label: t('back') }], selected: 0, at: mode.unit };
@@ -647,19 +764,26 @@ export class TurnControls {
     }
   }
 
-  /** La rueda si esta abierta; si no, las fichas (si tiene alguna). */
+  /** La rueda si esta abierta; si no, el bocadillo, si hay algo que se pueda elegir (solo lo apagado no lo abre). */
   private unitMenu({ unit, chips, radial, selected }: UnitMode): MenuView | null {
-    const options = radial ?? chips;
-    if (!options.length) return null;
+    const choices = radial?.map(choiceOf) ?? chips;
+    if (!choices.some(isEnabled)) return null;
     const title = nameOf(unitTypeOf(this.s, unit));
-    return { kind: radial ? 'radial' : 'chips', title, items: optionItems(this.s, unit, options), selected, at: unit };
+    const items = optionItems(this.s, unit, choices);
+    return { kind: radial ? 'radial' : 'chips', title, items, selected, at: unit, avoid: this.markedTargets };
+  }
+
+  /** Elegir a quien atacar: el aviso en el bocadillo de la unidad, sin tapar a los enemigos a tiro. */
+  private targetPrompt({ unit, pick, selected }: TargetMode): MenuView {
+    const items = targetItems(targetEntries(pick));
+    return { kind: 'prompt', title: t('targetPick'), items, selected, at: unit, avoid: this.markedTargets };
   }
 
   private groupRadial({ units, radial, selected }: GroupMode3D): MenuView | null {
     const [first] = units;
     if (!radial?.length || !first) return null;
     const title = `${t('pickedTitle')} · ${units.length}`;
-    return { kind: 'radial', title, items: optionItems(this.s, first, radial), selected, at: first };
+    return { kind: 'radial', title, items: optionItems(this.s, first, radial.map(choiceOf)), selected, at: first };
   }
 
   private buyMenu(building: Building, options: readonly BuyOption[], selected: number): MenuView {
@@ -672,30 +796,39 @@ export class TurnControls {
 
   hoverMenu(index: number): void {
     const mode = this.mode;
-    if (mode.kind !== 'unit' && mode.kind !== 'group' && mode.kind !== 'buy') return;
+    if (mode.kind !== 'unit' && mode.kind !== 'target' && mode.kind !== 'group' && mode.kind !== 'buy') return;
     this.setMode({ ...mode, selected: index });
   }
 
   pickMenu(index: number): void {
     if (this.isBusy) return;
     const mode = this.mode;
-    if (mode.kind === 'unit') void this.pickOption([mode.unit], (mode.radial ?? mode.chips)[index]);
+    if (mode.kind === 'unit') void this.pickOption([mode.unit], this.unitOptionAt(mode, index));
+    if (mode.kind === 'target') void this.pickTargetEntry(mode, index);
     if (mode.kind === 'group') void this.pickOption(mode.units, mode.radial?.[index]);
     if (mode.kind === 'unload') this.select(mode.unit);
     if (mode.kind === 'order') this.choose(this.selection);
     if (mode.kind === 'buy') void this.pickBuy(mode.building, mode.options[index]);
   }
 
+  /** La opcion `index` de la rueda abierta o del bocadillo (ninguna si esta apagada: no se elige). */
+  private unitOptionAt({ radial, chips }: UnitMode, index: number): UnitOption | undefined {
+    if (radial) return radial[index];
+    const choice = chips[index];
+    return choice && isEnabled(choice) ? choice.option : undefined;
+  }
+
   /** Elegir la opcion señalada (Intro). */
   acceptMenu(): void {
     const mode = this.mode;
-    if (mode.kind === 'unit' || mode.kind === 'group' || mode.kind === 'buy') this.pickMenu(mode.selected);
+    if (mode.kind === 'unit' || mode.kind === 'target' || mode.kind === 'group' || mode.kind === 'buy') this.pickMenu(mode.selected);
   }
 
   /** Una opcion (ficha o rueda) con estas unidades (una o un grupo). */
   private async pickOption(units: readonly Unit[], option: UnitOption | undefined): Promise<void> {
     const [first] = units;
     if (!option || !first) return;
+    if (option === 'attack') return this.startPicking(first);
     if (option === 'unload') return this.startUnloading(first);
     if (option === 'squadRename') return this.openRename(units);
     if (option === 'squadSelect' && first.squad != null) return this.selectSquad(first.squad);
@@ -739,7 +872,7 @@ export class TurnControls {
     if (mode.kind === 'idle') return false;
     if (mode.kind === 'unit' && lastUndoableMove(this.s)?.uid === mode.unit.uid)
       void this.actThenSelect(mode.unit, { kind: 'undoMove', uid: mode.unit.uid });
-    else if (mode.kind === 'unload') this.select(mode.unit);
+    else if (mode.kind === 'unload' || mode.kind === 'target') this.select(mode.unit);
     else if (mode.kind === 'order') this.choose(this.selection);
     else this.setMode({ kind: 'idle' });
     return true;
@@ -817,6 +950,7 @@ export class TurnControls {
   /** La casilla señalada (raton encima): con una unidad elegida que aun se mueve, por donde iria y a donde llegaria. */
   hover(pos: Pos | null): void {
     const mode = this.mode;
+    if (mode.kind === 'target' && !this.isBusy) return this.pointAtTile(mode, pos);
     if (mode.kind !== 'unit' || !pos || this.isBusy) return this.clearPreview();
     const plan = this.planAt(mode.unit, mode.range, pos);
     this.host.preview.aim(arcShotOf(plan));
@@ -847,7 +981,8 @@ export class TurnControls {
     this.clearPreview();
     marks.showReach(this.reachTiles());
     marks.showAttackReach(mode.kind === 'unit' ? attackReachTiles(this.s, mode.unit, mode.range) : []);
-    marks.showTargets(this.targetTiles());
+    this.markedTargets = this.targetTiles();
+    marks.showTargets(this.markedTargets);
     marks.select('unit' in mode ? mode.unit : 'building' in mode ? mode.building : null);
     marks.showGroup(mode.kind === 'group' || mode.kind === 'order' ? mode.units : []);
   }
@@ -859,18 +994,13 @@ export class TurnControls {
     return mode.kind === 'unit' && mode.range ? reachableTiles(mode.range) : [];
   }
 
-  /** En rojo: a quien puede atacar la elegida (o alguna del grupo) este turno. */
+  /** En rojo: a quien puede atacar la elegida (o alguna del grupo) este turno; eligiendo a quien, esos. */
   private targetTiles(): Pos[] {
     const mode = this.mode;
-    if (mode.kind === 'unit') return attackTargetsFromRange(this.s, mode.unit, mode.range);
+    if (mode.kind === 'unit') return targetsInReach(this.s, mode.unit, mode.range);
+    if (mode.kind === 'target') return [...mode.pick.targets];
     if (mode.kind !== 'group') return [];
-    const targets = mode.units.flatMap((unit) => attackTargetsFromRange(this.s, unit, this.rangeOf(unit)));
+    const targets = mode.units.flatMap((unit) => targetsInReach(this.s, unit, this.rangeOf(unit)));
     return [...new Set(targets)];
   }
-}
-
-/** Los enemigos visibles a los que podria llegar a atacar este turno (moviendose o no). */
-function attackTargetsFromRange(s: Parameters<typeof attackTargets>[0], unit: Unit, range: MoveRange | null): Unit[] {
-  const enemies = s.units.filter((other) => other.team !== unit.team);
-  return enemies.filter((enemy) => attackPlan(s, unit, range, enemy) !== null);
 }

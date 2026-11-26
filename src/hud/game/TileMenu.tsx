@@ -3,15 +3,20 @@ import { TextEntry } from '../menus/TextEntry';
 import { ui } from '../store';
 import type { MenuItemVM, MenuVM } from '../vm/menus';
 
-/** Una opcion en texto: su dibujo (si tiene), su nombre y debajo lo que diga (en capturar, los puntos). */
+/**
+ * Una opcion en texto: su dibujo (si tiene), su nombre y debajo lo que diga (en atacar, cuantos hay a
+ * tiro; en capturar, los puntos; si esta apagada, por que).
+ */
 function TileMenuEntry({ item, index, isSelected }: { item: MenuItemVM; index: number; isSelected: boolean }) {
   return (
     <TextEntry
       sel={isSelected}
-      cls={`${item.danger ? 'danger' : ''} ${item.disabled ? 'disabled' : ''}`}
+      cls={item.danger ? 'danger' : ''}
+      disabled={item.disabled}
       icon={item.icon}
       title={item.label}
       note={item.hint}
+      keyHint={item.key}
       onHover={() => ui.actions.menuHover(index)}
       onPick={() => ui.actions.menuPick(index)}
     />
@@ -27,7 +32,7 @@ function TileMenuEntry({ item, index, isSelected }: { item: MenuItemVM; index: n
 export function TileMenu({ menu }: { menu: MenuVM }) {
   const selected = menu.items[menu.selected];
   return (
-    <Callout anchor={menu.anchor} class={`tile-menu tile-menu-${menu.kind}`} label={menu.title} role="menu">
+    <Callout anchor={menu.anchor} avoid={menu.avoid} class={`tile-menu tile-menu-${menu.kind}`} label={menu.title} role="menu">
       {menu.title && <span class="callout-title">{menu.title}</span>}
       {menu.subtitle && <span class="callout-sub">{menu.subtitle}</span>}
       <div class="text-list callout-list">

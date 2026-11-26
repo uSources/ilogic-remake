@@ -10,6 +10,8 @@ export type CalloutTone = 'gold' | 'enemy';
 interface CalloutProps {
   /** La casilla de la que sale (px de pantalla). */
   anchor: Anchor;
+  /** Lo que no tapa si cabe en otro sitio (px de pantalla): los enemigos a tiro. */
+  avoid?: readonly Anchor[];
   tone?: CalloutTone;
   class?: string;
   label?: string;
@@ -26,7 +28,7 @@ const samePlace = (a: CalloutPlacement, b: CalloutPlacement): boolean =>
  * `placeCallout`). Se mide en cada pintado (su tamaño cambia); hasta entonces, fuera de la vista.
  * Siempre se ve de que casilla sale, aunque la ficha se aparte para no tapar.
  */
-export function Callout({ anchor, tone = 'gold', class: cls = '', label, role = 'dialog', children }: CalloutProps) {
+export function Callout({ anchor, avoid = [], tone = 'gold', class: cls = '', label, role = 'dialog', children }: CalloutProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<CalloutPlacement | null>(null);
   const tile = scaled(anchor);
@@ -35,7 +37,7 @@ export function Callout({ anchor, tone = 'gold', class: cls = '', label, role = 
     if (!box) return;
     const size = { width: box.offsetWidth, height: box.offsetHeight };
     const screen = { width: window.innerWidth / zoom(), height: window.innerHeight / zoom() };
-    const next = placeCallout(tile, size, screen);
+    const next = placeCallout(tile, size, screen, avoid.map(scaled));
     if (!place || !samePlace(place, next)) setPlace(next);
   });
   const shape = place ? `${place.side} ${place.vertical}` : '';

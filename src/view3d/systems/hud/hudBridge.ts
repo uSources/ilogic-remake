@@ -81,12 +81,15 @@ function tileCard(textures: GameImages, s: GameState, viewer: TeamId, moment: Hu
   return tileVM(textures, s, moment.cursor, { viewer, vis: visibility(s, viewer), hidden: NOTHING_HIDDEN });
 }
 
+/** Un enemigo a tiro y, encima, otro tanto para la cifra de la prevision que sube de el (Forecast.tsx). */
+const withRoomAbove = (overhead: Anchor): Anchor => ({ ...overhead, y: overhead.y - overhead.h, h: overhead.h * 2 });
+
 function menuOf(moment: HudMoment): UIState['menu'] {
   const menu = moment.menu;
   // La pausa se abre tambien mientras juegan los demas; los menus del tablero, no.
   if (!menu || (moment.busy && menu.kind !== 'game')) return null;
-  const { at, ...shown } = menu;
-  return { ...shown, anchor: moment.anchorOf(at) };
+  const { at, avoid, ...shown } = menu;
+  return { ...shown, anchor: moment.anchorOf(at), ...(avoid ? { avoid: avoid.map((pos) => withRoomAbove(moment.overheadOf(pos))) } : {}) };
 }
 
 function forecastOf(textures: GameImages, s: GameState, viewer: TeamId, moment: HudMoment): UIState['forecast'] {

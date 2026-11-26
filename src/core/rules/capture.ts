@@ -59,14 +59,26 @@ export function dropStaleCaptures(s: GameState): GameEvent[] {
   return events;
 }
 
+/** Por que una unidad no podria capturar en una casilla: no es de las que capturan, no hay edificio o ya es de su alianza. */
+export type CaptureBlock = 'notCapturer' | 'noBuilding' | 'allied';
+
+/**
+ * Por que la unidad no podria capturar el edificio de `at` si estuviera alli (null: si podria; solo
+ * los neutrales y los enemigos). No mira si le queda turno, como canCaptureAt.
+ */
+export function captureBlockAt(s: GameState, unit: Unit, at: Pos): CaptureBlock | null {
+  if (!isCapturer(s, unit)) return 'notCapturer';
+  const building = buildingAt(s, at);
+  if (!building) return 'noBuilding';
+  return building.owner === null || isHostile(s, building.owner, unit.team) ? null : 'allied';
+}
+
 /**
  * La unidad podria capturar el edificio de `at` si estuviera alli (neutral o enemigo: los de la propia
  * alianza, no). No mira si le queda turno: para lo que pasaria al llevarla alli (la escena).
  */
 export function canCaptureAt(s: GameState, unit: Unit, at: Pos): boolean {
-  if (!isCapturer(s, unit)) return false;
-  const building = buildingAt(s, at);
-  return !!building && (building.owner === null || isHostile(s, building.owner, unit.team));
+  return captureBlockAt(s, unit, at) === null;
 }
 
 /** Se puede capturar ya el edificio de debajo: le queda turno y podria (canCaptureAt). */

@@ -29,7 +29,7 @@ import { installHudActions, publishHud } from '../systems/hud/hudBridge';
 import { MinimapBridge, toggleMinimap } from '../systems/hud/minimapBridge';
 import { MatchEnd } from '../systems/hud/matchEnd';
 import { PauseMenu } from '../systems/hud/matchMenus';
-import { installKeys } from '../systems/input/keyInput';
+import { installKeys, type KeyPanel } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
 import { TurnControls } from '../systems/turn/turnControls';
 import { showDestinations } from '../systems/orders/destinationFlags';
@@ -102,7 +102,7 @@ export function playMatch(
    */
   function publish(): void {
     if (matchEnd.isOpen) return;
-    const forecast = cursor ? controls.forecastAt(cursor) : null;
+    const forecast = controls.forecastAt(cursor);
     board.previewHit(hitLookOf(state, forecast));
     threat.focus(controls.busy ? null : threatFocus());
     const menu = pause.view(cursor ?? PAUSE_ANCHOR) ?? controls.menu();
@@ -342,13 +342,21 @@ export function playMatch(
     boxSelect: unlessOver((box: ScreenBox, add: boolean) => controls.selectBox(scene.tilesInBox(ownUnitsOnBoard(), box), add)),
     onFrame: (listener) => scene.onFrame(listener),
   });
+  /** Eligiendo a quien atacar (tras «Atacar» en el bocadillo), las teclas son suyas: ← → otro enemigo, Intro, Esc. */
+  const targetKeys: KeyPanel = {
+    get isOpen() {
+      return controls.isPickingTarget;
+    },
+    context: () => 'target',
+    command: (command) => controls.targetCommand(command),
+  };
   installKeys({
     camera,
     onFrame: (listener) => scene.onFrame(listener),
     // El cambio de jugador, el final, la pausa, las opciones y la ayuda se abren encima del mapa (el
     // cambio de jugador, encima de todo; las opciones, tambien encima de la pausa: van antes): mientras,
-    // las teclas son suyas.
-    panels: [seat, matchEnd, helpPanel, options, pause],
+    // las teclas son suyas. Elegir a quien atacar, tambien (y la pausa, por encima).
+    panels: [seat, matchEnd, helpPanel, options, pause, targetKeys],
     sounds: audio.sounds,
     endTurn: () => endGuard.press(),
     nextUnit: nextIdle,
@@ -366,7 +374,7 @@ export function playMatch(
   });
   playEachFrame({ scene, camera, audio, ambience, minimap }, () => {
     // Los bocadillos (menu, prevision) siguen a su casilla mientras la camara se mueve.
-    if (controls.menu() || (cursor && controls.forecastAt(cursor))) publish();
+    if (controls.menu() || controls.forecastAt(cursor)) publish();
   });
   scene.start();
   ui.set({ screen: 'game' });
