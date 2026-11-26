@@ -50,6 +50,8 @@
   --menu-title: #d6cbe3;
   --menu-note: #b8aecb;
   --menu-tab: #e8dff5;
+  --menu-danger: #ff8a83;
+  --menu-own: #7fb2ff;
   /* Paginas del menu (Novedades, Aprender, Opciones): la noche casi tapa el tablero; fichas crema con
      sombra negra, su etiqueta en ocre y el texto de leer un poco mas suave que la tinta. */
   --page-veil: rgba(18, 21, 28, 0.9);

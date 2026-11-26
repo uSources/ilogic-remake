@@ -78,61 +78,8 @@ html.reduce-motion #game.menu-stage canvas {
   flex: none;
   filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.5));
 }
-.home-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.home-entry {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 6px 0;
-  background: none;
-  border: 0;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.home-arrow {
-  width: 28px;
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 30px;
-  color: var(--menu-gold);
-  visibility: hidden;
-}
-.home-entry.sel .home-arrow {
-  visibility: visible;
-}
-.home-entry-text {
-  display: flex;
-  flex-direction: column;
-}
-.home-entry-title {
-  font-family: var(--display);
-  font-weight: 700;
-  font-size: 36px;
-  line-height: 1;
-  color: var(--menu-title);
-  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7);
-  transition: font-size 0.1s ease-out;
-}
-.home-entry.sel .home-entry-title {
-  font-size: 44px;
-  color: var(--panel);
-}
-.home-entry-note {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--menu-note);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
-}
-.home-entry.sel .home-entry-note {
-  color: var(--menu-gold);
-}
 /* Te toca en una partida en linea: la chapa amarilla de «¡Te toca!» (la de los numeros, toy.css). */
-.home-entry.urgent .home-entry-note {
+.home .text-entry.urgent .text-entry-note {
   align-self: flex-start;
   margin-top: 4px;
   padding: 1px 10px;
@@ -141,17 +88,6 @@ html.reduce-motion #game.menu-stage canvas {
   background: #ffd23f;
   color: var(--ink);
   text-shadow: none;
-}
-.home-hint {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--menu-note);
-}
-/* Con el dedo no hay flechas ni Enter. */
-@media (pointer: coarse) {
-  .home-hint {
-    display: none;
-  }
 }
 .home-foot {
   display: flex;
@@ -207,12 +143,6 @@ html.reduce-motion #game.menu-stage canvas {
   .home .logo {
     width: 240px;
     height: 96px;
-  }
-  .home-entry-title {
-    font-size: 30px;
-  }
-  .home-entry.sel .home-entry-title {
-    font-size: 36px;
   }
 }
 @media (max-height: 640px) {

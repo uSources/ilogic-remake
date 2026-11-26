@@ -1,0 +1,100 @@
+/* El menu clasico de texto (TextEntry.tsx): Inicio, la pausa y el final. Titulos grandes sobre el
+   tablero, sin marco; la señalada crece y lleva la flecha dorada delante. Cada pantalla puede cambiar
+   los tamaños con --entry-size y --entry-size-sel. */
+.text-list {
+  --entry-size: 36px;
+  --entry-size-sel: 44px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.text-entry {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 6px 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.text-arrow {
+  width: 28px;
+  flex: none;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 30px;
+  color: var(--menu-gold);
+  visibility: hidden;
+}
+.text-entry.sel .text-arrow {
+  visibility: visible;
+}
+.text-entry-text {
+  display: flex;
+  flex-direction: column;
+}
+.text-entry-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: var(--entry-size);
+  line-height: 1;
+  color: var(--menu-title);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7);
+  transition: font-size 0.1s ease-out;
+}
+.text-entry.sel .text-entry-title {
+  font-size: var(--entry-size-sel);
+  color: var(--panel);
+}
+/* La tecla que hace lo mismo: pequeña, dorada y sin sombra de letra grande. */
+.text-entry-key {
+  font-size: 13px;
+  color: var(--menu-gold);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+.text-entry-note {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--menu-note);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+.text-entry.sel .text-entry-note {
+  color: var(--menu-gold);
+}
+/* Lo que no se deshace (rendirse): en rojo claro, aparte. */
+.text-entry.danger {
+  --entry-size: 28px;
+  --entry-size-sel: 34px;
+  margin-top: 14px;
+}
+.text-entry.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.text-entry.danger .text-entry-title,
+.text-entry.danger.sel .text-entry-title {
+  color: var(--menu-danger);
+}
+.menu-hint {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--menu-note);
+}
+/* Con el dedo no hay flechas, Enter ni teclas. */
+@media (pointer: coarse) {
+  .menu-hint,
+  .text-entry-key {
+    display: none;
+  }
+}
+@media (max-width: 600px) {
+  .text-list {
+    --entry-size: 30px;
+    --entry-size-sel: 36px;
+  }
+}
