@@ -68,6 +68,14 @@ describe('shaping: dejar listo un audio generado', () => {
     expect(loud).toBeCloseTo(-1, 5);
     expect(toDb(peakOf(KINDS.sfx.shape(click, soft(spec))))).toBeLessThan(loud - 6);
   });
+
+  it('un efecto que pasa de lo pedido acaba en su primer golpe si el corte cae en el silencio de despues', () => {
+    const blast = Array.from({ length: 50 }, (_, i) => (i % 2 ? -0.5 : 0.5));
+    const twoBlasts = mono([...silence(20), ...blast, ...silence(150), ...blast]);
+    const spec: SoundSpec = { id: 'x', kind: 'sfx', prompt: 'A whistle', seconds: 0.1 };
+    // 5 ms antes del ataque y el primer pitido: el segundo, el limite (150 ms) lo deja fuera, y el silencio tambien.
+    expect(lengthOf(KINDS.sfx.shape(twoBlasts, spec))).toBe(55);
+  });
 });
 
 /** Los efectos que hace Ashfox: uno por fichero en tools/art/ashfox/sounds/ (lo mismo que mira `elegir`). */
