@@ -321,7 +321,9 @@ y estado: `docs/PLAN-INTERFAZ.md`.
     elegir casilla.
     - La ficha va a la derecha si cabe; si no, a la izquierda. Si arriba no cabe, va debajo y el
       tallo baja. Nunca tapa a un enemigo a tiro (se toca para atacarle): si donde iba tapa alguno, va
-      a otro de los cuatro sitios. En el móvil prefiere tapar un poco la ficha de abajo.
+      a otro de los cuatro sitios, aunque tenga que moverse un poco para caber. Antes que tapar un
+      enemigo, tapa un poco lo de abajo (la ficha de la elegida o «Acabar turno»), que mientras la
+      unidad está elegida no hace falta.
     - Sale en un cuarto de segundo: el tallo crece, la ficha se abre desde su punta con un rebote
       corto y las líneas entran una detrás de otra.
     - Antes eran fichas redondas crema en fila y una rueda de fichas alrededor de la casilla.
