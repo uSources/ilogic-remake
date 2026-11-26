@@ -15,18 +15,18 @@ import type { InputCommand } from '../../../controls/inputCommands';
 import { REBINDABLE_KEYS, type KeyBindingId } from '../../../controls/keyboard';
 import type { MenuCommand, MenuContext } from '../../../controls/menu';
 import { screenEnd, type GameSession, type PersonEnd } from '../../../core/session';
-import { serialize } from '../../../core/save';
 import { bestDays, campaignMissions, markCompleted, objectiveText } from '../../../campaign';
 import { keyLabelOf } from '../../../hud/keyLabels';
 import { showToast, ui, type EndOutcome, type MenuItemVM } from '../../../hud/store';
 import { navGrid } from '../../../menu/nav';
 import { settings, t, type TextKey } from '../../../settings';
 import { randomSeed, seedToCode } from '../../../setup';
-import { deleteSave, writeSave } from '../../../storage';
+import { deleteSave } from '../../../storage';
 import { armyChartVM, endScoreVM, endStatsVM } from '../../../ui/hudModels';
 import { sideOf, type Side } from '../../../ui/sides';
 import { backToMenu, startGame, type GameStart } from '../../app/gameStart';
 import type { MenuView } from '../turn/turnControls';
+import { saveGame } from '../turn/saving';
 
 type PauseChoice = 'resume' | 'endTurn' | 'threat' | 'intents' | 'save' | 'options' | 'help' | 'surrender' | 'quit';
 const PAUSE_CHOICES: readonly PauseChoice[] = ['resume', 'endTurn', 'threat', 'intents', 'save', 'options', 'help', 'surrender', 'quit'];
@@ -242,11 +242,6 @@ function pauseInfo(s: GameState, viewer: TeamId): string[] {
   const mission = s.mission ? missionById(s.content, s.mission.id) : undefined;
   const objective = mission ? [`${mission.title[settings.lang]}: ${objectiveText(mission, { s, team: viewer })}`] : [];
   return [...code, ...objective];
-}
-
-/** Guarda la partida (si su modo se guarda); false si no se ha podido. */
-export function saveGame(s: GameState): boolean {
-  return gameModeOf(s).saves && writeSave(serialize(s));
 }
 
 // ---- Final ----

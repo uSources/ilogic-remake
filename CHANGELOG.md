@@ -12,10 +12,16 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 ### Novedades
 - **Dos personas en la misma pantalla**: con el rival «Otra persona» en Escaramuza, al acabar tu turno la partida se tapa con el aviso «Le toca al equipo 2» hasta que la otra persona pulsa «Empezar mi turno» (o Enter). Cada una ve solo lo suyo, en azul, con su niebla, y encuentra la cámara donde la dejó. Antes la partida se quedaba esperando a la segunda sin dejarla jugar.
 
+### Arreglos
+- **El autoguardado vuelve a funcionar**: con él activado en Opciones, la partida se guarda al empezar cada turno tuyo, así no se pierde si el navegador se cierra sin avisar (pasa en el móvil). Desde que el juego es 3D, la opción no hacía nada.
+
 <!-- en -->
 
 ### New
 - **Two people on the same screen**: with the “Another person” rival in Skirmish, when your turn ends the game is covered by a “It's the turn of team 2” notice until the other person presses “Start my turn” (or Enter). Each one only sees their own side, in blue, with their own fog, and finds the camera where they left it. Before, the game kept waiting for the second person without letting them play.
+
+### Fixes
+- **Autosave works again**: with it on in Options, the game is saved at the start of each of your turns, so it isn't lost if the browser closes without warning (it happens on phones). Since the game went 3D, the option did nothing.
 
 ## [0.18.0] - 2026-11-26 — Buscar rival y un menú nuevo
 
