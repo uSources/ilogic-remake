@@ -11,7 +11,7 @@ import type { Side } from '../vm/common';
 import { signed } from '../common/format';
 import { DayPanel, EconomyPanel, WeatherPanel } from './Breakdown';
 import { keyLabelOf } from '../keyLabels';
-import { canAct, canUseMenuButton, isOwnTurn } from './turn';
+import { canAct, canUseMenuButton, isBuying, isOwnTurn } from './turn';
 
 /** El dinero y lo que entra al dia; al pasar por encima o tocarlo, el desglose (ingresos, mantenimiento, puntos de mando). */
 function Funds({ s }: { s: UIState }) {
@@ -146,8 +146,8 @@ export function TopBar({ s }: { s: UIState }) {
     <div class="top">
       <TurnHeader s={s} />
       <div class="spacer" />
-      {s.standing && <Rival standing={s.standing} />}
-      <PauseButton s={s} />
+      {s.standing && !isBuying(s) && <Rival standing={s.standing} />}
+      {!isBuying(s) && <PauseButton s={s} />}
     </div>
   );
 }

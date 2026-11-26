@@ -8,7 +8,6 @@
 @import './styles/base/toy.css';
 @import './styles/game/topbar.css';
 @import './styles/game/breakdown.css';
-@import './styles/game/popmenu.css';
 @import './styles/game/forecast.css';
 @import './styles/overlays/notices.css';
 @import './styles/overlays/loading.css';
@@ -38,3 +37,5 @@
 @import './styles/game/turnclock.css';
 @import './styles/menus/page.css';
 @import './styles/menus/textlist.css';
+@import './styles/game/callout.css';
+@import './styles/game/buy.css';

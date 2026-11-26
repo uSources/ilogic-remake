@@ -17,6 +17,7 @@ export type { EndOutcome, EndStatsVM } from './vm/end';
 export type { PickedVM, SelectionVM } from './vm/army';
 export type { ForecastVM } from './vm/combat';
 export type {
+  BuyFactsVM,
   CampaignItemVM,
   HomeEntryVM,
   HomeVM,

@@ -71,17 +71,38 @@ tarjeta crema de antes, y se nota al salir de Inicio.
   lienzo nombra teclas que en el juego hacen otra cosa (Q es la orden de atacar, no girar la
   cámara), y la interfaz 0.12.0 quitó las líneas de ayuda fijas. Queda por decidir con el usuario.
 
-### Fase 4. Unidad elegida y previsión (tableros 8 y 9)
-- **Unidad elegida**: lo que puede hacer, en una lista de texto junto a ella: Atacar con cuántos
-  hay al alcance, Esperar, Capturar apagado y con el porqué, Cancelar. Su ficha va abajo a la
-  izquierda, con vida, movimiento, munición y lo que sabe hacer. Tocar un enemigo sigue atacando.
-- **Previsión**: abajo en el centro va tu unidad contra la suya, con la vida de antes y la de después,
-  «Le quitas 55 %» en grande y lo que te devuelve. Encima, «Atacar · Otro objetivo · Cancelar».
-  Sustituye a las chapas de `Forecast.tsx`.
+### Lo que sale de las casillas (hecho; decidido con el usuario el 26-11-2026)
+En el lienzo, la página «Lo que sale de las casillas» tiene tres formas: A, el bocadillo con tallo;
+B, la corona de texto; C, el cartel que se levanta. Se eligió **A** con **las cifras de B** para la
+previsión.
+- **A** (`common/Callout.tsx`, `game/TileMenu.tsx`): sirve para todo lo que sale de una casilla y se
+  maneja igual que la pausa (lista de texto, flecha dorada, Intro). Sale rápido y siempre se ve de
+  qué casilla viene.
+  - Hoy salen así las fichas de la unidad, su rueda y el aviso de elegir casilla.
+  - Colocación: `placeCallout` (`common/placement.ts`, con tests).
+- La previsión: el daño sube como cifra grande sobre el enemigo y lo que te devuelve sale a los pies
+  de tu unidad. Con Alt, el detalle va en el bocadillo con tallo rojo.
+- La compra en la fábrica no va en el bocadillo: con diez unidades no cabe encima ni debajo de la
+  casilla. Va a la derecha, como en el tablero 10 (fase 5).
 
-### Fase 5. Fábrica (tablero 10)
-Una lista a la derecha con retrato, nombre y precio. La elegida va en grande y, debajo, dice de qué
-va y con cuánto te quedas. Sustituye al abanico (`BuyFan.tsx`).
+### Fase 4. Unidad elegida y previsión (tableros 8 y 9)
+El bocadillo con tallo ya cubre lo que hace la unidad, y las cifras que suben, la previsión. De esta
+fase queda lo de los tableros que no está: «Atacar» con cuántos hay a tiro y «Capturar» apagado con
+el porqué. Hoy solo salen las opciones que no se hacen tocando el tablero.
+
+
+### Fase 5. Fábrica (tablero 10) (hecha)
+- Una lista a la derecha con retrato, nombre y precio (`game/BuyList.tsx`). Se comparó con capturas
+  con la misma lista en el bocadillo con tallo y el usuario eligió la derecha. Con las diez unidades
+  de la fábrica, el bocadillo no cabe encima ni debajo de la casilla, se aparta y la tapa.
+- La elegida va en grande. Al pie dice de qué va (mueve, alcance y visión; contra qué es fuerte y
+  débil) y con cuánto te quedas.
+- Lo que no te llega sale apagado y con lo que falta. Se puede señalar igual, para leer de qué va.
+- Lo decide `systems/turn/buyItems.ts`, con tests.
+- Se maneja con flechas, Enter y Esc, como la pausa (`systems/turn/buyKeys.ts`, un `KeyPanel`).
+- Mientras se compra, se van de la derecha el enemigo y la pausa de arriba, «Acabar turno» y el
+  minimapa. En el móvil, la lista es una hoja abajo.
+- Sustituye al abanico (`BuyFan.tsx` y `fanAround`, quitados; `IDEAS.md`, «Descartado»).
 
 ### Fase 6. Cambio de turno (tablero 11)
 Una franja oscura en el centro con «Día 12», «Turno de Rojo» y «Rojo está pensando…», que late.

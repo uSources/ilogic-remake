@@ -41,6 +41,7 @@ export type MenuContext =
   | 'end'
   | 'endPeek'
   | 'pause'
+  | 'buy'
   | 'handoff';
 
 export interface MenuBinding {
@@ -107,6 +108,8 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
   // La pausa de la partida: moverse por sus opciones, elegir y cerrarla. Sus atajos (fin del turno,
   // amenaza...) son las teclas del mapa que tenga el jugador: no van aqui (KeyPanel.shortcut, keyInput.ts).
   pause: MENU_KEYS,
+  // La compra en una fabrica, como la pausa: arriba y abajo señalan, Enter compra y Esc sale sin comprar.
+  buy: MENU_KEYS,
   // Mirando el tablero desde el final: Esc, Retroceso, Enter o Espacio vuelven al resultado.
   endPeek: [
     { codes: KEY_OK, command: { kind: 'ok', repeat: false } },

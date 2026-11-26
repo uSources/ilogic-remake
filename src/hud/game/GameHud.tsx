@@ -4,18 +4,16 @@ import { Pause } from '../menus/Pause';
 import { t } from '../../settings';
 import type { UIState } from '../state';
 import type { MenuVM, NetVM } from '../vm/menus';
-import { ActionChips } from './ActionChips';
-import { BuyFan } from './BuyFan';
+import { BuyList } from './BuyList';
 import { Forecast } from './Forecast';
 import { Minimap } from './Minimap';
 import { MissionPanel } from './MissionPanel';
-import { PopMenu } from './PopMenu';
-import { RadialMenu } from './RadialMenu';
+import { TileMenu } from './TileMenu';
 import { TileTip } from './TileTip';
 import { SelectionPanel } from './SelectionPanel';
 import { EndTurn, TopBar } from './TopBar';
 import { TurnClockPill } from './TurnClock';
-import { canAct, isOwnTurn } from './turn';
+import { canAct, isBuying, isOwnTurn } from './turn';
 
 /**
  * Un panel de la partida: lo que pinta segun el estado, o nada (null/false) si no le toca salir.
@@ -55,6 +53,9 @@ const DOCK_PANELS: GamePanel[] = [
   { id: 'minimap', render: (s) => s.minimap && s.minimapOn && <Minimap minimap={s.minimap} view={s.minimapView} /> },
 ];
 
+/** Un menu nuevo (otro tipo u otra unidad) se vuelve a montar: asi su bocadillo vuelve a salir de la casilla. */
+const menuKey = (menu: MenuVM): string => `${menu.kind}|${menu.title ?? ''}`;
+
 /** En el orden en que van en la pagina, que es el de apilado. Un panel nuevo es una entrada mas. */
 const GAME_PANELS: GamePanel[] = [
   // La sombra de abajo, que deja leer el texto de las esquinas sobre el tablero (la de arriba va en la barra).
@@ -68,20 +69,21 @@ const GAME_PANELS: GamePanel[] = [
     id: 'tileTip',
     render: (s) => showsTileTip(s) && s.tile && <TileTip tile={s.tile} />,
   },
-  { id: 'dock', render: (s) => <div class="dock">{renderPanels(DOCK_PANELS, s)}</div> },
+  { id: 'dock', render: (s) => !isBuying(s) && <div class="dock">{renderPanels(DOCK_PANELS, s)}</div> },
 
   { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },
   // La pausa no se ve a traves de Opciones o de la ayuda, que se abren desde ella.
-  { id: 'menu', render: (s) => s.menu && !isPageOpen(s) && <MatchMenu menu={s.menu} /> },
+  { id: 'menu', render: (s) => s.menu && !isPageOpen(s) && <MatchMenu key={menuKey(s.menu)} menu={s.menu} /> },
 ];
 
-/** Lo que sale junto a lo elegido o encima de todo: fichas, rueda, compra, pausa o el aviso de elegir casilla. */
+/**
+ * Lo que sale de una casilla o encima de todo: la pausa, la compra (en lista, a la derecha) y, en el
+ * bocadillo con tallo, las fichas de la unidad, su rueda o el aviso de elegir casilla.
+ */
 function MatchMenu({ menu }: { menu: MenuVM }) {
   if (menu.kind === 'game') return <Pause menu={menu} />;
-  if (menu.kind === 'chips') return <ActionChips menu={menu} />;
-  if (menu.kind === 'radial') return <RadialMenu menu={menu} />;
-  if (menu.kind === 'buy') return <BuyFan menu={menu} />;
-  return <PopMenu menu={menu} />;
+  if (menu.kind === 'buy') return <BuyList menu={menu} />;
+  return <TileMenu menu={menu} />;
 }
 
 function renderPanels(panels: GamePanel[], s: UIState) {

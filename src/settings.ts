@@ -124,8 +124,14 @@ export function saveSettings(): void {
   }
 }
 
+/** Como se escriben los numeros y las listas en el idioma del juego. */
+const locale = (): string => (settings.lang === 'es' ? 'es-ES' : 'en-US');
+
 /** Numero con separador de miles del idioma del juego (1.000 / 1,000). */
-export const fmtNum = (value: number): string => value.toLocaleString(settings.lang === 'es' ? 'es-ES' : 'en-US');
+export const fmtNum = (value: number): string => value.toLocaleString(locale());
+
+/** Una lista como se dice en el idioma del juego: «Soldado, Jeep y Tanque» / «Soldier, Jeep, and Tank». */
+export const fmtList = (items: readonly string[]): string => new Intl.ListFormat(locale(), { type: 'conjunction' }).format(items);
 
 /** Texto de la interfaz en el idioma elegido (los textos, por tema, en src/i18n/). */
 export function t(key: TextKey): string {

@@ -1,5 +1,6 @@
 import type { SoundName } from '../../audio/sounds';
 import { Btn } from '../common/buttons';
+import { Icon } from '../common/Icon';
 
 interface TextEntryProps {
   /** La señalada (con el teclado o el raton): mas grande, con la flecha y lo de debajo en oro. */
@@ -11,6 +12,8 @@ interface TextEntryProps {
   note?: string;
   /** La tecla que hace lo mismo, pequeña junto al titulo. */
   keyHint?: string;
+  /** Un dibujo pequeño delante del titulo (en lo que sale de las casillas: capturar, bajar carga...). */
+  icon?: string | null;
   sound?: SoundName;
   onHover: () => void;
   onPick: () => void;
@@ -20,7 +23,7 @@ interface TextEntryProps {
  * Una entrada del menu clasico de texto (Inicio, la pausa, el final): el titulo grande sobre el
  * tablero, sin marco, con una linea debajo si la hay. La señalada crece y lleva la flecha delante.
  */
-export function TextEntry({ sel, cls, title, note, keyHint, sound, onHover, onPick }: TextEntryProps) {
+export function TextEntry({ sel, cls, title, note, keyHint, icon, sound, onHover, onPick }: TextEntryProps) {
   return (
     <Btn sel={sel} cls={`text-entry ${cls ?? ''}`} sound={sound} onHover={onHover} onPick={onPick}>
       <span class="text-arrow" aria-hidden="true">
@@ -28,6 +31,7 @@ export function TextEntry({ sel, cls, title, note, keyHint, sound, onHover, onPi
       </span>
       <span class="text-entry-text">
         <span class="text-entry-title">
+          {icon && <Icon k={icon} alt="" cls="px-icon text-entry-icon" />}
           {title}
           {keyHint && <span class="text-entry-key">{keyHint}</span>}
         </span>

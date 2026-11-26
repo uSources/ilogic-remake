@@ -587,7 +587,7 @@ el propio tablero (`docs/PLAN-INTERFAZ-2.md`; cómo se ve, `docs/ESTETICA.md`, �
 | Daño y vida en el panel lateral | Chapas sobre el tablero: el daño encima del enemigo, el contraataque a los pies de tu unidad; la vida de una unidad herida, una chapa con su número |
 | Defensa del terreno en el panel | Estrellas de bloque sobre la casilla señalada |
 | — | Al señalar una unidad tuya, una flecha roja desde cada enemigo que podría atacarla |
-| Panel de compra | Retratos en abanico alrededor del edificio, con lo que falta si no llega el dinero |
+| Panel de compra | Lista de texto a la derecha: retrato, nombre y precio; lo que no llega, apagado y con lo que falta; al pie, de qué va la señalada y con cuánto te quedas |
 | Botón «Fin del turno» | Abajo a la derecha; con unidades sin mover, estas saltan y pide otra pulsación |
 | Cambio de día instantáneo | Una banderola cae con el día y el clima; «+1000» sobre cada edificio que cobra |
 

@@ -198,12 +198,28 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
     forma de sacar unidades que comprar (la fábrica que saca refuerzos de la reserva, idea 35):
     ampliar `ProductionShortage` (`rules/production.ts`) con su motivo y repasar los sitios que
     suponen que lo que falta es dinero, de los que el compilador no avisa: `buyBlockedText`
-    (`ui/models/economy.ts`, cuyo `default` diría que el ejército está lleno), el «te faltan N» del
-    menú de compra (`view3d/systems/turn/menuItems.ts`) y lo que la IA se plantea aunque aún no lo
-    pueda pagar (`ai/production.ts`). Y renombrar `buyBlock` (`rules/economy.ts`), que ya pregunta a
+    (`ui/models/economy.ts`, cuyo `default` diría que el ejército está lleno), el «faltan N» y el «Te
+    quedan N» de la lista de compra (`view3d/systems/turn/buyItems.ts`) y lo que la IA se plantea
+    aunque aún no lo pueda pagar (`ai/production.ts`). Y renombrar `buyBlock` (`rules/economy.ts`), que ya pregunta a
     la producción de la partida y no solo a la compra (`productionBlock` o parecido).
 
 ## Descartado (y por qué)
+
+- **Corona de texto para lo que sale de una casilla** (B del lienzo «Lo que sale de las casillas»,
+  26-11-2026). Las opciones saltaban en arco por encima de la casilla. Gustaba, pero con 5 o 6 opciones
+  y textos largos («Orden: defender allí») el arco se abre mucho, y con el teclado moverse por un arco
+  es raro. Se quedó el bocadillo con tallo (A). De la B se quedaron las cifras de la previsión, que
+  suben de la casilla.
+- **Cartel que se levanta de la casilla** (C, el mismo día). Va plantado en el tablero con su sombra,
+  pero al girar la cámara el palito y la sombra no siguen la perspectiva, y levantarse con rebote
+  cansa a la décima vez.
+- **La compra en abanico** (fichas crema con retrato, nombre y precio alrededor de la fábrica, y en el
+  centro la chapa de la señalada; `BuyFan.tsx` y `fanAround`, de la interfaz 2, quitados el
+  26-11-2026). Era lo último del diseño anterior en la partida. Con las diez unidades de la fábrica
+  daba la vuelta entera, tapaba el tablero de alrededor y con las flechas no había un orden claro que
+  seguir. La sustituye la lista de texto a la derecha del tablero 10 (`docs/ESTETICA.md`). Tampoco va
+  en el bocadillo con tallo: con diez unidades no cabe encima ni debajo de la casilla, se aparta, la
+  tapa y el tallo no se ve (se comparó con capturas).
 
 - **Fábrica automática** (comprar sola al terminar el turno, con posturas, reserva y resumen): llenaba
   el mapa de unidades que luego había que mover y se gastaba el dinero. Saber qué comprar es parte
