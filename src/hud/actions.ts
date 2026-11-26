@@ -65,6 +65,8 @@ export interface UIActions {
   // --- Final de la partida y ayuda ---
   endHover(index: number): void;
   endPick(index: number): void;
+  /** Mirando el tablero desde el final: volver al resultado. */
+  endBack(): void;
   closeHelp(): void;
   /** Leer otro tema de Aprender. */
   helpTopic(topic: HelpTopic): void;

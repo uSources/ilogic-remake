@@ -136,13 +136,21 @@ describe('adaptador de teclado en los menus', () => {
     expect(listStep(menuKeyCommand(shiftTab, 'end')!)).toBe(listStep(menuKeyCommand(k('Tab'), 'end')!));
   });
 
-  it('fin de partida: Tab pasa al siguiente, Esc vuelve al menu, Retroceso y teclado numerico no', () => {
+  it('fin de partida: Tab pasa al siguiente; Esc no hace nada (salir de la partida acabada es un boton), ni Retroceso ni el teclado numerico', () => {
     expect(listStep(menuKeyCommand(k('Tab'), 'end')!)).toBe(1);
     expect(listStep(menuKeyCommand(k('KeyW'), 'end')!)).toBe(-1);
     expect(listStep(menuKeyCommand(k('ArrowRight'), 'end')!)).toBe(1);
-    expect(menuKeyCommand(k('Escape'), 'end')?.kind).toBe('back');
+    expect(menuKeyCommand(k('Escape'), 'end')).toBeNull();
     expect(menuKeyCommand(k('Backspace'), 'end')).toBeNull();
     expect(menuKeyCommand(k('Numpad4'), 'end')).toBeNull();
+  });
+
+  it('mirando el tablero desde el final: Esc, Retroceso, Enter o Espacio vuelven al resultado; las flechas no', () => {
+    expect(menuKeyCommand(k('Escape'), 'endPeek')?.kind).toBe('back');
+    expect(menuKeyCommand(k('Backspace'), 'endPeek')?.kind).toBe('back');
+    expect(menuKeyCommand(k('Enter'), 'endPeek')?.kind).toBe('ok');
+    expect(menuKeyCommand(k('Space'), 'endPeek')?.kind).toBe('ok');
+    expect(menuKeyCommand(k('ArrowDown'), 'endPeek')).toBeNull();
   });
 
   it('paso en una lista: izquierda/arriba -1, derecha/abajo +1, lo demas 0', () => {

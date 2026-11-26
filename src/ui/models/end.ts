@@ -11,7 +11,7 @@ const sumOver = (teams: readonly TeamId[], valueOf: (team: TeamId) => number): n
   teams.reduce((total, team) => total + valueOf(team), 0);
 
 /** Un dato de la alianza de quien mira y el de sus enemigos, sumados. */
-const bySide = (s: GameState, viewer: TeamId, valueOf: (team: TeamId) => number): BySide => [
+export const bySide = (s: GameState, viewer: TeamId, valueOf: (team: TeamId) => number): BySide => [
   sumOver(alliesOf(s, viewer), valueOf),
   sumOver(enemiesOf(s, viewer), valueOf),
 ];

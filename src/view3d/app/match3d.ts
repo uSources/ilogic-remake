@@ -2,7 +2,7 @@
  * Una partida en 3D: la raiz de composicion. Junta cada sistema (el turno, la entrada, la camara de
  * estrategia, los sucesos animados, la interfaz, la pausa) con el motor que dibuja la partida
  * (engine/matchScene.ts) y con la misma sesion, reglas e interfaz HTML de siempre. Aqui no se dibuja
- * ni se decide: solo se conecta. La pausa y el final, en systems/hud/matchMenus.ts. Quien lleva la
+ * ni se decide: solo se conecta. La pausa, en systems/hud/matchMenus.ts; el final, en matchEnd.ts. Quien lleva la
  * partida es su sesion (`localRunner`) o, por la red, la sala del servidor (`OnlinePlay`): su sesion
  * espejo cambia con cada vista, asi que los sistemas la piden siempre a `runner`.
  */
@@ -26,7 +26,8 @@ import { boardLookupOf, incomeSpotsOf, type DayLookup } from '../systems/events/
 import { playEvents } from '../systems/events/timeline';
 import { installHudActions, publishHud } from '../systems/hud/hudBridge';
 import { MinimapBridge, toggleMinimap } from '../systems/hud/minimapBridge';
-import { PauseMenu, showEndIfOver } from '../systems/hud/matchMenus';
+import { MatchEnd } from '../systems/hud/matchEnd';
+import { PauseMenu } from '../systems/hud/matchMenus';
 import { installKeys } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
 import { TurnControls } from '../systems/turn/turnControls';
@@ -40,6 +41,8 @@ import { TurnClock } from '../systems/net/turnClock';
 import { notifyTurn } from '../systems/net/turnNotice';
 import { backToMenu, type StartedGame } from './gameStart';
 import type { GroupMode } from '../../controls/inputCommands';
+import type { ClickMods } from '../../controls/selection';
+import type { ScreenBox } from '../ports/pointer';
 
 /** De partida, lo bastante cerca para leer las unidades (la rueda deja alejarse para ver mas mapa). */
 const START_DISTANCE = 13;
@@ -82,8 +85,12 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   const minimap = new MinimapBridge(viewer);
 
   let cursor: Pos | null = null;
-  /** Publica la interfaz (de las piezas, solo la barra de vida del enemigo al que se apunta). */
+  /**
+   * Publica la interfaz (de las piezas, solo la barra de vida del enemigo al que se apunta). Acabada la
+   * partida no: la pantalla es la del final (`matchEnd`), tambien mirando el tablero desde el.
+   */
   function publish(): void {
+    if (matchEnd.isOpen) return;
     const forecast = cursor ? controls.forecastAt(cursor) : null;
     board.previewHit(hitLookOf(state, forecast));
     threat.focus(controls.busy ? null : threatFocus());
@@ -187,7 +194,6 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     },
     viewer,
     savesHere: !online,
-    endTurn: () => endGuard.press(),
     surrender: () => void surrender(),
     openOptions: () => options.open(),
     toggleThreat,
@@ -195,8 +201,15 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     isThreatOn: () => threat.isShowing,
     isIntentsOn: () => intents.isShowingAll,
     hasOrders: () => anyStandingOrder(state, viewer),
-    isWatching: () => controls.isWatchingOthers,
     refresh: () => publish(),
+  });
+
+  const matchEnd = new MatchEnd({
+    get session() {
+      return runner.session;
+    },
+    viewer,
+    isOnline: !!online,
   });
 
   /** Tras el cartel de victoria o derrota, la pantalla del final. */
@@ -206,7 +219,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
 
   /** La pantalla del final, si la partida se ha acabado para quien mira (por la red, ya no se sigue la sala). */
   function showEnd(): void {
-    if (showEndIfOver(runner.session, viewer, !!online)) online?.close();
+    if (matchEnd.showIfOver()) online?.close();
   }
 
   /** Rendirse acaba la partida sin pasar por los turnos: su final, ya. */
@@ -251,11 +264,19 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     if (lookAt) camera.lookAt(scene.groundOf(lookAt));
   }
 
+  /** Acabada la partida (mirando el tablero desde el final), el raton solo mueve la camara. */
+  function unlessOver<Args extends unknown[]>(run: (...args: Args) => void): (...args: Args) => void {
+    return (...args) => {
+      if (!matchEnd.isOpen) run(...args);
+    };
+  }
+
   /** Las unidades de quien mira que estan en el tablero (para el recuadro). */
   const ownUnitsOnBoard = () => state.units.filter((unit) => unit.team === viewer && isOnMap(unit));
 
   /** La casilla señalada: el cuadro amarillo, la ficha y la prevision de combate. */
   function hover(pos: Pos | null): void {
+    if (matchEnd.isOpen) return;
     const isSame = pos && cursor ? pos.x === cursor.x && pos.y === cursor.y : pos === cursor;
     if (isSame) return;
     cursor = pos;
@@ -270,17 +291,17 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     box: scene.box,
     tileAt: (x, y) => scene.tileAt(x, y),
     hover,
-    tap: (pos, mods) => void controls.tap(pos, mods),
-    context: (pos) => controls.context(pos),
-    boxSelect: (box, add) => controls.selectBox(scene.tilesInBox(ownUnitsOnBoard(), box), add),
+    tap: unlessOver((pos: Pos, mods: ClickMods) => void controls.tap(pos, mods)),
+    context: unlessOver((pos: Pos) => controls.context(pos)),
+    boxSelect: unlessOver((box: ScreenBox, add: boolean) => controls.selectBox(scene.tilesInBox(ownUnitsOnBoard(), box), add)),
     onFrame: (listener) => scene.onFrame(listener),
   });
   installKeys({
     camera,
     onFrame: (listener) => scene.onFrame(listener),
-    // La pausa, las opciones y la ayuda se abren encima del mapa (las opciones, tambien encima de la
-    // pausa: van antes): mientras, las teclas son suyas.
-    panels: [helpPanel, options, pause],
+    // El final, la pausa, las opciones y la ayuda se abren encima del mapa (las opciones, tambien
+    // encima de la pausa: van antes): mientras, las teclas son suyas.
+    panels: [matchEnd, helpPanel, options, pause],
     sounds: audio.sounds,
     endTurn: () => endGuard.press(),
     nextUnit: nextIdle,
@@ -327,6 +348,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
     wrecks: scene.wrecks,
     ui,
     pause,
+    matchEnd,
   });
 }
 

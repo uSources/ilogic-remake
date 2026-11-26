@@ -73,13 +73,17 @@ export interface UIState {
     /** Como ha acabado para quien mira. */
     outcome: EndOutcome;
     day: number;
+    /** Encima del titulo: que se ha jugado y en que mapa. */
+    kicker: string;
     /** Lo de la alianza de quien mira y lo de todos sus enemigos juntos. */
     stats: EndStatsVM | null;
+    /** Los edificios de su alianza y cuantos hay en el mapa. */
+    buildings: { own: number; total: number };
     /** Por que ha acabado, ya visto por quien mira (endOfMatch.ts: reasonText), o null. */
     reasonText: TextKey | null;
     /** Titulo de la mision, si se jugaba una. */
     mission: string | null;
-    /** Puntos de su alianza y de la mejor enemiga. */
+    /** Puntos de su alianza y de la mejor enemiga (con limite de dias, que se gana por puntos). */
     score: BySide | null;
     /** Valor de los ejercitos dia a dia (su alianza y sus enemigos). */
     chart: BySide[] | null;
@@ -88,6 +92,8 @@ export interface UIState {
     newBest: boolean;
     buttons: { id: string; label: string }[];
     selected: number;
+    /** «Mirar el tablero»: el final se esconde y solo queda su boton para volver. */
+    peek: boolean;
   } | null;
   /** Limite de dias de la partida (null = sin limite). */
   dayLimit: number | null;
