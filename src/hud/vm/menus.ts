@@ -1,4 +1,4 @@
-import type { Anchor, StatChipVM } from './common';
+import type { Anchor, BySide, StatChipVM } from './common';
 
 /** Menus: emergente de la partida (unidad, compra, carga, pausa) y pantallas del menu principal. */
 
@@ -38,9 +38,22 @@ export interface MenuVM {
   subtitle?: string;
   /** Lineas extra (objetivo de la mision) en el panel de pausa. */
   info?: string[];
+  /** En la pausa: «Cómo va» la partida. */
+  standing?: StandingVM;
   items: MenuItemVM[];
   selected: number;
   anchor: Anchor;
+}
+
+/**
+ * «Cómo va» (la pausa): lo de la alianza de quien mira y lo de sus enemigos. Las unidades enemigas,
+ * null si la niebla no deja saber cuantas son.
+ */
+export interface StandingVM {
+  units: readonly [own: number, rivals: number | null];
+  buildings: BySide;
+  /** Lo que pagan sus edificios cada dia. */
+  income: BySide;
 }
 
 /** Fila de la pantalla de opciones: un grupo, un nombre y botones de segmento. */

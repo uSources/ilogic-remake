@@ -6,11 +6,12 @@ import type { MenuCommand, MenuContext } from '../src/controls/menu';
 import type { SoundName } from '../src/audio/sounds';
 import { ui } from '../src/hud/store';
 import { OptionsPanel } from '../src/menu/optionsPanel';
-import { settings } from '../src/settings';
+import { settings, t } from '../src/settings';
 import type { CameraControls } from '../src/view3d/systems/camera/strategyCamera';
+import { MatchEnd } from '../src/view3d/systems/hud/matchEnd';
 import { PauseMenu } from '../src/view3d/systems/hud/matchMenus';
 import { KeyRouter, type KeyHost, type KeyPanel, type KeyPress } from '../src/view3d/systems/input/keyInput';
-import { blankState, PLAYER } from './helpers';
+import { act, blankState, PLAYER } from './helpers';
 
 /** El teclado de la partida sin navegador: el mapa, la camara, los paneles y los sonidos son puertos falsos que apuntan lo que se les pide. */
 
@@ -214,15 +215,14 @@ describe('KeyRouter con la pausa de verdad', () => {
   });
 
   /** La pausa de una partida vacia (sin ordenes: no sale «Ver órdenes»); lo que pide a la partida se apunta por su nombre. */
-  /** Con `watching`, quien mira esta mirando jugar a los demas. */
-  function pausedMatch(watching = false) {
+  /** Sin `savesHere`, la partida no se guarda en esta pantalla (por la red). */
+  function pausedMatch(savesHere = true) {
     const asked: string[] = [];
     const ask = (name: string) => () => void asked.push(name);
     const pause = new PauseMenu({
       session: new GameSession(blankState(), [humanController(), passiveController()]),
       viewer: PLAYER,
-      savesHere: true,
-      endTurn: ask('endTurn'),
+      savesHere,
       surrender: ask('surrender'),
       openOptions: ask('options'),
       toggleThreat: ask('threat'),
@@ -230,7 +230,6 @@ describe('KeyRouter con la pausa de verdad', () => {
       isThreatOn: () => false,
       isIntentsOn: () => false,
       hasOrders: () => false,
-      isWatching: () => watching,
       refresh: () => undefined,
     });
     const match = fakeMatch([pause]);
@@ -255,35 +254,46 @@ describe('KeyRouter con la pausa de verdad', () => {
     expect(pause.isOpen).toBe(true);
   });
 
-  it('las flechas recorren las opciones como se ven y Enter elige la señalada', () => {
+  it('las flechas recorren las opciones de arriba abajo y Enter elige la señalada', () => {
     const { press, pause, asked, sounds } = pausedMatch();
-    // «Seguir» a todo lo ancho; debajo, «Fin del turno» y «Ver amenaza»; luego «Guardar» y «Opciones».
-    press('ArrowDown', 'ArrowRight');
-    expect(selectedChoice(pause)).toBe('threat');
-    press('ArrowDown');
+    press('ArrowDown', 'ArrowDown');
     expect(selectedChoice(pause)).toBe('options');
-    press('ArrowUp', 'ArrowLeft');
-    expect(selectedChoice(pause)).toBe('endTurn');
+    press('ArrowUp');
+    expect(selectedChoice(pause)).toBe('threat');
     press('Enter');
-    expect(asked).toEqual(['endTurn']);
+    expect(asked).toEqual(['threat']);
     expect(pause.isOpen).toBe(false);
-    expect(sounds).toEqual(['ui_move', 'ui_move', 'ui_move', 'ui_move', 'ui_move', 'ui_select']);
+    expect(sounds).toEqual(['ui_move', 'ui_move', 'ui_move', 'ui_select']);
   });
 
-  it('mirando jugar a los demas no sale lo del turno propio (terminarlo, guardar): rendirse y salir, si', () => {
-    const { press, pause, asked } = pausedMatch(true);
-    expect(shownPause(pause).items.map((item) => item.id)).toEqual(['resume', 'threat', 'options', 'help', 'surrender', 'quit']);
+  it('salen las del lienzo, en su orden: terminar el turno no esta (su boton y su tecla ya estan en la partida)', () => {
+    const { press, pause, asked } = pausedMatch();
+    expect(shownPause(pause).items.map((item) => item.id)).toEqual(['resume', 'threat', 'options', 'help', 'quit', 'surrender']);
     press('KeyE');
     expect(asked).toEqual([]);
     expect(pause.isOpen).toBe(true);
   });
 
-  it('las peligrosas van en su fila, abajo', () => {
+  it('rendirse va la ultima, en rojo y avisando de que se confirma', () => {
     const { press, pause } = pausedMatch();
-    press('ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown');
+    press('ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowDown');
     expect(selectedChoice(pause)).toBe('surrender');
-    press('ArrowRight');
-    expect(selectedChoice(pause)).toBe('quit');
+    const surrender = shownPause(pause).items.find((item) => item.id === 'surrender')!;
+    expect(surrender.danger).toBe(true);
+    expect(surrender.detail).toBe(t('surrenderNote'));
+  });
+
+  it('salir dice que guarda si la partida se guarda al salir; por la red, solo salir', () => {
+    const labelOfQuit = (pause: PauseMenu) => shownPause(pause).items.find((item) => item.id === 'quit')?.label;
+    expect(labelOfQuit(pausedMatch().pause)).toBe(t('saveAndQuit'));
+    expect(labelOfQuit(pausedMatch(false).pause)).toBe(t('quit'));
+  });
+
+  it('enseña «Cómo va» y lo que se juega encima del titulo', () => {
+    const { pause } = pausedMatch();
+    expect(shownPause(pause).title).toBe(t('pause'));
+    expect(shownPause(pause).subtitle).toContain(t('day'));
+    expect(shownPause(pause).standing).toBeDefined();
   });
 
   it('sus atajos hacen lo que la opcion, y Esc la cierra', () => {
@@ -307,20 +317,59 @@ describe('KeyRouter con la pausa de verdad', () => {
 
   it('enseña y atiende las teclas del jugador, no las de serie', () => {
     const { press, pause, asked } = pausedMatch();
-    expect([hintOf(pause, 'resume'), hintOf(pause, 'endTurn'), hintOf(pause, 'threat'), hintOf(pause, 'help')]).toEqual([
-      'Esc',
-      'E',
-      'T',
-      'H',
-    ]);
-    settings.keys = { endTurn: 'KeyP', cancel: 'KeyK' };
-    expect([hintOf(pause, 'resume'), hintOf(pause, 'endTurn')]).toEqual(['K', 'P']);
-    press('KeyE');
+    expect([hintOf(pause, 'resume'), hintOf(pause, 'threat'), hintOf(pause, 'help')]).toEqual(['Esc', 'T', 'H']);
+    settings.keys = { threat: 'KeyP', cancel: 'KeyK' };
+    expect([hintOf(pause, 'resume'), hintOf(pause, 'threat')]).toEqual(['K', 'P']);
+    press('KeyT');
     expect(asked).toEqual([]);
     press('KeyK');
     expect(pause.isOpen).toBe(false);
     pause.open();
     press('KeyP');
-    expect(asked).toEqual(['endTurn']);
+    expect(asked).toEqual(['threat']);
+  });
+});
+
+describe('KeyRouter con el final de verdad', () => {
+  /** Una partida de prueba en la que quien mira se ha rendido: su final, ya enseñado. */
+  function endedMatch() {
+    const s = blankState();
+    act(s, PLAYER, { kind: 'surrender' });
+    const end = new MatchEnd({ session: new GameSession(s, [humanController(), passiveController()]), viewer: PLAYER, isOnline: false });
+    end.showIfOver();
+    const match = fakeMatch([end]);
+    const press = (...codes: string[]) => codes.forEach((code) => match.router.press(keyPress(code)));
+    return { ...match, end, press };
+  }
+
+  const shownEnd = () => ui.get().end!;
+
+  it('el teclado es del final: Esc, E, T y las flechas no llegan al mapa ni lo quitan', () => {
+    const { press, router, end, mapOrders, pans } = endedMatch();
+    press('Escape', 'KeyE', 'KeyT', 'KeyV', 'KeyM');
+    router.frame(FRAME_SECONDS);
+    expect(mapOrders).toEqual([]);
+    expect(pans).toEqual([]);
+    expect(end.isOpen).toBe(true);
+    expect(ui.get().screen).toBe('end');
+  });
+
+  it('las flechas y Tab recorren sus botones; Enter en «Mirar el tablero» lo esconde y Esc o Enter lo traen', () => {
+    const { press } = endedMatch();
+    const boardIndex = shownEnd().buttons.findIndex((button) => button.id === 'board');
+    press(...Array.from({ length: boardIndex }, () => 'ArrowDown'));
+    expect(shownEnd().selected).toBe(boardIndex);
+    press('Enter');
+    expect(shownEnd().peek).toBe(true);
+    press('Escape');
+    expect(shownEnd().peek).toBe(false);
+    press('Enter');
+    expect(shownEnd().peek).toBe(true);
+    press('Enter');
+    expect(shownEnd().peek).toBe(false);
+    press('Tab');
+    expect(shownEnd().selected).toBe(boardIndex + 1);
+    press('ArrowUp');
+    expect(shownEnd().selected).toBe(boardIndex);
   });
 });

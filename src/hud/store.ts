@@ -37,6 +37,7 @@ export type {
   OptionsVM,
   PresetVM,
   SetupVM,
+  StandingVM,
 } from './vm/menus';
 export type { MinimapVM } from './vm/minimap';
 export type { NotesVM } from './vm/notes';
@@ -61,6 +62,7 @@ const DEFAULT_ACTIONS: UIActions = {
   pickInSelection: noop,
   endHover: noop,
   endPick: noop,
+  endBack: noop,
   closeHelp: () => ui.set({ help: false }),
   helpTopic: (topic) => ui.set({ helpTopic: topic }),
   homeHover: noop,

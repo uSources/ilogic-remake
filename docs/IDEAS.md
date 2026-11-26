@@ -180,12 +180,6 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
 
 ## Técnico
 
-11. **El teclado en la pantalla final.** En 3D no tiene panel de teclas (los `panels` de
-    `view3d/app/match3d.ts` son ayuda, opciones y pausa), así que las teclas siguen yendo al tablero:
-    flechas, Tab y Enter no recorren ni eligen sus botones (`MENU_BINDINGS.end`, `controls/menu.ts`,
-    no lo usa nadie), Esc abre la pausa de la partida acabada, y una tecla del mapa que vuelve a
-    pintar la interfaz (Tab, E...) quita el final y deja el tablero (`publishHud` pone
-    `screen: 'game'`). Comprobado rindiéndose en `/?seed=2013`.
 12. **Mando (gamepad).** Un adaptador más en `src/controls`; el hueco queda preparado en la PR #50
     (`docs/ARQUITECTURA.md`, «Mandos»).
 31. **Migrar las partidas guardadas al publicar.** Hoy un cambio de formato sube `SAVE_VERSION` y las

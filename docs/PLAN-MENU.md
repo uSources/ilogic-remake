@@ -26,7 +26,10 @@ lienzo «Ilogic · Rediseño de Jugar en línea», página «Menú inicial») y 
   reducir movimiento y ver siempre la amenaza.
 - **Nueva partida:** vista previa del mapa que se va a jugar, "Otro mapa" (R), código, y los ajustes Normal / Rápida / Clásica 2013 / Personalizada con botones de segmento.
 - **Campaña:** tarjetas con miniatura, tipo de objetivo, estado y mejor marca en días.
-- **Pausa:** panel centrado con el día, el código del mapa y el objetivo de la misión.
+- **Pausa y final:** como el menú clásico de Inicio (`docs/PLAN-ESTILO-C.md`, fase 1). La pausa, sobre
+  el tablero desenfocado: lo que se juega, «Pausa» en grande, sus opciones en texto y «Cómo va» a la
+  derecha. El final: el resultado en grande, sus cifras, la lista de qué hacer y la gráfica de los
+  ejércitos a la derecha.
 
 ## Cómo estaban
 

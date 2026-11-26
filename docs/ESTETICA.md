@@ -308,6 +308,14 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   - La compra, **fichas en abanico** alrededor de la fábrica (retrato, nombre y precio; lo que no se
     puede pagar, apagado y con lo que falta en rojo) y en el centro la chapa de la señalada: mover,
     alcance y visión con sus iconos y los retratos de contra qué es buena.
+- **El menú clásico de texto** (estilo C; Inicio desde el 25-11-2026; la pausa y el final, el
+  26-11-2026; plan: `docs/PLAN-ESTILO-C.md`). Va sin fichas crema: títulos grandes en Fredoka,
+  claros y con sombra negra, sobre el tablero 3D, que se oscurece del lado del texto (en la pausa,
+  además, desenfocado). La opción elegida crece y lleva delante una flecha dorada (`TextEntry`). Lo
+  que no se deshace va aparte, más pequeño y en rojo claro (`--menu-danger`), con su nota debajo.
+  Lo que se lee aparte («Cómo va», la gráfica del final) va en una ficha oscura translúcida con la
+  etiqueta en mayúsculas pequeñas. Lo tuyo, en azul claro (`--menu-own`), y lo enemigo, en rojo
+  claro. Los resultados: la victoria en dorado, la derrota en rojo y el empate en lila.
 - **Jugar en línea** (24-11-2026, decidido con el usuario): las pantallas son las del lienzo de diseño
   «Ilogic · Rediseño de Jugar en línea» (página «Jugar en línea»); lo que cambie se cambia allí
   primero. A ellas se llega por una tarjeta más de Inicio, «En línea», con azul contra rojo (un

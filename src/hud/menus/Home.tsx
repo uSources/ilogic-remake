@@ -6,6 +6,7 @@ import type { UIState } from '../state';
 import { ui } from '../store';
 import type { HomeEntryVM } from '../vm/menus';
 import { MenuTabs } from './MenuTabs';
+import { TextEntry } from './TextEntry';
 
 /** Corazon pixel (7×6), en rojo. */
 function Heart() {
@@ -33,21 +34,17 @@ function HomeLink({ id, focus, cls, children }: { id: string; focus: Focus; cls:
   );
 }
 
-/**
- * Una entrada de la lista: la elegida, en grande, con la flecha delante y lo de debajo en oro. Si pide
- * jugar (te toca en linea), lo de debajo va en una chapa amarilla aunque no este elegida.
- */
+/** Una entrada de la lista. Si pide jugar (te toca en linea), lo de debajo va en una chapa amarilla aunque no este elegida. */
 function Entry({ entry, focus }: { entry: HomeEntryVM; focus: Focus }) {
   return (
-    <HomeLink id={entry.id} focus={focus} cls={`home-entry entry-${entry.id} ${entry.urgent ? 'urgent' : ''}`}>
-      <span class="home-arrow" aria-hidden="true">
-        ▸
-      </span>
-      <span class="home-entry-text">
-        <span class="home-entry-title">{entry.title}</span>
-        <span class="home-entry-note">{entry.note}</span>
-      </span>
-    </HomeLink>
+    <TextEntry
+      sel={focus.focused === entry.id}
+      cls={`entry-${entry.id} ${entry.urgent ? 'urgent' : ''}`}
+      title={entry.title}
+      note={entry.note}
+      onHover={focus.hover(entry.id)}
+      onPick={focus.pick(entry.id)}
+    />
   );
 }
 
@@ -77,12 +74,12 @@ export function Home({ s }: { s: UIState }) {
       <MenuTabs current="play" focused={home.focus} onHover={(id) => ui.actions.homeHover(id)} onPick={(id) => ui.actions.homePick(id)} />
       <div class="home-main">
         <img class="px-icon logo" src={imgUrl('logoilogic')} alt="Ilogic" />
-        <nav class="home-list" aria-label={t('mainMenu')}>
+        <nav class="text-list" aria-label={t('mainMenu')}>
           {home.entries.map((entry) => (
             <Entry key={entry.id} entry={entry} focus={focus} />
           ))}
         </nav>
-        <span class="home-hint">{t('homeHint')}</span>
+        <span class="menu-hint">{t('homeHint')}</span>
       </div>
       <div class="home-foot">
         <HomeLink id="credits" focus={focus} cls="link">

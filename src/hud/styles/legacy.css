@@ -1,35 +1,7 @@
-/* Restos de las primeras pantallas que aun se usan: tabla del final, barra de captura y retoques de
+/* Restos de las primeras pantallas que aun se usan: barra de captura y retoques de
    la ficha y del dia, codigo del mapa y nota de Nueva partida, "Volver" de la campaña. Se quedan aqui
    y no en su sitio porque el orden de la cascada importa: moverlos pide comprobar que nada de en
    medio les gana. */
-
-/* Pantalla final */
-.endstats {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 15px;
-}
-.endstats th {
-  font-family: var(--display);
-  font-size: 12px;
-  font-weight: normal;
-  text-align: right;
-  padding-bottom: 4px;
-}
-.endstats th.you {
-  color: var(--blue);
-}
-.endstats th.enemy {
-  color: var(--red-soft);
-}
-.endstats td {
-  padding: 4px 0;
-  border-top: 2px solid var(--lo);
-}
-.endstats td.num {
-  text-align: right;
-  color: var(--gold);
-}
 
 /* Nueva partida */
 .ng-code {
