@@ -7,11 +7,15 @@
  *
  * No espera nada: el reloj del primer turno ya corre en el servidor, asi que esto no puede comerse
  * tiempo. Se enseña lo que tarde en cargar la partida (main.ts le da un minimo corto para que se lea).
+ *
+ * Igual, que la partida acaba de empezar (se esperaba en el vestibulo, o se ha encontrado rival): esa
+ * carga lo hace sonar (`match_begins`). En el vestibulo no puede: la recarga lo cortaria.
  */
 import type { GameState } from '../core/model';
 import type { MatchIntroVM } from '../hud/vm/notices';
 
 const INTRO_KEY = 'ilogic3d.intro';
+const BEGUN_KEY = 'ilogic3d.begun';
 
 /** Lo que se ve de la partida recien emparejada, desde la vista de quien mira (`team`) y lo que ya se dice en texto. */
 export function introOf(state: GameState, team: number, details: string[]): MatchIntroVM {
@@ -36,6 +40,26 @@ export function takeIntro(): MatchIntroVM | null {
     return isIntro(parsed) ? parsed : null;
   } catch {
     return null;
+  }
+}
+
+/** La partida empieza ahora: lo apunta para la carga de la pagina que la empieza. */
+export function noteMatchBegun(): void {
+  try {
+    sessionStorage.setItem(BEGUN_KEY, 'yes');
+  } catch {
+    // Sin sessionStorage empieza callada, como al volver a una que ya iba.
+  }
+}
+
+/** La partida que carga acaba de empezar (una sola vez: se borra al leerlo). */
+export function takeMatchBegun(): boolean {
+  try {
+    const isBegun = sessionStorage.getItem(BEGUN_KEY) !== null;
+    sessionStorage.removeItem(BEGUN_KEY);
+    return isBegun;
+  } catch {
+    return false;
   }
 }
 

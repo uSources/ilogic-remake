@@ -6,7 +6,8 @@
  * puede jugar contra la IA o cancelar la busqueda. Es tambien quien
  * tiene la conexion con la sala (`OnlineMatch`): entra por el WebSocket al abrirse, apunta la sala en
  * «Mis partidas» y, cuando la sala juega (o ya acabo), le pasa la conexion a la escena
- * (`OnlineHost.startOnline`).
+ * (`OnlineHost.startOnline`). Suena cuando entra alguien mas y con lo que le pasa a la conexion
+ * (`LinkSounds`); que la partida empieza suena ya en su carga de la pagina (`noteMatchBegun`).
  */
 import type { RoomStatus, SearchPace, SeatId } from '../../core/net';
 import { shownTeamNumber } from '../../core/teams';
@@ -16,7 +17,8 @@ import { forgetRoom, readOnlineRooms, rememberRoom, roomLinkUrl, type OnlineRoom
 import { handToAi, lobbyOf, type LobbyInfo, type LobbySeat } from '../../net/roomApi';
 import type { RoomPlay } from '../../net/roomClient';
 import type { FatalClose, LinkStatus } from '../../net/serverLink';
-import { introOf, saveIntro } from '../../net/matchIntro';
+import { LinkSounds } from '../../net/linkSounds';
+import { introOf, noteMatchBegun, saveIntro } from '../../net/matchIntro';
 import { serverUrl } from '../../net/serverUrl';
 import { themeOf } from '../../core/gameContent';
 import { nameOf, t, type TextKey } from '../../settings';
@@ -68,6 +70,12 @@ function searchStart(
   return known?.search ? now : (remembered?.searchedAt ?? now);
 }
 
+/** Ha entrado alguien mas desde la respuesta de antes (el asiento propio no cuenta: de ese ya sabe su conexion). */
+function someoneArrived(before: LobbyInfo, after: LobbyInfo, ownSeat: SeatId): boolean {
+  const wasIn = (seat: SeatId) => before.seats.some((earlier) => earlier.seat === seat && earlier.joined);
+  return after.seats.some((seat) => seat.joined && seat.seat !== ownSeat && !wasIn(seat.seat));
+}
+
 /** De quien es el ejercito: el tuyo, azul; en un duelo, el otro, rojo; con mas, su numero de equipo. */
 function seatTeam(seat: LobbySeat, isMe: boolean, isDuel: boolean): string {
   if (isMe) return t('onlineArmyBlue');
@@ -77,6 +85,8 @@ function seatTeam(seat: LobbySeat, isMe: boolean, isDuel: boolean): string {
 export class LobbyScreen {
   /** La sala en la que se esta, con lo que se sabe de ella. */
   private match: OnlineMatch | null = null;
+  /** Lo que suena de su conexion: uno por cada vez que se entra, como `match`. */
+  private linkSounds: LinkSounds | null = null;
   private entry: OnlineRoomEntry | null = null;
   private lobby: LobbyInfo | null = null;
   private linkStatus: LinkStatus = 'connecting';
@@ -85,6 +95,8 @@ export class LobbyScreen {
   private isLeaving = false;
   /** Se ha entrado buscando rival (con este ritmo): al empezar la partida, «¡Rival encontrado!». */
   private foundPace: SearchPace | null = null;
+  /** Se ha visto la sala esperando: si se pone a jugar, la partida empieza ahora (no es volver a una que ya iba). */
+  private hasSeenWaiting = false;
 
   constructor(private readonly screens: OnlineScreens) {}
 
@@ -97,6 +109,8 @@ export class LobbyScreen {
   /** Sale de la sala (si se estaba en una): nada queda esperando. */
   leave(): void {
     this.stopPolling();
+    this.linkSounds?.stop();
+    this.linkSounds = null;
     this.match?.close();
     this.match = null;
     this.entry = null;
@@ -129,11 +143,13 @@ export class LobbyScreen {
     };
     if (known) rememberRoom(this.entry);
     this.foundPace = known?.found ?? null;
+    this.hasSeenWaiting = false;
     this.screens.show('lobby', 'leave');
     this.screens.error = null;
     this.linkStatus = 'connecting';
     const match = new OnlineMatch(base, code, token);
     this.match = match;
+    this.linkSounds = new LinkSounds(this.screens.host.sounds);
     match.listener = {
       onStatus: (status) => this.linkStatusChanged(status),
       onClosed: (reason) => this.closedByServer(reason),
@@ -240,6 +256,7 @@ export class LobbyScreen {
 
   private welcomed(seat: SeatId, team: number, status: RoomStatus): void {
     if (!this.entry) return;
+    if (status === 'waiting') this.hasSeenWaiting = true;
     this.entry = { ...this.entry, seat, team, status, at: Date.now() };
     this.remember();
     this.screens.publish();
@@ -255,10 +272,12 @@ export class LobbyScreen {
 
   private linkStatusChanged(status: LinkStatus): void {
     this.linkStatus = status;
+    this.linkSounds?.statusChanged(status);
     this.screens.publish();
   }
 
   private closedByServer(reason: FatalClose): void {
+    this.linkSounds?.closed();
     this.screens.error = closeText(reason);
     if (reason === 'gone' && this.entry) forgetRoom(this.entry.code);
     this.screens.publish();
@@ -272,9 +291,12 @@ export class LobbyScreen {
     if (!match.client.isInPlay || play.kind === 'events') return;
     this.isLeaving = true;
     this.stopPolling();
+    this.linkSounds?.stop();
+    this.linkSounds = null;
     match.listener = {};
     this.remember();
     this.announceRival(match);
+    if (this.hasSeenWaiting || this.foundPace !== null) noteMatchBegun();
     this.screens.host.startOnline(match);
     this.match = null;
   }
@@ -309,12 +331,19 @@ export class LobbyScreen {
     if (!base || !match || this.isLeaving) return;
     const info = await lobbyOf(base, match.code);
     if (this.match !== match) return;
-    if (info.ok) {
-      this.lobby = info.value;
-      this.remember();
-    } else if (info.error !== 'unreachable') this.screens.error = t(API_ERROR_TEXT[info.error] ?? 'onlineFailed');
+    if (info.ok) this.lobbyArrived(info.value);
+    else if (info.error !== 'unreachable') this.screens.error = t(API_ERROR_TEXT[info.error] ?? 'onlineFailed');
     this.screens.publish();
     if (this.lobby?.status === 'waiting' || !info.ok) this.pollHandle = setTimeout(() => void this.pollLobby(), LOBBY_POLL_MS);
+  }
+
+  /** Lo que dice el servidor de la sala. La primera respuesta no suena: quien ya estaba, estaba antes de llegar. */
+  private lobbyArrived(info: LobbyInfo): void {
+    const before = this.lobby;
+    if (before && this.entry && someoneArrived(before, info, this.entry.seat)) this.screens.host.sounds.play('player_joined');
+    if (info.status === 'waiting') this.hasSeenWaiting = true;
+    this.lobby = info;
+    this.remember();
   }
 
   private stopPolling(): void {

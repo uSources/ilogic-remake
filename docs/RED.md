@@ -525,6 +525,8 @@ puerto; ademas, sus alarmas, arrancar otra vez y servir el juego).
 | `src/net/serverLink.ts` | `ServerLink`: el WebSocket con el protocolo encima: saludo, `seq`, reconexion, reenvio, `step` |
 | `src/net/roomClient.ts` | `RoomClient`: los mensajes como partida (`state`) y jugadas (`RoomPlay`, `next`), `act` con su promesa, que trae el resultado y su eco (y las respuestas perdidas en un corte, `answerLost`); `animationView` para animar un lote |
 | `src/net/onlineMatch.ts` | `OnlineMatch`: enlace y cliente juntos, con quien los escucha; `inPlay` (conectar y esperar a estar en juego) |
+| `src/net/linkSounds.ts` | `LinkSounds`: lo que suena de la conexion (un corte que dura, su vuelta, el cierre sin arreglo), en el vestibulo y en la partida |
+| `src/net/matchIntro.ts` | Lo que el vestibulo deja a la carga de la pagina de la partida: «¡Rival encontrado!» (`saveIntro`) y que la partida acaba de empezar, para que suene (`noteMatchBegun`) |
 | `src/net/mirrorSession.ts` | `mirrorSession`: la sesion de la pantalla sobre una vista |
 | `src/net/roomApi.ts` | Las rutas HTTP: `createRoom`, `claimSeat`, `lobbyOf`, `handToAi`, `closeRoom`, `searchRival` |
 | `src/net/onlineRooms.ts` | «Mis partidas» en localStorage (la sala de una busqueda, con su ritmo: `search`); el enlace de la sala (`parseRoomLink`, `roomLinkUrl`) |

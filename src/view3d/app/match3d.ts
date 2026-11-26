@@ -73,6 +73,7 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
         ownTurn: notifyTurn,
         showClock: (turn) => turnClock.follow(turn),
         quit: backToMenu,
+        sounds: audio.sounds,
       })
     : null;
   const runner: MatchRunner = online ?? localRunner(session, viewer);

@@ -71,6 +71,7 @@ export class MenuFlow {
     });
     this.online = new OnlineScreen({
       palette: this.palette,
+      sounds,
       toHome: () => this.toHome(),
       startOnline: (match) => this.startOnline(match),
     });

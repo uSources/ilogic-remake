@@ -1111,6 +1111,14 @@ archivo y por donde pasa cada cosa, en `docs/RED.md`. Las decisiones:
 - **El reloj del turno**: con `turnSeconds`, la pastilla bajo el dia cuenta lo que le queda al
   turno que se ve (`TurnClock`, `src/view3d/systems/net/turnClock.ts`; lo que pinta, `turnClockVM`):
   azul, rojo con un tic por segundo los ultimos 15 s («Fin del turno» parpadea) y oscuro en el de otro.
+- **Lo que suena**: en el vestibulo, que entra alguien mas (`player_joined`, comparando cada respuesta
+  de `GET /rooms/:code` con la anterior). Que la partida empieza (`match_begins`) suena en la carga de
+  la pagina de la partida, no en el vestibulo, que la recarga lo cortaria: el vestibulo lo apunta
+  (`noteMatchBegun`, `src/net/matchIntro.ts`) si vio la sala esperando o llego buscando rival, y
+  volver a una partida que ya iba no lo apunta. La conexion (`LinkSounds`, `src/net/linkSounds.ts`,
+  en el vestibulo y en `OnlinePlay`): un corte suena solo si dura 4 s (`net_reconnecting`), su vuelta
+  solo si sono el corte (`net_connected`) y el cierre sin arreglo en el acto (`net_lost`). Conectar
+  la primera vez no suena: mientras todo va bien, silencio.
 - **Limites de hoy**: lo que hacen los demas durante el turno propio (rendirse) no se anima, solo se
   ve; el final no sabe las cuentas de los demas (no estan en la vista: `docs/IDEAS.md`).
 

@@ -5,6 +5,7 @@
  * pantalla esta en su modulo: menuScreen (buscar rival, crear, entrar con el codigo, mis partidas),
  * createScreen y lobbyScreen; onlineScreen.ts las enlaza.
  */
+import type { SoundPort } from '../../audio/sounds';
 import { PACE_RULES, type RoomStatus, type SearchPace, type SeatId } from '../../core/net';
 import type { OnlineVM } from '../../hud/store';
 import type { OnlineMatch } from '../../net/onlineMatch';
@@ -16,6 +17,8 @@ import type { RoomWatch } from './roomWatch';
 
 export interface OnlineHost {
   readonly palette: TerrainPalette;
+  /** Lo que suena en la sala: quien entra y la conexion. */
+  readonly sounds: SoundPort;
   toHome(): void;
   /** La sala esta en juego (o acabada): la escena de la partida sigue con esta conexion. */
   startOnline(match: OnlineMatch): void;

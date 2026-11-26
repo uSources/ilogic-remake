@@ -1,16 +1,23 @@
 /**
- * El vestibulo de una sala (`LobbyScreen`) con un servidor de mentira: `fetch`, `WebSocket` y
- * `localStorage` falsos y el reloj a mano. Con un servidor lejano (Cloudflare) la bienvenida llega
- * por el WebSocket antes que la respuesta de quien esta en la sala, y eso no puede dejarlo a medias.
+ * El vestibulo de una sala (`LobbyScreen`) con un servidor de mentira: `fetch`, `WebSocket`,
+ * `localStorage` y `sessionStorage` falsos y el reloj a mano. Con un servidor lejano (Cloudflare) la
+ * bienvenida llega por el WebSocket antes que la respuesta de quien esta en la sala, y eso no puede
+ * dejarlo a medias. Tambien lo que suena: quien entra, la conexion y que la partida empieza.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CURRENT_PROTOCOL, type ServerMessage } from '@core/net';
+import { defaultContent } from '@core/content/default';
+import { skirmishConfig } from '@core/match';
+import { CURRENT_PROTOCOL, Room, type ServerMessage } from '@core/net';
 import { LobbyScreen } from '../src/menu/online/lobbyScreen';
 import { RoomWatch } from '../src/menu/online/roomWatch';
 import type { OnlineHost, OnlineScreens } from '../src/menu/online/shared';
+import { CUT_NOTICE_MS } from '../src/net/linkSounds';
+import { takeMatchBegun } from '../src/net/matchIntro';
 import { readOnlineRooms, writeOnlineRooms } from '../src/net/onlineRooms';
 import type { LobbyInfo } from '../src/net/roomApi';
 import { t } from '../src/settings';
+import { tokenCounter } from './sim/netClient';
+import { FakeSounds } from './sim/turnPorts';
 
 const PAGE = 'http://localhost/';
 const CODE = 'ABCDEF';
@@ -68,11 +75,41 @@ type Welcome = Extract<ServerMessage, { kind: 'welcome' }>;
 
 const welcome: Welcome = { kind: 'welcome', seat: 0, team: 0, ...CURRENT_PROTOCOL, status: 'waiting', lastSeq: 0 };
 
-/** Lo que pidio la pantalla al conjunto (cancelar la busqueda, volver al menu). */
+/** La sala esperando con quien ha entrado en cada asiento (el 0 es el propio). */
+const roomWith = (...joined: boolean[]): LobbyInfo => ({
+  ...waitingRoom,
+  seats: joined.map((isIn, seat) => ({ seat, team: seat, kind: 'person', joined: isIn })),
+});
+
+/**
+ * Lo que manda la sala de verdad del nucleo al asiento 0 al entrar, con la IA enfrente: la bienvenida
+ * (aun esperando: falta el) y, como con el ya estan todos, la vista y a quien se espera. Al volver a
+ * entrar (`isReturning`), lo mismo con la partida ya en marcha.
+ */
+function roomMessages(isReturning: boolean): ServerMessage[] {
+  const config = skirmishConfig({ seed: 21, size: 16, teams: [{ controller: 'human' }, { controller: 'ai' }] });
+  const room = Room.create({ match: config }, { content: defaultContent(), newToken: tokenCounter() });
+  const hello = { kind: 'hello', token: room.personSeats()[0]!.token, ...CURRENT_PROTOCOL };
+  const first = room.join(hello);
+  const joined = isReturning ? room.join(hello) : first;
+  if (!joined.ok) throw new Error(joined.error);
+  return joined.messages.filter((outgoing) => outgoing.seat === 0).map((outgoing) => outgoing.message);
+}
+
+/** Lo que pidio la pantalla al conjunto (cancelar la busqueda, volver al menu, pasar a la partida). */
 const asked: string[] = [];
 
+let sounds = new FakeSounds();
+
+const host = (): OnlineHost => ({
+  palette: {} as OnlineHost['palette'],
+  sounds,
+  toHome: () => {},
+  startOnline: (match) => asked.push(`play ${match.code}`),
+});
+
 const screens = (): OnlineScreens => ({
-  host: {} as OnlineHost,
+  host: host(),
   rooms: new RoomWatch(),
   focus: '',
   error: null,
@@ -99,10 +136,12 @@ describe('LobbyScreen', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     vi.stubGlobal('location', { href: PAGE });
     vi.stubGlobal('localStorage', new FakeStorage());
+    vi.stubGlobal('sessionStorage', new FakeStorage());
     vi.stubGlobal('WebSocket', FakeSocket);
     vi.stubGlobal('fetch', fakeFetch);
     unanswered.length = 0;
     asked.length = 0;
+    sounds = new FakeSounds();
     lobby = new LobbyScreen(screens());
   });
 
@@ -187,5 +226,59 @@ describe('LobbyScreen', () => {
     await settle();
     expect(asked).toEqual([`cancel ${CODE}`, 'menu']);
     expect(lobby.vm()).toBeNull();
+  });
+
+  it('suena cuando entra alguien mas; ni con quien ya estaba al llegar ni con la propia conexion', async () => {
+    lobby.join(CODE, 'ficha-0', 3, { seat: 0, team: 0 });
+    FakeSocket.last?.reply(welcome);
+    unanswered.shift()?.(roomWith(false, true, false));
+    await settle();
+    expect(sounds.heard).toEqual([]);
+
+    await settle(POLL_MS);
+    unanswered.shift()?.(roomWith(true, true, false));
+    await settle();
+    expect(sounds.heard).toEqual([]);
+
+    await settle(POLL_MS);
+    unanswered.shift()?.(roomWith(true, true, true));
+    await settle();
+    expect(sounds.heard).toEqual(['player_joined']);
+
+    await settle(POLL_MS);
+    unanswered.shift()?.(roomWith(true, true, true));
+    await settle();
+    expect(sounds.heard).toEqual(['player_joined']);
+  });
+
+  it('un corte que dura suena, y su vuelta; un cierre sin arreglo, en el acto', async () => {
+    lobby.join(CODE, 'ficha-0', 2, { seat: 0, team: 0 });
+    FakeSocket.last?.reply(welcome);
+    FakeSocket.last?.onclose?.({ code: 1006 });
+    await settle(CUT_NOTICE_MS);
+    expect(sounds.heard).toEqual(['net_reconnecting']);
+
+    FakeSocket.last?.reply(welcome);
+    expect(sounds.heard).toEqual(['net_reconnecting', 'net_connected']);
+
+    FakeSocket.last?.onclose?.({ code: 4410 });
+    expect(sounds.heard).toEqual(['net_reconnecting', 'net_connected', 'net_lost']);
+  });
+
+  it('si la sala se pone a jugar mientras se esperaba en ella, la carga de la partida lo hace sonar', () => {
+    lobby.join(CODE, 'ficha-0', 2, { seat: 0, team: 0 });
+    for (const message of roomMessages(false)) FakeSocket.last?.reply(message);
+
+    expect(asked).toEqual([`play ${CODE}`]);
+    expect(takeMatchBegun()).toBe(true);
+    expect(takeMatchBegun()).toBe(false);
+  });
+
+  it('volver a una partida que ya iba no la hace sonar como si empezara', () => {
+    lobby.join(CODE, 'ficha-0', 2);
+    for (const message of roomMessages(true)) FakeSocket.last?.reply(message);
+
+    expect(asked).toEqual([`play ${CODE}`]);
+    expect(takeMatchBegun()).toBe(false);
   });
 });

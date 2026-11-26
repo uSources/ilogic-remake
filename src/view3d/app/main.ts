@@ -18,7 +18,7 @@ import { installSounds, webAudioSounds } from '../../audio/sfx';
 import { followPageVisibility } from '../../audio/volumeControl';
 import { webAudio } from '../../audio/gameAudio';
 import { openGame, pendingStart } from './gameStart';
-import { takeIntro } from '../../net/matchIntro';
+import { takeIntro, takeMatchBegun } from '../../net/matchIntro';
 import { GlbLibrary } from '../engine/pieces/glbModels';
 import { playMatch } from './match3d';
 import { MenuFlow } from './menuFlow';
@@ -49,6 +49,8 @@ const start = pendingStart();
 // Recien emparejada con «Buscar rival»: la carga enseña a los dos rivales (src/net/matchIntro.ts).
 // Sale en cuanto estan las imagenes (lleva los soldados y tanques del atlas) y se ve un minimo.
 const intro = start?.start === 'online' ? takeIntro() : null;
+// Recien empezada mientras se esperaba en el vestibulo: suena aqui, que alli la recarga lo cortaria.
+if (start?.start === 'online' && takeMatchBegun()) webAudioSounds.play('match_begins');
 const imagesLoaded = loadGameImages(asset);
 const introShown = intro
   ? imagesLoaded.then(() => {
