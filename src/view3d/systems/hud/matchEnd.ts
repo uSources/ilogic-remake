@@ -159,6 +159,7 @@ export class MatchEnd implements KeyPanel {
       toast: null,
       forecast: null,
       tile: null,
+      chosen: null,
       end: { ...this.shown.view, selected: this.selected, peek: this.peeking },
     });
   }

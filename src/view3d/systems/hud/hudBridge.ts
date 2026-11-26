@@ -12,7 +12,7 @@ import { teamState } from '../../../core/teams';
 import { helpRulesOfMatch } from '../../../hud/helpText';
 import { ui, type Anchor, type SelectionVM, type UIState } from '../../../hud/store';
 import { nameOf } from '../../../settings';
-import { dayInfoVM, economyVM, forecastVM, standingVM, tileVM, weatherVM } from '../../../ui/hudModels';
+import { chosenUnitVM, dayInfoVM, economyVM, forecastVM, standingVM, tileVM, weatherVM } from '../../../ui/hudModels';
 import { sideOf } from '../../../ui/sides';
 import { unitKey } from '../../../ui/sprites';
 import type { AttackPlan } from '../turn/attackPlan';
@@ -25,7 +25,7 @@ export interface HudMoment {
   busy: boolean;
   menu: MenuView | null;
   forecast: AttackPlan | null;
-  /** Lo elegido (el panel de lo elegido sale con dos o mas). */
+  /** Lo elegido (con una, su ficha abajo a la izquierda; con dos o mas, el panel de lo elegido). */
   selected: readonly Unit[];
   /** El rectangulo de una casilla en la pantalla (para colocar bocadillos junto a ella). */
   anchorOf(pos: Pos): Anchor;
@@ -81,6 +81,13 @@ function tileCard(textures: GameImages, s: GameState, viewer: TeamId, moment: Hu
   return tileVM(textures, s, moment.cursor, { viewer, vis: visibility(s, viewer), hidden: NOTHING_HIDDEN });
 }
 
+/** La unidad elegida, si es una sola y no se esta animando nada (con dos o mas, su panel). */
+function chosenOf(textures: GameImages, s: GameState, viewer: TeamId, moment: HudMoment): UIState['chosen'] {
+  const [only, ...others] = moment.selected;
+  if (!only || others.length > 0 || moment.busy) return null;
+  return chosenUnitVM(textures, s, only, viewer);
+}
+
 /** Un enemigo a tiro y, encima, otro tanto para la cifra de la prevision que sube de el (Forecast.tsx). */
 const withRoomAbove = (overhead: Anchor): Anchor => ({ ...overhead, y: overhead.y - overhead.h, h: overhead.h * 2 });
 
@@ -114,6 +121,7 @@ export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, m
     busy: moment.busy,
     watching: moment.watching,
     tile: moment.menu ? null : tileCard(textures, s, viewer, moment),
+    chosen: chosenOf(textures, s, viewer, moment),
     menu: menuOf(moment),
     forecast: forecastOf(textures, s, viewer, moment),
     selection: selectionOf(textures, s, viewer, moment.selected),
