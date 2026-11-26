@@ -3,14 +3,12 @@
 Lista viva de lo que se ha hablado para Ilogic y aún no está hecho (o se descartó, y por qué). Se
 actualiza al terminar cada cosa: lo hecho sale de aquí y va a las notas de versión (`CHANGELOG.md`).
 
-Estado a 19 de noviembre de 2026, con la versión 0.13.1 publicada y, aún sin versión, que el
-tablero se lea mejor: siluetas de las unidades tapadas, contorno en la elegida y la señalada,
-minimapa en 3D (siempre abierto, con los colores del tablero y que crece al señalarlo), decorado
-más pequeño y la cámara de partida más cerca. Ahora el foco es que la vista 3D tenga lo que tenía
-el 2D, con su forma por sistemas (`docs/ARQUITECTURA.md`, "Vista 3D"), y un núcleo PvE bueno; el
-PvP, después.
+Estado a 26 de noviembre de 2026, con la versión 0.18.0 publicada: el juego en línea ya está
+(«Jugar en línea» y «Buscar rival»; lo que le falta, en la idea 15). El foco sigue siendo que la
+vista 3D tenga lo que tenía el 2D, con su forma por sistemas (`docs/ARQUITECTURA.md`, "Vista 3D"),
+y un núcleo PvE bueno.
 
-## En marcha
+## Plan escrito, sin empezar
 
 - **Una IA más humana** (planes que duran, mapas de influencia, memoria, personalidades y
   dificultad): plan por fases en `docs/PLAN-IA.md`, para revisar antes de tocar código. Recoge
@@ -22,10 +20,17 @@ El juego pasó de 2D (Phaser) a 3D (three.js, `src/view3d/`). Las reglas, la IA 
 son las mismas, pero la vista 3D aún no deja hacer todo. La ayuda de la partida solo cuenta lo que
 ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`).
 
-19. **Tutorial y paneles de misión.**
-20. **Varias personas en la misma pantalla** (el aviso de cambio de jugador), repetir el turno
-    enemigo y guardado automático.
-21. **El dedo:** pellizcar para acercar y girar con dos dedos (`docs/PLAN-MOVIL.md`).
+19. **Tutorial y paneles de misión.** Las piezas están (el panel, `hud/game/MissionPanel.tsx`, y
+    los pasos del tutorial, `campaign.ts`), pero la partida 3D nunca rellena `mission` en la
+    interfaz: hoy el objetivo solo sale en la pausa.
+20. **Varias personas en la misma pantalla y repetir el turno enemigo.** Con rival «Persona» (Nueva
+    partida) se juega, pero la vista se queda con el primer equipo (`playerTeam`,
+    `view3d/app/gameStart.ts`) y no sale el aviso de cambio de jugador: `hud/overlays/Handoff.tsx`
+    está hecho y la vista 3D no lo enseña. Repetir el turno enemigo: con el registro de la sesión
+    (`replaySession`), como hacía el 2D.
+21. **El dedo:** el pellizco está hecho (`controls/gestures/pinch.ts`, dentro de `PointerGestures`),
+    pero la vista 3D usa su propio `pointerInput.ts` y no lo tiene (idea 33). Girar con dos dedos,
+    aún no (`docs/PLAN-MOVIL.md`).
 22. **Laboratorio de animaciones** (se quitó con el 2D; para los modelos está `units3d.html`).
 24. **Edificios con explanada delante** (como en Advance Wars): rehacer los seis en Ashfox ocupando
     la mitad de atrás de la casilla, para que la unidad de encima quede delante sin tener que
@@ -52,11 +57,13 @@ cosa en su PR:
    (objetivo: 15-25 días). Pista: con el tope de puntos de mando el dinero se amontona (100.000+ sin
    gastar el día 40), perder unidades sale casi gratis y la Base se defiende sola. Probar junto con
    ejércitos más pequeños (2) y un asalto escoltado a la Base.
-2. **Ejércitos más pequeños.** Bajar los puntos de mando de 30 a ~20 para que cada unidad pese más y
+2. **Ejércitos más pequeños.** La partida «Rápida» ya va con 20 puntos de mando (`PRESETS`,
+   `src/setup.ts`); falta decidir si la Normal baja de 30 a ~20, para que cada unidad pese más y
    haya menos que mover. Medir antes con `npm run balance`.
 3. **Dificultad en «Nueva partida».** Fácil: la IA empieza con menos dinero y sin
    curarse. Normal: como ahora.
-4. **Modo Escaramuza.** Mapa pequeño (12×12), menos dinero, partidas de ~10 días.
+4. **Partidas aún más cortas.** «Rápida» ya es 20×20 con 20 días; queda un mapa pequeño (12×12),
+   con menos dinero, para partidas de ~10 días.
 
 ## Campaña: la guerra por el mapamundi
 
@@ -113,9 +120,10 @@ cosa en su PR:
 
 ## Equilibrio
 
-10. **Unidades.** `npm run balance` dice que el Soldado (1,6×) y el Caza ligero (2×) rinden demasiado
-    para lo que cuestan, y el Jeep (0,4×) y el Motorizado (0,3×) muy poco. Propuestas de la
-    herramienta: Soldado 1500 → 2000, Jeep 5000 → 4000, Caza ligero 12000 → 15000.
+10. **Soldado 1500 → 2000.** `npm run balance` decía que el Soldado (1,6×) y el Caza ligero (2×)
+    rendían demasiado para lo que cuestan, y el Jeep (0,4×) y el Motorizado (0,3×) muy poco. El Jeep
+    (4000) y el Caza ligero (15000) ya tienen el precio que proponía; falta el Soldado y volver a
+    medir, sobre todo el Motorizado.
 
 ## PvP (más adelante: primero un núcleo PvE bueno)
 
@@ -124,34 +132,27 @@ El juego por turnos le va bien al PvP asíncrono, y el núcleo ya ayuda: es dete
 jugador es una acción (datos) que pasa por `dispatch`, con sucesos completos: lo que mandaría y
 recibiría un cliente. Por fases, para no apostarlo todo de golpe:
 
-14. **Dos jugadores en el mismo dispositivo** (pasarse el móvil): casi gratis de hacer, y sirve para
-    probar el equilibrio entre personas.
-15. **Partidas con amigos por enlace o código**, asíncronas, con aviso cuando te toca. **En marcha**,
-    en tres PR: (1) el núcleo habla por la red, sin servidor (hecho: `src/core/net`, ver
-    `docs/ARQUITECTURA.md`, "Red": el protocolo como datos, la sala `Room` sobre una `GameSession`,
-    la niebla de los sucesos y la vista del cliente); (2) el servidor, en Cloudflare Workers con un
-    Durable Object por sala o en Node para alojarlo uno mismo (la misma sala, `HostedRoom`), que
-    guarda la sala (`snapshot`/`restore`), lleva los tiempos y manda a cada uno solo lo que ve
-    (hecho: `server/`); (3) la pantalla: crear una partida, unirse con su
-    código o su enlace, «Mis partidas» con el estado de cada una (te toca, turno del rival,
-    esperando, acabada) y jugar desde la vista y los sucesos que llegan (hecho: `src/net`, «Jugar en línea»;
-    ver `docs/ARQUITECTURA.md`, "Red" → "Cliente"; en la vista 3D, `OnlinePlay`). «Buscar rival»
-    también está (por turnos o en vivo; 1 contra 1, reglas normales y mapa al azar: un emparejador
-    en el servidor, `server/src/matchmaker.ts`). Queda: pedir asiento con el código,
-    `POST /rooms/:code/seat`, sin tope por IP (quien sabe el código de una sala que espera puede
-    gastar sus asientos libres, y el código es el único secreto; las de la búsqueda no se reparten,
-    pero su código sale en «Mis partidas» de los dos), lo que queda del lienzo de diseño «Ilogic ·
-    Rediseño de Jugar en línea» (practicar contra la IA mientras se busca rival, con aviso si llega
-    alguien; en la sala, sus reglas en chapas y «Cambiar reglas», que el vestíbulo aún no sabe:
-    `LobbyInfo` no las trae; en «Mis partidas», la barra de lo que queda de turno, que pide saber
-    cuánto dura), avisos fuera de la pestaña (notificaciones del navegador: más aún con «Buscar
-    rival» por turnos, que empieza sin que estés) y que el final sepa las cuentas de todos: cada uno
-    solo ve las suyas (`withoutBooks`, `core/playerView.ts`), así que en la pantalla final las del
-    rival salen a 0 y su gráfica del valor del ejército solo tiene el último día; al acabar ya no hay
-    nada que esconder y la sala podría mandar la partida entera. Decidido: el servidor manda (las
-    acciones pasan por la sesión como las de cualquiera, la IA rival y los dados juegan allí) y un
-    cliente nunca recibe más que la vista de su equipo (si no, se puede mirar a través de la niebla).
-    Las clasificatorias, después.
+14. **Dos jugadores en el mismo dispositivo** (pasarse el móvil): sirve para probar el equilibrio
+    entre personas. Ya se puede elegir rival «Persona»; falta lo de la idea 20 (que la vista cambie
+    de equipo y el aviso).
+15. **Lo que le falta al juego en línea.** Ya está entero: el núcleo habla por la red (`src/core/net`,
+    `docs/ARQUITECTURA.md`, "Red"), el servidor (`server/`, en Cloudflare Workers o en Node), la
+    pantalla («Jugar en línea», `src/net`; en la vista 3D, `OnlinePlay`) y «Buscar rival», por turnos
+    o en vivo (`server/src/matchmaker.ts`). Decidido: el servidor manda (las acciones pasan por la
+    sesión como las de cualquiera, la IA rival y los dados juegan allí) y un cliente nunca recibe
+    más que la vista de su equipo (si no, se puede mirar a través de la niebla). Queda:
+    - **Un tope para pedir asiento con el código** (`POST /rooms/:code/seat`, hoy sin tope por IP):
+      quien sabe el código de una sala que espera puede gastar sus asientos libres, y el código es el
+      único secreto. Las de la búsqueda no se reparten, pero su código sale en «Mis partidas» de los dos.
+    - **Lo que queda del lienzo de diseño** «Ilogic · Rediseño de Jugar en línea»: en la sala, sus
+      reglas en chapas y «Cambiar reglas» (el vestíbulo aún no las sabe: `LobbyInfo` no las trae); en
+      «Mis partidas», la barra de lo que queda de turno, que pide saber cuánto dura.
+    - **Avisos fuera de la pestaña**: hoy solo cambia el título (`view3d/systems/net/turnNotice.ts`).
+      Notificaciones del navegador, más aún con «Buscar rival» por turnos, que empieza sin que estés.
+    - **Que el final sepa las cuentas de todos**: cada uno solo ve las suyas (`withoutBooks`,
+      `core/playerView.ts`), así que en la pantalla final las del rival salen a 0 y su gráfica del
+      valor del ejército solo tiene el último día. Al acabar ya no hay nada que esconder y la sala
+      podría mandar la partida entera.
 17. **Clasificatorias** (emparejamiento, Elo, temporadas): solo si lo anterior consigue jugadores.
 
 Para competir hará falta: equilibrio estricto, mapas simétricos o probados (los de azar
@@ -175,40 +176,40 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   antiaereo (un emisor mas del ambiente, que se mueve con su pieza).
 - **Musica**: `enemy_turn` mientras juega el rival y jingles de victoria y derrota en vez de los efectos
   (`MusicTrack`, `src/audio/music.ts`).
-- **Sonidos en linea** (`room_created`, `player_joined`...): ya tienen nombre en `soundNames.ts`;
-  falta que la partida en linea llegue a 3D.
+- **Sonidos en linea**: de los de `soundNames.ts` (`room_created`, `player_joined`, `net_lost`...)
+  solo suena el tic del reloj del turno; los demas no los pide nadie (crear la sala, que entre
+  alguien, perder la conexion...), y `net_connected` aun no tiene sonido.
 - **Mas momentos con sonido**: subir de rango, el botin, la torreta del aerodeslizador... (inventario en
   `docs/PLAN-SONIDO.md`).
-- **El trueno de las tormentas.** El relampago ya pide su trueno, lejos y algo despues
-  (`ambiencePlayer.lightning`), pero `thunder` sigue sin sonido elegido (`null` en `soundNames.ts`):
-  generar varios (cercano seco, lejano que retumba) y que se note la tormenta.
-- **Los animales se callan con el mal tiempo.** Con lluvia, tormenta, nevada o tormenta de arena, los
-  ambientes de zona con animales (pajaros del bosque, ranas del pantano...) bajan o se apagan, y vuelven
-  poco a poco al despejar; con un trueno cerca, silencio de golpe unos segundos. Lo decide el sistema de
-  sonido (`systems/sound/ambience.ts`) con el clima del dia, sin que el motor sepa de reglas.
-- **Repensar los sonidos de las personas y los coches.** Las voces (`voice_ack_*`, `voice_hurt`...) y
-  los motores de los vehiculos: revisar cuales faltan, cuales cansan al repetirse y si piden variantes o
-  menos volumen.
+- **Silencio tras un trueno cercano.** Con mal tiempo los animales ya bajan o se callan
+  (`ANIMALS_IN_WEATHER`, `systems/sound/ambience.ts`); falta que un trueno cerca los deje en silencio
+  de golpe unos segundos.
 
 ## Técnico
 
-11. **Tab en la pantalla final.** Mirar si Tab funciona (en la pantalla final no mueve la selección, ni antes del cambio).
+11. **El teclado en la pantalla final.** En 3D no tiene panel de teclas (los `panels` de
+    `view3d/app/match3d.ts` son ayuda, opciones y pausa), así que las teclas siguen yendo al tablero:
+    flechas, Tab y Enter no recorren ni eligen sus botones (`MENU_BINDINGS.end`, `controls/menu.ts`,
+    no lo usa nadie), Esc abre la pausa de la partida acabada, y una tecla del mapa que vuelve a
+    pintar la interfaz (Tab, E...) quita el final y deja el tablero (`publishHud` pone
+    `screen: 'game'`). Comprobado rindiéndose en `/?seed=2013`.
 12. **Mando (gamepad).** Un adaptador más en `src/controls`; el hueco queda preparado en la PR #50
     (`docs/ARQUITECTURA.md`, «Mandos»).
 31. **Migrar las partidas guardadas al publicar.** Hoy un cambio de formato sube `SAVE_VERSION` y las
     partidas de antes se descartan (`core/saveVersion.ts`): vale mientras el juego no ha salido. Con
     jugadores, perder su partida al actualizar es un fallo; antes de la 1.0, decidir si se migra
     (una función por versión, probada con `tests/fixtures/saves`) o se avisa.
-32. **La partida 3D como clase.** `playMatch` (`view3d/app/match3d.ts`) aún tiene unas 260 líneas: lo
+32. **La partida 3D como clase.** `playMatch` (`view3d/app/match3d.ts`) aún tiene unas 270 líneas: lo
     que queda se conecta entre sí (publicar, la sesión, las órdenes, la pausa, la entrada). Una clase
     `Match3d` con un método por cosa lo partiría sin parámetros enormes; hay que probarla jugando.
 33. **Un solo puntero.** `controls/pointer.ts` (`PointerGestures`, puro y con test) y
     `view3d/systems/input/pointerInput.ts` hacen lo mismo dos veces; pasar la vista 3D al primero
     (y con él, el pellizco de la idea 21).
-34. **Funciones largas que quedan** (más de 40 líneas, todas de la interfaz): `Minimap`, `Help`,
-    `CreateRoom`, `RenameSquad`, `showEndIfOver`, `buildTerrain` y dos de `menuFlow.ts` y
-    `matchScene.ts`. Cuando se toquen, partirlas; luego se puede poner `max-lines-per-function` en
-    ESLint como ya está `max-depth`.
+34. **Funciones largas que quedan** (más de 40 líneas, sin contar `playMatch`): `Minimap`,
+    `CreateRoom`, `FriendsCard` y `Searching` (`hud/menus/Online.tsx`), `RenameSquad`, `controls` de
+    la ayuda (`i18n/*/help.ts`), `buildTerrain`, `installPointer` y el constructor de `MenuFlow`.
+    Cuando se toquen, partirlas; luego se puede poner `max-lines-per-function` en ESLint como ya
+    está `max-depth`.
 36. **La segunda producción** (lo que la revisión de la PR #195 dejó para entonces). Cuando haya otra
     forma de sacar unidades que comprar (la fábrica que saca refuerzos de la reserva, idea 35):
     ampliar `ProductionShortage` (`rules/production.ts`) con su motivo y repasar los sitios que
