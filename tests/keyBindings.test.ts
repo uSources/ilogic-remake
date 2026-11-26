@@ -119,7 +119,7 @@ describe('la ayuda enseña las teclas del jugador', () => {
   it('de serie, las letras de siempre', () => {
     const keys = keyLabels({}, KEY_NAMES.es);
     const controls = HELP_TEXTS.es.controls(keys);
-    expect(column(controls, 'Fin del turno')).toBe('E');
+    expect(column(controls, 'Acabar turno')).toBe('E');
     expect(column(controls, 'Soltar la unidad')).toBe('Esc');
     expect(column(controls, 'Zoom')).toBe('+ / −');
   });

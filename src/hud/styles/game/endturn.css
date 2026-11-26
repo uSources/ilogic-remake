@@ -1,25 +1,105 @@
-/* Fin del turno: la ficha grande abajo a la derecha (TopBar.tsx, EndTurnChip). Con unidades sin mover,
-   cuantas quedan en la esquina y, al primer clic, "¿Terminar?" en rojo que late. */
-.end-dock {
+/* Abajo a la derecha, en fila (GameHud.tsx, `dock`): «Acabar turno» en texto grande (TopBar.tsx,
+   EndTurn) y el minimapa en su ficha oscura (side.css). Debajo de «Acabar turno», cuantas quedan sin
+   mover; al primer clic con unidades sin mover, «¿Terminar?» en rojo, que late. */
+.dock {
   position: absolute;
-  right: 16px;
-  bottom: 16px;
+  right: 28px;
+  bottom: 26px;
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
   pointer-events: none;
 }
-.chip.end .key {
-  margin-left: 4px;
+/* La sombra que sube del borde de abajo, para leer el texto de las esquinas sobre el tablero. */
+.hud-shade-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 200px;
+  background: linear-gradient(0deg, rgba(18, 21, 28, 0.8) 0%, rgba(18, 21, 28, 0) 100%);
+  pointer-events: none;
 }
-.chip.end.armed {
+.end-dock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.end-turn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--panel);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.end-turn .end-arrow {
+  display: inline-block;
+  color: var(--menu-gold);
+}
+.end-turn:hover:not(:disabled) .end-arrow {
+  transform: translateX(3px);
+}
+.end-turn:disabled {
+  color: var(--menu-note);
+  cursor: default;
+}
+.end-turn:disabled .end-arrow {
+  visibility: hidden;
+}
+.end-turn.armed {
+  color: var(--menu-danger);
   animation: end-armed 0.5s ease-in-out infinite alternate;
 }
 @keyframes end-armed {
   to {
-    filter: brightness(1.15);
     transform: translateY(-2px);
+    filter: brightness(1.2);
+  }
+}
+.end-idle {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--menu-gold);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.end-idle:hover {
+  color: var(--panel);
+}
+.end-idle .key {
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--menu-title);
+}
+@media (max-width: 720px) {
+  .dock {
+    right: 10px;
+    bottom: 10px;
+    gap: 12px;
+  }
+  .end-turn {
+    font-size: 22px;
+  }
+  .end-idle .key {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chip.end.armed {
+  .end-turn.armed {
     animation: none;
   }
 }

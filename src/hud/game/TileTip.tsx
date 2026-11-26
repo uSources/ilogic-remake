@@ -1,40 +1,21 @@
-import { useEffect, useState } from 'preact/hooks';
 import { useAltHeld } from '../common/useAltHeld';
-import { Popover } from '../common/Popover';
-import type { Anchor } from '../vm/common';
+import { t } from '../../settings';
 import type { TileVM } from '../vm/tile';
 import { GroundPart, UnitPart } from './TileParts';
 
-/** Lo que tarda en salir la ficha al parar el raton sobre una casilla: de paso, no estorba. */
-const TIP_DELAY_MS = 400;
-
-/** Sale al cabo de TIP_DELAY_MS desde que se monta (la casilla cambia: se vuelve a montar). */
-function useDelayed(ms: number): boolean {
-  const [isReady, setReady] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setReady(true), ms);
-    return () => clearTimeout(timer);
-  }, [ms]);
-  return isReady;
-}
-
 /**
- * La ficha de la casilla señalada, junto a ella (docs/PLAN-INTERFAZ.md, fase 5): sale al parar el
- * raton un momento, con lo justo (la unidad, el sitio y lo que da); con Alt pulsado, la misma ficha
- * crece con el resto (de quien es la unidad, sus datos, carga, habilidades).
+ * Lo que hay bajo el cursor, abajo a la izquierda (lienzo «Todo en estilo C», «Partida: tu turno»):
+ * el sitio con lo que da y, si hay, la unidad con su vida. Va fijo en su esquina, asi que sale en
+ * cuanto se señala una casilla y no tapa nada. Con Alt pulsado, la unidad crece con el resto (de quien
+ * es, sus datos, carga, habilidades).
  */
-export function TileTip({ tile, at }: { tile: TileVM; at: Anchor }) {
-  const isReady = useDelayed(TIP_DELAY_MS);
+export function TileTip({ tile }: { tile: TileVM }) {
   const isDetailed = useAltHeld();
-  if (!isReady && !isDetailed) return null;
   return (
-    <Popover anchor={at} prefer="right" class={`tile-tip ${isDetailed ? 'detailed' : ''}`}>
-      {tile.unit && <UnitPart unit={tile.unit} isDetailed={isDetailed} />}
+    <section class={`cursor-info ${isDetailed ? 'detailed' : ''}`} aria-label={t('underCursor')}>
       <GroundPart tile={tile} />
-    </Popover>
+      {tile.unit && <div class="ci-divider" aria-hidden="true" />}
+      {tile.unit && <UnitPart unit={tile.unit} isDetailed={isDetailed} />}
+    </section>
   );
 }
-
-/** Para volver a montar la ficha (y su espera) solo cuando cambia lo que hay en la casilla. */
-export const tileTipKey = (tile: TileVM): string =>
-  `${tile.terrain.name}|${tile.building?.name ?? ''}|${tile.unit?.name ?? ''}|${tile.unit?.life ?? ''}`;

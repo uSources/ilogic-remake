@@ -1,10 +1,7 @@
 /* Desglose al pasar por encima del dinero o del dia (o al tocarlos) */
-/* El dia ya va en position: absolute (centrado); el dinero necesita relative para su panel. */
+/* El dia y el dinero (topbar.css) van en position: relative para su panel. */
 .has-tip {
   cursor: help;
-}
-.funds.has-tip {
-  position: relative;
 }
 .has-tip > .breakdown {
   display: none;
@@ -24,10 +21,6 @@
   line-height: 20px;
   color: var(--text);
   cursor: default;
-}
-.day.has-tip > .breakdown {
-  left: 50%;
-  transform: translateX(-50%);
 }
 /* Pasar el raton abre el desglose; tocarlo lo abre y lo cierra (clase open). Con el dedo, el
    navegador deja la casilla en :hover tras tocarla, asi que el hover solo vale con raton: si no,
@@ -100,22 +93,4 @@
 }
 .breakdown .note.warn {
   color: var(--red-soft);
-}
-.top .spacer {
-  flex: 1;
-}
-.menu-btn {
-  width: 52px;
-  height: 50px;
-  justify-content: center;
-  flex-direction: column;
-  gap: 5px;
-  padding: 0;
-}
-.menu-btn i {
-  display: block;
-  width: 20px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--text);
 }

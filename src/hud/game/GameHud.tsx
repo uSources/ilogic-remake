@@ -11,9 +11,9 @@ import { Minimap } from './Minimap';
 import { MissionPanel } from './MissionPanel';
 import { PopMenu } from './PopMenu';
 import { RadialMenu } from './RadialMenu';
-import { TileTip, tileTipKey } from './TileTip';
+import { TileTip } from './TileTip';
 import { SelectionPanel } from './SelectionPanel';
-import { EndTurnChip, TopBar } from './TopBar';
+import { EndTurn, TopBar } from './TopBar';
 import { TurnClockPill } from './TurnClock';
 import { canAct, isOwnTurn } from './turn';
 
@@ -46,15 +46,19 @@ const showsSelection = (s: UIState) => !!s.selection && !s.busy;
 const showsTileTip = (s: UIState) => canAct(s) && !showsSelection(s) && !s.menu && !s.forecast;
 
 /**
- * Columna de la derecha: el minimapa (lo publica la vista 3D, systems/hud/minimapBridge.ts). La bandeja de antes (sin mover,
- * amenaza, escuadras) ya no esta: el numero de «Fin del turno», la pausa y la rueda hacen lo suyo.
+ * Abajo a la derecha, en fila: «Acabar turno» y el minimapa (lo publica la vista 3D,
+ * systems/hud/minimapBridge.ts). La bandeja de antes (sin mover, amenaza, escuadras) ya no esta: lo
+ * de «Acabar turno», la pausa y la rueda hacen lo suyo.
  */
-const SIDE_PANELS: GamePanel[] = [
+const DOCK_PANELS: GamePanel[] = [
+  { id: 'endTurn', render: (s) => <EndTurn s={s} /> },
   { id: 'minimap', render: (s) => s.minimap && s.minimapOn && <Minimap minimap={s.minimap} view={s.minimapView} /> },
 ];
 
 /** En el orden en que van en la pagina, que es el de apilado. Un panel nuevo es una entrada mas. */
 const GAME_PANELS: GamePanel[] = [
+  // La sombra de abajo, que deja leer el texto de las esquinas sobre el tablero (la de arriba va en la barra).
+  { id: 'shade', render: () => <div class="hud-shade-bottom" aria-hidden="true" /> },
   { id: 'topBar', render: (s) => <TopBar s={s} /> },
   { id: 'turnClock', render: (s) => s.turnClock && <TurnClockPill clock={s.turnClock} /> },
   { id: 'net', render: (s) => showsNetLine(s) && s.net && <NetLine net={s.net} /> },
@@ -62,10 +66,9 @@ const GAME_PANELS: GamePanel[] = [
   { id: 'selection', render: (s) => showsSelection(s) && s.selection && <SelectionPanel selection={s.selection} /> },
   {
     id: 'tileTip',
-    render: (s) => showsTileTip(s) && s.tile && s.tileAt && <TileTip key={tileTipKey(s.tile)} tile={s.tile} at={s.tileAt} />,
+    render: (s) => showsTileTip(s) && s.tile && <TileTip tile={s.tile} />,
   },
-  { id: 'side', render: (s) => <div class="side">{renderPanels(SIDE_PANELS, s)}</div> },
-  { id: 'endTurn', render: (s) => <EndTurnChip s={s} /> },
+  { id: 'dock', render: (s) => <div class="dock">{renderPanels(DOCK_PANELS, s)}</div> },
 
   { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },
   // La pausa no se ve a traves de Opciones o de la ayuda, que se abren desde ella.

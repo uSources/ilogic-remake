@@ -101,16 +101,13 @@
   }
 }
 
-/* «Fin del turno» parpadea cuando se acaba el tiempo (endturn.css). */
-.chip.end.hurry {
+/* «Acabar turno» parpadea en rojo cuando se acaba el tiempo (endturn.css). */
+.end-turn.hurry {
   animation: end-hurry 1s steps(1, end) infinite;
 }
 @keyframes end-hurry {
   50% {
-    background: var(--red-btn);
-    box-shadow:
-      inset 0 -4px 0 var(--red-lo),
-      var(--lift);
+    color: var(--menu-danger);
   }
 }
 
@@ -118,14 +115,14 @@
   .turnclock .tc-fill {
     transition: none;
   }
-  .chip.end.hurry {
+  .end-turn.hurry {
     animation: none;
-    background: var(--red-btn);
+    color: var(--menu-danger);
   }
 }
 
 /* La opcion de menos movimiento acorta cada animacion a nada (reduce-motion.css): sin parpadeo, en rojo. */
-html.reduce-motion .chip.end.hurry {
+html.reduce-motion .end-turn.hurry {
   animation-name: none;
-  background: var(--red-btn);
+  color: var(--menu-danger);
 }

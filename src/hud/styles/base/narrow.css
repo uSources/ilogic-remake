@@ -3,57 +3,9 @@
   white-space: nowrap;
 }
 @media (max-width: 720px) {
-  .top {
-    left: 10px;
-    right: 10px;
-    top: 10px;
-    gap: 8px;
-  }
-  .funds {
-    padding: 6px 10px 6px 8px;
-    gap: 8px;
-  }
-  .funds .coin {
-    width: 24px;
-    height: 24px;
-  }
-  .funds .amount {
-    font-size: 18px;
-    line-height: 18px;
-  }
-  .funds .sub {
-    display: none;
-  }
-  .day span {
-    font-size: 14px;
-    padding: 6px 10px;
-  }
-  .day .w {
-    padding: 6px 8px;
-  }
-  .day .w .wn,
-  .day .w .wf {
-    display: none;
-  }
   .px-btn {
     font-size: 14px;
     padding: 8px 10px;
-  }
-  .chip.end .key {
-    display: none;
-  }
-  .chip.lg {
-    min-height: 52px;
-    padding: 6px 16px;
-    font-size: 18px;
-  }
-  .end-dock {
-    right: 10px;
-    bottom: 10px;
-  }
-  .menu-btn {
-    width: 44px;
-    height: 42px;
   }
   .forecast {
     width: 220px;
@@ -69,14 +21,8 @@
   filter: grayscale(0.7) brightness(0.75);
   cursor: default;
 }
-.funds .coin {
-  width: 24px;
-  height: 24px;
-}
 .pop .item span {
   white-space: nowrap;
-}
-@media (max-width: 1100px) {
 }
 @keyframes bob {
   from {

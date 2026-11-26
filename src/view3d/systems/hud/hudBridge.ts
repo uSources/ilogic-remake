@@ -12,7 +12,7 @@ import { teamState } from '../../../core/teams';
 import { helpRulesOfMatch } from '../../../hud/helpText';
 import { ui, type Anchor, type SelectionVM, type UIState } from '../../../hud/store';
 import { nameOf } from '../../../settings';
-import { dayInfoVM, economyVM, forecastVM, tileVM, weatherVM } from '../../../ui/hudModels';
+import { dayInfoVM, economyVM, forecastVM, standingVM, tileVM, weatherVM } from '../../../ui/hudModels';
 import { sideOf } from '../../../ui/sides';
 import { unitKey } from '../../../ui/sprites';
 import type { AttackPlan } from '../turn/attackPlan';
@@ -102,6 +102,7 @@ export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, m
     screen: 'game',
     funds: teamState(s, viewer).funds,
     economy: economyVM(s, viewer),
+    standing: standingVM(s, viewer),
     dayInfo: dayInfoVM(s, viewer),
     day: s.day,
     dayLimit: s.settings.dayLimit,
@@ -114,7 +115,6 @@ export function publishHud(textures: GameImages, s: GameState, viewer: TeamId, m
     menu: menuOf(moment),
     forecast: forecastOf(textures, s, viewer, moment),
     selection: selectionOf(textures, s, viewer, moment.selected),
-    tileAt: moment.cursor && !moment.menu ? moment.anchorOf(moment.cursor) : null,
     endTurn: { pending: idleUnits(s, viewer).length, armed: moment.endArmed },
   });
 }
