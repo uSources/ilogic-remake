@@ -329,9 +329,23 @@ y estado: `docs/PLAN-INTERFAZ.md`.
     turno» debajo y, si el clima cambia, su icono grande en una ficha.
   - Lo que sube del tablero (el daño, lo que cobra cada edificio, la captura),
     **chapas de crema** con el número en su color y borde de tinta, como las del HUD.
-  - La compra, **fichas en abanico** alrededor de la fábrica (retrato, nombre y precio; lo que no se
-    puede pagar, apagado y con lo que falta en rojo) y en el centro la chapa de la señalada: mover,
-    alcance y visión con sus iconos y los retratos de contra qué es buena.
+  - La compra, una **lista de texto a la derecha** (estilo C, lienzo «Todo en estilo C», tablero 10;
+    26-11-2026, elegida con capturas frente al bocadillo con tallo). El tablero se oscurece desde la
+    derecha y se van de ese lado el enemigo y la pausa de arriba, «Acabar turno» y el minimapa.
+    - Arriba, el nombre del edificio en grande y, a su derecha, «Tienes» y el dinero en dorado.
+    - Cada unidad, como una entrada del menú de texto: retrato, nombre y precio a la derecha. La
+      señalada crece, lleva la flecha dorada y su precio va en dorado.
+    - Lo que no te llega sale con el nombre y el precio en gris, el retrato gris y «faltan 2000» en
+      rojo claro debajo. Se puede señalar igual, para leer de qué va.
+    - Lo que te deja sin dinero lleva debajo «te quedarías a 0».
+    - Al pie, separado por una raya, el nombre de la señalada en mayúsculas pequeñas. Debajo, de qué
+      va: mueve, alcance y visión, contra qué es fuerte y contra qué es débil. Por último, «Te quedan
+      1000» en dorado (o lo que falta, en rojo).
+    - Flechas, Enter y Esc, como la pausa.
+    - En el móvil es una hoja abajo, a lo ancho.
+    - El bocadillo no sirve aquí: con las diez unidades de la fábrica no cabe encima ni debajo de la
+      casilla, así que se aparta, la tapa y el tallo no se ve.
+    - Antes eran fichas en abanico alrededor de la fábrica (`IDEAS.md`, «Descartado»).
 - **El menú clásico de texto** (estilo C; Inicio desde el 25-11-2026; la pausa y el final, el
   26-11-2026; plan: `docs/PLAN-ESTILO-C.md`). Va sin fichas crema: títulos grandes en Fredoka,
   claros y con sombra negra, sobre el tablero 3D, que se oscurece del lado del texto (en la pausa,
