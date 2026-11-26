@@ -309,9 +309,21 @@ y estado: `docs/PLAN-INTERFAZ.md`.
     mismo amarillo (21-11-2026). Con Alt, la unidad crece con el resto, en las mismas chapas y líneas
     de texto pequeño. Hasta el 26-11-2026 era una ficha crema junto a la casilla, que salía al parar
     el ratón.
-  - La previsión de combate, **chapas de plástico** (`Badge`): la del daño encima de la barra de vida
-    del enemigo y la del contraataque a los pies de tu unidad (encima, junto al enemigo de al lado,
-    chocaban). Comprobadas con la interfaz a 0,9 y a 1,25 (las escalas de Opciones).
+  - **Lo que sale de una casilla** (decidido con el usuario el 26-11-2026; lienzo «Lo que sale de las
+    casillas», A). Va en un **bocadillo con tallo**: un tallo dorado sube de lo alto de la casilla,
+    con un punto donde la toca, y en su punta se abre una ficha oscura translúcida con la lista en
+    texto (`Callout.tsx`, `TileMenu.tsx`). Así salen lo que hace la unidad, su rueda y el aviso de
+    elegir casilla.
+    - La ficha va a la derecha si cabe; si no, a la izquierda. Si arriba no cabe, va debajo y el
+      tallo baja.
+    - Sale en un cuarto de segundo: el tallo crece, la ficha se abre desde su punta con un rebote
+      corto y las líneas entran una detrás de otra.
+    - Antes eran fichas redondas crema en fila y una rueda de fichas alrededor de la casilla.
+  - La previsión de combate, **cifras que suben de la casilla**, sin ficha (lo que gustó de la B del
+    lienzo). Encima del enemigo va el daño en grande (blanco, o dorado si lo más probable es
+    destruirlo), con la calavera y el % si puede caer, y la vida que le quedaría. A los pies de tu
+    unidad, «↩ −10», en rojo si puede caer. Con Alt, el detalle sale en el bocadillo con tallo rojo
+    del enemigo. Antes eran chapas de plástico crema (`Badge`).
   - El cartel del día, una **banderola de tela** en el color del bando colgada de una barra de
     madera, con cola de golondrina: cae, se balancea y vuelve a subir. Dice «Día 4» en grande, «Tu
     turno» debajo y, si el clima cambia, su icono grande en una ficha.

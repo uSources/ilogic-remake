@@ -205,6 +205,15 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
 
 ## Descartado (y por qué)
 
+- **Corona de texto para lo que sale de una casilla** (B del lienzo «Lo que sale de las casillas»,
+  26-11-2026). Las opciones saltaban en arco por encima de la casilla. Gustaba, pero con 5 o 6 opciones
+  y textos largos («Orden: defender allí») el arco se abre mucho, y con el teclado moverse por un arco
+  es raro. Se quedó el bocadillo con tallo (A). De la B se quedaron las cifras de la previsión, que
+  suben de la casilla.
+- **Cartel que se levanta de la casilla** (C, el mismo día). Va plantado en el tablero con su sombra,
+  pero al girar la cámara el palito y la sombra no siguen la perspectiva, y levantarse con rebote
+  cansa a la décima vez.
+
 - **Fábrica automática** (comprar sola al terminar el turno, con posturas, reserva y resumen): llenaba
   el mapa de unidades que luego había que mover y se gastaba el dinero. Saber qué comprar es parte
   del juego: si compras mal, lo pagas.

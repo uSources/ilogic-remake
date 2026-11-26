@@ -1,0 +1,176 @@
+/* El bocadillo con tallo (common/Callout.tsx; lienzo «Lo que sale de las casillas», A): un tallo
+   dorado sube de lo alto de la casilla (rojo si sale de un enemigo) y en su punta se abre una ficha
+   oscura translucida, con la esquina pegada al tallo casi recta. Sale en un cuarto de segundo: el
+   tallo crece, la ficha se abre desde su punta con un rebote corto (lo que gusto de la B) y las
+   lineas entran una detras de otra. */
+.callout-stem {
+  position: absolute;
+  width: 3px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--menu-gold);
+  box-shadow: 0 0 0 1.5px rgba(14, 17, 24, 0.6);
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  animation: callout-stem 0.12s ease-out both;
+}
+/* El punto donde el tallo toca la casilla: abajo si el bocadillo va encima, arriba si va debajo. */
+.callout-stem::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: inherit;
+  box-shadow:
+    0 0 0 1.5px rgba(14, 17, 24, 0.6),
+    0 0 0 5px rgba(245, 192, 74, 0.3);
+}
+.callout-stem.below {
+  transform-origin: 50% 0;
+}
+.callout-stem.below::after {
+  top: -5px;
+  bottom: auto;
+}
+.callout-stem.enemy {
+  background: var(--red-btn);
+}
+.callout-stem.enemy::after {
+  box-shadow:
+    0 0 0 1.5px rgba(14, 17, 24, 0.6),
+    0 0 0 5px rgba(239, 75, 67, 0.3);
+}
+@keyframes callout-stem {
+  from {
+    transform: scaleY(0);
+  }
+}
+.callout {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 190px;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 20px 14px 10px;
+  border-radius: 16px;
+  background: rgba(14, 17, 24, 0.86);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  color: var(--panel);
+  pointer-events: auto;
+  animation: callout-open 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.25) 0.07s both;
+}
+/* La esquina pegada al tallo, casi recta, y desde ella se abre. */
+.callout.right.above {
+  border-bottom-left-radius: 4px;
+  transform-origin: 0 100%;
+}
+.callout.left.above {
+  border-bottom-right-radius: 4px;
+  transform-origin: 100% 100%;
+}
+.callout.right.below {
+  border-top-left-radius: 4px;
+  transform-origin: 0 0;
+}
+.callout.left.below {
+  border-top-right-radius: 4px;
+  transform-origin: 100% 0;
+}
+@keyframes callout-open {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+.callout-title {
+  padding: 0 0 6px 30px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 1.4px;
+  color: var(--menu-note);
+  text-transform: uppercase;
+}
+/* El aviso de elegir casilla es una frase: sin mayusculas, para leerla. */
+.tile-menu-prompt .callout-title {
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--menu-title);
+}
+.callout-sub {
+  padding: 4px 0 0 30px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--menu-note);
+}
+/* Con las dos clases: textlist.css va despues y pondria sus tamaños. */
+.text-list.callout-list {
+  --entry-size: 22px;
+  --entry-size-sel: 27px;
+  gap: 0;
+}
+.callout-list .text-entry {
+  gap: 10px;
+  padding: 3px 0;
+}
+.callout-list .text-arrow {
+  width: 20px;
+  font-size: 22px;
+}
+.callout-list .text-entry-title {
+  text-shadow: none;
+}
+.callout-list .text-entry-note {
+  font-size: 12px;
+  text-shadow: none;
+}
+.callout-list .text-entry.danger {
+  --entry-size: 19px;
+  --entry-size-sel: 22px;
+  margin-top: 6px;
+}
+.text-entry-icon {
+  width: 24px;
+  height: 24px;
+  align-self: center;
+}
+.callout-list .text-entry {
+  animation: callout-line 0.16s ease-out both;
+}
+.callout-list .text-entry:nth-child(1) {
+  animation-delay: 0.12s;
+}
+.callout-list .text-entry:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.callout-list .text-entry:nth-child(3) {
+  animation-delay: 0.18s;
+}
+.callout-list .text-entry:nth-child(n + 4) {
+  animation-delay: 0.21s;
+}
+@keyframes callout-line {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .callout-stem,
+  .callout,
+  .callout-list .text-entry {
+    animation: none;
+  }
+}
