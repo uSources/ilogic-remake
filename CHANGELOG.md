@@ -7,15 +7,19 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
-## [Sin publicar]
+## [0.18.0] - 2026-11-26 — Buscar rival y un menú nuevo
 
 ### Novedades
 - **«Buscar rival»**: te empareja con otra persona, 1 contra 1, con las reglas de siempre y un mapa al azar. Puede ser **por turnos** (un día por turno: cada uno juega cuando puede, y puedes cerrar el juego mientras esperas) o **en vivo** (2 minutos por turno, con los dos conectados a la vez). Mientras llega alguien puedes jugar contra la IA o cancelar la búsqueda.
-- **El reloj del turno**: en las partidas en línea con tiempo por turno, bajo el día sale lo que queda, con un anillo que se vacía. Los últimos 15 segundos se pone en rojo, hace tic y «Fin del turno» parpadea; mientras juega otro, se ve el tiempo que le queda a él.
+- **El reloj del turno**: en las partidas en línea con tiempo por turno, bajo el día sale lo que queda, con un anillo que se vacía. Los últimos 15 segundos se pone en rojo, hace tic y «Fin del turno» parpadea; mientras juega otro, se ve el tiempo que le queda a él. Con lector de pantalla, avisa de los últimos segundos.
+- Suena subir y bajar del transporte: botas sobre un suelo de metal y un pestillo, en el camión y en el helicóptero.
+- Los animales ya no se oyen desde lejos: solo al acercar la cámara, más flojos cuanto más lejos y cada vez un poco distintos.
+- La artillería es más pequeña, del tamaño de un tanque.
 
 ### Interfaz
-- **Nuevo menú de inicio**: una lista de texto a la izquierda (Continuar, Campaña, Escaramuza y En línea, cada una con lo que hay detrás: el día de tu partida guardada, la misión por la que vas) y, detrás, el juego en 3D: la cámara da vueltas despacio alrededor de la base de una partida de la IA. Novedades, Aprender y Opciones, arriba a la derecha.
+- **Nuevo menú de inicio**: una lista de texto a la izquierda (Continuar, Campaña, Escaramuza y En línea, cada una con lo que hay detrás: el día de tu partida guardada, la misión por la que vas, en cuántas partidas en línea te toca) y, detrás, el juego en 3D: la cámara da vueltas despacio alrededor de la base de una partida de la IA. Novedades, Aprender y Opciones, arriba a la derecha.
 - **Novedades, Aprender y Opciones con el mismo diseño**, en pantalla entera y con las pestañas del menú arriba. Novedades se lee como un texto: las notas de la versión elegida en grande y las demás versiones al lado. Aprender va por temas (objetivo y reglas, colores del mapa, controles y, nuevo, las unidades con su precio, movimiento, alcance y visión). Opciones, con las pestañas en una barra y cada grupo en su ficha.
+- **«Jugar en línea», rediseñado**: tres tarjetas (Buscar rival, Con amigos y Mis partidas) y, arriba, si el servidor contesta, también la primera vez, sin partidas apuntadas. La sala enseña el código en teclas, con «Copiar código», y los equipos frente a frente. En el móvil, una cosa encima de otra y lo que te toca, arriba.
 - Cuando «Buscar rival» te empareja, la partida carga detrás de «¡Rival encontrado!»: los dos ejércitos frente a frente, quién empieza, el mapa y el tiempo por turno.
 
 ### Cambios de juego
@@ -23,16 +27,22 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### Arreglos
 - El menú de la partida (☰ o Esc) también se abre mientras juegan los demás, para salir o rendirte: antes no hacía nada hasta tu turno.
+- Al matar en tu turno, o al caer tu unidad en el contraataque, vuelven a verse el disparo, la explosión y la caída: antes la unidad desaparecía sin más.
+- Con Alt pulsado, la ficha sale entera también al pasar a otra casilla: antes (sobre todo en Mac) la nueva salía normal hasta soltar Alt y volver a pulsarlo.
 
 <!-- en -->
 
 ### New
 - **“Find an opponent”**: matches you with another person, 1 vs 1, with the usual rules and a random map. It can be **Daily** (a day per turn: each plays when they can, and you can close the game while you wait) or **Live** (2 minutes per turn, with both online at the same time). While you wait you can play against the AI or cancel the search.
-- **Turn clock**: in online games with a time per turn, the time left shows under the day, with a ring that empties. In the last 15 seconds it turns red, ticks and “End turn” blinks; while someone else plays, you see the time they have left.
+- **Turn clock**: in online games with a time per turn, the time left shows under the day, with a ring that empties. In the last 15 seconds it turns red, ticks and “End turn” blinks; while someone else plays, you see the time they have left. With a screen reader, it announces the last seconds.
+- Getting on and off a transport makes a sound: boots on a metal floor and a latch, on the truck and the helicopter.
+- Animals no longer sound from afar: only when you zoom the camera in, quieter the farther away, and a little different each time.
+- The artillery is smaller, about the size of a tank.
 
 ### Interface
-- **New start menu**: a text list on the left (Continue, Campaign, Skirmish and Online, each with what's behind it: the day of your saved game, the mission you're on) and, behind it, the game in 3D: the camera slowly circles the base of an AI game. What's new, Learn and Options, top right.
+- **New start menu**: a text list on the left (Continue, Campaign, Skirmish and Online, each with what's behind it: the day of your saved game, the mission you're on, how many online games are waiting for you) and, behind it, the game in 3D: the camera slowly circles the base of an AI game. What's new, Learn and Options, top right.
 - **What's new, Learn and Options share the same look**, full screen with the menu tabs on top. What's new reads like a text: the notes of the chosen version in large type and the other versions beside them. Learn goes by topic (goal and rules, map colors, controls and, new, the units with their price, movement, range and vision). Options has its tabs in a bar and each group on its own card.
+- **“Play online”, redesigned**: three cards (Find an opponent, With friends and My games) and, on top, whether the server answers, even the first time, with no games saved. The room shows the code as keys, with “Copy code”, and the teams face to face. On a phone, one thing above the other, and what's waiting for you on top.
 - When “Find an opponent” pairs you up, the game loads behind an “Opponent found!” screen: both armies face to face, who goes first, the map and the time per turn.
 
 ### Gameplay
@@ -40,6 +50,8 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### Fixes
 - The game menu (☰ or Esc) also opens while others are playing, so you can leave or surrender: before, it did nothing until your turn.
+- When you kill a unit on your turn, or yours falls in the counterattack, the shot, the explosion and the fall show again: before, the unit just vanished.
+- Holding Alt shows the full card also when you move to another tile: before (mostly on Mac) the new one showed the short card until you released Alt and pressed it again.
 
 ## [0.17.0] - 2026-11-24 — Cada bioma, vivo, y el juego en línea vuelve
 
