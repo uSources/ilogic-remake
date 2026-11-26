@@ -83,7 +83,8 @@ previsión.
   - Colocación: `placeCallout` (`common/placement.ts`, con tests).
 - La previsión: el daño sube como cifra grande sobre el enemigo y lo que te devuelve sale a los pies
   de tu unidad. Con Alt, el detalle va en el bocadillo con tallo rojo.
-- Falta la compra en la fábrica, que sigue en abanico (fase 5).
+- La compra en la fábrica no va en el bocadillo: con diez unidades no cabe encima ni debajo de la
+  casilla. Va a la derecha, como en el tablero 10 (fase 5).
 
 ### Fase 4. Unidad elegida y previsión (tableros 8 y 9) (hecha; decidido con el usuario el 26-11-2026)
 El bocadillo con tallo ya cubría lo que hace la unidad, y las cifras que suben, la previsión. Se
@@ -104,9 +105,18 @@ añadió lo de los tableros que faltaba:
   mismo que en la fase 3: queda por decidir con el usuario.
 
 
-### Fase 5. Fábrica (tablero 10)
-Una lista a la derecha con retrato, nombre y precio. La elegida va en grande y, debajo, dice de qué
-va y con cuánto te quedas. Sustituye al abanico (`BuyFan.tsx`).
+### Fase 5. Fábrica (tablero 10) (hecha)
+- Una lista a la derecha con retrato, nombre y precio (`game/BuyList.tsx`). Se comparó con capturas
+  con la misma lista en el bocadillo con tallo y el usuario eligió la derecha. Con las diez unidades
+  de la fábrica, el bocadillo no cabe encima ni debajo de la casilla, se aparta y la tapa.
+- La elegida va en grande. Al pie dice de qué va (mueve, alcance y visión; contra qué es fuerte y
+  débil) y con cuánto te quedas.
+- Lo que no te llega sale apagado y con lo que falta. Se puede señalar igual, para leer de qué va.
+- Lo decide `systems/turn/buyItems.ts`, con tests.
+- Se maneja con flechas, Enter y Esc, como la pausa (`systems/turn/buyKeys.ts`, un `KeyPanel`).
+- Mientras se compra, se van de la derecha el enemigo y la pausa de arriba, «Acabar turno» y el
+  minimapa. En el móvil, la lista es una hoja abajo.
+- Sustituye al abanico (`BuyFan.tsx` y `fanAround`, quitados; `IDEAS.md`, «Descartado»).
 
 ### Fase 6. Cambio de turno (tablero 11)
 Una franja oscura en el centro con «Día 12», «Turno de Rojo» y «Rojo está pensando…», que late.
