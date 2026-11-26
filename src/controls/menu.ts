@@ -29,7 +29,7 @@ export type MenuCommand =
  * menu: alli mandan las ordenes InputCommand.
  */
 export type MenuContext =
-  'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'online' | 'end' | 'pause';
+  'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'online' | 'end' | 'endPeek' | 'pause';
 
 export interface MenuBinding {
   codes: readonly string[];
@@ -83,18 +83,23 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
   campaign: MENU_KEYS,
   // Jugar en línea: R cambia el mapa al crear una sala.
   online: [...MENU_KEYS, { codes: ['KeyR'], command: { kind: 'reroll' } }],
-  // Fin de partida: una fila de botones; Tab pasa al siguiente y Esc vuelve al menu.
+  // Fin de partida: sus botones, uno debajo de otro (Tab pasa al siguiente). Esc no hace nada: salir
+  // de la partida acabada es un boton, no una tecla que se pulsa sin querer.
   end: [
     { codes: ['ArrowLeft', 'KeyA'], command: move(-1, 0) },
     { codes: ['ArrowUp', 'KeyW'], command: move(0, -1) },
     { codes: ['ArrowRight', 'KeyD', 'Tab'], command: move(1, 0) },
     { codes: ['ArrowDown', 'KeyS'], command: move(0, 1) },
     { codes: KEY_OK, command: { kind: 'ok', repeat: false } },
-    { codes: ['Escape'], command: { kind: 'back' } },
   ],
   // La pausa de la partida: moverse por sus opciones, elegir y cerrarla. Sus atajos (fin del turno,
   // amenaza...) son las teclas del mapa que tenga el jugador: no van aqui (KeyPanel.shortcut, keyInput.ts).
   pause: MENU_KEYS,
+  // Mirando el tablero desde el final: Esc, Retroceso, Enter o Espacio vuelven al resultado.
+  endPeek: [
+    { codes: KEY_OK, command: { kind: 'ok', repeat: false } },
+    { codes: KEY_BACK, command: { kind: 'back' } },
+  ],
 };
 
 /** La orden de una pulsacion en un menu, o null si en ese menu la tecla no hace nada. */

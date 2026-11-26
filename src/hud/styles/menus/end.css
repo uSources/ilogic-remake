@@ -1,54 +1,64 @@
-/* Final de la partida */
+/* Final de la partida (EndScreen.tsx), como el menu clasico de Inicio (lienzo «Todo en estilo C»,
+   «Victoria»): sobre el tablero, oscuro a la izquierda, lo jugado, el resultado en grande, sus cifras y
+   la lista de que hacer; a la derecha, la grafica de los ejercitos en su ficha oscura. */
 .endscreen {
   position: absolute;
   inset: 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  padding: 7vh 16px 16px;
-  pointer-events: none;
+  gap: 32px;
+  padding: 60px 80px 28px;
+  overflow-y: auto;
+  pointer-events: auto;
+  background: linear-gradient(90deg, rgba(18, 21, 28, 0.93) 0%, rgba(18, 21, 28, 0.72) 42%, rgba(18, 21, 28, 0.1) 75%);
+}
+.end-main {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
 }
 .end-head {
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 6px;
   animation: endIn 0.5s ease-out both;
 }
-.end-title {
+.end-kicker {
   font-family: var(--display);
   font-weight: 700;
-  font-size: clamp(36px, 8vw, 84px);
-  letter-spacing: 2px;
-  line-height: 1;
-  /* Letras de juguete: relleno de color, borde de tinta y sombra dura debajo. */
-  -webkit-text-stroke: 3px var(--ink);
-  paint-order: stroke fill;
-  text-shadow: 0 6px 0 var(--ink);
+  font-size: 16px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--menu-title);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+.end-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(56px, 9vw, 104px);
+  line-height: 1.05;
+  color: var(--menu-title);
+  text-shadow: 0 6px 0 rgba(0, 0, 0, 0.75);
 }
 .endscreen.won .end-title {
-  color: #ffcf33;
+  color: var(--menu-gold);
 }
 .endscreen.lost .end-title {
-  color: #ff6b61;
-}
-.endscreen.draw .end-title {
-  color: var(--panel);
+  color: var(--menu-danger);
 }
 .end-reason {
   font-family: var(--display);
   font-weight: 600;
-  font-size: 16px;
-  /* Va sobre el velo oscuro, no sobre una ficha: en crema. */
+  font-size: 24px;
   color: var(--panel);
-}
-.end-head .label {
-  color: var(--panel);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7);
 }
 @keyframes endIn {
   from {
-    transform: translateY(-20px) scale(1.2);
+    transform: translateX(-40px);
     opacity: 0;
   }
   to {
@@ -56,126 +66,175 @@
     opacity: 1;
   }
 }
-.end-card {
-  width: min(720px, 100%);
+.end-figures {
+  margin: 0;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 18px;
-  animation: endUp 0.4s steps(4) 0.3s both;
+  flex-wrap: wrap;
+  gap: 6px 48px;
 }
-@keyframes endUp {
-  from {
-    transform: translateY(30px);
-    opacity: 0;
-  }
-  to {
-    transform: none;
-    opacity: 1;
-  }
+.end-figure dt {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--menu-note);
 }
-.end-cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  align-items: start;
+.end-figure dd {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 40px;
+  color: var(--panel);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.7);
 }
-.end-cols:has(> :only-child) {
-  grid-template-columns: 1fr;
+.end-best {
+  margin-top: -14px;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--menu-title);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+.end-best.new {
+  color: var(--menu-gold);
+  animation: bob 0.6s steps(2) infinite alternate;
+}
+/* Con las dos clases: textlist.css va despues y pondria sus tamaños. */
+.text-list.end-list {
+  --entry-size: 32px;
+  --entry-size-sel: 40px;
+  gap: 8px;
+}
+.end-main .menu-hint {
+  margin-top: auto;
 }
 .end-chart {
+  flex: none;
+  width: 340px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 10px;
+  padding: 18px 20px;
+  border-radius: 18px;
+  background: rgba(14, 17, 24, 0.6);
+  animation: endIn 0.5s ease-out 0.2s both;
 }
-.chart {
+.end-chart-title {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--menu-note);
+}
+.end-chart .chart {
   width: 100%;
   height: 110px;
-  background: var(--ink);
-  border: 3px solid var(--ink);
-  border-radius: var(--radius-sm);
 }
-.chart .grid {
-  stroke: #24314d;
+.end-chart .chart .grid {
+  stroke: rgba(255, 247, 232, 0.12);
   stroke-width: 1;
 }
-.chart path {
+.end-chart .chart path {
   fill: none;
   stroke-width: 3;
   vector-effect: non-scaling-stroke;
 }
-.chart path.you {
-  stroke: var(--blue);
+.end-chart .chart path.you {
+  stroke: var(--menu-own);
 }
-.chart path.enemy {
-  stroke: var(--red);
+.end-chart .chart path.enemy {
+  stroke: var(--menu-danger);
 }
-.legend {
+.end-chart .legend {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--muted);
+  font-weight: 700;
+  color: var(--menu-title);
 }
-.legend i {
+.end-chart .legend i {
   display: inline-block;
   width: 12px;
   height: 4px;
   margin-left: 6px;
 }
-.legend i.you {
-  background: var(--blue);
+.end-chart .legend i.you {
+  background: var(--menu-own);
 }
-.legend i.enemy {
-  background: var(--red);
+.end-chart .legend i.enemy {
+  background: var(--menu-danger);
 }
-.end-best {
-  font-family: var(--display);
-  font-size: 14px;
-  color: var(--muted);
-  text-align: center;
-}
-.end-best.new {
-  color: var(--gold);
-  animation: bob 0.6s steps(2) infinite alternate;
-}
-.end-btns {
+/* Mirando el tablero: solo el boton para volver, abajo en el centro; el resto deja pasar el raton. */
+.end-peek {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28px;
   display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.end-peek-back {
+  display: inline-flex;
+  align-items: center;
   gap: 10px;
-  justify-content: center;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(14, 17, 24, 0.72);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--panel);
+  cursor: pointer;
+  pointer-events: auto;
 }
-.end-btns .px-btn {
-  justify-content: center;
-  flex: 1;
-  max-width: 260px;
-  font-size: 15px;
+.end-peek-back .key {
+  font-size: 12px;
+  color: var(--menu-gold);
 }
-@media (max-width: 720px) {
-  .end-cols {
-    grid-template-columns: 1fr;
-  }
-  .chart {
-    height: 70px;
-  }
-  .end-btns {
-    flex-direction: column;
-  }
-  .end-btns .px-btn {
-    max-width: none;
-  }
+/* Estrecho: una cosa debajo de otra, la grafica despues de la lista. */
+@media (max-width: 760px) {
   .endscreen {
-    padding-top: 4vh;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 24px 16px 16px;
+    background: rgba(18, 21, 28, 0.82);
   }
-  .end-card {
-    gap: 8px;
-    padding: 10px 12px;
+  .end-main {
+    min-height: auto;
+    gap: 20px;
   }
-  .endstats td {
-    padding: 2px 0;
+  .end-figures {
+    gap: 6px 28px;
+  }
+  .end-figure dd {
+    font-size: 30px;
+  }
+  .text-list.end-list {
+    --entry-size: 28px;
+    --entry-size-sel: 34px;
+  }
+  .end-chart {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+@media (max-height: 640px) {
+  .endscreen {
+    padding-top: 24px;
+  }
+  .end-main {
+    gap: 16px;
+  }
+  .end-figure dd {
+    font-size: 30px;
   }
 }
 html.reduce-motion .end-head,
-html.reduce-motion .end-card,
+html.reduce-motion .end-chart,
 html.reduce-motion .end-best.new {
   animation: none !important;
 }
