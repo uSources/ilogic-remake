@@ -37,7 +37,7 @@ import {
   type BuyOption,
   type MoveRange,
 } from '../../../core/rules';
-import { showBanner, showToast, ui, type MenuItemVM } from '../../../hud/store';
+import { showBanner, showToast, ui, type MenuItemVM, type StandingVM } from '../../../hud/store';
 import { buyItem, optionItems } from './menuItems';
 import { fmtNum, nameOf, settings, t } from '../../../settings';
 import { buyBlockedText } from '../../../ui/hudModels';
@@ -89,6 +89,8 @@ export interface MenuView {
   subtitle?: string;
   /** Lineas extra (el objetivo de la mision, en la pausa). */
   info?: string[];
+  /** En la pausa: «Cómo va» la partida. */
+  standing?: StandingVM;
   items: MenuItemVM[];
   selected: number;
   at: Pos;

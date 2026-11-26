@@ -718,7 +718,7 @@ nucleo, una herramienta con dependencias propias, publicar el nucleo), `src/core
 ### Interfaz HTML (src/hud)
 
 La vista 3D publica con `ui.set(...)` lo que hay que enseñar (`view3d/systems/hud/hudBridge.ts`, `matchMenus.ts`,
-`menuFlow.ts`) y los componentes de Preact solo lo pintan; los botones llaman a `ui.actions.*`, que
+`matchEnd.ts`, `menuFlow.ts`) y los componentes de Preact solo lo pintan; los botones llaman a `ui.actions.*`, que
 pone la vista. Cada pieza en su sitio:
 
 | Que | Donde |
@@ -818,7 +818,7 @@ azar"): nadie se lo da, asi que la pantalla, el fondo del menu y las herramienta
   equipos), se acaba para esta pantalla: `screenEnd(session, viewer)` lo dice (un `PersonEnd`;
   `people`, `personStillPlays`, session/screen.ts) y la pantalla del final se lee desde quien mira
   (`screenEndFor`: `ScreenEnd.fallenBy` dice de quien fue la caida que lo decidio, asi «Te has
-  rendido» solo lo lee quien se rindio). En 3D lo mira `showEndIfOver` (`view3d/systems/hud/matchMenus.ts`), que
+  rendido» solo lo lee quien se rindio). En 3D lo mira `MatchEnd.showIfOver` (`view3d/systems/hud/matchEnd.ts`), que
   borra el guardado; asi la partida por texto acaba igual (K4). Pendiente en 3D: el guardado
   automatico (`isAutosaveMoment`), el aviso de cada equipo que cae y salir mientras juegan los demas.
 
@@ -1080,7 +1080,7 @@ archivo y por donde pasa cada cosa, en `docs/RED.md`. Las decisiones:
   vista de despues mas las unidades que solo estan en la de antes (cayeron o se metieron en la niebla
   por el camino: sin ellas no habria pieza que animar). Al acabar el lote, la de despues es la
   partida. Un `ended` deja la ultima vista y el final lo decide la pantalla como siempre
-  (`showEndIfOver`).
+  (`MatchEnd.showIfOver`).
 - **Cada partida por la red es su carga de pagina, como todas**: el vestibulo cierra su conexion y
   apunta el arranque 'online' (codigo y ficha); la partida vuelve a entrar al cargar (`joinMatch`,
   `app/gameStart.ts`: `OnlineMatch.inPlay`). Ese arranque no se borra al cargar, asi que recargar
@@ -1176,7 +1176,7 @@ src/view3d/
 | `systems/board/` | el tablero tal como lo ve quien mira (`boardScene`): lado, niebla, vida, quien ya jugo, capturas; el humo de las heridas; lo que perderia el enemigo al que se apunta (`hitLookOf`) |
 | `systems/camera/` | la camara de estrategia como logica (`StrategyCamera`): desplazar, acercar, girar, limites y suavizado; da su pose como datos. Y la del fondo del menu (`OrbitCamera`): da vueltas a un punto, siempre igual, y lo deja donde no lo tapa el menu; mueve su pose en el sitio, sin crear nada por fotograma |
 | `systems/input/` | teclado (tablas de `src/controls/`, `KEY_ACTIONS`: grupos con numero, ordenes, «Ver órdenes») y raton o dedo sobre el mundo (`pointerInput.ts`: tocar, recuadro, doble clic, borde), a ordenes de la camara y del turno |
-| `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien el numero de «Fin del turno» y el panel de lo elegido), pausa y pantalla final (`matchMenus.ts`), el minimapa (`minimapBridge.ts`: lo publica solo si cambia algo que se ve en el, y el recuadro de lo que esta en pantalla, que da `MatchScene.viewedArea`) |
+| `systems/hud/` | publicar la interfaz (`publishHud`, `installHudActions`: tambien el numero de «Fin del turno» y el panel de lo elegido), la pausa con «Cómo va» (`matchMenus.ts`), la pantalla final (`matchEnd.ts`: es un `KeyPanel`, con su teclado y «Mirar el tablero», mientras la partida no publica nada mas), el minimapa (`minimapBridge.ts`: lo publica solo si cambia algo que se ve en el, y el recuadro de lo que esta en pantalla, que da `MatchScene.viewedArea`) |
 | `systems/net/` | la partida por la red (`onlinePlay.ts`: `OnlinePlay`, el `MatchRunner` de una sala; las acciones las decide el servidor y lo que llega se atiende en orden) y el aviso de «Tu turno» con la pestaña escondida (`turnNotice.ts`) |
 | `systems/sound/`, `systems/weather/` | que suena con cada cosa (`soundCues.ts`); como se ve cada clima (datos: `weatherStyles.ts`) |
 | `engine/matchScene.ts` | todo lo que se dibuja de una partida: lo crea, lo mueve en cada fotograma (`render`), la casilla bajo un punto (`tileAt`) y el recuadro de una casilla en pantalla (`anchorOf`) |
@@ -1314,7 +1314,7 @@ traduce lo que pulsa el jugador a **ordenes**, y la vista las cumple.
 | Orden | Donde vale | Quien la cumple |
 |---|---|---|
 | `InputCommand` (`inputCommands.ts`): cursor, aceptar, atras, fin de turno, siguiente unidad, zoom... | la partida | `KEY_ACTIONS` de `view3d/systems/input/keyInput.ts` (cursor = desplazar la camara mientras se mantiene) |
-| `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda; en la partida, la pausa, las opciones y la ayuda abiertas encima del mapa | `MenuFlow` (`view3d/app/menuFlow.ts`, que pasa a `OptionsPanel.command`...); en la partida, `KeyRouter` (`keyInput.ts`) al primer `KeyPanel` abierto (`OptionsPanel`, `helpPanel`, `PauseMenu`), y el mapa no recibe ninguna. Un panel puede hacer suyas algunas ordenes del mapa (`KeyPanel.shortcut`: la pausa, las de sus opciones, con la tecla que tenga el jugador) |
+| `MenuCommand` (`menu.ts`): mover, aceptar, atras y atajos (opciones, notas, otro mapa) | menus de pantalla: inicio, partida nueva, campaña, opciones, notas, ayuda; en la partida, la pausa, las opciones y la ayuda abiertas encima del mapa | `MenuFlow` (`view3d/app/menuFlow.ts`, que pasa a `OptionsPanel.command`...); en la partida, `KeyRouter` (`keyInput.ts`) al primer `KeyPanel` abierto (`MatchEnd`, `OptionsPanel`, `helpPanel`, `PauseMenu`), y el mapa no recibe ninguna. Un panel puede hacer suyas algunas ordenes del mapa (`KeyPanel.shortcut`: la pausa, las de sus opciones, con la tecla que tenga el jugador) |
 
 - **Teclado**: `keyCommand(key, settings.keys)` en la partida, con las tablas `FIXED_KEYS` y
   `REBINDABLE_KEYS` (una entrada por `KeyBindingId` con su tecla de serie; el jugador la cambia en
@@ -1361,7 +1361,7 @@ Un fichero nuevo, `src/controls/gamepad.ts`, con la misma forma que el teclado:
 | Añadir una marca sobre el tablero o un efecto | `src/view3d/engine/fx/highlights.ts`; `engine/fx/fx.ts`, `particles.ts` (y si va con un suceso, su paso en `systems/events/`) |
 | Cambiar las teclas, o añadir un mando (gamepad...) | `src/controls/` (ver "Mandos": teclas del mapa en `keyboard.ts`, de los menus en `menu.ts`) |
 | Cambiar el raton o el dedo sobre el tablero | `src/view3d/systems/input/pointerInput.ts` (y que hace la casilla tocada, `TurnControls.tap`) |
-| Cambiar algo de la partida en pantalla (animaciones, turno enemigo, pausa, final...) | `src/view3d/` (ver "Vista 3D": `systems/turn/`, `systems/events/`, `systems/hud/matchMenus.ts`) |
+| Cambiar algo de la partida en pantalla (animaciones, turno enemigo, pausa, final...) | `src/view3d/` (ver "Vista 3D": `systems/turn/`, `systems/events/`, `systems/hud/matchMenus.ts`, `matchEnd.ts`) |
 
 | Textos | `src/i18n/es/*.ts` (un fichero por tema) y su traduccion en `src/i18n/en/` (ver "Interfaz HTML", "Textos"); `t('clave')` y `nameOf` en `src/settings.ts` |
 | Generar mapas | `src/core/mapgen/` (un modulo por paso: terreno, salidas, edificios; los pasos en orden en `steps.ts`, fachada `mapgen.ts`), sus numeros en `mapgen.json` y `themes.json` |

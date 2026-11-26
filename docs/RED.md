@@ -395,9 +395,9 @@ que le queda al turno de quien se espera:
   `abandoned`). Quien entre despues recibe la vista y el `ended` (`sendSituation`).
 - En el cliente, `RoomClient` apunta `ended` y lo pone en la cola. `OnlinePlay` (`ended`) adopta la
   ultima vista y el turno acaba (`untilInput` devuelve 'over'); la pantalla decide el final como en
-  una partida de esta pantalla (`showEndIfOver`: ganada, perdida, rendicion), sin tocar la partida
-  guardada de esta pantalla. Por la red el final solo ofrece volver al menu (la revancha seria otra
-  sala). Las cuentas de los demas no estan en la vista (`withoutBooks`), asi que el final no las sabe
+  una partida de esta pantalla (`MatchEnd.showIfOver`: ganada, perdida, rendicion), sin tocar la partida
+  guardada de esta pantalla. Por la red el final solo ofrece mirar el tablero y volver al menu (la
+  revancha seria otra sala). Las cuentas de los demas no estan en la vista (`withoutBooks`), asi que el final no las sabe
   (`docs/IDEAS.md`).
 - La sala sigue guardada hasta que caduca (30 dias sin actividad, `ROOM_EXPIRY_MS`): entonces
   `expire` borra todo y cierra los sockets con 4410 ('gone'); el cliente lo quita de «Mis partidas».

@@ -3,6 +3,7 @@ import { Btn } from '../common/buttons';
 import type { UIState } from '../state';
 import { ui } from '../store';
 import { OWN, RIVALS, type BySide, type SideIndex } from '../vm/common';
+import { TextEntry } from './TextEntry';
 
 type EndVM = NonNullable<UIState['end']>;
 
@@ -52,94 +53,100 @@ const END_TITLE: Record<'game' | 'mission', Record<EndVM['outcome'], TextKey>> =
 
 const endTitle = (end: EndVM): string => t(END_TITLE[end.mission ? 'mission' : 'game'][end.outcome]);
 
+/** El valor de los ejercitos dia a dia, en su ficha oscura a la derecha (como «Cómo va» en la pausa). */
 function ChartSection({ chart }: { chart: readonly BySide[] }) {
   return (
-    <div class="end-chart">
-      <span class="label">{t('endChart')}</span>
+    <section class="end-chart" aria-label={t('endChart')}>
+      <span class="end-chart-title">{t('endChart')}</span>
       <ArmyChart data={chart} />
       <span class="legend">
-        <i class="you" /> {t('you')} <i class="enemy" /> {t('enemy')}
+        <i class="you" /> {t('youShort')} <i class="enemy" /> {t('enemy')}
       </span>
+    </section>
+  );
+}
+
+/** Una cifra del final: su nombre y su valor ya escrito. */
+interface Figure {
+  label: TextKey;
+  value: string;
+}
+
+/** Las cifras de la partida, grandes y sin tabla: dias, bajas de cada lado, edificios y, con limite de dias, los puntos. */
+function endFigures({ day, stats, buildings, score }: EndVM): Figure[] {
+  const lost: Figure[] = stats
+    ? [
+        { label: 'statLost', value: fmtNum(stats.lost[OWN]) },
+        { label: 'endDestroyed', value: fmtNum(stats.lost[RIVALS]) },
+      ]
+    : [];
+  const points: Figure[] = score ? [{ label: 'points', value: `${fmtNum(score[OWN])} – ${fmtNum(score[RIVALS])}` }] : [];
+  return [
+    { label: 'endDaysPlayed', value: fmtNum(day) },
+    ...lost,
+    { label: 'endBuildings', value: `${buildings.own} ${t('of')} ${buildings.total}` },
+    ...points,
+  ];
+}
+
+function Figures({ end }: { end: EndVM }) {
+  return (
+    <dl class="end-figures">
+      {endFigures(end).map(({ label, value }) => (
+        <div key={label} class="end-figure">
+          <dt>{t(label)}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** Mirando el tablero: solo el boton para volver al resultado. */
+function PeekBar() {
+  return (
+    <div class="end-peek">
+      <Btn cls="end-peek-back" sound="ui_back" onPick={() => ui.actions.endBack()}>
+        {t('endBoardBack')} <span class="key">Esc</span>
+      </Btn>
     </div>
   );
 }
 
-function StatRow({ label, values }: { label: TextKey; values: BySide }) {
-  return (
-    <tr>
-      <td>{t(label)}</td>
-      <td class="num">{fmtNum(values[OWN])}</td>
-      <td class="num">{fmtNum(values[RIVALS])}</td>
-    </tr>
-  );
-}
-
-/** Tabla tuyo / enemigo: puntos (si hay limite de dias), compras, bajas, capturas, gasto y dias. */
-function StatsTable({ stats, score, day }: { stats: NonNullable<EndVM['stats']>; score: EndVM['score']; day: number }) {
-  const rows = [
-    ['statBuilt', stats.built],
-    ['statLost', stats.lost],
-    ['statCaptured', stats.captured],
-    ['statSpent', stats.spent],
-  ] as const;
-  return (
-    <table class="endstats">
-      <thead>
-        <tr>
-          <th />
-          <th class="you">{t('you')}</th>
-          <th class="enemy">{t('enemy')}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {score && <StatRow label="points" values={score} />}
-        {rows.map(([label, values]) => (
-          <StatRow key={label} label={label} values={values} />
-        ))}
-        <tr>
-          <td>{t('statDays')}</td>
-          <td class="num" colSpan={2}>
-            {day}
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  );
-}
-
-/** Final de la partida: resultado, grafica de los ejercitos, estadisticas y botones. */
+/**
+ * Final de la partida, como el menu clasico de Inicio: a la izquierda lo jugado, el resultado en
+ * grande, sus cifras y que hacer despues; a la derecha, la grafica de los ejercitos.
+ */
 export function EndScreen({ end }: { end: EndVM }) {
+  if (end.peek) return <PeekBar />;
   return (
-    <div class={`endscreen ${end.outcome}`}>
-      <div class="end-head">
-        {end.mission && <span class="label">{end.mission}</span>}
-        <span class="end-title">{endTitle(end)}</span>
-        {end.reasonText && <span class="end-reason">{t(end.reasonText)}</span>}
-      </div>
-      <div class="px end-card">
-        <div class="end-cols">
-          {end.chart && <ChartSection chart={end.chart} />}
-          {end.stats && <StatsTable stats={end.stats} score={end.score} day={end.day} />}
-        </div>
+    <div class={`endscreen ${end.outcome}`} role="dialog" aria-label={endTitle(end)}>
+      <div class="end-main">
+        <header class="end-head">
+          <span class="end-kicker">{end.kicker}</span>
+          <h1 class="end-title">{endTitle(end)}</h1>
+          {end.reasonText && <span class="end-reason">{t(end.reasonText)}</span>}
+        </header>
+        <Figures end={end} />
         {end.best !== null && (
-          <div class={`end-best ${end.newBest ? 'new' : ''}`}>
+          <span class={`end-best ${end.newBest ? 'new' : ''}`}>
             {end.newBest ? t('newBest') : t('bestDays')}: {end.best} {t('days')}
-          </div>
+          </span>
         )}
-        <div class="end-btns">
-          {end.buttons.map((button, i) => (
-            <Btn
+        <nav class="text-list end-list" aria-label={endTitle(end)}>
+          {end.buttons.map((button, index) => (
+            <TextEntry
               key={button.id}
-              sel={i === end.selected}
-              cls={`px-btn ${i === 0 ? '' : 'plain'}`}
-              onHover={() => ui.actions.endHover(i)}
-              onPick={() => ui.actions.endPick(i)}
-            >
-              {button.label}
-            </Btn>
+              sel={index === end.selected}
+              title={button.label}
+              onHover={() => ui.actions.endHover(index)}
+              onPick={() => ui.actions.endPick(index)}
+            />
           ))}
-        </div>
+        </nav>
+        <span class="menu-hint">{t('homeHint')}</span>
       </div>
+      {end.chart && <ChartSection chart={end.chart} />}
     </div>
   );
 }

@@ -322,8 +322,8 @@ async function knownRoomLine(code) {
 
 /** Donde se pulsa la entrada «En línea» de Inicio: su nombre o la linea de debajo (el clic sube al mismo boton). */
 const ONLINE_ENTRY_SPOTS = {
-  title: { selector: '.entry-online .home-entry-title', name: 'su nombre' },
-  note: { selector: '.entry-online .home-entry-note', name: 'la linea de debajo' },
+  title: { selector: '.entry-online .text-entry-title', name: 'su nombre' },
+  note: { selector: '.entry-online .text-entry-note', name: 'la linea de debajo' },
 };
 
 /** Cuantas veces se usa algo de Inicio desde ahora (lo que hace la entrada al pulsarla). */
