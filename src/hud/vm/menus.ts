@@ -177,6 +177,8 @@ export interface CampaignItemVM {
   thumb: string;
   kind: string;
   best: number | null;
+  /** Debajo del nombre: su objetivo y como esta («Base · hecha en 9 días», «Capturar · la siguiente»). */
+  note: string;
 }
 
 /** Un asiento de una sala por la red, como se ve en el vestibulo. */

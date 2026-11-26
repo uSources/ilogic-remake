@@ -1,0 +1,106 @@
+/* Escaramuza y Campaña (MenuScreen.tsx): el menu clasico de texto como la pausa, sobre el tablero de
+   Inicio. A la izquierda, lo pequeño en oro, el titulo en grande y la lista; a la derecha, lo que se va
+   a jugar en su ficha oscura. */
+/* El velo de detras: como el de Inicio, pero oscurece mas lejos, hasta la ficha. */
+.menu-veil.screen {
+  background: linear-gradient(90deg, var(--night-veil) 0%, rgba(18, 21, 28, 0.78) 45%, rgba(18, 21, 28, 0.35) 100%);
+}
+@media (max-aspect-ratio: 6/5) {
+  .menu-veil.screen {
+    background: rgba(18, 21, 28, 0.82);
+  }
+}
+.menu-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 40px;
+  padding: 44px 80px 24px;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+.menu-screen-main {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.menu-screen-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.menu-screen-kicker {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--menu-gold);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+.menu-screen-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 60px;
+  line-height: 1;
+  color: var(--panel);
+  text-shadow: 0 4px 0 rgba(0, 0, 0, 0.7);
+}
+.menu-screen-main .menu-hint {
+  margin-top: auto;
+}
+/* La ficha oscura translucida (como «Cómo va» en la pausa). */
+.menu-card {
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(14, 17, 24, 0.6);
+  backdrop-filter: blur(8px);
+}
+.menu-card-kicker {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--menu-note);
+}
+/* Estrecho: una cosa debajo de otra, la ficha despues de la lista. */
+@media (max-width: 760px) {
+  .menu-screen {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 24px;
+    padding: 24px 16px 16px;
+  }
+  .menu-screen-main {
+    min-height: auto;
+    gap: 16px;
+  }
+  .menu-screen-title {
+    font-size: 48px;
+  }
+  /* Con las dos clases: campaign.css y newgame.css van despues y pondrian el ancho de la ficha. */
+  .menu-screen .menu-card {
+    width: 100%;
+  }
+}
+@media (max-height: 640px) {
+  .menu-screen {
+    padding-top: 20px;
+  }
+  .menu-screen-main {
+    gap: 12px;
+  }
+  .menu-screen-title {
+    font-size: 44px;
+  }
+}

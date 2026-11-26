@@ -68,7 +68,11 @@ const CUSTOM_GROUPS: { title: TextKey; keys: { k: ChoiceKey; label: TextKey }[] 
 ];
 
 const OPTION_PREFIX = 'opt-';
-const PRESET_PREFIX = 'preset-';
+/** El modo (Normal, Rápida, Personalizada): se cambia con ← → como una opcion mas. */
+const MODE_ID = 'mode';
+
+/** Lo que se cambia con ← → (y con Enter da un paso adelante): el modo y las opciones. */
+const isChoice = (id: string) => id === MODE_ID || id.startsWith(OPTION_PREFIX);
 
 /** Casillas mas pequeñas en la miniatura cuanto mas grande es el mapa, para que quepa. */
 const thumbTileSize = (mapSize: number) => (mapSize <= 20 ? 10 : mapSize <= 32 ? 7 : 6);
@@ -120,9 +124,9 @@ export class SetupScreen {
         this.focus = id;
         this.pick();
       },
-      setupSet: (id: string, index: number) => {
+      setupStep: (id: string, delta: number) => {
         this.focus = id;
-        this.setChoice(id, index);
+        this.step(id, delta);
       },
       setupCode: (text: string) => this.typeCode(text),
     };
@@ -157,8 +161,8 @@ export class SetupScreen {
 
   command(command: MenuCommand): void {
     const dx = command.kind === 'move' ? command.dx : 0;
-    // A los lados, en una opcion, se cambia su valor.
-    if (dx && this.focus.startsWith(OPTION_PREFIX)) return this.stepChoice(this.focus, dx);
+    // A los lados, en el modo o en una opcion, se cambia su valor.
+    if (dx && isChoice(this.focus)) return this.step(this.focus, dx);
     if (command.kind === 'move') return this.moveFocus(command.dx, command.dy);
     if (command.kind === 'ok' && !command.repeat) return this.pick();
     if (command.kind === 'reroll') {
@@ -252,6 +256,18 @@ export class SetupScreen {
     };
   }
 
+  /** Pasa el modo o la opcion `id` `delta` valores adelante o atras (dan la vuelta). */
+  private step(id: string, delta: number): void {
+    if (id === MODE_ID) return this.stepMode(delta);
+    this.stepChoice(id, delta);
+  }
+
+  private stepMode(delta: number): void {
+    const index = PRESET_IDS.indexOf(this.options.preset) + delta;
+    this.pickPreset(PRESET_IDS[(index + PRESET_IDS.length) % PRESET_IDS.length]!);
+    this.publish();
+  }
+
   /** Pasa la opcion `id` ("opt-xxx") `delta` valores adelante o atras. */
   private stepChoice(id: string, delta: number): void {
     const key = id.slice(OPTION_PREFIX.length) as ChoiceKey;
@@ -274,19 +290,20 @@ export class SetupScreen {
     this.options = applyPreset(this.options, preset);
     saveOptions(this.options);
     if (this.options.size !== sizeBefore) this.refreshPreview();
-    // En "Personalizada", el foco baja a la primera opcion.
-    if (preset === 'custom') this.focus = `${OPTION_PREFIX}${CUSTOM_GROUPS[0]!.keys[0]!.k}`;
   }
 
   // --- Foco ------------------------------------------------------------------------------------
 
+  /** La lista de arriba abajo; la ficha del mapa (el codigo y «Otro mapa») queda a la derecha de «Empezar». */
   private rows(): string[][] {
-    const rows: string[][] = [PRESET_IDS.map((preset) => `${PRESET_PREFIX}${preset}`), [`${OPTION_PREFIX}rival`]];
-    if (this.options.preset === 'custom')
-      for (const group of CUSTOM_GROUPS) for (const { k: key } of group.keys) rows.push([`${OPTION_PREFIX}${key}`]);
-    rows.push(['code', 'reroll']);
-    rows.push(['back', 'start']);
-    return rows;
+    const custom = this.options.preset === 'custom' ? CUSTOM_GROUPS.flatMap((group) => group.keys) : [];
+    return [
+      ['start', 'code', 'reroll'],
+      [MODE_ID],
+      [`${OPTION_PREFIX}rival`],
+      ...custom.map(({ k: key }) => [`${OPTION_PREFIX}${key}`]),
+      ['back'],
+    ];
   }
 
   private moveFocus(dx: number, dy: number): void {
@@ -297,12 +314,11 @@ export class SetupScreen {
   /** Aceptar sobre lo que tiene el foco. */
   private pick(): void {
     const focus = this.focus;
-    if (focus.startsWith(OPTION_PREFIX)) return this.stepChoice(focus, 1);
+    if (isChoice(focus)) return this.step(focus, 1);
     if (focus === 'back') return this.host.toHome();
     if (focus === 'start') return this.start();
-    if (focus.startsWith(PRESET_PREFIX)) this.pickPreset(focus.slice(PRESET_PREFIX.length) as PresetId);
-    else if (focus === 'reroll') this.reroll();
-    else if (focus === 'code') document.querySelector<HTMLInputElement>('.ng-code')?.focus();
+    if (focus === 'reroll') this.reroll();
+    else if (focus === 'code') document.querySelector<HTMLInputElement>('.setup-code')?.focus();
     this.publish();
   }
 }

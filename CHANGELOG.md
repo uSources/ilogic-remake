@@ -21,6 +21,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **La ficha de la unidad elegida**, abajo a la izquierda: retrato, vida, lo que mueve, su alcance y su visión, y lo que sabe hacer (capturar edificios, sus habilidades).
 - **La compra en una fábrica, en una lista a la derecha**: retrato, nombre y precio, uno debajo de otro, en vez del abanico de fichas. La señalada crece y, abajo, dice cómo se mueve, contra qué es fuerte y débil y con cuánto dinero te quedas. Lo que no te llega sale en gris con lo que falta. Se maneja con las flechas, Enter y Esc, como la pausa.
 - **«Otra escaramuza»** al acabar: las mismas reglas en otro mapa. Y **«Mirar el tablero»**, para ver cómo ha quedado la partida; Esc vuelve al resultado.
+- **Escaramuza y Campaña, con el mismo diseño**: la lista a la izquierda y el mapa en su ficha a la derecha, sobre el tablero. En Escaramuza, el modo y el rival se cambian con ← → (o con ◂ ▸) y, en Personalizada, sus opciones salen debajo, en la misma lista. En Campaña, las misiones son un camino: las hechas en oro, la siguiente con su número y las cerradas con candado; debajo de cada una, su objetivo y cómo te fue.
 
 ### Arreglos
 - El final de la partida se maneja con el teclado (flechas, Tab y Enter). Antes las teclas iban al tablero: Esc abría la pausa de la partida acabada y E o Tab quitaban el final.
@@ -40,6 +41,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **The chosen unit's card**, bottom left: portrait, life, how far it moves, its range and vision, and what it can do (capture buildings, its abilities).
 - **Buying at a factory, in a list on the right**: portrait, name and price, one under another, instead of the fan of cards. The highlighted one grows and, at the bottom, shows how it moves, what it is strong and weak against and how much money you will have left. What you cannot afford is grey, with what is missing. It works with the arrows, Enter and Esc, like the pause.
 - **"Another skirmish"** when a game ends: the same rules on another map. And **"Look at the board"**, to see how the game ended; Esc goes back to the result.
+- **Skirmish and Campaign, with the same design**: the list on the left and the map in its card on the right, over the board. In Skirmish, the mode and the rival change with ← → (or ◂ ▸) and, in Custom, its options show up below, in the same list. In Campaign, the missions are a path: the finished ones in gold, the next one with its number and the locked ones with a padlock; under each one, its objective and how it went.
 
 ### Fixes
 - The end screen works with the keyboard (arrows, Tab and Enter). Keys used to go to the board: Esc opened the pause of the finished game and E or Tab removed the end screen.
