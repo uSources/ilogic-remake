@@ -50,7 +50,8 @@ linea empieza por `error:` y el programa sale con 1.
   clima; `?model=Tank&side=enemy`). Desde la consola, `window.ilogicPlayground`.
 
 En la partida, `window.ilogic3d` da `session` (la partida: `session.state`), `viewer` (el equipo de quien
-mira), `online` (por la red, `OnlinePlay`; si no, null), `board` (las piezas),
+mira; con dos personas en la misma pantalla, la que juega), `seat` (el cambio de jugador: `seat.isOpen`
+mientras tapa la partida, `seat.ready()` como «Empezar mi turno»), `online` (por la red, `OnlinePlay`; si no, null), `board` (las piezas),
 `controls` (la entrada del turno: `tap(pos)`, `endTurn()`, `focusUnit(uid)`), `camera` (la camara de
 estrategia como logica: `lookAt({ x, y, z })`, `pose`), `world` (escena, `setWeather(id)`), `weather`, `stages` (los puertos con los que se
 anima un suceso: `stages.pieces.walk(uid, de, a)`, `stages.effects.sparks(sitio, 1)`...; los pasos de cada

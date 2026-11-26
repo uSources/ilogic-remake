@@ -46,6 +46,8 @@ export interface HudActions {
   openGameMenu: () => void;
   renameSquad: (id: number, name: string) => void;
   renameClose: () => void;
+  /** La siguiente persona de esta pantalla esta lista para su turno (el aviso de cambio de jugador). */
+  handoffReady: () => void;
   /** Un retrato del panel de lo elegido: solo esa, quitarla (Mayusculas) o las de su tipo (Ctrl). */
   pickInSelection: (uid: number, shift: boolean, ctrl: boolean) => void;
   /** La siguiente unidad sin mover (el numero de «Fin del turno»). */

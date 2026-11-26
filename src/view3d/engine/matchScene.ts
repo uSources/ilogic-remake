@@ -217,6 +217,11 @@ export class MatchScene implements ScreenView {
     this.hoveredTile = pos;
   }
 
+  /** Quien mira pasa a ser `team` (varias personas en la misma pantalla): el siguiente `sync` lo pinta como lo ve el. */
+  lookAs(team: TeamId): void {
+    this.board.lookAs(team);
+  }
+
   /** Deja las piezas y el clima (su id, null si no hay) como estan en la partida. */
   sync(weather: string | null): void {
     this.board.sync();

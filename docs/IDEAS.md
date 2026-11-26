@@ -23,8 +23,7 @@ son las mismas, pero la vista 3D aún no deja hacer todo. La ayuda de la partida
 ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`).
 
 19. **Tutorial y paneles de misión.**
-20. **Varias personas en la misma pantalla** (el aviso de cambio de jugador), repetir el turno
-    enemigo y guardado automático.
+20. **Repetir el turno enemigo y guardado automático.**
 21. **El dedo:** pellizcar para acercar y girar con dos dedos (`docs/PLAN-MOVIL.md`).
 22. **Laboratorio de animaciones** (se quitó con el 2D; para los modelos está `units3d.html`).
 24. **Edificios con explanada delante** (como en Advance Wars): rehacer los seis en Ashfox ocupando
@@ -124,8 +123,6 @@ El juego por turnos le va bien al PvP asíncrono, y el núcleo ya ayuda: es dete
 jugador es una acción (datos) que pasa por `dispatch`, con sucesos completos: lo que mandaría y
 recibiría un cliente. Por fases, para no apostarlo todo de golpe:
 
-14. **Dos jugadores en el mismo dispositivo** (pasarse el móvil): casi gratis de hacer, y sirve para
-    probar el equilibrio entre personas.
 15. **Partidas con amigos por enlace o código**, asíncronas, con aviso cuando te toca. **En marcha**,
     en tres PR: (1) el núcleo habla por la red, sin servidor (hecho: `src/core/net`, ver
     `docs/ARQUITECTURA.md`, "Red": el protocolo como datos, la sala `Room` sobre una `GameSession`,

@@ -29,7 +29,7 @@ export type MenuCommand =
  * menu: alli mandan las ordenes InputCommand.
  */
 export type MenuContext =
-  'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'online' | 'end' | 'pause';
+  'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'online' | 'end' | 'pause' | 'handoff';
 
 export interface MenuBinding {
   codes: readonly string[];
@@ -95,6 +95,8 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
   // La pausa de la partida: moverse por sus opciones, elegir y cerrarla. Sus atajos (fin del turno,
   // amenaza...) son las teclas del mapa que tenga el jugador: no van aqui (KeyPanel.shortcut, keyInput.ts).
   pause: MENU_KEYS,
+  // El cambio de jugador en la misma pantalla: solo su boton, «Empezar mi turno» (nada del mapa detras).
+  handoff: [{ codes: KEY_OK, command: { kind: 'ok', repeat: false } }],
 };
 
 /** La orden de una pulsacion en un menu, o null si en ese menu la tecla no hace nada. */
