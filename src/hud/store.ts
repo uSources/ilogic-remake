@@ -42,7 +42,7 @@ export type {
 export type { MinimapVM } from './vm/minimap';
 export type { NotesVM } from './vm/notes';
 export type { HandoffVM } from './vm/notices';
-export type { AbilityVM, BuildingVM, TileVM, UnitVM } from './vm/tile';
+export type { AbilityVM, BuildingVM, ChosenStatVM, ChosenUnitVM, TileVM, UnitVM } from './vm/tile';
 export type { BreakdownLineVM, DayInfoVM, EconomyVM, TurnClockMood, TurnClockVM, WeatherVM } from './vm/topBar';
 
 const noop = () => {};
