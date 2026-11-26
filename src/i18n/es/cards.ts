@@ -5,6 +5,8 @@ export const cards = {
   you: 'Tuyo',
   enemy: 'Enemigo',
   ally: 'Aliado',
+  terrainLabel: 'Terreno',
+  underCursor: 'Bajo el cursor',
   defense: 'Defensa',
   income: 'Ingresos',
   move: 'Mov',

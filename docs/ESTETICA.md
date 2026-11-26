@@ -270,11 +270,22 @@ y estado: `docs/PLAN-INTERFAZ.md`.
 - **Retratos de unidades**: no son dibujos, son el propio modelo 3D renderizado en tres cuartos y pasado a
   pixel art de 64x64 (`npm run retratos` y `tools/art/retratos_pixel.py`). Así la ficha y el tablero
   muestran lo mismo; si cambia un modelo, hay que volver a renderizarlo.
-- **Poca cosa en pantalla**: solo cuatro piezas fijas, el dinero (su desglose al pasar el ratón), el
-  día con su clima, el menú y «Fin del turno» con su número de unidades sin mover (que lleva a la
-  siguiente). Nada de bandejas ni líneas de ayuda: lo demás sale junto a lo que se toca y cuando hace
-  falta (fichas, rueda, compra, ficha de la casilla), y lo de vez en cuando va en el menú (ver
-  amenaza, ver órdenes) o en la rueda (escuadras).
+- **Las esquinas, en texto** (estilo C desde el 26-11-2026; antes, cuatro fichas crema). Nada de
+  bandejas ni de líneas de ayuda: lo demás sale junto a lo que se toca y cuando hace falta (fichas,
+  rueda, compra), y lo de vez en cuando va en la pausa (ver amenaza, ver órdenes) o en la rueda
+  (escuadras).
+  - Arriba a la izquierda, de quién es el turno en grande, con el punto del bando. Debajo, en dorado,
+    el día, el clima y el dinero con lo que entra al día. Los tres tienen su desglose al pasar el
+    ratón (o al tocarlos), en una ficha oscura translúcida como «Cómo va»: nada de fichas crema ni
+    del globito del navegador.
+  - Arriba a la derecha, el enemigo (sus edificios y, sin niebla, sus unidades) y el botón de pausa
+    con su tecla.
+  - Abajo a la derecha, «Acabar turno ▸» en texto grande, con «N sin mover» debajo (lleva a la
+    siguiente), y al lado el minimapa en una ficha oscura.
+  - Abajo a la izquierda, lo que hay bajo el cursor: el sitio con sus chapas y la unidad con su
+    retrato, de quién es y su vida en diez pastillas.
+  - Una sombra baja del borde de arriba y otra sube del de abajo: así el texto se lee sobre la hierba
+    o la nieve.
 - **Sobre el tablero, chapas y bloques** (`docs/PLAN-INTERFAZ-2.md`, fases 2 y 3; probado en el
   navegador el 17-11-2026):
   - Mover y atacar, **losas y bordes**: a donde puede ir, losas azules translúcidas con borde claro
@@ -291,12 +302,13 @@ y estado: `docs/PLAN-INTERFAZ.md`.
   - La barra queda solo para **lo que perdería** al apuntarle (a rayas), que es una proporción.
   - La captura a medias, una chapa con **los puntos que le faltan**, del color de quien captura y a la
     izquierda (encima está la unidad que captura, con su vida en el centro y su orden a la derecha).
-  - La defensa de la casilla señalada va en **su ficha** (`TileTip.tsx`), no en el tablero: una chapa
-    con el escudo y el %, junto a las de lo que cuesta entrar, lo que cobra y lo que le falta por
-    capturar (solo las que tenga). Antes eran estrellas de bloque (cubitos amarillos) sobre la casilla:
-    no se entendía qué eran y se confundían con el cursor, del mismo amarillo (21-11-2026). Con Alt,
-    la misma ficha crece con el resto, en las mismas chapas y líneas de texto pequeño: nada de una
-    tarjeta aparte con otro aspecto.
+  - La defensa de la casilla señalada va en **lo que hay bajo el cursor** (`TileTip.tsx`, abajo a la
+    izquierda), no en el tablero: una chapa con el escudo y el %, junto a las de lo que cuesta entrar,
+    lo que cobra y lo que le falta por capturar (solo las que tenga). Antes eran estrellas de bloque
+    (cubitos amarillos) sobre la casilla: no se entendía qué eran y se confundían con el cursor, del
+    mismo amarillo (21-11-2026). Con Alt, la unidad crece con el resto, en las mismas chapas y líneas
+    de texto pequeño. Hasta el 26-11-2026 era una ficha crema junto a la casilla, que salía al parar
+    el ratón.
   - La previsión de combate, **chapas de plástico** (`Badge`): la del daño encima de la barra de vida
     del enemigo y la del contraataque a los pies de tu unidad (encima, junto al enemigo de al lado,
     chocaban). Comprobadas con la interfaz a 0,9 y a 1,25 (las escalas de Opciones).

@@ -1,10 +1,10 @@
 import type { HelpRules, HelpTopic } from '../i18n/help';
 import type { TextKey } from '../settings';
 import type { EndOutcome, EndStatsVM } from './vm/end';
-import type { Anchor, BySide, Side } from './vm/common';
+import type { BySide, Side } from './vm/common';
 import type { ForecastVM } from './vm/combat';
 import type { SelectionVM } from './vm/army';
-import type { CampaignItemVM, HomeVM, MenuVM, NetVM, OnlineVM, OptionsVM, SetupVM } from './vm/menus';
+import type { CampaignItemVM, HomeVM, MenuVM, NetVM, OnlineVM, OptionsVM, SetupVM, StandingVM } from './vm/menus';
 import type { MinimapVM } from './vm/minimap';
 import type { NotesVM } from './vm/notes';
 import type { HandoffVM, MatchIntroVM } from './vm/notices';
@@ -42,6 +42,8 @@ export interface UIState {
   funds: number;
   /** Desglose de dinero y mando (al pasar por encima del dinero). */
   economy: EconomyVM | null;
+  /** «Cómo va»: lo de su alianza y lo de sus enemigos (arriba a la derecha, el enemigo). */
+  standing: StandingVM | null;
   /** Desglose del dia (al pasar por encima del dia). */
   dayInfo: DayInfoVM | null;
   day: number;
@@ -55,8 +57,6 @@ export interface UIState {
   /** Clima (null si la partida no tiene). */
   weather: WeatherVM | null;
   tile: TileVM | null;
-  /** Donde esta en la pantalla la casilla de `tile` (su ficha sale al lado); null: no se sabe (2D). */
-  tileAt: Anchor | null;
   /** [CAMBIO] Panel de lo elegido (con dos o mas unidades; null = no se enseña). */
   selection: SelectionVM | null;
   /**
@@ -151,6 +151,7 @@ export const initialState: UIState = {
   mission: null,
   funds: 0,
   economy: null,
+  standing: null,
   dayInfo: null,
   day: 1,
   turn: 'own',
@@ -159,7 +160,6 @@ export const initialState: UIState = {
   menu: null,
   forecast: null,
   tile: null,
-  tileAt: null,
   selection: null,
   endTurn: { pending: 0, armed: false },
   rename: null,

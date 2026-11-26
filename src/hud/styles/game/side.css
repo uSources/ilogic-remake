@@ -1,17 +1,11 @@
-/* Columna derecha: minimapa y bandeja */
-/* Encima de la ficha de fin del turno (endturn.css). */
-.side {
-  position: absolute;
-  right: 16px;
-  bottom: 96px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-  pointer-events: none;
-}
-.minimap {
-  padding: 6px;
+/* El minimapa, abajo a la derecha junto a «Acabar turno» (endturn.css), en una ficha oscura
+   translucida como las del menu clasico. */
+.px.minimap {
+  padding: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(14, 17, 24, 0.6);
+  box-shadow: none;
 }
 .mm-wrap {
   position: relative;
@@ -52,16 +46,12 @@
   pointer-events: none;
 }
 @media (max-height: 640px) {
-  .side {
+  .dock {
     --minimap-size: 128px;
   }
 }
 @media (max-width: 720px) {
-  .side {
-    right: 10px;
-    bottom: 80px;
-  }
-  .side {
-    --minimap-size: 144px;
+  .dock {
+    --minimap-size: 112px;
   }
 }

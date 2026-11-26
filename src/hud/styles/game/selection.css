@@ -1,8 +1,8 @@
 /* [CAMBIO] Panel de lo elegido (abajo a la izquierda, en lugar de las fichas). */
 .picked {
   position: absolute;
-  left: 16px;
-  bottom: 16px;
+  left: 28px;
+  bottom: 26px;
   display: flex;
   flex-direction: column;
   gap: 6px;

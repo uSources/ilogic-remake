@@ -42,7 +42,7 @@ export const options = {
   keyTakenFixed: 'Esa tecla es fija (cursor, aceptar, deshacer o grupos)',
   keyTakenBy: 'Esa tecla ya es de «{a}»',
   keyIsModifier: 'Pulsa una tecla, no solo Mayúsculas, Ctrl o Alt',
-  key_endTurn: 'Fin del turno',
+  key_endTurn: 'Acabar turno',
   key_nextUnit: 'Siguiente unidad',
   key_orderHere: 'Todas las acciones en la casilla',
   key_orderAttack: 'Orden: atacar',

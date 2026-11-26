@@ -3,7 +3,7 @@ import { newUnit } from '@core/measure';
 import { EndTurnGuard, END_CONFIRM_MS } from '../src/view3d/systems/turn/endTurnGuard';
 import { blankState, PLAYER, unitTypeNamed } from './helpers';
 
-/** «Fin del turno» con unidades sin mover: la primera pulsacion las hace saltar; la segunda termina. */
+/** «Acabar turno» con unidades sin mover: la primera pulsacion las hace saltar; la segunda termina. */
 
 function guardFor(idle: number) {
   const s = blankState({ fog: false });

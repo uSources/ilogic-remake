@@ -7,6 +7,8 @@ export const cards: Translation<typeof es> = {
   you: 'Yours',
   enemy: 'Enemy',
   ally: 'Ally',
+  terrainLabel: 'Terrain',
+  underCursor: 'Under the cursor',
   defense: 'Defense',
   income: 'Income',
   move: 'Move',

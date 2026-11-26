@@ -92,8 +92,8 @@ sirve el juego y las salas en la misma direccion (`http://<tu-equipo>:8787`).
 | Girar la camara | — | Arrastrar con el derecho |
 | Acercar y alejar | + / - | Rueda |
 | Aceptar en un menu | Enter | Clic |
-| Atras / menu de partida | Esc (sin nada elegido abre la pausa) | Boton ☰ arriba a la derecha |
-| Fin del turno | E | Boton "Fin del turno" |
+| Atras / pausa | Esc (sin nada elegido abre la pausa) | Boton de pausa arriba a la derecha |
+| Acabar el turno | E | "Acabar turno", abajo a la derecha |
 | Siguiente unidad sin mover | Tab | Clic en la bandeja de abajo a la derecha |
 
 - Pulsa sobre una unidad tuya (azul) para ver adonde puede ir (casillas azules) y a quien puede

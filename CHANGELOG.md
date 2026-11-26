@@ -15,6 +15,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### Interfaz
 - **La pausa y el final, con el diseño del menú de inicio**: texto grande sobre el tablero, sin tarjetas. La pausa deja ver el tablero desenfocado y trae «Cómo va»: tus unidades, edificios e ingresos contra los del enemigo (sus unidades, solo si no hay niebla). «Guardar y salir al menú» sale sin preguntar, porque la partida se guarda sola al salir. El final enseña el resultado en grande, los días, las unidades perdidas y destruidas y los edificios, y la gráfica de los ejércitos al lado.
+- **La partida, con el mismo diseño**: arriba a la izquierda, de quién es el turno en grande y, debajo, el día, el clima y el dinero con lo que entra al día; arriba a la derecha, el enemigo y el botón de pausa. Abajo a la derecha, «Acabar turno» en texto junto al minimapa, con cuántas unidades quedan sin mover. Abajo a la izquierda, lo que hay bajo el cursor (el sitio con su defensa y la unidad con su vida), al momento y sin tapar el tablero.
 - **«Otra escaramuza»** al acabar: las mismas reglas en otro mapa. Y **«Mirar el tablero»**, para ver cómo ha quedado la partida; Esc vuelve al resultado.
 
 ### Arreglos
@@ -29,6 +30,7 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ### Interface
 - **Pause and end screens with the home menu's design**: big text over the board, no cards. The pause shows the board blurred and adds "How it's going": your units, buildings and income against the enemy's (their units only without fog). "Save and quit to menu" leaves without asking, since the game saves itself when you leave. The end screen shows the result in big letters, the days, units lost and destroyed and buildings, with the army chart beside them.
+- **The match, with the same design**: top left, whose turn it is in big letters and, below, the day, the weather and your money with what comes in each day; top right, the enemy and the pause button. Bottom right, "End turn" as text next to the minimap, with how many units have not moved. Bottom left, what is under the cursor (the place with its defense and the unit with its life), right away and without covering the board.
 - **"Another skirmish"** when a game ends: the same rules on another map. And **"Look at the board"**, to see how the game ended; Esc goes back to the result.
 
 ### Fixes

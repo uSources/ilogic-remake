@@ -1,33 +1,36 @@
-/* Desglose al pasar por encima del dinero o del dia (o al tocarlos) */
-/* El dia ya va en position: absolute (centrado); el dinero necesita relative para su panel. */
+/* Desglose al pasar por encima del dia, el clima o el dinero (o al tocarlos): la ficha oscura
+   translucida del estilo C (como «Cómo va» en la pausa), con las etiquetas en mayusculas pequeñas y
+   las cifras en su color. El dia, el clima y el dinero (topbar.css) van en position: relative para
+   su panel. */
 .has-tip {
   cursor: help;
-}
-.funds.has-tip {
-  position: relative;
 }
 .has-tip > .breakdown {
   display: none;
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 12px);
   /* Pantallas bajas (movil en horizontal): que no se salga por abajo; se desplaza dentro. */
   max-height: calc(100dvh - 100px);
   overflow-y: auto;
-  left: -3px;
+  left: -8px;
   z-index: 30;
   width: max-content;
   min-width: 260px;
   max-width: min(360px, calc(100vw - 32px));
-  padding: 12px 14px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(14, 17, 24, 0.88);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   font-family: var(--body);
   font-size: 14px;
+  font-weight: 700;
   line-height: 20px;
-  color: var(--text);
+  color: var(--panel);
+  text-shadow: none;
+  white-space: normal;
   cursor: default;
-}
-.day.has-tip > .breakdown {
-  left: 50%;
-  transform: translateX(-50%);
+  pointer-events: auto;
 }
 /* Pasar el raton abre el desglose; tocarlo lo abre y lo cierra (clase open). Con el dedo, el
    navegador deja la casilla en :hover tras tocarla, asi que el hover solo vale con raton: si no,
@@ -48,11 +51,12 @@
   box-shadow: none;
 }
 .breakdown h4 {
-  margin: 10px 0 4px;
+  margin: 12px 0 4px;
   font-family: var(--display);
+  font-weight: 700;
   font-size: 12px;
-  letter-spacing: 1px;
-  color: var(--muted);
+  letter-spacing: 1.4px;
+  color: var(--menu-note);
   text-transform: uppercase;
 }
 .breakdown h4:first-child {
@@ -65,7 +69,7 @@
 }
 .breakdown .row .n {
   min-width: 34px;
-  color: var(--muted);
+  color: var(--menu-note);
   text-align: right;
 }
 .breakdown .row .l {
@@ -75,47 +79,31 @@
   text-align: right;
 }
 .breakdown .row.total {
-  margin-top: 2px;
-  padding-top: 2px;
-  border-top: 2px solid var(--lo);
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 247, 232, 0.14);
 }
 .breakdown .row.net {
-  margin-top: 10px;
-  padding-top: 6px;
-  border-top: 3px solid var(--ink);
-  font-weight: bold;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 2px solid rgba(255, 247, 232, 0.3);
+  font-family: var(--display);
+  font-size: 16px;
 }
 .breakdown .pos {
-  color: var(--green);
+  color: var(--menu-good);
 }
 .breakdown .neg {
-  color: var(--red-soft);
+  color: var(--menu-danger);
 }
 .breakdown .gold {
-  color: var(--gold);
+  color: var(--menu-gold);
 }
 .breakdown .note {
   font-size: 12px;
-  color: var(--muted);
+  font-weight: 600;
+  color: var(--menu-note);
 }
 .breakdown .note.warn {
-  color: var(--red-soft);
-}
-.top .spacer {
-  flex: 1;
-}
-.menu-btn {
-  width: 52px;
-  height: 50px;
-  justify-content: center;
-  flex-direction: column;
-  gap: 5px;
-  padding: 0;
-}
-.menu-btn i {
-  display: block;
-  width: 20px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--text);
+  color: var(--menu-danger);
 }

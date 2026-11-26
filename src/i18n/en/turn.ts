@@ -2,8 +2,6 @@ import type { turn as es } from '../es/turn';
 import type { Translation } from '../translation';
 
 export const turn: Translation<typeof es> = {
-  enemyTurn: 'ENEMY TURN',
-  allyTurn: 'ALLY TURN',
   yourTurn: 'YOUR TURN',
   handoffTitle: 'Next player',
   handoffTeam: "It's the turn of team",
@@ -42,6 +40,15 @@ export const turn: Translation<typeof es> = {
   standingUnits: 'Units',
   standingBuildings: 'Buildings',
   standingIncome: 'Income per day',
+  turnTitleOwn: 'Your turn',
+  turnTitleAlly: "Ally's turn",
+  turnTitleEnemy: "Enemy's turn",
+  dayTitle: 'Day',
+  perDay: 'a day',
+  unitsCount: '{n} units',
+  unitsCount1: '1 unit',
+  buildingsCount: '{n} buildings',
+  buildingsCount1: '1 building',
   surrender: 'Surrender',
   confirmSurrender: 'Press again to surrender',
   replay: 'Replay enemy turn',

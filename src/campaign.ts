@@ -195,8 +195,8 @@ export const TUTORIAL: TutorialStep[] = [
   },
   {
     text: {
-      es: 'Mueve también tu otro soldado (o elige Esperar) y termina el turno con FIN DEL TURNO, arriba a la derecha, o con la tecla E.',
-      en: 'Move your other soldier too (or choose Wait) and end your turn with END TURN, top right, or the E key.',
+      es: 'Mueve también tu otro soldado (o elige Esperar) y termina el turno con ACABAR TURNO, abajo a la derecha, o con la tecla E.',
+      en: 'Move your other soldier too (or choose Wait) and end your turn with END TURN, bottom right, or the E key.',
     },
     done: (context) => context.s.day >= 2,
   },

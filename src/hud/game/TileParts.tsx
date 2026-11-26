@@ -1,3 +1,4 @@
+import { MAX_LIFE } from '../../core/data';
 import { t, type TextKey } from '../../settings';
 import { signed, stars } from '../common/format';
 import { Icon } from '../common/Icon';
@@ -6,8 +7,8 @@ import type { OwnerSide, StatChipVM } from '../vm/common';
 import type { AbilityVM, TileVM, UnitVM } from '../vm/tile';
 
 /**
- * Las piezas de la ficha de la casilla (TileTip.tsx): la unidad y el sitio, cada uno con sus datos
- * en chapas. Con Alt, la misma ficha crece con lo que no hace falta ver siempre.
+ * Las piezas de lo que hay bajo el cursor (TileTip.tsx): el sitio y la unidad, cada uno con sus datos
+ * en chapas. Con Alt, la unidad crece con lo que no hace falta ver siempre.
  */
 
 type Owner = OwnerSide | 'unknown';
@@ -65,32 +66,10 @@ function Facts({ facts }: { facts: readonly Fact[] }) {
   );
 }
 
-function UnitRow({ unit }: { unit: UnitVM }) {
-  return (
-    <div class="tt-row">
-      <Icon k={unit.icon} alt="" cls="px-icon tt-icon" />
-      <b class="tt-name">{unit.name}</b>
-      {unit.rank ? (
-        <span class="tt-rank" title={t('veteran')}>
-          {stars(unit.rank)}
-        </span>
-      ) : null}
-      <span class="tt-life num" style={{ color: sidePaint(unit.side, 'text') }} title={t('hp')}>
-        {Math.max(0, Math.round(unit.life))}
-      </span>
-    </div>
-  );
-}
-
-/** "Tuyo · Escuadra Alfa · Destacada · Orden: atacar allí" (lo que haya); el lado, en su color. */
-function UnitSideLine({ unit }: { unit: UnitVM }) {
-  const squadAndOrder = [unit.squad && `${t('squad')} ${unit.squad}`, unit.detached && t('detached'), unit.order].filter(Boolean);
-  return (
-    <div class="tt-line">
-      <span style={{ color: sidePaint(unit.side, 'text') }}>{ownerText(unit.side)}</span>
-      {squadAndOrder.map((part) => ` · ${part}`).join('')}
-    </div>
-  );
+/** «Escuadra Alfa · Destacada · Orden: atacar allí» (lo que haya; de quien es ya va encima, en su color). */
+function SquadAndOrder({ unit }: { unit: UnitVM }) {
+  const parts = [unit.squad && `${t('squad')} ${unit.squad}`, unit.detached && t('detached'), unit.order].filter(Boolean);
+  return parts.length > 0 ? <div class="tt-line">{parts.join(' · ')}</div> : null;
 }
 
 function Abilities({ abilities }: { abilities: readonly AbilityVM[] }) {
@@ -105,11 +84,11 @@ function Abilities({ abilities }: { abilities: readonly AbilityVM[] }) {
   );
 }
 
-/** Lo de la unidad que sale con Alt: de quien es, su movimiento, alcance y vision, carga y habilidades. */
+/** Lo de la unidad que sale con Alt: su escuadra y su orden, movimiento, alcance y vision, carga y habilidades. */
 function UnitDetails({ unit }: { unit: UnitVM }) {
   return (
     <>
-      <UnitSideLine unit={unit} />
+      <SquadAndOrder unit={unit} />
       {unit.chips && <Facts facts={unit.chips} />}
       {unit.noHeal && <div class="tt-line tt-warn">{t('noHeal')}</div>}
       {unit.cargo && <div class="tt-line">{unit.cargo}</div>}
@@ -118,33 +97,65 @@ function UnitDetails({ unit }: { unit: UnitVM }) {
   );
 }
 
-/** La unidad: nombre, veterania y vida; con Alt, ademas, sus datos. */
-export function UnitPart({ unit, isDetailed }: { unit: UnitVM; isDetailed: boolean }) {
+/** Las pastillas de la vida: cuantas decimas le quedan, en verde, amarillo o rojo como su chapa en el tablero. */
+const LIFE_STEPS = 10;
+const lifeTone = (share: number): string => (share > 0.6 ? 'high' : share > 0.3 ? 'mid' : 'low');
+
+function LifeBar({ life }: { life: number }) {
+  const shown = Math.max(0, Math.round(life));
+  const share = shown / MAX_LIFE;
+  const filled = Math.ceil(share * LIFE_STEPS);
   return (
-    <>
-      <UnitRow unit={unit} />
-      {isDetailed && <UnitDetails unit={unit} />}
-    </>
+    <span class="ci-life" title={t('hp')}>
+      {t('hp')}
+      <span class={`ci-pips ${lifeTone(share)}`} aria-hidden="true">
+        {Array.from({ length: LIFE_STEPS }, (_, step) => (
+          <i key={step} class={step < filled ? 'on' : ''} />
+        ))}
+      </span>
+      <span class="num">{shown}</span>
+    </span>
   );
 }
 
-/** El edificio (con su dueño) o el terreno; bajo una unidad, mas pequeño: lo principal es ella. */
-function GroundName({ tile }: { tile: TileVM }) {
-  const { building, terrain, unit } = tile;
+/** La unidad: su retrato, de quien es, su nombre (y veterania) y su vida; con Alt, ademas, sus datos. */
+export function UnitPart({ unit, isDetailed }: { unit: UnitVM; isDetailed: boolean }) {
   return (
-    <div class={`tt-ground ${unit ? 'under-unit' : ''}`}>
-      {building ? building.name : terrain.name}
-      {building && <span style={{ color: ownerColor(building.owner) }}> · {ownerText(building.owner)}</span>}
+    <div class="ci-unit">
+      <Icon k={unit.icon} alt="" cls="px-icon ci-portrait" />
+      <div class="ci-text">
+        <span class="ci-label" style={{ color: ownerColor(unit.side) }}>
+          {ownerText(unit.side)}
+        </span>
+        <span class="ci-name">
+          {unit.name}
+          {unit.rank ? (
+            <span class="ci-rank" title={t('veteran')}>
+              {stars(unit.rank)}
+            </span>
+          ) : null}
+        </span>
+        <LifeBar life={unit.life} />
+        {isDetailed && <UnitDetails unit={unit} />}
+      </div>
     </div>
   );
 }
 
-/** El sitio y lo que da. */
+/** El sitio: encima, de quien es el edificio (o «Terreno»), su nombre y lo que da. */
 export function GroundPart({ tile }: { tile: TileVM }) {
+  const { building, terrain } = tile;
   return (
-    <>
-      <GroundName tile={tile} />
+    <div class="ci-ground">
+      {building ? (
+        <span class="ci-label" style={{ color: ownerColor(building.owner) }}>
+          {ownerText(building.owner)}
+        </span>
+      ) : (
+        <span class="ci-label">{t('terrainLabel')}</span>
+      )}
+      <span class="ci-name">{building ? building.name : terrain.name}</span>
       <Facts facts={tileFacts(tile)} />
-    </>
+    </div>
   );
 }
