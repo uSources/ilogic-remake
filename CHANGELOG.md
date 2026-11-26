@@ -9,10 +9,16 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ## [Sin publicar]
 
+### Novedades
+- **La partida en línea suena**: cuando alguien entra en tu sala y cuando empieza la partida, así te enteras aunque estés esperando en otra pestaña; y cuando la conexión se corta un rato, vuelve o se pierde. Mientras todo va bien, silencio.
+
 ### Arreglos
 - **El autoguardado vuelve a funcionar**: con él activado en Opciones, la partida se guarda al empezar cada turno tuyo, así no se pierde si el navegador se cierra sin avisar (pasa en el móvil). Desde que el juego es 3D, la opción no hacía nada.
 
 <!-- en -->
+
+### New
+- **Online games have sound**: when someone joins your room and when the match starts, so you hear it even while waiting in another tab; and when the connection drops for a while, comes back or is lost. While everything works, silence.
 
 ### Fixes
 - **Autosave works again**: with it on in Options, the game is saved at the start of each of your turns, so it isn't lost if the browser closes without warning (it happens on phones). Since the game went 3D, the option did nothing.
