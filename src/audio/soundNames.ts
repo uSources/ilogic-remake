@@ -140,9 +140,7 @@ export const SOUND_FALLBACKS = {
   new_record: null,
   news_badge: null,
   // En linea (sonaran cuando haya partida en linea en 3D)
-  room_created: 'ui_select',
   player_joined: 'ui_select',
-  player_left: 'ui_back',
   net_connected: null,
   net_reconnecting: 'ui_error',
   net_lost: 'ui_error',

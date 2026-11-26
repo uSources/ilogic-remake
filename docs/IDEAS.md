@@ -259,3 +259,7 @@ Sin pagar para ganar, sobre todo con PvP: nada que afecte a la partida se vende 
   con la cámara algo más cerca (`docs/ESTETICA.md`).
 - **Botón para abrir y cerrar el minimapa:** mejor siempre abierto (también en el móvil) y que crezca
   al pasar el ratón o al tocarlo; la tecla M lo sigue cerrando.
+- **Sonido al crear la sala y al irse alguien** (`room_created`, `player_left`): crear la sala es tu
+  propio clic, que ya suena; y en plena partida el servidor no dice que alguien se va (solo el final,
+  con `abandoned`), así que solo sonaría en el vestíbulo, donde casi no pasa. Los demás de la partida
+  en línea sí suenan (`docs/ARQUITECTURA.md`, «Lo que suena»).

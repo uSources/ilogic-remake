@@ -60,11 +60,9 @@ const MENU_INTERFACE: SoundSpec[] = [
   effect('news_badge', 0.3, 'rare', 'A tiny bright bell ding'),
 ];
 
-/** Suenan cuando haya partida en linea en 3D. */
+/** La partida en linea: quien entra en la sala, que empieza, la conexion y el reloj del turno. */
 const ONLINE: SoundSpec[] = [
-  effect('room_created', 0.6, 'rare', 'A wooden door with a small shop bell swinging open, a short bell jingle'),
   effect('player_joined', 0.6, 'often', 'A small door bell jingle as someone comes in'),
-  effect('player_left', 0.6, 'often', 'A door closing softly with a latch click'),
   effect('net_connected', 0.5, 'rare', 'A plug pushed into a socket with a firm click and a soft electric hum'),
   effect('net_reconnecting', 1, 'rare', 'An old radio dial searching through static with short squelches'),
   effect('net_lost', 0.8, 'rare', 'A radio cutting out: a crackle of static dropping to silence'),
