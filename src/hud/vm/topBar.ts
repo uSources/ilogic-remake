@@ -46,7 +46,7 @@ export interface WeatherVM {
 
 /**
  * Como va el reloj: el turno propio con tiempo de sobra (azul), sus ultimos segundos (rojo, con un tic
- * cada segundo y «Fin del turno» que parpadea) o el turno de otro (oscuro: no es su momento).
+ * cada segundo y «Acabar turno» que parpadea) o el turno de otro (oscuro: no es su momento).
  */
 export type TurnClockMood = 'calm' | 'hurry' | 'waiting';
 

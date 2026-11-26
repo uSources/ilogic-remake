@@ -126,7 +126,7 @@ export function playMatch(
     const selected = controls.selectedUnits();
     return selected.length === 1 ? selected[0]! : null;
   }
-  /** «Fin del turno»: con unidades sin mover, la primera pulsacion las hace saltar y pide otra. */
+  /** «Acabar turno»: con unidades sin mover, la primera pulsacion las hace saltar y pide otra. */
   const endGuard = new EndTurnGuard({
     s: state,
     get viewer() {
@@ -219,7 +219,7 @@ export function playMatch(
     publish,
     onOver: () => showEndSoon(),
   });
-  /** La siguiente unidad sin mover (Tab o el numero de «Fin del turno»): elegirla y llevar la camara. */
+  /** La siguiente unidad sin mover (Tab o el numero de «Acabar turno»): elegirla y llevar la camara. */
   function nextIdle(): void {
     const uid = controls.nextIdleUnit();
     if (uid !== null) focusUnit(uid);

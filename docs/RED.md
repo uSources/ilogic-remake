@@ -312,7 +312,7 @@ nota. Mientras, el turno esta ocupado (`TurnControls.busy`) y no se puede pulsar
 
 ### El turno de la IA en el servidor
 
-1. La persona pulsa «Fin del turno»: `TurnControls.endTurn` → `runner.finishTurn()` →
+1. La persona pulsa «Acabar turno»: `TurnControls.endTurn` → `runner.finishTurn()` →
    `OnlinePlay.finishTurn` → `client.endTurn()` (mensaje `endTurn`, con `seq`; sin `result`: lo que
    sigue llega como jugadas) y el turno se pone a mirar la cola (`runUntilInput` →
    `OnlinePlay.untilInput`).
@@ -355,7 +355,7 @@ que le queda al turno de quien se espera:
 4. `TurnClock` (`src/view3d/systems/net/turnClock.ts`) lo cuenta con el bucle de dibujo y publica
    `UIState.turnClock` (`turnClockVM`, `src/ui/models/turnClock.ts`) cada vez que cambia el segundo:
    azul en el turno propio, rojo los ultimos `HURRY_SECONDS` (15) con un tic suave por segundo
-   (`turn_clock_tick`) y «Fin del turno» que parpadea, y oscuro en el de otro (el anillo de su lado,
+   (`turn_clock_tick`) y «Acabar turno» que parpadea, y oscuro en el de otro (el anillo de su lado,
    «Juega el rojo»). Con el reloj y la conexion bien, la linea de la conexion no sale: ya lo dice el reloj.
 
 ### Abandono y sustituir por la IA
@@ -364,7 +364,7 @@ que le queda al turno de quien se espera:
   connection)` → `Room.leave`: la persona queda fuera (`connection: null`, el `Courier` la olvida), su
   asiento sigue siendo suyo y la sala sigue esperandola. Vuelve con el enlace o desde «Mis partidas».
 - **Rendirse** (menu de pausa, dos pulsaciones, tambien en el turno de otro: la pausa se abre mirando
-  jugar a los demas, `TurnControls.isWatchingOthers`, sin «Fin del turno»; `match3d.surrender` →
+  jugar a los demas, `TurnControls.isWatchingOthers`, sin «Acabar turno»; `match3d.surrender` →
   `runner.act`): `surrender` por la red (`RoomClient.act` lo manda como mensaje `surrender`; vale
   fuera de turno: `isAnyTime`). La sesion lo apunta, el `Courier` lo
   cuenta a todos (es publico) y, si ya no juega ninguna persona, la sala acaba (`ended.abandoned`).

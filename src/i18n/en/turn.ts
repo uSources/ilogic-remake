@@ -2,8 +2,6 @@ import type { turn as es } from '../es/turn';
 import type { Translation } from '../translation';
 
 export const turn: Translation<typeof es> = {
-  enemyTurn: 'ENEMY TURN',
-  allyTurn: 'ALLY TURN',
   yourTurn: 'YOUR TURN',
   handoffTitle: 'Next player',
   handoffTeam: "It's the turn of team",

@@ -1,6 +1,6 @@
 /* El reloj del turno por la red (TurnClock.tsx): una pastilla bajo la del dia (topbar.css), donde va la
    linea de la conexion (online.css), con un anillo que se vacia. Azul con tiempo de sobra, rojo los
-   ultimos segundos (y «Fin del turno» parpadea) y oscuro en el turno de otro, con el anillo de su color. */
+   ultimos segundos (y «Acabar turno» parpadea) y oscuro en el turno de otro, con el anillo de su color. */
 .turnclock {
   --tc-fill: var(--blue-btn);
   --tc-track: var(--lo);
