@@ -1,8 +1,8 @@
 /* Dedos: objetivos de toque mas grandes */
 @media (pointer: coarse) {
-  .item {
-    padding-top: 12px;
-    padding-bottom: 12px;
+  .callout .text-entry {
+    padding-top: 8px;
+    padding-bottom: 8px;
   }
   .pause-btn {
     min-width: 48px;

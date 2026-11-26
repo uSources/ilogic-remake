@@ -1,16 +1,18 @@
 /**
- * Los textos e iconos de lo que enseña la partida 3D: las fichas y la rueda de lo elegido (sus
+ * Los textos e iconos de lo que enseña la partida 3D: el bocadillo y la rueda de lo elegido (sus
  * opciones), la compra (precio y datos de cada unidad) y lo que cobra un equipo cada dia (la barra de
  * arriba).
  */
-import { usesCommandPoints, type BuyOption } from '../../../core/rules';
+import { usesCommandPoints, type BuyOption, type CaptureBlock } from '../../../core/rules';
 import type { UnitType } from '../../../core/content';
 import type { GameState, Unit } from '../../../core/model';
 import type { MenuItemVM } from '../../../hud/store';
-import { nameOf, t } from '../../../settings';
+import { fmtNum, nameOf, t, type TextKey } from '../../../settings';
 import { abilitiesVM, buyBlockedText, captureHintText, unitStatChips, unitStatsText } from '../../../ui/hudModels';
 import { unitIconKey } from '../../../ui/sprites';
-import type { UnitOption } from './unitOptions';
+import { keyNameOf } from '../../../hud/keyLabels';
+import type { TargetEntry } from './targetPick';
+import type { UnitChoice, UnitOption } from './unitOptions';
 
 /** Como se ve cada opcion en su ficha: un dibujo del juego o, si no hay, un simbolo. */
 const OPTION_LOOKS: { readonly [Option in UnitOption]: { icon: string } | { glyph: string } } = {
@@ -34,17 +36,51 @@ const OPTION_LOOKS: { readonly [Option in UnitOption]: { icon: string } | { glyp
   delete: { glyph: '✖' },
 };
 
-/** Las opciones de lo elegido (fichas o rueda), con su texto (en capturar, "20→10": puntos del edificio antes y despues). */
-export function optionItems(s: GameState, unit: Unit, options: readonly UnitOption[]): MenuItemVM[] {
-  return options.map((option) => {
+/** Por que no puede capturar, como se dice debajo de «Capturar» apagado. */
+const CAPTURE_BLOCK_TEXT: { readonly [Block in CaptureBlock]: TextKey } = {
+  notCapturer: 'captureNotCapturer',
+  noBuilding: 'captureNoBuilding',
+  allied: 'captureAllied',
+};
+
+/** Las opciones de lo elegido (su bocadillo o su rueda), con su texto y la linea de debajo (optionNote). */
+export function optionItems(s: GameState, unit: Unit, choices: readonly UnitChoice[]): MenuItemVM[] {
+  return choices.map((choice) => {
+    const { option } = choice;
     const look = OPTION_LOOKS[option];
     return {
       id: option,
       label: t(option),
       danger: option === 'delete',
-      hint: option === 'capture' ? captureHintText(s, unit) : undefined,
+      disabled: !!choice.blocked,
+      hint: optionNote(s, unit, choice),
       ...('icon' in look ? { icon: look.icon } : { glyph: look.glyph }),
     };
+  });
+}
+
+/**
+ * La linea de debajo: por que no se puede, si sale apagada; en atacar, cuantos hay a tiro («2 al
+ * alcance»); en capturar, «20→10» (los puntos del edificio antes y despues).
+ */
+function optionNote(s: GameState, unit: Unit, { option, blocked, targets }: UnitChoice): string | undefined {
+  if (blocked) return t(CAPTURE_BLOCK_TEXT[blocked]);
+  if (targets) return t('attackTargets').replace('{n}', fmtNum(targets));
+  return option === 'capture' ? captureHintText(s, unit) : undefined;
+}
+
+/** Cada entrada del bocadillo de elegir a quien atacar: su texto y su tecla (Intro, ← →, Esc; como el tablero 9). */
+const TARGET_LOOKS: { readonly [Entry in TargetEntry]: { label: TextKey; keys: readonly string[] } } = {
+  attack: { label: 'attack', keys: ['Enter'] },
+  nextTarget: { label: 'otherTarget', keys: ['ArrowLeft', 'ArrowRight'] },
+  back: { label: 'back', keys: ['Escape'] },
+};
+
+/** Las entradas del bocadillo de elegir a quien atacar. */
+export function targetItems(entries: readonly TargetEntry[]): MenuItemVM[] {
+  return entries.map((entry) => {
+    const look = TARGET_LOOKS[entry];
+    return { id: entry, label: t(look.label), key: look.keys.map(keyNameOf).join(' ') };
   });
 }
 

@@ -1,72 +1,3 @@
-/* Fichas junto a lo elegido (game/ActionChips.tsx) y su rueda (game/RadialMenu.tsx). */
-
-/* En fila encima de la casilla de la unidad, centradas. */
-.action-chips {
-  position: absolute;
-  display: flex;
-  gap: 8px;
-  transform: translate(-50%, calc(-100% - 14px));
-  pointer-events: none;
-}
-.action-chips .chip,
-.radial .chip {
-  pointer-events: auto;
-}
-.chip.sel {
-  outline: 3px solid #ffd23f;
-  outline-offset: 2px;
-}
-
-/* La rueda: cada ficha centrada en su sitio alrededor del centro de la casilla. */
-.radial {
-  position: absolute;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-.radial::before {
-  content: '';
-  position: absolute;
-  left: -112px;
-  top: -112px;
-  width: 224px;
-  height: 224px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(43, 34, 64, 0.28) 0 58%, transparent 60%);
-}
-.radial-slot {
-  position: absolute;
-  left: -24px;
-  top: -24px;
-  animation: radial-in 0.14s ease-out;
-}
-@keyframes radial-in {
-  from {
-    opacity: 0;
-    scale: 0.6;
-  }
-}
-.radial-caption {
-  position: absolute;
-  left: 0;
-  top: 118px;
-  transform: translateX(-50%);
-  padding: 6px 14px;
-  background: var(--panel);
-  border: var(--outline) solid var(--ink);
-  border-radius: 999px;
-  box-shadow: var(--lift);
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 15px;
-  white-space: nowrap;
-}
-@media (prefers-reduced-motion: reduce) {
-  .radial-slot {
-    animation: none;
-  }
-}
-
 /* La compra (game/BuyFan.tsx): retratos en abanico alrededor de la fabrica, y en el centro la chapa
    de la señalada. Cada ficha mide lo que dice SLOT en BuyFan.tsx. */
 .buy-fan {
@@ -329,6 +260,36 @@
 .tt-abilities b {
   color: var(--menu-gold);
 }
+/* La unidad elegida (game/ChosenUnit.tsx; lienzo «Todo en estilo C», tablero 8), en el sitio de lo de
+   bajo el cursor: retrato grande, nombre, su vida con lo que mueve, alcanza y ve, y en dorado lo que
+   sabe hacer. */
+.chosen-unit {
+  gap: 16px;
+}
+.chosen-unit .ci-name {
+  font-size: 32px;
+}
+.cu-portrait {
+  width: 80px;
+  height: 80px;
+}
+.cu-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 22px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--menu-title);
+}
+.cu-stat b {
+  color: var(--panel);
+}
+.cu-skills {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--menu-gold);
+}
 /* En el movil, encima de «Acabar turno» y del minimapa, a lo ancho. */
 @media (max-width: 720px) {
   .cursor-info {
@@ -348,5 +309,12 @@
   .ci-portrait {
     width: 44px;
     height: 44px;
+  }
+  .chosen-unit .ci-name {
+    font-size: 24px;
+  }
+  .cu-stats {
+    gap: 2px 14px;
+    font-size: 13px;
   }
 }

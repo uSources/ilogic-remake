@@ -24,7 +24,7 @@ import {
 import type { Building, GameState, Pos, TeamId, Unit } from '../../core/model';
 import type { Grid } from '../../core/util/grid';
 import { turnEndOrderOf, isDetached, squadById } from '../../core/squads';
-import type { AbilityVM, BuildingVM, StatChipVM, TileVM, UnitVM } from '../../hud/store';
+import type { AbilityVM, BuildingVM, ChosenStatVM, ChosenUnitVM, StatChipVM, TileVM, UnitVM } from '../../hud/store';
 import { nameOf, t, type TextKey } from '../../settings';
 import { isFriendly, ownerSideOf, sideOf } from '../sides';
 import { AS_ACTIVE, buildingKey, terrainKey, unitKey } from '../sprites';
@@ -186,6 +186,31 @@ function unitVM(textures: GameImages, s: GameState, unit: Unit, viewer: TeamId):
     ...(unit.life < MAX_LIFE && unhealable(s, unit) ? { noHeal: true } : {}),
     ...(isOwn ? ownUnitDetails(s, unit) : {}),
   };
+}
+
+/**
+ * La ficha de la unidad elegida (lienzo «Todo en estilo C», tablero 8): la unidad como en lo de bajo
+ * el cursor, lo que mueve, alcanza y ve en texto, y lo que sabe hacer. Sin municion ni combustible:
+ * el juego no los tiene.
+ */
+export function chosenUnitVM(textures: GameImages, s: GameState, unit: Unit, viewer: TeamId): ChosenUnitVM {
+  const unitType = unitTypeOf(s, unit);
+  const capture = unitType.canCapture ? [t('capturesBuildings')] : [];
+  return {
+    unit: unitVM(textures, s, unit, viewer),
+    stats: chosenStats(unitType),
+    skills: [...capture, ...abilitiesVM(s, unitType).map((ability) => ability.name)],
+  };
+}
+
+/** «Mueve 3 · Alcance 1–1 · Visión 2» (o «No ataca» en vez del alcance). */
+function chosenStats(unitType: UnitType): ChosenStatVM[] {
+  const { attack } = unitType;
+  return [
+    { label: t('movesStat'), value: String(unitType.move) },
+    attack ? { label: t('range'), value: rangeText(attack) } : { label: t('noAttack'), value: '' },
+    { label: t('vision'), value: String(unitType.vision) },
+  ];
 }
 
 /** "Carga: Soldado, Soldado" (o "Carga: vacío") en los que llevan carga; undefined en el resto. */

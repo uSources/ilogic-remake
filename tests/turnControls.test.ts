@@ -269,6 +269,63 @@ describe('el clic que acierta, las fichas y la rueda', () => {
     expect(soldier.turnState).toBe('done');
   });
 
+  it('con enemigos a tiro, «Atacar» dice cuantos y «Capturar» sale apagada con el porque', async () => {
+    const { s, soldier, controls } = await myTurn();
+    newUnit(s, SOLDIER, ENEMY, { x: 7, y: 5 });
+    newUnit(s, SOLDIER, ENEMY, { x: 5, y: 8 });
+    await controls.tap(soldier);
+    const items = controls.menu()?.items ?? [];
+    expect(items.map((item) => [item.id, !!item.disabled, item.hint])).toEqual([
+      ['attack', false, '2 al alcance'],
+      ['capture', true, 'no hay edificio aquí'],
+    ]);
+    expect(controls.menu()?.selected).toBe(0);
+  });
+
+  it('«Atacar»: ← → pasan de un enemigo a otro con su prevision e Intro ataca al señalado', async () => {
+    const { s, soldier, events, controls } = await myTurn();
+    const near = newUnit(s, SOLDIER, ENEMY, { x: 7, y: 5 });
+    const far = newUnit(s, SOLDIER, ENEMY, { x: 5, y: 8 });
+    await controls.tap(soldier);
+    controls.acceptMenu();
+    expect(controls.isPickingTarget).toBe(true);
+    expect(controls.menu()).toMatchObject({ kind: 'prompt', title: 'Elige a quién atacar' });
+    expect(controls.menu()?.items.map((item) => item.id)).toEqual(['attack', 'nextTarget', 'back']);
+    expect(controls.forecastAt(null)?.target.uid).toBe(near.uid);
+    controls.targetCommand({ kind: 'move', dx: 1, dy: 0 });
+    expect(controls.forecastAt(null)?.target.uid).toBe(far.uid);
+    controls.targetCommand({ kind: 'ok', repeat: false });
+    await settle();
+    const attacks = events.played.flat().filter((event) => event.kind === 'attack');
+    expect(attacks).toEqual([expect.objectContaining({ target: far.uid })]);
+    expect(controls.isPickingTarget).toBe(false);
+  });
+
+  it('eligiendo a quien atacar, Esc o tocar fuera de los enemigos vuelve a la unidad sin atacar', async () => {
+    const { s, soldier, events, controls } = await myTurn();
+    newUnit(s, SOLDIER, ENEMY, { x: 7, y: 5 });
+    await controls.tap(soldier);
+    controls.acceptMenu();
+    expect(controls.menu()?.items.map((item) => item.id)).toEqual(['attack', 'back']);
+    controls.targetCommand({ kind: 'back' });
+    expect(controls.menu()?.kind).toBe('chips');
+    controls.acceptMenu();
+    await controls.tap({ x: 20, y: 20 });
+    expect(controls.menu()?.kind).toBe('chips');
+    expect(events.played).toEqual([]);
+  });
+
+  it('eligiendo a quien atacar, tocar un enemigo a tiro le ataca', async () => {
+    const { s, soldier, events, controls } = await myTurn();
+    newUnit(s, SOLDIER, ENEMY, { x: 7, y: 5 });
+    const far = newUnit(s, SOLDIER, ENEMY, { x: 5, y: 8 });
+    await controls.tap(soldier);
+    controls.acceptMenu();
+    await controls.tap(far);
+    const attacks = events.played.flat().filter((event) => event.kind === 'attack');
+    expect(attacks).toEqual([expect.objectContaining({ target: far.uid })]);
+  });
+
   it('la rueda (clic derecho en la unidad): esperar, ordenes y disolver al final; sin moverse no hay deshacer', async () => {
     const { soldier, controls } = await myTurn();
     controls.context(soldier);

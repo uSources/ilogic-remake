@@ -8,7 +8,7 @@ import type { CampaignItemVM, HomeVM, MenuVM, NetVM, OnlineVM, OptionsVM, SetupV
 import type { MinimapVM } from './vm/minimap';
 import type { NotesVM } from './vm/notes';
 import type { HandoffVM, MatchIntroVM } from './vm/notices';
-import type { TileVM } from './vm/tile';
+import type { ChosenUnitVM, TileVM } from './vm/tile';
 import type { DayInfoVM, EconomyVM, TurnClockVM, WeatherVM } from './vm/topBar';
 
 /**
@@ -57,6 +57,8 @@ export interface UIState {
   /** Clima (null si la partida no tiene). */
   weather: WeatherVM | null;
   tile: TileVM | null;
+  /** La unidad elegida (sola): su ficha, abajo a la izquierda, en lugar de lo de bajo el cursor. */
+  chosen: ChosenUnitVM | null;
   /** [CAMBIO] Panel de lo elegido (con dos o mas unidades; null = no se enseña). */
   selection: SelectionVM | null;
   /**
@@ -160,6 +162,7 @@ export const initialState: UIState = {
   menu: null,
   forecast: null,
   tile: null,
+  chosen: null,
   selection: null,
   endTurn: { pending: 0, armed: false },
   rename: null,

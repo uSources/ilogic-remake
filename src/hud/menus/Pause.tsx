@@ -8,7 +8,8 @@ function PauseEntry({ item, index, isSelected }: { item: MenuItemVM; index: numb
   return (
     <TextEntry
       sel={isSelected}
-      cls={`${item.danger ? 'danger' : ''} ${item.disabled ? 'disabled' : ''}`}
+      cls={item.danger ? 'danger' : ''}
+      disabled={item.disabled}
       title={item.label}
       note={item.detail}
       keyHint={item.hint}

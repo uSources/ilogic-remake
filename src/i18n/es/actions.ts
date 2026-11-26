@@ -2,6 +2,12 @@
 export const actions = {
   attack: 'Atacar',
   capture: 'Capturar',
+  attackTargets: '{n} al alcance',
+  captureNoBuilding: 'no hay edificio aquí',
+  captureAllied: 'ya es de los tuyos',
+  captureNotCapturer: 'esta unidad no captura',
+  targetPick: 'Elige a quién atacar',
+  otherTarget: 'Otro objetivo',
   unload: 'Desembarcar',
   supply: 'Reparar',
   wait: 'Esperar',

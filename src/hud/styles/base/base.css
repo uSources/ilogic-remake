@@ -53,6 +53,11 @@
   --menu-danger: #ff8a83;
   --menu-own: #7fb2ff;
   --menu-good: #6fdc8c;
+  /* Lo que no se puede ahora (una entrada apagada): el titulo en gris y el porque debajo, algo mas claro. */
+  --menu-off: #8a82a0;
+  --menu-off-note: #9a91ad;
+  /* Lo que ya no esta (la vida que le faltaba a una unidad), apenas marcado sobre la ficha oscura. */
+  --menu-empty: rgba(255, 247, 232, 0.15);
   /* Paginas del menu (Novedades, Aprender, Opciones): la noche casi tapa el tablero; fichas crema con
      sombra negra, su etiqueta en ocre y el texto de leer un poco mas suave que la tinta. */
   --page-veil: rgba(18, 21, 28, 0.9);

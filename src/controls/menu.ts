@@ -41,6 +41,7 @@ export type MenuContext =
   | 'end'
   | 'endPeek'
   | 'pause'
+  | 'target'
   | 'handoff';
 
 export interface MenuBinding {
@@ -107,6 +108,9 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
   // La pausa de la partida: moverse por sus opciones, elegir y cerrarla. Sus atajos (fin del turno,
   // amenaza...) son las teclas del mapa que tenga el jugador: no van aqui (KeyPanel.shortcut, keyInput.ts).
   pause: MENU_KEYS,
+  // Eligiendo a quien atacar (tras «Atacar» en el bocadillo de la unidad): ← → pasan de un enemigo a
+  // otro, ↑ ↓ se mueven por el bocadillo, Intro elige (atacar al señalado) y Esc vuelve a la unidad.
+  target: MENU_KEYS,
   // Mirando el tablero desde el final: Esc, Retroceso, Enter o Espacio vuelven al resultado.
   endPeek: [
     { codes: KEY_OK, command: { kind: 'ok', repeat: false } },

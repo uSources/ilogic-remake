@@ -1,16 +1,26 @@
 /**
  * Lo que se puede hacer con lo elegido, repartido como lo enseña la interfaz limpia
- * (docs/PLAN-INTERFAZ.md): al lado de la unidad, solo las **fichas** de lo que no se hace ya con un
- * clic en el tablero (capturar si ya esta encima, bajar carga, reparar); lo demas, poco frecuente,
- * en la **rueda** (clic derecho o mantener pulsado): esperar, ordenes, escuadras, deshacer y
- * disolver. Atacar, ir, subir y unirse son tocar la casilla (clickIntent.ts). Lo que vale lo dice
- * el nucleo (`availableActions` para una unidad, `canDoWithSelection` para varias). Puro: que hace
- * cada opcion lo cumple el turno.
+ * (docs/PLAN-INTERFAZ.md): al lado de la unidad, en su bocadillo, atacar (con cuantos hay a tiro) y
+ * lo que no se hace ya con un clic en el tablero (capturar si ya esta encima, bajar carga, reparar),
+ * y capturar apagado con el porque si no puede (lienzo «Todo en estilo C», tablero 8); lo demas, poco
+ * frecuente, en la **rueda** (clic derecho o mantener pulsado): esperar, ordenes, escuadras, deshacer
+ * y disolver. Tocar un enemigo sigue atacando, e ir, subir y unirse son tocar la casilla
+ * (clickIntent.ts). Lo que vale lo dice el nucleo (`availableActions` para una unidad,
+ * `canDoWithSelection` para varias). Puro: que hace cada opcion lo cumple el turno.
  */
 import { availableActions, canDoWithSelection, SELECTION_MENU, type SelectionOption, type UnitMenuOption } from '../../../core/actions';
 import type { GameAction, GameState, Pos, TeamId, TurnEndOrderKind, Unit } from '../../../core/model';
-import { buildingAt, lastUndoableMove, sightOf, visibleFoeAt } from '../../../core/rules';
+import {
+  buildingAt,
+  captureBlockAt,
+  lastUndoableMove,
+  sightOf,
+  visibleFoeAt,
+  type CaptureBlock,
+  type MoveRange,
+} from '../../../core/rules';
 import { isAlliedOwner } from '../../../core/teams';
+import { targetsInReach } from './attackPlan';
 
 /**
  * Una opcion de lo elegido: las del nucleo para una unidad o para varias, deshacer el movimiento, y
@@ -19,7 +29,18 @@ import { isAlliedOwner } from '../../../core/teams';
  */
 export type UnitOption = UnitMenuOption | SelectionOption | 'undo' | 'squadSelect' | 'pickSeveral';
 
-/** Las fichas de una unidad, en su orden: lo que no se hace tocando el tablero. */
+/**
+ * Una opcion como sale en el bocadillo de la unidad. La que no se puede ahora lleva el porque
+ * (`blocked`): sale apagada y no se elige. Atacar lleva cuantos enemigos hay a tiro.
+ */
+export interface UnitChoice {
+  option: UnitOption;
+  blocked?: CaptureBlock;
+  /** Atacar: los enemigos a los que puede llegar a atacar este turno (los que se marcan en rojo). */
+  targets?: number;
+}
+
+/** Las de una unidad junto a ella, en su orden, despues de atacar: lo que no se hace tocando el tablero. */
 const CHIP_OPTIONS: readonly UnitMenuOption[] = ['capture', 'unload', 'supply'];
 
 /** La rueda de una unidad: esperar alli, ordenes y quitarla. */
@@ -40,10 +61,33 @@ const GROUP_RADIAL: readonly SelectionOption[] = [
   'squadDisband',
 ];
 
-/** Las fichas junto a esa unidad ahora (vacio: no hay nada que hacer que no sea tocar el tablero). */
-export function chipOptions(s: GameState, viewer: TeamId, unit: Unit): UnitOption[] {
+/**
+ * El bocadillo de esa unidad ahora, llegando a `range` (null si ya no se mueve): atacar si hay a
+ * quien, lo que no se hace tocando el tablero y, al final y apagado, capturar si no puede (vacio: no
+ * hay nada).
+ */
+export function chipChoices(s: GameState, viewer: TeamId, unit: Unit, range: MoveRange | null): UnitChoice[] {
   const core = availableActions(s, viewer, unit);
-  return CHIP_OPTIONS.filter((option) => core.includes(option));
+  const targets = targetsInReach(s, unit, range).length;
+  const attack: UnitChoice[] = targets > 0 ? [{ option: 'attack', targets }] : [];
+  const chips = CHIP_OPTIONS.filter((option) => core.includes(option)).map(choiceOf);
+  return [...attack, ...chips, ...blockedCapture(s, unit, core)];
+}
+
+/** Una opcion que se puede elegir, sin mas. */
+export const choiceOf = (option: UnitOption): UnitChoice => ({ option });
+
+/** Se puede elegir (no sale apagada). */
+export const isEnabled = (choice: UnitChoice): boolean => !choice.blocked;
+
+/**
+ * Capturar apagado, con el porque: solo para las que capturan (en las demas seria ruido en cada
+ * bocadillo) y si el nucleo no la deja capturar ahi.
+ */
+function blockedCapture(s: GameState, unit: Unit, core: readonly UnitMenuOption[]): UnitChoice[] {
+  if (core.includes('capture')) return [];
+  const blocked = captureBlockAt(s, unit, unit);
+  return blocked && blocked !== 'notCapturer' ? [{ option: 'capture', blocked }] : [];
 }
 
 /** La rueda de esa unidad ahora. */
