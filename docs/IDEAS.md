@@ -23,11 +23,7 @@ ya hace la vista 3D: al portar cada cosa, añadir su fila (`src/i18n/*/help.ts`)
 19. **Tutorial y paneles de misión.** Las piezas están (el panel, `hud/game/MissionPanel.tsx`, y
     los pasos del tutorial, `campaign.ts`), pero la partida 3D nunca rellena `mission` en la
     interfaz: hoy el objetivo solo sale en la pausa.
-20. **Varias personas en la misma pantalla y repetir el turno enemigo.** Con rival «Persona» (Nueva
-    partida) se juega, pero la vista se queda con el primer equipo (`playerTeam`,
-    `view3d/app/gameStart.ts`) y no sale el aviso de cambio de jugador: `hud/overlays/Handoff.tsx`
-    está hecho y la vista 3D no lo enseña. Repetir el turno enemigo: con el registro de la sesión
-    (`replaySession`), como hacía el 2D.
+20. **Repetir el turno enemigo**: con el registro de la sesión (`replaySession`), como hacía el 2D.
 21. **El dedo:** el pellizco está hecho (`controls/gestures/pinch.ts`, dentro de `PointerGestures`),
     pero la vista 3D usa su propio `pointerInput.ts` y no lo tiene (idea 33). Girar con dos dedos,
     aún no (`docs/PLAN-MOVIL.md`).
@@ -132,9 +128,6 @@ El juego por turnos le va bien al PvP asíncrono, y el núcleo ya ayuda: es dete
 jugador es una acción (datos) que pasa por `dispatch`, con sucesos completos: lo que mandaría y
 recibiría un cliente. Por fases, para no apostarlo todo de golpe:
 
-14. **Dos jugadores en el mismo dispositivo** (pasarse el móvil): sirve para probar el equilibrio
-    entre personas. Ya se puede elegir rival «Persona»; falta lo de la idea 20 (que la vista cambie
-    de equipo y el aviso).
 15. **Lo que le falta al juego en línea.** Ya está entero: el núcleo habla por la red (`src/core/net`,
     `docs/ARQUITECTURA.md`, "Red"), el servidor (`server/`, en Cloudflare Workers o en Node), la
     pantalla («Jugar en línea», `src/net`; en la vista 3D, `OnlinePlay`) y «Buscar rival», por turnos

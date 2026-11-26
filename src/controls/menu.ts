@@ -29,7 +29,19 @@ export type MenuCommand =
  * menu: alli mandan las ordenes InputCommand.
  */
 export type MenuContext =
-  'help' | 'notes' | 'options' | 'keyCapture' | 'home' | 'setup' | 'typing' | 'campaign' | 'online' | 'end' | 'endPeek' | 'pause';
+  | 'help'
+  | 'notes'
+  | 'options'
+  | 'keyCapture'
+  | 'home'
+  | 'setup'
+  | 'typing'
+  | 'campaign'
+  | 'online'
+  | 'end'
+  | 'endPeek'
+  | 'pause'
+  | 'handoff';
 
 export interface MenuBinding {
   codes: readonly string[];
@@ -100,6 +112,8 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
     { codes: KEY_OK, command: { kind: 'ok', repeat: false } },
     { codes: KEY_BACK, command: { kind: 'back' } },
   ],
+  // El cambio de jugador en la misma pantalla: solo su boton, «Empezar mi turno» (nada del mapa detras).
+  handoff: [{ codes: KEY_OK, command: { kind: 'ok', repeat: false } }],
 };
 
 /** La orden de una pulsacion en un menu, o null si en ese menu la tecla no hace nada. */

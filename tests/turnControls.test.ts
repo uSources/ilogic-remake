@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { newUnit } from '@core/measure';
-import { GameSession, humanController, passiveController } from '@core/session';
-import type { GameEvent } from '@core/model';
+import { GameSession, humanController, passiveController, type Controller } from '@core/session';
+import type { GameEvent, GameState } from '@core/model';
+import { shownTeamNumber } from '@core/teams';
+import { ui } from '../src/hud/store';
+import { HotSeat, type ScreenPass } from '../src/view3d/systems/turn/hotSeat';
 import { localRunner } from '../src/view3d/systems/turn/matchRunner';
 import { TurnControls } from '../src/view3d/systems/turn/turnControls';
 import { blankState, ENEMY, PLAYER, unitTypeNamed } from './helpers';
@@ -20,15 +23,25 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 async function myTurn() {
   const s = blankState();
   const soldier = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 5 });
+  const seat = new HotSeat(PLAYER, () => {});
+  const turn = turnOnScreen(s, [humanController(), passiveController()], seat);
+  await turn.controls.runUntilInput();
+  return { s, soldier, ...turn };
+}
+
+/** El turno 3D de la partida `s` en una pantalla de prueba, con esos controladores y quien mira en ella (`seat`). */
+function turnOnScreen(s: GameState, controllers: Controller[], seat: HotSeat) {
   const marks = new FakeMarks();
   const board = new FakeBoard(s);
   const events = new FakeEvents(board);
   const sounds = new FakeSounds();
   const preview = new FakePreview();
-  const session = new GameSession(s, [humanController(), passiveController()]);
+  const session = new GameSession(s, controllers);
   const controls = new TurnControls({
-    runner: localRunner(session, PLAYER),
-    viewer: PLAYER,
+    runner: localRunner(session, seat),
+    get viewer() {
+      return seat.team;
+    },
     marks,
     preview,
     events,
@@ -39,8 +52,7 @@ async function myTurn() {
     publish: () => {},
     onOver: () => {},
   });
-  await controls.runUntilInput();
-  return { s, soldier, marks, preview, events, sounds, board, controls };
+  return { marks, preview, events, sounds, board, controls };
 }
 
 describe('turno 3D con puertos', () => {
@@ -594,5 +606,68 @@ describe('el tablero se lee: hasta donde ataca y el visor', () => {
     controls.cancel();
     expect(preview.shot).toBeNull();
     expect(preview.look).toBeNull();
+  });
+});
+
+describe('varias personas en la misma pantalla', () => {
+  /** Dos personas, cada una con un soldado; empieza la primera. */
+  async function twoPeople() {
+    const s = blankState();
+    const first = newUnit(s, SOLDIER, PLAYER, { x: 5, y: 5 });
+    const second = newUnit(s, SOLDIER, ENEMY, { x: 15, y: 15 });
+    const passes: ScreenPass[] = [];
+    const seat = new HotSeat(PLAYER, (pass) => passes.push(pass));
+    const { controls } = turnOnScreen(s, [humanController(), humanController()], seat);
+    await controls.runUntilInput();
+    return { first, second, passes, seat, controls };
+  }
+
+  it('empieza la primera sin aviso; al acabar su turno, la pantalla pasa a la otra tapada por el aviso', async () => {
+    const { second, passes, seat, controls } = await twoPeople();
+    expect(ui.get().handoff).toBeNull();
+    controls.endTurn();
+    await settle();
+    expect(passes).toEqual([{ from: PLAYER, to: ENEMY }]);
+    expect(seat.team).toBe(ENEMY);
+    expect(ui.get().handoff).toEqual({ team: shownTeamNumber(ENEMY) });
+    // Tapada, no se juega: ni siquiera la persona que la recibe.
+    await controls.tap(second);
+    expect(controls.selectedUnits()).toEqual([]);
+  });
+
+  it('cuando la siguiente esta lista se quita el aviso y juega ella, con sus unidades', async () => {
+    const { first, second, seat, controls } = await twoPeople();
+    controls.endTurn();
+    await settle();
+    seat.command({ kind: 'ok', repeat: false });
+    await settle();
+    expect(ui.get().handoff).toBeNull();
+    await controls.tap(first);
+    expect(controls.selectedUnits()).toEqual([]);
+    await controls.tap(second);
+    expect(controls.selectedUnits()).toEqual([second]);
+  });
+
+  it('al acabar la segunda su turno, la pantalla vuelve a la primera', async () => {
+    const { passes, seat, controls } = await twoPeople();
+    controls.endTurn();
+    await settle();
+    seat.ready();
+    await settle();
+    controls.endTurn();
+    await settle();
+    expect(passes).toEqual([
+      { from: PLAYER, to: ENEMY },
+      { from: ENEMY, to: PLAYER },
+    ]);
+    expect(ui.get().handoff).toEqual({ team: shownTeamNumber(PLAYER) });
+    seat.ready();
+  });
+
+  it('con una sola persona en la pantalla no sale nunca', async () => {
+    const { controls } = await myTurn();
+    controls.endTurn();
+    await settle();
+    expect(ui.get().handoff).toBeNull();
   });
 });

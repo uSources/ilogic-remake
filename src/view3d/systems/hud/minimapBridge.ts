@@ -25,11 +25,9 @@ export class MinimapBridge {
   /** El color de cada terreno (terrain.json, "mapColor"). */
   private readonly palette = terrainPalette();
 
-  constructor(private readonly viewer: TeamId) {}
-
-  /** El minimapa de la partida tal como esta para quien mira (si ha cambiado algo). */
-  publishMap(s: GameState): void {
-    const view = { viewer: this.viewer, vis: visibility(s, this.viewer), hidden: NOTHING_HIDDEN };
+  /** El minimapa de la partida tal como esta para quien mira, `viewer` (si ha cambiado algo). */
+  publishMap(s: GameState, viewer: TeamId): void {
+    const view = { viewer, vis: visibility(s, viewer), hidden: NOTHING_HIDDEN };
     const minimap = minimapVM(this.palette, s, view);
     const key = JSON.stringify([minimap.units, minimap.buildings, minimap.fog]);
     if (key === this.shownMap) return;

@@ -9,6 +9,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 
 ## [Sin publicar]
 
+### Novedades
+- **Dos personas en la misma pantalla**: con el rival «Otra persona» en Escaramuza, al acabar tu turno la partida se tapa con el aviso «Le toca al equipo 2» hasta que la otra persona pulsa «Empezar mi turno» (o Enter). Cada una ve solo lo suyo, en azul, con su niebla, y encuentra la cámara donde la dejó. Antes la partida se quedaba esperando a la segunda sin dejarla jugar.
+
 ### Interfaz
 - **La pausa y el final, con el diseño del menú de inicio**: texto grande sobre el tablero, sin tarjetas. La pausa deja ver el tablero desenfocado y trae «Cómo va»: tus unidades, edificios e ingresos contra los del enemigo (sus unidades, solo si no hay niebla). «Guardar y salir al menú» sale sin preguntar, porque la partida se guarda sola al salir. El final enseña el resultado en grande, los días, las unidades perdidas y destruidas y los edificios, y la gráfica de los ejércitos al lado.
 - **«Otra escaramuza»** al acabar: las mismas reglas en otro mapa. Y **«Mirar el tablero»**, para ver cómo ha quedado la partida; Esc vuelve al resultado.
@@ -18,6 +21,9 @@ Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas a
 - **El autoguardado vuelve a funcionar**: con él activado en Opciones, la partida se guarda al empezar cada turno tuyo, así no se pierde si el navegador se cierra sin avisar (pasa en el móvil). Desde que el juego es 3D, la opción no hacía nada.
 
 <!-- en -->
+
+### New
+- **Two people on the same screen**: with the “Another person” rival in Skirmish, when your turn ends the game is covered by a “It's the turn of team 2” notice until the other person presses “Start my turn” (or Enter). Each one only sees their own side, in blue, with their own fog, and finds the camera where they left it. Before, the game kept waiting for the second person without letting them play.
 
 ### Interface
 - **Pause and end screens with the home menu's design**: big text over the board, no cards. The pause shows the board blurred and adds "How it's going": your units, buildings and income against the enemy's (their units only without fog). "Save and quit to menu" leaves without asking, since the game saves itself when you leave. The end screen shows the result in big letters, the days, units lost and destroyed and buildings, with the army chart beside them.

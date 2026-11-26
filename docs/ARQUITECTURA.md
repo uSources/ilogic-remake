@@ -686,10 +686,15 @@ estadisticas. **Ningun numero de equipo es especial**: no hay "el 0 es el jugado
   `isPerson(session, equipo)` (session/screen.ts: el `person` de su controlador, tambien dentro de un `sequence`). La interfaz
   no sabe de numeros de equipo: pinta y escribe por **lado** (`ui/sides.ts`: `'own'`, `'ally'`,
   `'enemy'` y `'neutral'` para lo que no es de nadie; azul lo propio y aliado, rojo lo enemigo).
-- **Varias personas en la misma pantalla** (por turnos): cada una tiene su `humanController`. La
-  vista 3D aun no las alterna (el aviso de cambio de jugador, `UIState.handoff` y
-  `hud/overlays/Handoff.tsx`, esta en la interfaz pero nadie lo abre: pendiente). `npm run play` juega la persona a la que le toca
-  (`TextMatch`, tools/play/textMatch.ts, sobre la misma `GameSession`).
+- **Varias personas en la misma pantalla** (por turnos; el rival «Persona» de Nueva partida): cada
+  una tiene su `humanController`, y quien mira en la vista 3D es la persona a la que le toca
+  (`HotSeat`, `view3d/systems/turn/hotSeat.ts`). Cuando la sesion espera a otra (`localRunner`,
+  `Onlooker.handTo`), la partida se tapa con el aviso de cambio de jugador (`UIState.handoff`,
+  `hud/overlays/Handoff.tsx`), la vista pasa a ser la suya (sus colores y su niebla:
+  `MatchScene.lookAs`; su camara, donde la dejo o en su Base) y su turno empieza cuando pulsa
+  «Empezar mi turno» (o Enter). Por eso los sistemas no guardan el `viewer`: lo piden cada vez (los
+  `...Host` lo tienen como `get viewer()`, como la sesion de `runner`). `npm run play` juega la persona
+  a la que le toca (`TextMatch`, tools/play/textMatch.ts, sobre la misma `GameSession`).
 - El turno en la barra de arriba es el del equipo que juega, por lado (`turn: Side`): tu turno, el
   de un aliado (en azul) o el de un enemigo (en rojo).
 - Los mapas al azar valen para 2 o mas equipos (`generateGame` busca una salida por equipo, cada una
@@ -1161,7 +1166,7 @@ src/view3d/
 | `ports/orders.ts`, `ports/pointer.ts` | `IntentMarks` (lo que haran las ordenes); `SelectionBoxView` (el recuadro de seleccion) |
 | `ports/stage.ts` | `PieceStage`, `EffectStage`, `PieceLookup` y los sitios (`Spot`), para los sucesos animados |
 | `ports/camera.ts`, `ports/frame.ts` | `CameraView` (situar la camara), `CameraPose`, `Point3`; el reloj (`FrameListener`) |
-| `systems/turn/` | el turno de la persona y los de los demas paso a paso (`turnControls.ts`), con quien lleva la partida por `MatchRunner` (`matchRunner.ts`: `localRunner` en una partida de esta pantalla); guardarla a mano y sola, al salir de la pagina y con el autoguardado al empezar cada turno de una persona (`saving.ts`: `saveGame`, `keepSaved`); «Fin del turno» con unidades sin mover, que las hace saltar y pide otra pulsacion (`endTurnGuard.ts`); que hace un clic con una unidad elegida (`clickIntent.ts`: ir, atacar, capturar al llegar, subir, unirse); que sale junto a lo elegido (`unitOptions.ts`: las fichas, solo lo que no es tocar el tablero; la rueda del clic derecho, lo poco frecuente; la orden que tiene sentido en una casilla, `orderForTile`); el camino trazado, el fantasma y si el disparo va en arco (`movePreview.ts`: `arcShotOf`); hasta donde ataca, el borde rojo (`attackReach.ts`, con `attackZone` del nucleo); que se puede elegir (`selection.ts`); desde donde atacaria (`attackPlan.ts`); textos e iconos de las fichas, la rueda y la compra (`menuItems.ts`; los pinta el HUD: `ActionChips.tsx`, `RadialMenu.tsx` y `BuyFan.tsx`, el abanico de la compra; donde va cada ficha, `fanAround` en `hud/common/placement.ts`). Esperar es implicito: la que se mueve y ya no puede hacer nada espera sola, y dejar una que se movio tambien (`leavingMovedUnit`). `MenuView.kind`: `chips`, `radial`, `prompt` (elegir casilla), `buy` o `game` (pausa) |
+| `systems/turn/` | el turno de la persona y los de los demas paso a paso (`turnControls.ts`), con quien lleva la partida por `MatchRunner` (`matchRunner.ts`: `localRunner` en una partida de esta pantalla); quien mira y el cambio de jugador con varias personas en la misma pantalla (`hotSeat.ts`, que tapa la partida hasta que la siguiente esta lista); guardarla a mano y sola, al salir de la pagina y con el autoguardado al empezar cada turno de una persona (`saving.ts`: `saveGame`, `keepSaved`); «Fin del turno» con unidades sin mover, que las hace saltar y pide otra pulsacion (`endTurnGuard.ts`); que hace un clic con una unidad elegida (`clickIntent.ts`: ir, atacar, capturar al llegar, subir, unirse); que sale junto a lo elegido (`unitOptions.ts`: las fichas, solo lo que no es tocar el tablero; la rueda del clic derecho, lo poco frecuente; la orden que tiene sentido en una casilla, `orderForTile`); el camino trazado, el fantasma y si el disparo va en arco (`movePreview.ts`: `arcShotOf`); hasta donde ataca, el borde rojo (`attackReach.ts`, con `attackZone` del nucleo); que se puede elegir (`selection.ts`); desde donde atacaria (`attackPlan.ts`); textos e iconos de las fichas, la rueda y la compra (`menuItems.ts`; los pinta el HUD: `ActionChips.tsx`, `RadialMenu.tsx` y `BuyFan.tsx`, el abanico de la compra; donde va cada ficha, `fanAround` en `hud/common/placement.ts`). Esperar es implicito: la que se mueve y ya no puede hacer nada espera sola, y dejar una que se movio tambien (`leavingMovedUnit`). `MenuView.kind`: `chips`, `radial`, `prompt` (elegir casilla), `buy` o `game` (pausa) |
 | `systems/orders/` | lo que haran las ordenes al terminar el turno: cuales enseñar (`orderIntents.ts`, con `previewStandingOrders` del nucleo) |
 | `systems/threat/` | «Ver amenaza» (T o el menú de la partida): las casillas a las que puede disparar algun enemigo que se ve (`threatZone.ts`, con `threatMap` del nucleo, que no delata a los de la niebla; se ven con un velo y un borde rojos); y al señalar o elegir una unidad propia, quien podria atacarla en su turno (`threatLinesTo`: enemigos que se ven, que llegan y que le hacen daño; lo que podria pasar, no lo que hara la IA). Lo pinta el motor por `ThreatMarks` (`ports/threat.ts`: las casillas en `engine/fx/highlights.ts`, las lineas en arco en `engine/fx/threatLines.ts`) |
 | `systems/events/` | que pasos lleva cada suceso (`EVENT_STEPS`, `eventSteps.ts`; los del dia, como lo que cobra cada edificio propio, con `DayLookup` e `incomeSpotsOf`, una entrada por fuente de ingresos), los pasos como datos (`steps.ts`) y la linea de tiempo que los cumple sobre los puertos (`timeline.ts`: `STEP_RUNNERS`, `playEvents`) |
@@ -1200,9 +1205,8 @@ src/view3d/
 - **Depuracion**: en la consola, `window.ilogic3d` (`session`, `board`, `controls`, `camera`, `world`,
   `weather`, `stages`, `wrecks`...). Playground de modelos y animaciones: `units3d.html`
   (`src/view3d/playground/`, `window.ilogicPlayground`).
-- **Aun no en 3D** (estaban en el 2D): escuadras, ordenes permanentes, grupos y recuadro, varias personas en la misma pantalla, repetir el turno enemigo,
-  guardado automatico, tutorial, laboratorio de animaciones y campaña online. Cada uno entra con esta
-  forma: su sistema en `systems/`, su dibujo en `engine/` y su puerto en `ports/`.
+- **Aun no en 3D** (estaban en el 2D): repetir el turno enemigo, tutorial, laboratorio de animaciones
+  y campaña online. Cada uno entra con esta forma: su sistema en `systems/`, su dibujo en `engine/` y su puerto en `ports/`.
 - Colores de los lienzos de la interfaz: `PAL_CSS` en `ui/palette.ts` (los mismos que `hud.css`).
 
 ### La regla: sistemas agnosticos, solo el motor dibuja

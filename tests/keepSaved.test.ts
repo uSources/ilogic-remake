@@ -28,7 +28,7 @@ function memoryStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> {
 function savedMatch(): GameSession {
   const s = createMatch(skirmishConfig({ seed: 4, size: 20, teams: duel('human', 'ai') }));
   const session = new GameSession(s, [humanController(), aiController()]);
-  keepSaved(session, PERSON);
+  keepSaved(session, { team: PERSON });
   return session;
 }
 
