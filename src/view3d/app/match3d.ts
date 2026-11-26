@@ -9,7 +9,6 @@
 import { mapGrid } from '../../core/mapGrid';
 import type { GameState, Pos, TeamId, Unit } from '../../core/model';
 import { isOnMap, unitAt } from '../../core/rules';
-import { screenEnd } from '../../core/session';
 import { ui } from '../../hud/store';
 import type { GameImages } from '../../atlas';
 import { gameTrackOf, playMusic } from '../../audio/music';
@@ -27,7 +26,7 @@ import { boardLookupOf, incomeSpotsOf, type DayLookup } from '../systems/events/
 import { playEvents } from '../systems/events/timeline';
 import { installHudActions, publishHud } from '../systems/hud/hudBridge';
 import { MinimapBridge, toggleMinimap } from '../systems/hud/minimapBridge';
-import { PauseMenu, saveGame, showEndIfOver } from '../systems/hud/matchMenus';
+import { PauseMenu, showEndIfOver } from '../systems/hud/matchMenus';
 import { installKeys } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
 import { TurnControls } from '../systems/turn/turnControls';
@@ -35,6 +34,7 @@ import { showDestinations } from '../systems/orders/destinationFlags';
 import { anyStandingOrder, OrderIntents } from '../systems/orders/orderIntents';
 import { ThreatZone } from '../systems/threat/threatZone';
 import { localRunner, type MatchRunner } from '../systems/turn/matchRunner';
+import { keepSaved } from '../systems/turn/saving';
 import { OnlinePlay } from '../systems/net/onlinePlay';
 import { TurnClock } from '../systems/net/turnClock';
 import { notifyTurn } from '../systems/net/turnNotice';
@@ -303,8 +303,8 @@ export function playMatch({ session, viewer, room }: StartedGame, images: GameIm
   scene.start();
   ui.set({ screen: 'game' });
   playMusic(gameTrackOf(state.theme));
-  // Se guarda al salir de la pagina (cerrar, recargar): «Continuar» la retoma. Por la red se sigue desde el servidor.
-  if (!online) window.addEventListener('pagehide', () => void (screenEnd(session, viewer) ?? saveGame(session.state)));
+  // Se guarda sola: al salir de la pagina y, con el autoguardado, en cada turno. Por la red se sigue desde el servidor.
+  if (!online) keepSaved(session, viewer);
   online?.listen();
   void controls.runUntilInput();
 

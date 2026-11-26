@@ -7,6 +7,16 @@ Lo que va antes de `<!-- en -->` sale con el juego en español; lo de después, 
 Este fichero va dentro del juego (por si no hay conexión) y `npm run release` lo publica como
 Release en GitHub. El juego lee las Releases de GitHub para enseñar las notas al día.
 
+## [Sin publicar]
+
+### Arreglos
+- **El autoguardado vuelve a funcionar**: con él activado en Opciones, la partida se guarda al empezar cada turno tuyo, así no se pierde si el navegador se cierra sin avisar (pasa en el móvil). Desde que el juego es 3D, la opción no hacía nada.
+
+<!-- en -->
+
+### Fixes
+- **Autosave works again**: with it on in Options, the game is saved at the start of each of your turns, so it isn't lost if the browser closes without warning (it happens on phones). Since the game went 3D, the option did nothing.
+
 ## [0.18.0] - 2026-11-26 — Buscar rival y un menú nuevo
 
 ### Novedades
