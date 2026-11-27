@@ -9,8 +9,6 @@ export interface MenuItemVM {
   hint?: string;
   /** Clave de imagen del juego (sprite de unidad, icono de la interfaz). */
   icon?: string | null;
-  /** Sin dibujo: un simbolo corto en su lugar (fichas y rueda). */
-  glyph?: string;
   disabled?: boolean;
   danger?: boolean;
   /** Linea de detalle que se muestra al pie cuando esta seleccionado. */
@@ -42,6 +40,8 @@ export interface MenuVM {
   standing?: StandingVM;
   items: MenuItemVM[];
   selected: number;
+  /** La casilla del tablero de la que sale (la que lo vuelve a montar al cambiar) y su recuadro en pantalla. */
+  at: { x: number; y: number };
   anchor: Anchor;
 }
 

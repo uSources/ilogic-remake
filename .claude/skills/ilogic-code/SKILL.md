@@ -48,7 +48,7 @@ Para los modelos 3D, ademas, la skill `ashfox`. Del juego 2D de antes solo queda
   Un mando nuevo es un adaptador nuevo (`docs/ARQUITECTURA.md`, "Mandos").
 - La vista no calcula lo que enseña la interfaz a mano: usa funciones puras de `ui/hudModels.ts`
   y publican con `ui.set(...)`. Los componentes solo pintan lo que hay en el store. Como se añade un
-  panel y que pieza usar (`Button`, `Popover`, `Veil`...): `docs/ARQUITECTURA.md`, "Interfaz HTML".
+  panel y que pieza usar (`Button`, `Callout`, `Veil`...): `docs/ARQUITECTURA.md`, "Interfaz HTML".
 - **La partida solo cambia con acciones**: quien juega un equipo manda una `GameAction` (datos: uids y
   casillas) con `dispatch(s, team, action)` (`core/actions.ts`), que la comprueba (`validate`, desde
   la partida; solo el equipo al que le toca: `GameState.turn`), la hace y devuelve sus sucesos (o por

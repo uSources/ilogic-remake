@@ -71,13 +71,24 @@ tarjeta crema de antes, y se nota al salir de Inicio.
   lienzo nombra teclas que en el juego hacen otra cosa (Q es la orden de atacar, no girar la
   cámara), y la interfaz 0.12.0 quitó las líneas de ayuda fijas. Queda por decidir con el usuario.
 
+### Lo que sale de las casillas (hecho; decidido con el usuario el 26-11-2026)
+En el lienzo, la página «Lo que sale de las casillas» tiene tres formas: A, el bocadillo con tallo;
+B, la corona de texto; C, el cartel que se levanta. Se eligió **A** con **las cifras de B** para la
+previsión.
+- **A** (`common/Callout.tsx`, `game/TileMenu.tsx`): sirve para todo lo que sale de una casilla y se
+  maneja igual que la pausa (lista de texto, flecha dorada, Intro). Sale rápido y siempre se ve de
+  qué casilla viene.
+  - Hoy salen así las fichas de la unidad, su rueda y el aviso de elegir casilla.
+  - Colocación: `placeCallout` (`common/placement.ts`, con tests).
+- La previsión: el daño sube como cifra grande sobre el enemigo y lo que te devuelve sale a los pies
+  de tu unidad. Con Alt, el detalle va en el bocadillo con tallo rojo.
+- Falta la compra en la fábrica, que sigue en abanico (fase 5).
+
 ### Fase 4. Unidad elegida y previsión (tableros 8 y 9)
-- **Unidad elegida**: lo que puede hacer, en una lista de texto junto a ella: Atacar con cuántos
-  hay al alcance, Esperar, Capturar apagado y con el porqué, Cancelar. Su ficha va abajo a la
-  izquierda, con vida, movimiento, munición y lo que sabe hacer. Tocar un enemigo sigue atacando.
-- **Previsión**: abajo en el centro va tu unidad contra la suya, con la vida de antes y la de después,
-  «Le quitas 55 %» en grande y lo que te devuelve. Encima, «Atacar · Otro objetivo · Cancelar».
-  Sustituye a las chapas de `Forecast.tsx`.
+El bocadillo con tallo ya cubre lo que hace la unidad, y las cifras que suben, la previsión. De esta
+fase queda lo de los tableros que no está: «Atacar» con cuántos hay a tiro y «Capturar» apagado con
+el porqué. Hoy solo salen las opciones que no se hacen tocando el tablero.
+
 
 ### Fase 5. Fábrica (tablero 10)
 Una lista a la derecha con retrato, nombre y precio. La elegida va en grande y, debajo, dice de qué

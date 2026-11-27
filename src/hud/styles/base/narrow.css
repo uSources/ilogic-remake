@@ -21,9 +21,6 @@
   filter: grayscale(0.7) brightness(0.75);
   cursor: default;
 }
-.pop .item span {
-  white-space: nowrap;
-}
 @keyframes bob {
   from {
     transform: translateY(0);

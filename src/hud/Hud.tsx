@@ -18,7 +18,7 @@ import { MatchIntro } from './overlays/MatchIntro';
  * Raiz de la interfaz HTML: la pantalla en curso (s.screen) y, encima, los dialogos y avisos.
  *
  * Donde va cada cosa:
- * - common/: piezas compartidas (Button/Btn, Icon, Popover, Veil, Seg, plegar, formatos, useUI).
+ * - common/: piezas compartidas (Button/Btn, Icon, Callout, Veil, Seg, plegar, formatos, useUI).
  * - game/: paneles de la partida (GameHud los coloca).
  * - menus/: pantallas del menu principal, pausa y final.
  * - overlays/: dialogos (ayuda, novedades, nombre de escuadra) y avisos (carga, aviso, resumen, cartel).
