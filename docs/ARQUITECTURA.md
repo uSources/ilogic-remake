@@ -737,7 +737,7 @@ pone la vista. Cada pieza en su sitio:
 | Paneles de la partida y donde va cada uno | `game/*.tsx`, colocados en `game/GameHud.tsx` (lista `GAME_PANELS`) |
 | Pantallas del menu, pausa y final | `menus/*.tsx`; Novedades, Aprender y Opciones son paginas enteras con el mismo marco (`menus/MenuPage.tsx`: en el menu, el logo y las pestañas de Inicio, `MenuTabs.tsx`; en la partida, su titulo y «Cerrar»), y mientras hay una abierta no se pinta lo de debajo (`isPageOpen`) |
 | Dialogos (ayuda, novedades, nombre de escuadra) y avisos (carga, aviso, resumen, cartel) | `overlays/*.tsx` |
-| Piezas compartidas | `common/`: `Callout` (el bocadillo con tallo que sale de una casilla; donde va, `placeCallout` en `placement.ts`), `Pill` y `PixelSkull` (`toy.tsx`, lo que queda de la "caja de juguete"), `Button` (sin foco del navegador), `Btn` (menus), `Icon`, `Popover`, `Veil`, `Seg`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
+| Piezas compartidas | `common/`: `Callout` (el bocadillo con tallo que sale de una casilla; donde va, `placeCallout` en `placement.ts`), `Pill` y `PixelSkull` (`toy.tsx`, lo que queda de la "caja de juguete"), `Button` (sin foco del navegador), `Btn` (menus; `dimmed` la deja apagada pero se puede señalar), `Icon`, `scaled`/`zoom` (`uiScale.ts`: la escala de la interfaz), `Veil`, `Seg`, `useTipToggle`, `useUI`, formatos (`pct`, `range`...) |
 | Estilos | `styles/<grupo>/<panel>.css`, juntados en orden por `hud.css` |
 
 - **Un panel nuevo**: su tipo en `vm/`, su campo en `UIState` (null = no se ve) y en `initialState`,

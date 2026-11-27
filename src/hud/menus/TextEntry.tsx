@@ -14,6 +14,8 @@ interface TextEntryProps {
   keyHint?: string;
   /** Un dibujo pequeño delante del titulo (en lo que sale de las casillas: capturar, bajar carga...). */
   icon?: string | null;
+  /** Apagada: se ve mas tenue y el lector de pantalla la dice desactivada. */
+  dimmed?: boolean;
   sound?: SoundName;
   onHover: () => void;
   onPick: () => void;
@@ -23,9 +25,16 @@ interface TextEntryProps {
  * Una entrada del menu clasico de texto (Inicio, la pausa, el final): el titulo grande sobre el
  * tablero, sin marco, con una linea debajo si la hay. La señalada crece y lleva la flecha delante.
  */
-export function TextEntry({ sel, cls, title, note, keyHint, icon, sound, onHover, onPick }: TextEntryProps) {
+export function TextEntry({ sel, cls, title, note, keyHint, icon, dimmed, sound, onHover, onPick }: TextEntryProps) {
   return (
-    <Btn sel={sel} cls={`text-entry ${cls ?? ''}`} sound={sound} onHover={onHover} onPick={onPick}>
+    <Btn
+      sel={sel}
+      cls={`text-entry ${dimmed ? 'disabled' : ''} ${cls ?? ''}`}
+      dimmed={dimmed}
+      sound={sound}
+      onHover={onHover}
+      onPick={onPick}
+    >
       <span class="text-arrow" aria-hidden="true">
         ▸
       </span>

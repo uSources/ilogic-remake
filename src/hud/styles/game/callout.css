@@ -2,17 +2,21 @@
    dorado sube de lo alto de la casilla (rojo si sale de un enemigo) y en su punta se abre una ficha
    oscura translucida, con la esquina pegada al tallo casi recta. Sale en un cuarto de segundo: el
    tallo crece, la ficha se abre desde su punta con un rebote corto (lo que gusto de la B) y las
-   lineas entran una detras de otra. */
+   lineas entran una detras de otra. Los colores, de las variables de base.css. */
 .callout-stem {
+  --stem-color: var(--menu-gold);
   position: absolute;
   width: 3px;
   margin-left: -1px;
   border-radius: 2px;
-  background: var(--menu-gold);
-  box-shadow: 0 0 0 1.5px rgba(14, 17, 24, 0.6);
+  background: var(--stem-color);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--menu-ink) 60%, transparent);
   pointer-events: none;
   transform-origin: 50% 100%;
   animation: callout-stem 0.12s ease-out both;
+}
+.callout-stem.enemy {
+  --stem-color: var(--red-btn);
 }
 /* El punto donde el tallo toca la casilla: abajo si el bocadillo va encima, arriba si va debajo. */
 .callout-stem::after {
@@ -24,10 +28,10 @@
   height: 10px;
   margin-left: -5px;
   border-radius: 50%;
-  background: inherit;
+  background: var(--stem-color);
   box-shadow:
-    0 0 0 1.5px rgba(14, 17, 24, 0.6),
-    0 0 0 5px rgba(245, 192, 74, 0.3);
+    0 0 0 1.5px color-mix(in srgb, var(--menu-ink) 60%, transparent),
+    0 0 0 5px color-mix(in srgb, var(--stem-color) 30%, transparent);
 }
 .callout-stem.below {
   transform-origin: 50% 0;
@@ -35,14 +39,6 @@
 .callout-stem.below::after {
   top: -5px;
   bottom: auto;
-}
-.callout-stem.enemy {
-  background: var(--red-btn);
-}
-.callout-stem.enemy::after {
-  box-shadow:
-    0 0 0 1.5px rgba(14, 17, 24, 0.6),
-    0 0 0 5px rgba(239, 75, 67, 0.3);
 }
 @keyframes callout-stem {
   from {
@@ -56,14 +52,22 @@
   gap: 2px;
   min-width: 190px;
   max-width: min(360px, calc(100vw - 32px));
+  /* Una lista larga (la rueda de un grupo en una pantalla baja) se desplaza dentro (.callout-list). */
+  max-height: calc(100dvh - 120px);
   padding: 12px 20px 14px 10px;
   border-radius: 16px;
-  background: rgba(14, 17, 24, 0.86);
+  background: color-mix(in srgb, var(--menu-ink) 86%, transparent);
   backdrop-filter: blur(8px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 10px 28px color-mix(in srgb, #000 35%, transparent);
   color: var(--panel);
   pointer-events: auto;
   animation: callout-open 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.25) 0.07s both;
+}
+/* El de un enemigo (el detalle de la prevision con Alt): tambien la ficha lleva su borde rojo. */
+.callout.enemy {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--red-btn) 55%, transparent),
+    0 10px 28px color-mix(in srgb, #000 35%, transparent);
 }
 /* La esquina pegada al tallo, casi recta, y desde ella se abre. */
 .callout.right.above {
@@ -115,15 +119,23 @@
   line-height: 1.35;
   color: var(--menu-note);
 }
-/* Con las dos clases: textlist.css va despues y pondria sus tamaños. */
-.text-list.callout-list {
+/* callout.css va despues de textlist.css en hud.css: sus tamaños ganan a los de .text-list. */
+.callout-list {
   --entry-size: 22px;
   --entry-size-sel: 27px;
   gap: 0;
+  min-height: 0;
+  overflow-y: auto;
 }
 .callout-list .text-entry {
   gap: 10px;
   padding: 3px 0;
+}
+/* Con el dedo, mas alto cada renglon: que se acierte al tocar. */
+@media (pointer: coarse) {
+  .callout-list .text-entry {
+    padding: 8px 0;
+  }
 }
 .callout-list .text-arrow {
   width: 20px;

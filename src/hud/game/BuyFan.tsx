@@ -1,7 +1,7 @@
 import { fmtNum } from '../../settings';
 import { Button } from '../common/buttons';
 import { Icon } from '../common/Icon';
-import { scaled, zoom } from '../common/Popover';
+import { scaled, zoom } from '../common/uiScale';
 import { fanAround } from '../common/placement';
 import { ui } from '../store';
 import type { MenuItemVM, MenuVM } from '../vm/menus';

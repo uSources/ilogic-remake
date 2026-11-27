@@ -1,31 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { placeBeside, placeCallout } from '../src/hud/common/placement';
+import { placeCallout } from '../src/hud/common/placement';
 
 const screen = { width: 1000, height: 600 };
 const box = { width: 200, height: 100 };
 const tile = (x: number, y: number) => ({ x, y, w: 40, h: 40 });
-
-describe('placeBeside', () => {
-  it('va al lado que se prefiere si cabe, centrado en altura', () => {
-    expect(placeBeside(tile(400, 300), box, screen, 'right')).toEqual({ left: 450, top: 270 });
-    expect(placeBeside(tile(400, 300), box, screen, 'left')).toEqual({ left: 190, top: 270 });
-  });
-
-  it('si no cabe en el que prefiere, al otro', () => {
-    expect(placeBeside(tile(900, 300), box, screen, 'right')).toEqual({ left: 690, top: 270 });
-    expect(placeBeside(tile(20, 300), box, screen, 'left')).toEqual({ left: 70, top: 270 });
-  });
-
-  it('si no cabe a ningun lado, debajo (o encima si abajo no hay sitio)', () => {
-    const narrow = { width: 300, height: 600 };
-    expect(placeBeside(tile(130, 200), box, narrow, 'right')).toEqual({ left: 50, top: 250 });
-    expect(placeBeside(tile(130, 500), box, narrow, 'right')).toEqual({ left: 50, top: 390 });
-  });
-
-  it('no tapa la barra de arriba', () => {
-    expect(placeBeside(tile(400, 0), box, screen, 'right').top).toBe(80);
-  });
-});
 
 describe('placeCallout (el bocadillo con tallo)', () => {
   it('encima de la casilla y a la derecha del tallo, que sube de lo alto de la casilla hasta el bocadillo', () => {
@@ -46,11 +24,17 @@ describe('placeCallout (el bocadillo con tallo)', () => {
     expect(placed.stem).toEqual({ x: 420, top: 190, height: 44 });
   });
 
-  it('si el bocadillo se mueve para caber, el tallo llega igual hasta su borde', () => {
-    // Pegado al borde de abajo: debajo no cabe entero y se sube; el tallo se acorta.
+  it('si no cabe ni encima ni debajo, va donde hay mas sitio y el tallo llega igual hasta su borde', () => {
+    // Cerca de arriba: debajo hay mas sitio; no cabe entero y se sube, y el tallo se acorta.
     const placed = placeCallout(tile(400, 120), { width: 200, height: 420 }, screen);
     expect(placed.vertical).toBe('below');
     expect(placed.top).toBe(164);
     expect(placed.stem).toEqual({ x: 420, top: 160, height: 4 });
+  });
+
+  it('cerca del borde de abajo y sin sitio de ninguna forma, encima (donde hay mas sitio)', () => {
+    const placed = placeCallout(tile(400, 500), { width: 200, height: 450 }, screen);
+    expect(placed.vertical).toBe('above');
+    expect(placed.top).toBe(80);
   });
 });

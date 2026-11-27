@@ -4,7 +4,7 @@ import { pct, range } from '../common/format';
 import { Icon } from '../common/Icon';
 import { useAltHeld } from '../common/useAltHeld';
 import { Callout } from '../common/Callout';
-import { scaled } from '../common/Popover';
+import { scaled } from '../common/uiScale';
 import { PixelSkull } from '../common/toy';
 import type { Anchor } from '../vm/common';
 import type { ForecastVM } from '../vm/combat';

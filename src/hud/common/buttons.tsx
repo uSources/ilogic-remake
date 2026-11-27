@@ -31,6 +31,8 @@ export function Btn(props: {
   onPick: () => void;
   children: ComponentChildren;
   label?: string;
+  /** Se ve y se señala, pero esta apagado (lo dice al lector de pantalla); pulsarlo lo decide quien lo usa. */
+  dimmed?: boolean;
   /** El efecto al pulsarlo (sfx.ts lee `data-sound`; sin el, `ui_select`): Atras, `ui_back`. */
   sound?: SoundName;
 }) {
@@ -39,6 +41,7 @@ export function Btn(props: {
       class={`${props.cls ?? 'px-btn'} ${props.sel ? 'sel' : ''}`}
       disabled={props.disabled}
       aria-label={props.label}
+      aria-disabled={props.dimmed}
       data-sound={props.sound}
       onMouseEnter={props.onHover}
       onClick={props.onPick}

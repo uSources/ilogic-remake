@@ -85,8 +85,7 @@ function menuOf(moment: HudMoment): UIState['menu'] {
   const menu = moment.menu;
   // La pausa se abre tambien mientras juegan los demas; los menus del tablero, no.
   if (!menu || (moment.busy && menu.kind !== 'game')) return null;
-  const { at, ...shown } = menu;
-  return { ...shown, anchor: moment.anchorOf(at) };
+  return { ...menu, anchor: moment.anchorOf(menu.at) };
 }
 
 function forecastOf(textures: GameImages, s: GameState, viewer: TeamId, moment: HudMoment): UIState['forecast'] {

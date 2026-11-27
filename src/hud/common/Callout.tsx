@@ -2,9 +2,9 @@ import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useRef, useState } from 'preact/compat';
 import type { Anchor } from '../vm/common';
 import { placeCallout, type CalloutPlacement } from './placement';
-import { scaled, zoom } from './Popover';
+import { scaled, zoom } from './uiScale';
 
-/** El color del tallo y del borde: dorado (lo tuyo, lo que eliges) o rojo (un enemigo). */
+/** El color del tallo (y, en rojo, el borde de la ficha): dorado (lo tuyo, lo que eliges) o rojo (un enemigo). */
 export type CalloutTone = 'gold' | 'enemy';
 
 interface CalloutProps {
@@ -13,12 +13,18 @@ interface CalloutProps {
   tone?: CalloutTone;
   class?: string;
   label?: string;
-  role?: 'dialog' | 'menu';
   children: ComponentChildren;
 }
 
+/** Lo mismo de antes (si no, otro pintado): tambien el tallo, que sigue a la casilla aunque la ficha no se mueva (pegada al borde). */
 const samePlace = (a: CalloutPlacement, b: CalloutPlacement): boolean =>
-  a.left === b.left && a.top === b.top && a.side === b.side && a.vertical === b.vertical && a.stem.height === b.stem.height;
+  a.left === b.left &&
+  a.top === b.top &&
+  a.side === b.side &&
+  a.vertical === b.vertical &&
+  a.stem.x === b.stem.x &&
+  a.stem.top === b.stem.top &&
+  a.stem.height === b.stem.height;
 
 /**
  * El bocadillo con tallo (lienzo «Lo que sale de las casillas», A): un tallo sube de lo alto de la
@@ -26,7 +32,7 @@ const samePlace = (a: CalloutPlacement, b: CalloutPlacement): boolean =>
  * `placeCallout`). Se mide en cada pintado (su tamaño cambia); hasta entonces, fuera de la vista.
  * Siempre se ve de que casilla sale, aunque la ficha se aparte para no tapar.
  */
-export function Callout({ anchor, tone = 'gold', class: cls = '', label, role = 'dialog', children }: CalloutProps) {
+export function Callout({ anchor, tone = 'gold', class: cls = '', label, children }: CalloutProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [place, setPlace] = useState<CalloutPlacement | null>(null);
   const tile = scaled(anchor);
@@ -51,7 +57,7 @@ export function Callout({ anchor, tone = 'gold', class: cls = '', label, role = 
       <div
         ref={ref}
         class={`callout ${tone} ${shape} ${cls}`}
-        role={role}
+        role="dialog"
         aria-label={label}
         style={place ? { left: place.left, top: place.top } : { left: -9999, top: 0, visibility: 'hidden' }}
       >

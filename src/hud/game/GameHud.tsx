@@ -53,8 +53,12 @@ const DOCK_PANELS: GamePanel[] = [
   { id: 'minimap', render: (s) => s.minimap && s.minimapOn && <Minimap minimap={s.minimap} view={s.minimapView} /> },
 ];
 
-/** Un menu nuevo (otro tipo u otra unidad) se vuelve a montar: asi su bocadillo vuelve a salir de la casilla. */
-const menuKey = (menu: MenuVM): string => `${menu.kind}|${menu.title ?? ''}`;
+/**
+ * Un menu nuevo (otro tipo, u otra casilla: otra unidad aunque sea del mismo tipo) se vuelve a montar,
+ * y asi su bocadillo vuelve a salir de la casilla. La casilla del tablero, no su recuadro en pantalla,
+ * que cambia con cada movimiento de la camara.
+ */
+const menuKey = (menu: MenuVM): string => `${menu.kind}|${menu.at.x},${menu.at.y}`;
 
 /** En el orden en que van en la pagina, que es el de apilado. Un panel nuevo es una entrada mas. */
 const GAME_PANELS: GamePanel[] = [

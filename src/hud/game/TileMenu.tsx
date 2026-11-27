@@ -8,7 +8,8 @@ function TileMenuEntry({ item, index, isSelected }: { item: MenuItemVM; index: n
   return (
     <TextEntry
       sel={isSelected}
-      cls={`${item.danger ? 'danger' : ''} ${item.disabled ? 'disabled' : ''}`}
+      cls={item.danger ? 'danger' : ''}
+      dimmed={item.disabled}
       icon={item.icon}
       title={item.label}
       note={item.hint}
@@ -27,7 +28,7 @@ function TileMenuEntry({ item, index, isSelected }: { item: MenuItemVM; index: n
 export function TileMenu({ menu }: { menu: MenuVM }) {
   const selected = menu.items[menu.selected];
   return (
-    <Callout anchor={menu.anchor} class={`tile-menu tile-menu-${menu.kind}`} label={menu.title} role="menu">
+    <Callout anchor={menu.anchor} class={`tile-menu tile-menu-${menu.kind}`} label={menu.title}>
       {menu.title && <span class="callout-title">{menu.title}</span>}
       {menu.subtitle && <span class="callout-sub">{menu.subtitle}</span>}
       <div class="text-list callout-list">
