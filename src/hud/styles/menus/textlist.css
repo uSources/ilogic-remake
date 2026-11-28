@@ -108,3 +108,46 @@
     --entry-size-sel: 36px;
   }
 }
+/* Una entrada con su valor al lado (ChoiceEntry.tsx): «Rival ◂ La IA ▸». El valor va en oro, algo mas
+   pequeño que el titulo, y crece con el; el titulo y ◂ ▸ son botones sin aspecto de boton. */
+.choice-entry {
+  cursor: default;
+}
+/* Si no cabe al lado (en el movil), el valor baja debajo del titulo, entero. */
+.choice-entry .text-entry-title {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+.choice-name,
+.choice-step {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  text-shadow: inherit;
+  cursor: pointer;
+}
+.choice-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-left: 8px;
+  font-size: 0.72em;
+  color: var(--menu-gold);
+  white-space: nowrap;
+}
+.choice-step {
+  min-width: 1.1em;
+  opacity: 0.75;
+}
+.choice-step:hover,
+.choice-entry.sel .choice-step {
+  opacity: 1;
+}
+/* Con el dedo, ◂ y ▸ mas anchos para acertar. */
+@media (pointer: coarse) {
+  .choice-step {
+    min-width: 1.8em;
+  }
+}

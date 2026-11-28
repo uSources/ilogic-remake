@@ -1,4 +1,5 @@
-/* Nueva partida */
+/* La tarjeta de «Crear sala» de Jugar en línea (Online.tsx): la de la Escaramuza de antes. La
+   Escaramuza de ahora esta al final. */
 .newgame2 {
   position: absolute;
   left: 50%;
@@ -12,9 +13,7 @@
   gap: 14px;
   padding: 16px 18px;
 }
-.newgame2 .htitle,
-.campaign2 .htitle,
-.pause .htitle {
+.newgame2 .htitle {
   font-family: var(--display);
   font-size: 24px;
   color: var(--gold);
@@ -41,24 +40,6 @@
   height: 100%;
   image-rendering: pixelated;
   object-fit: contain;
-}
-.ng-coderow {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.ng-coderow .ng-code {
-  flex: 1;
-  width: auto;
-  min-width: 0;
-}
-.ng-code.focus {
-  box-shadow: 0 0 0 3px var(--gold);
-}
-.ng-code::placeholder {
-  color: var(--muted);
-  letter-spacing: 2px;
-  font-family: var(--display);
 }
 .bad-note {
   color: var(--red-soft);
@@ -98,11 +79,6 @@
   font-size: 16px;
   line-height: 1.4;
   color: var(--muted);
-}
-.ng-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
 }
 .ng-group {
   display: flex;
@@ -172,5 +148,148 @@
   .px-btn.start {
     padding: 12px 24px;
     font-size: 18px;
+  }
+}
+
+/* Escaramuza (NewGame.tsx), en el menu clasico de texto (screen.css): Empezar, el modo y el rival con
+   su valor al lado, las nueve opciones de Personalizada mas pequeñas y apartadas, y Volver; a la
+   derecha, la ficha del mapa. Con las dos clases: textlist.css va despues y pondria sus tamaños. */
+.text-list.setup-list {
+  --entry-size: 32px;
+  --entry-size-sel: 40px;
+  gap: 4px;
+}
+.setup-custom {
+  --entry-size: 20px;
+  --entry-size-sel: 24px;
+  display: flex;
+  flex-direction: column;
+  margin: 2px 0 4px 44px;
+  padding-left: 16px;
+  border-left: 3px solid rgba(255, 247, 232, 0.14);
+}
+.setup-custom .text-entry {
+  gap: 10px;
+  padding: 2px 0;
+}
+.setup-custom .text-arrow {
+  width: 16px;
+  font-size: 20px;
+}
+/* Los valores de las nueve, en columna (el nombre mas largo, «Puntos de mando», cabe elegido). */
+.setup-custom .choice-name {
+  min-width: 200px;
+  text-align: left;
+}
+.setup-custom .choice-value {
+  font-size: 0.9em;
+}
+.setup-back {
+  --entry-size: 26px;
+  --entry-size-sel: 30px;
+  margin-top: 6px;
+}
+.setup-card {
+  width: 400px;
+}
+.setup-map {
+  width: 360px;
+  height: 360px;
+  border-radius: 8px;
+  background: var(--ink);
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+.setup-map-info {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--menu-title);
+}
+.setup-code-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.setup-code {
+  width: 130px;
+  height: 40px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 2px solid rgba(255, 247, 232, 0.2);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--panel);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  outline: none;
+  user-select: text;
+}
+.setup-code::placeholder {
+  color: var(--menu-note);
+}
+.setup-code:focus,
+.setup-code.focus {
+  border-color: var(--menu-gold);
+}
+.setup-code.bad {
+  border-color: var(--menu-danger);
+}
+.setup-bad-code {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--menu-danger);
+}
+.setup-reroll {
+  --entry-size: 22px;
+  --entry-size-sel: 26px;
+}
+@media (max-width: 760px) {
+  .text-list.setup-list {
+    --entry-size: 28px;
+    --entry-size-sel: 34px;
+  }
+  .setup-custom {
+    --entry-size: 18px;
+    --entry-size-sel: 21px;
+    margin-left: 6px;
+    padding-left: 10px;
+  }
+  /* Sin sitio para la columna de 200: el nombre ocupa lo que sobra y los valores van a la derecha. */
+  .setup-custom .text-entry-text,
+  .setup-custom .choice-name {
+    flex: 1;
+    min-width: 0;
+  }
+  .setup-custom .text-entry-title {
+    flex-wrap: nowrap;
+  }
+  .setup-map {
+    width: min(100%, 320px);
+    height: auto;
+    aspect-ratio: 1;
+  }
+}
+@media (max-height: 640px) {
+  .text-list.setup-list {
+    --entry-size: 28px;
+    --entry-size-sel: 34px;
+    gap: 0;
+  }
+  .setup-custom {
+    --entry-size: 18px;
+    --entry-size-sel: 21px;
+  }
+  .setup-custom .text-entry {
+    padding: 1px 0;
+  }
+  .setup-card {
+    gap: 8px;
+  }
+  .setup-map {
+    width: 260px;
+    height: 260px;
   }
 }

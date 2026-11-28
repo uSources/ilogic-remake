@@ -21,6 +21,7 @@
 @import './styles/base/reduce-motion.css';
 @import './styles/menus/common.css';
 @import './styles/menus/home.css';
+@import './styles/menus/screen.css';
 @import './styles/menus/newgame.css';
 @import './styles/menus/campaign.css';
 @import './styles/menus/options.css';

@@ -13,6 +13,10 @@ import { PatchNotes } from './overlays/PatchNotes';
 import { RenameSquad } from './overlays/RenameSquad';
 import { Handoff } from './overlays/Handoff';
 import { MatchIntro } from './overlays/MatchIntro';
+import type { UIState } from './state';
+
+/** La forma del velo sobre el tablero de Inicio en cada pantalla del menu (sin forma: oscurece todo por igual). */
+const MENU_VEIL: Partial<Record<UIState['screen'], string>> = { menu: 'side', setup: 'screen', campaign: 'screen' };
 
 /**
  * Raiz de la interfaz HTML: la pantalla en curso (s.screen) y, encima, los dialogos y avisos.
@@ -31,8 +35,9 @@ export function Hud() {
     <>
       {s.screen === 'loading' && (s.intro ? <MatchIntro intro={s.intro} progress={s.loading} /> : <Loading progress={s.loading} />)}
       {(s.screen === 'menu' || s.screen === 'setup' || s.screen === 'campaign' || s.screen === 'online') && (
-        // En Inicio, el tablero 3D de detras se ve a la derecha: el velo solo oscurece el lado del menu.
-        <div class={s.screen === 'menu' ? 'menu-veil side' : 'menu-veil'} />
+        // En Inicio el tablero 3D de detras se ve a la derecha: el velo solo oscurece el lado del menu.
+        // En Escaramuza y Campaña, igual pero mas lejos, hasta su ficha de la derecha.
+        <div class={`menu-veil ${MENU_VEIL[s.screen] ?? ''}`} />
       )}
       {/* Debajo de una pagina, las pestañas de Inicio se verian dos veces. */}
       {s.screen === 'menu' && !isPageOpen(s) && <Home s={s} />}
