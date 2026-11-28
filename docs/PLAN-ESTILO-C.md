@@ -85,10 +85,23 @@ previsión.
   de tu unidad. Con Alt, el detalle va en el bocadillo con tallo rojo.
 - Falta la compra en la fábrica, que sigue en abanico (fase 5).
 
-### Fase 4. Unidad elegida y previsión (tableros 8 y 9)
-El bocadillo con tallo ya cubre lo que hace la unidad, y las cifras que suben, la previsión. De esta
-fase queda lo de los tableros que no está: «Atacar» con cuántos hay a tiro y «Capturar» apagado con
-el porqué. Hoy solo salen las opciones que no se hacen tocando el tablero.
+### Fase 4. Unidad elegida y previsión (tableros 8 y 9) (hecha; decidido con el usuario el 26-11-2026)
+El bocadillo con tallo ya cubría lo que hace la unidad, y las cifras que suben, la previsión. Se
+añadió lo de los tableros que faltaba:
+- «Atacar» con cuántos hay a tiro, primero y solo si hay alguno (`chipChoices`,
+  `systems/turn/unitOptions.ts`). Tocar un enemigo sigue atacando y tocar una casilla, moviendo.
+- «Capturar» apagado con el porqué (`captureBlockAt` del núcleo): solo en las que capturan y solo si
+  el bocadillo ya sale por otra cosa. Lo apagado es `disabled` de `TextEntry`: se ve, pero no se
+  señala ni se elige.
+- Elegir «Atacar» lleva a «Elige a quién atacar» (tablero 9; `systems/turn/targetPick.ts`): ← → pasan
+  de un enemigo a otro con su previsión, Intro ataca, Esc vuelve, y con el ratón se señala pasando
+  por encima y se ataca tocando. El bocadillo no tapa a los enemigos a tiro (`placeCallout`, `avoid`).
+- Abajo a la izquierda, la ficha de la unidad elegida (`ChosenUnit.tsx`, `chosenUnitVM`): retrato,
+  nombre, vida, «Mueve · Alcance · Visión» y, en dorado, lo que sabe hacer. Sin nada elegido, lo de
+  bajo el cursor, como antes.
+- No se pusieron «Esperar», «Cancelar», la munición ni el combustible (`docs/IDEAS.md`,
+  «Descartado»). La línea de ayuda del tablero 8 («Lo azul es hasta dónde llega…») tampoco, por lo
+  mismo que en la fase 3: queda por decidir con el usuario.
 
 
 ### Fase 5. Fábrica (tablero 10)

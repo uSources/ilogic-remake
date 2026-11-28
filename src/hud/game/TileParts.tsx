@@ -67,7 +67,7 @@ function Facts({ facts }: { facts: readonly Fact[] }) {
 }
 
 /** «Escuadra Alfa · Destacada · Orden: atacar allí» (lo que haya; de quien es ya va encima, en su color). */
-function SquadAndOrder({ unit }: { unit: UnitVM }) {
+export function SquadAndOrder({ unit }: { unit: UnitVM }) {
   const parts = [unit.squad && `${t('squad')} ${unit.squad}`, unit.detached && t('detached'), unit.order].filter(Boolean);
   return parts.length > 0 ? <div class="tt-line">{parts.join(' · ')}</div> : null;
 }
@@ -90,6 +90,15 @@ function UnitDetails({ unit }: { unit: UnitVM }) {
     <>
       <SquadAndOrder unit={unit} />
       {unit.chips && <Facts facts={unit.chips} />}
+      <UnitNotes unit={unit} />
+    </>
+  );
+}
+
+/** Lo que se lee de la unidad con Alt despues de sus datos: si no se cura esta noche, su carga y sus habilidades explicadas. */
+export function UnitNotes({ unit }: { unit: UnitVM }) {
+  return (
+    <>
       {unit.noHeal && <div class="tt-line tt-warn">{t('noHeal')}</div>}
       {unit.cargo && <div class="tt-line">{unit.cargo}</div>}
       {unit.abilities && unit.abilities.length > 0 && <Abilities abilities={unit.abilities} />}
@@ -101,7 +110,7 @@ function UnitDetails({ unit }: { unit: UnitVM }) {
 const LIFE_STEPS = 10;
 const lifeTone = (share: number): string => (share > 0.6 ? 'high' : share > 0.3 ? 'mid' : 'low');
 
-function LifeBar({ life }: { life: number }) {
+export function LifeBar({ life }: { life: number }) {
   const shown = Math.max(0, Math.round(life));
   const share = shown / MAX_LIFE;
   const filled = Math.ceil(share * LIFE_STEPS);
@@ -118,6 +127,20 @@ function LifeBar({ life }: { life: number }) {
   );
 }
 
+/** Su nombre y, si es veterana, sus estrellas. */
+export function UnitName({ unit }: { unit: UnitVM }) {
+  return (
+    <span class="ci-name">
+      {unit.name}
+      {unit.rank ? (
+        <span class="ci-rank" title={t('veteran')}>
+          {stars(unit.rank)}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 /** La unidad: su retrato, de quien es, su nombre (y veterania) y su vida; con Alt, ademas, sus datos. */
 export function UnitPart({ unit, isDetailed }: { unit: UnitVM; isDetailed: boolean }) {
   return (
@@ -127,14 +150,7 @@ export function UnitPart({ unit, isDetailed }: { unit: UnitVM; isDetailed: boole
         <span class="ci-label" style={{ color: ownerColor(unit.side) }}>
           {ownerText(unit.side)}
         </span>
-        <span class="ci-name">
-          {unit.name}
-          {unit.rank ? (
-            <span class="ci-rank" title={t('veteran')}>
-              {stars(unit.rank)}
-            </span>
-          ) : null}
-        </span>
+        <UnitName unit={unit} />
         <LifeBar life={unit.life} />
         {isDetailed && <UnitDetails unit={unit} />}
       </div>

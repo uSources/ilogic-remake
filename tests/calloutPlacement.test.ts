@@ -38,3 +38,34 @@ describe('placeCallout (el bocadillo con tallo)', () => {
     expect(placed.top).toBe(80);
   });
 });
+
+describe('placeCallout sin tapar a los enemigos a tiro', () => {
+  it('si donde iba tapa uno, va al primer otro sitio donde quepa sin taparlo', () => {
+    // Encima a la derecha (de 420 a 620, de 156 a 256) taparia la casilla de 500, 200.
+    const placed = placeCallout(tile(400, 300), box, screen, [tile(500, 200)]);
+    expect(placed).toMatchObject({ left: 220, top: 156, side: 'left', vertical: 'above' });
+  });
+
+  it('encima no queda sitio libre: debajo', () => {
+    const placed = placeCallout(tile(400, 300), box, screen, [tile(500, 200), tile(300, 200)]);
+    expect(placed).toMatchObject({ top: 384, side: 'right', vertical: 'below' });
+  });
+
+  it('en una pantalla estrecha (no cabe entero a ningun lado) tambien se aparta', () => {
+    // Tallo en x = 150: encima, a un lado o al otro, se mueve hasta tapar la casilla de 60, 200.
+    const narrow = { width: 300, height: 600 };
+    const placed = placeCallout(tile(130, 300), box, narrow, [tile(60, 200)]);
+    expect(placed).toMatchObject({ left: 84, top: 384, vertical: 'below' });
+  });
+
+  it('si encima tapa y debajo no cabe del todo, debajo movido lo justo para caber', () => {
+    // Debajo iria de 504 a 604 y se sale por 20 px: sube a 484, aun lejos de su casilla (420 a 460).
+    const placed = placeCallout(tile(400, 420), box, screen, [tile(500, 300), tile(300, 300)]);
+    expect(placed).toMatchObject({ left: 420, top: 484, vertical: 'below' });
+  });
+
+  it('si tapa algo en todos los sitios, donde iba', () => {
+    const everywhere = [tile(500, 200), tile(300, 200), tile(500, 400), tile(300, 400)];
+    expect(placeCallout(tile(400, 300), box, screen, everywhere)).toMatchObject({ left: 420, top: 156, vertical: 'above' });
+  });
+});

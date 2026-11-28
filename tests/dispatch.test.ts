@@ -10,7 +10,7 @@ import {
   isValidAction,
   ORDER_OPTIONS,
 } from '@core/actions';
-import { canCaptureAt, INVARIANTS, roundReport, targetProblem, unitById } from '@core/rules';
+import { canCaptureAt, captureBlockAt, INVARIANTS, roundReport, targetProblem, unitById } from '@core/rules';
 import { endRound } from '@core/rules/round';
 import { newUnit } from '@core/measure';
 import { restoreInvariants } from '@core/rules/invariants';
@@ -110,6 +110,10 @@ describe('dispatch: la unica via para cambiar la partida', () => {
     expect(canCaptureAt(s, soldier, { x: 9, y: 9 })).toBe(true);
     expect(canCaptureAt(s, soldier, { x: 9, y: 8 })).toBe(false);
     expect(canCaptureAt(s, tank, { x: 9, y: 9 })).toBe(false);
+    expect(captureBlockAt(s, soldier, { x: 9, y: 9 })).toBeNull();
+    expect(captureBlockAt(s, soldier, { x: 9, y: 8 })).toBe('allied');
+    expect(captureBlockAt(s, soldier, { x: 3, y: 3 })).toBe('noBuilding');
+    expect(captureBlockAt(s, tank, { x: 9, y: 9 })).toBe('notCapturer');
   });
 
   it('ir alli avanza con gotoStep: se acerca y acaba si ya llega este turno', () => {

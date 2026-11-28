@@ -12,6 +12,7 @@ import { settings } from '../src/settings';
 import {
   armyChartVM,
   captureHintText,
+  chosenUnitVM,
   endScoreVM,
   endStatsVM,
   dayInfoVM,
@@ -67,6 +68,18 @@ describe('datos de la interfaz', () => {
     const vm = tileVM(images, s, { x: 2, y: 2 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set([unit.uid]), selected: unit });
     expect(vm.unit?.name).toBeTruthy();
     expect(tileVM(images, s, { x: 2, y: 2 }, { viewer: 0, vis: createLayer(s, true), hidden: new Set([unit.uid]) }).unit).toBeUndefined();
+  });
+
+  it('ficha de la elegida: mueve, alcance y vision en texto, y lo que sabe hacer (captura, habilidades)', () => {
+    const s = blankState();
+    const soldier = chosenUnitVM(images, s, newUnit(s, unitType('FSoldier'), 0, { x: 2, y: 2 }), 0);
+    expect(soldier.stats.map((stat) => stat.label)).toEqual(['Mueve', 'Alcance', 'Visión']);
+    expect(soldier.skills[0]).toBe('Captura edificios');
+    expect(soldier.skills).toHaveLength(2);
+    const supplier = chosenUnitVM(images, s, newUnit(s, unitType('Supplier'), 0, { x: 4, y: 4 }), 0);
+    expect(supplier.stats[1]).toEqual({ label: 'No ataca', value: '' });
+    expect(supplier.skills).toHaveLength(1);
+    expect(supplier.skills).not.toContain('Captura edificios');
   });
 
   it('textos: movimiento y alcance, puntos de captura', () => {

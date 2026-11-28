@@ -260,6 +260,36 @@
 .tt-abilities b {
   color: var(--menu-gold);
 }
+/* La unidad elegida (game/ChosenUnit.tsx; lienzo «Todo en estilo C», tablero 8), en el sitio de lo de
+   bajo el cursor: retrato grande, nombre, su vida con lo que mueve, alcanza y ve, y en dorado lo que
+   sabe hacer. */
+.chosen-unit {
+  gap: 16px;
+}
+.chosen-unit .ci-name {
+  font-size: 32px;
+}
+.cu-portrait {
+  width: 80px;
+  height: 80px;
+}
+.cu-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 22px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--menu-title);
+}
+.cu-stat b {
+  color: var(--panel);
+}
+.cu-skills {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--menu-gold);
+}
 /* En el movil, encima de «Acabar turno» y del minimapa, a lo ancho. */
 @media (max-width: 720px) {
   .cursor-info {
@@ -279,5 +309,12 @@
   .ci-portrait {
     width: 44px;
     height: 44px;
+  }
+  .chosen-unit .ci-name {
+    font-size: 24px;
+  }
+  .cu-stats {
+    gap: 2px 14px;
+    font-size: 13px;
   }
 }

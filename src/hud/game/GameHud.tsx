@@ -5,6 +5,7 @@ import { t } from '../../settings';
 import type { UIState } from '../state';
 import type { MenuVM, NetVM } from '../vm/menus';
 import { BuyFan } from './BuyFan';
+import { ChosenUnit } from './ChosenUnit';
 import { Forecast } from './Forecast';
 import { Minimap } from './Minimap';
 import { MissionPanel } from './MissionPanel';
@@ -40,8 +41,15 @@ const showsNetLine = (s: UIState) => !!s.net && !(s.turnClock && s.net.status ==
 
 /** Con dos o mas unidades elegidas, su panel sustituye a las fichas de la casilla. */
 const showsSelection = (s: UIState) => !!s.selection && !s.busy;
+/** La pausa tapa la partida: ni lo elegido ni lo de bajo el cursor se enseñan a traves de ella. */
+const isPaused = (s: UIState) => s.menu?.kind === 'game';
+/**
+ * La unidad elegida (sola), abajo a la izquierda: sustituye a lo de bajo el cursor, tambien con su
+ * bocadillo abierto o la prevision encima (lienzo «Todo en estilo C», tablero 8).
+ */
+const showsChosen = (s: UIState) => canAct(s) && !!s.chosen && !isPaused(s);
 /** La ficha de la casilla señalada: en tu turno y sin otra cosa encima (menu, prevision de combate, lo elegido). */
-const showsTileTip = (s: UIState) => canAct(s) && !showsSelection(s) && !s.menu && !s.forecast;
+const showsTileTip = (s: UIState) => canAct(s) && !showsSelection(s) && !showsChosen(s) && !s.menu && !s.forecast;
 
 /**
  * Abajo a la derecha, en fila: «Acabar turno» y el minimapa (lo publica la vista 3D,
@@ -73,6 +81,7 @@ const GAME_PANELS: GamePanel[] = [
     id: 'tileTip',
     render: (s) => showsTileTip(s) && s.tile && <TileTip tile={s.tile} />,
   },
+  { id: 'chosen', render: (s) => showsChosen(s) && s.chosen && <ChosenUnit chosen={s.chosen} /> },
   { id: 'dock', render: (s) => <div class="dock">{renderPanels(DOCK_PANELS, s)}</div> },
 
   { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },

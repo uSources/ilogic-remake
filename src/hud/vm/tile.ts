@@ -31,6 +31,22 @@ export interface UnitVM {
   detached?: boolean;
 }
 
+/** Un dato de la unidad elegida en texto: «Mueve 3», «Alcance 1–1» (sin valor: «No ataca»). */
+export interface ChosenStatVM {
+  label: string;
+  value: string;
+}
+
+/**
+ * La unidad elegida, abajo a la izquierda (lienzo «Todo en estilo C», tablero 8): la unidad, lo que
+ * mueve, alcanza y ve, y lo que sabe hacer (capturar, sus habilidades; vacio si nada especial).
+ */
+export interface ChosenUnitVM {
+  unit: UnitVM;
+  stats: ChosenStatVM[];
+  skills: string[];
+}
+
 export interface BuildingVM {
   icon: string | null;
   name: string;

@@ -72,9 +72,19 @@
   --entry-size-sel: 34px;
   margin-top: 14px;
 }
+/* La apagada (lo que no se puede ahora): en gris, sin flecha y con el porque debajo. */
 .text-entry.disabled {
-  opacity: 0.5;
   cursor: default;
+}
+.text-entry.disabled .text-entry-title {
+  color: var(--menu-off);
+}
+.text-entry.disabled .text-entry-note {
+  color: var(--menu-off-note);
+}
+.text-entry.disabled .text-entry-icon {
+  filter: grayscale(1);
+  opacity: 0.6;
 }
 .text-entry.danger .text-entry-title,
 .text-entry.danger.sel .text-entry-title {
