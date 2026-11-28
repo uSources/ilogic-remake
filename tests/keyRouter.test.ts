@@ -11,6 +11,7 @@ import type { CameraControls } from '../src/view3d/systems/camera/strategyCamera
 import { MatchEnd } from '../src/view3d/systems/hud/matchEnd';
 import { PauseMenu } from '../src/view3d/systems/hud/matchMenus';
 import { KeyRouter, type KeyHost, type KeyPanel, type KeyPress } from '../src/view3d/systems/input/keyInput';
+import { BuyKeys, type BuyHost } from '../src/view3d/systems/turn/buyKeys';
 import { act, blankState, PLAYER } from './helpers';
 
 /** El teclado de la partida sin navegador: el mapa, la camara, los paneles y los sonidos son puertos falsos que apuntan lo que se les pide. */
@@ -371,5 +372,35 @@ describe('KeyRouter con el final de verdad', () => {
     expect(shownEnd().selected).toBe(boardIndex + 1);
     press('ArrowUp');
     expect(shownEnd().selected).toBe(boardIndex);
+  });
+});
+
+describe('KeyRouter con la compra abierta', () => {
+  /** La compra con el teclado (BuyKeys) sobre un turno falso que apunta lo que se le pide. */
+  function buyingMatch() {
+    const asked: string[] = [];
+    const turn: BuyHost = {
+      isBuying: true,
+      stepBuy: (step) => void asked.push(`step ${step}`),
+      acceptMenu: () => void asked.push('buy'),
+      cancel: () => void asked.push('close'),
+    };
+    const { router, mapOrders, pans } = fakeMatch([new BuyKeys(turn)]);
+    const press = (...codes: string[]) => codes.forEach((code) => router.press(keyPress(code)));
+    return { press, router, asked, mapOrders, pans };
+  }
+
+  it('arriba y abajo señalan, Enter compra y Esc sale sin comprar, como en la pausa', () => {
+    const { press, asked } = buyingMatch();
+    press('ArrowDown', 'ArrowUp', 'KeyS', 'ArrowLeft', 'Enter', 'Escape');
+    expect(asked).toEqual(['step 1', 'step -1', 'step 1', 'buy', 'close']);
+  });
+
+  it('nada llega al mapa: ni las flechas mueven la camara ni E acaba el turno', () => {
+    const { press, router, mapOrders, pans } = buyingMatch();
+    press('ArrowUp', 'KeyE', 'Tab');
+    router.frame(FRAME_SECONDS);
+    expect(mapOrders).toEqual([]);
+    expect(pans).toEqual([]);
   });
 });

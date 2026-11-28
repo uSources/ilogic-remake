@@ -42,6 +42,7 @@ export type MenuContext =
   | 'endPeek'
   | 'pause'
   | 'target'
+  | 'buy'
   | 'handoff';
 
 export interface MenuBinding {
@@ -111,6 +112,8 @@ export const MENU_BINDINGS: Readonly<Record<MenuContext, readonly MenuBinding[]>
   // Eligiendo a quien atacar (tras «Atacar» en el bocadillo de la unidad): ← → pasan de un enemigo a
   // otro, ↑ ↓ se mueven por el bocadillo, Intro elige (atacar al señalado) y Esc vuelve a la unidad.
   target: MENU_KEYS,
+  // La compra en una fabrica, como la pausa: arriba y abajo señalan, Enter compra y Esc sale sin comprar.
+  buy: MENU_KEYS,
   // Mirando el tablero desde el final: Esc, Retroceso, Enter o Espacio vuelven al resultado.
   endPeek: [
     { codes: KEY_OK, command: { kind: 'ok', repeat: false } },

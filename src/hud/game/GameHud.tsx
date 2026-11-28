@@ -4,7 +4,7 @@ import { Pause } from '../menus/Pause';
 import { t } from '../../settings';
 import type { UIState } from '../state';
 import type { MenuVM, NetVM } from '../vm/menus';
-import { BuyFan } from './BuyFan';
+import { BuyList } from './BuyList';
 import { ChosenUnit } from './ChosenUnit';
 import { Forecast } from './Forecast';
 import { Minimap } from './Minimap';
@@ -14,7 +14,7 @@ import { TileTip } from './TileTip';
 import { SelectionPanel } from './SelectionPanel';
 import { EndTurn, TopBar } from './TopBar';
 import { TurnClockPill } from './TurnClock';
-import { canAct, isOwnTurn } from './turn';
+import { canAct, isBuying, isOwnTurn } from './turn';
 
 /**
  * Un panel de la partida: lo que pinta segun el estado, o nada (null/false) si no le toca salir.
@@ -82,7 +82,7 @@ const GAME_PANELS: GamePanel[] = [
     render: (s) => showsTileTip(s) && s.tile && <TileTip tile={s.tile} />,
   },
   { id: 'chosen', render: (s) => showsChosen(s) && s.chosen && <ChosenUnit chosen={s.chosen} /> },
-  { id: 'dock', render: (s) => <div class="dock">{renderPanels(DOCK_PANELS, s)}</div> },
+  { id: 'dock', render: (s) => !isBuying(s) && <div class="dock">{renderPanels(DOCK_PANELS, s)}</div> },
 
   { id: 'forecast', render: (s) => s.forecast && <Forecast forecast={s.forecast} /> },
   // La pausa no se ve a traves de Opciones o de la ayuda, que se abren desde ella.
@@ -90,12 +90,12 @@ const GAME_PANELS: GamePanel[] = [
 ];
 
 /**
- * Lo que sale de una casilla o encima de todo: la pausa, la compra (en abanico) y, en el bocadillo
- * con tallo, las fichas de la unidad, su rueda o el aviso de elegir casilla.
+ * Lo que sale de una casilla o encima de todo: la pausa, la compra (en lista, a la derecha) y, en el
+ * bocadillo con tallo, las fichas de la unidad, su rueda o el aviso de elegir casilla.
  */
 function MatchMenu({ menu }: { menu: MenuVM }) {
   if (menu.kind === 'game') return <Pause menu={menu} />;
-  if (menu.kind === 'buy') return <BuyFan menu={menu} />;
+  if (menu.kind === 'buy') return <BuyList menu={menu} />;
   return <TileMenu menu={menu} />;
 }
 

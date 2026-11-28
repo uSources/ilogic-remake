@@ -32,6 +32,7 @@ import { PauseMenu } from '../systems/hud/matchMenus';
 import { installKeys, type KeyPanel } from '../systems/input/keyInput';
 import { installPointer } from '../systems/input/pointerInput';
 import { TurnControls } from '../systems/turn/turnControls';
+import { BuyKeys } from '../systems/turn/buyKeys';
 import { showDestinations } from '../systems/orders/destinationFlags';
 import { anyStandingOrder, OrderIntents } from '../systems/orders/orderIntents';
 import { ThreatZone } from '../systems/threat/threatZone';
@@ -224,6 +225,8 @@ export function playMatch(
     const uid = controls.nextIdleUnit();
     if (uid !== null) focusUnit(uid);
   }
+  // La compra en una fabrica se maneja con el teclado como la pausa: abierta, las teclas son suyas.
+  const buyKeys = new BuyKeys(controls);
   const options = new OptionsPanel(
     'game',
     () => publish(),
@@ -353,10 +356,10 @@ export function playMatch(
   installKeys({
     camera,
     onFrame: (listener) => scene.onFrame(listener),
-    // El cambio de jugador, el final, la pausa, las opciones y la ayuda se abren encima del mapa (el
-    // cambio de jugador, encima de todo; las opciones, tambien encima de la pausa: van antes): mientras,
-    // las teclas son suyas. Elegir a quien atacar, tambien (y la pausa, por encima).
-    panels: [seat, matchEnd, helpPanel, options, pause, targetKeys],
+    // El cambio de jugador, el final, la pausa, las opciones, la ayuda y la compra se abren encima del
+    // mapa (el cambio de jugador, encima de todo; las opciones, tambien encima de la pausa, y la pausa,
+    // de la compra: van antes): mientras, las teclas son suyas. Elegir a quien atacar, tambien.
+    panels: [seat, matchEnd, helpPanel, options, pause, buyKeys, targetKeys],
     sounds: audio.sounds,
     endTurn: () => endGuard.press(),
     nextUnit: nextIdle,
